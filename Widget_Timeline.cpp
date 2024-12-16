@@ -131,11 +131,10 @@ namespace MIDILightDrawer
 			graphicsBuffer->Graphics->Clear(currentTheme.Background);
 
 			// Draw components in correct order
-			DrawTrackBackground(graphicsBuffer->Graphics);	// Draw track backgrounds first
-			DrawTimeline(graphicsBuffer->Graphics);			// Draw timeline (including grid lines)
-			DrawTrackContent(graphicsBuffer->Graphics);		// Draw track content and headers
-			DrawTrackNames(graphicsBuffer->Graphics);
-			ToolPreview(graphicsBuffer->Graphics);			// Draw tool preview last
+			DrawTrackBackground	(graphicsBuffer->Graphics);	// Draw track backgrounds first
+			DrawTimeline		(graphicsBuffer->Graphics);	// Draw timeline (including grid lines)
+			DrawTrackContent	(graphicsBuffer->Graphics);	// Draw track content and headers
+			ToolPreview			(graphicsBuffer->Graphics);	// Draw tool preview last
 
 			// Render the buffer
 			graphicsBuffer->Render(e->Graphics);
@@ -149,12 +148,11 @@ namespace MIDILightDrawer
 			DrawTrackBackground(e->Graphics);
 			DrawTimeline(e->Graphics);
 			DrawTrackContent(e->Graphics);
-			DrawTrackNames(graphicsBuffer->Graphics);
 			ToolPreview(e->Graphics);
 		}
 
 		performanceMetrics->EndFrame();
-		LogPerformanceMetrics();
+		//LogPerformanceMetrics();
 	}
 
 	void Widget_Timeline::OnResize(EventArgs^ e)
@@ -355,51 +353,6 @@ namespace MIDILightDrawer
 
 		// Draw measure numbers in header area
 		DrawMeasureNumbers(g, headerRect);
-	}
-
-	void Widget_Timeline::DrawTracks(Graphics^ g)
-	{
-		if (tracks->Count == 0) return;
-
-		// Debug output
-		System::Diagnostics::Debug::WriteLine(String::Format("Drawing {0} tracks", tracks->Count));
-
-		// Set up the graphics context
-		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
-		g->TextRenderingHint = System::Drawing::Text::TextRenderingHint::ClearTypeGridFit;
-
-		// Calculate the total available area for tracks
-		Rectangle tracksArea(0, HEADER_HEIGHT, Width, Height - HEADER_HEIGHT);
-
-		// Draw background for tracks area
-		g->FillRectangle(gcnew SolidBrush(currentTheme.TrackBackground), tracksArea);
-
-		// Draw each track
-		for each (Track ^ track in tracks) {
-			// Get track bounds
-			Rectangle bounds = GetTrackBounds(track);
-
-			// Draw track header background
-			Rectangle headerBounds = GetTrackHeaderBounds(track);
-			Color headerBg = track->IsSelected ? currentTheme.SelectionHighlight : currentTheme.HeaderBackground;
-			g->FillRectangle(gcnew SolidBrush(headerBg), headerBounds);
-
-			// Draw track name
-			/*Rectangle textBounds = headerBounds;
-			textBounds.X += TRACK_PADDING;
-			textBounds.Width -= TRACK_PADDING * 2;
-			g->DrawString(track->Name, measureFont, gcnew SolidBrush(currentTheme.Text), (float)(textBounds.X), (float)(textBounds.Y + TRACK_PADDING));*/
-
-			// Draw track content area
-			Rectangle contentBounds = GetTrackContentBounds(track);
-			g->FillRectangle(gcnew SolidBrush(currentTheme.TrackBackground), contentBounds);
-
-			// Draw track borders
-			Pen^ borderPen = gcnew Pen(currentTheme.TrackBorder);
-			g->DrawRectangle(borderPen, bounds);
-			g->DrawLine(borderPen, TRACK_HEADER_WIDTH, bounds.Y, TRACK_HEADER_WIDTH, bounds.Y + bounds.Height);
-			delete borderPen;
-		}
 	}
 
 	int Widget_Timeline::TicksToPixels(int ticks) {
@@ -944,9 +897,7 @@ namespace MIDILightDrawer
 	void Widget_Timeline::UpdateVisibilityTracker(Graphics^ g)
 	{
 		Rectangle viewport(0, 0, Width, Height);
-		visibilityTracker->Update(viewport, zoomLevel, scrollPosition,
-			tracks, measures, HEADER_HEIGHT, TRACK_HEADER_WIDTH,
-			performanceMetrics);
+		visibilityTracker->Update(viewport, zoomLevel, scrollPosition, tracks, measures, HEADER_HEIGHT, TRACK_HEADER_WIDTH, performanceMetrics);
 	}
 
 	void Widget_Timeline::DrawMeasureLines(Graphics^ g, Rectangle contentRect)
@@ -1189,15 +1140,14 @@ namespace MIDILightDrawer
 					{
 						// Get the track bounds for drawing
 						Rectangle bounds = GetTrackContentBounds(previewTrack);
+						bounds.Y += scrollPosition->Y;
 
 						// Calculate bar position and width
-						int x = TicksToPixels(drawTool->PreviewBar->StartTick) +
-							scrollPosition->X + TRACK_HEADER_WIDTH;
+						int x = TicksToPixels(drawTool->PreviewBar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
 						int width = TicksToPixels(drawTool->PreviewBar->Length);
 
 						// Create rectangle for preview bar
-						Rectangle barBounds(x, bounds.Y + TRACK_PADDING,
-							width, bounds.Height - TRACK_PADDING * 2);
+						Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
 
 						// Draw semi-transparent preview
 						Color previewColor = drawTool->PreviewBar->Color;
@@ -1799,7 +1749,7 @@ namespace MIDILightDrawer
 		return 1;
 	}
 
-	void Widget_Timeline::DrawTrackHeaders(Graphics^ g, bool drawBorders)
+	void Widget_Timeline::DrawTrackHeaders(Graphics^ g)
 	{
 		if (tracks->Count == 0) return;
 
@@ -1807,85 +1757,27 @@ namespace MIDILightDrawer
 		Rectangle headerBackground(0, HEADER_HEIGHT, TRACK_HEADER_WIDTH, Height - HEADER_HEIGHT);
 		g->FillRectangle(resourceManager->GetBrush(currentTheme.HeaderBackground), headerBackground);
 
-		for each(Track ^ track in tracks) {
-			if (!visibilityTracker->IsTrackVisible(track)) continue;
+		for each(Track ^ track in tracks)
+		{
+			if (!visibilityTracker->IsTrackVisible(track)) {
+				continue;
+			}
 
-			Rectangle trackBounds = visibilityTracker->GetTrackBounds(track);
+			Rectangle trackBounds = GetTrackBounds(track);
 			Rectangle headerBounds(0, trackBounds.Y, TRACK_HEADER_WIDTH, trackBounds.Height);
+
+			headerBounds.Y += scrollPosition->Y;
 
 			// Draw header background
 			Color headerBg = track->IsSelected ? currentTheme.SelectionHighlight : currentTheme.HeaderBackground;
 			g->FillRectangle(resourceManager->GetBrush(headerBg), headerBounds);
 
-			// Draw track name with proper positioning
-			if (!String::IsNullOrEmpty(track->Name)) {
-				Rectangle textBounds = headerBounds;
-				textBounds.X += TRACK_PADDING;
-				textBounds.Y += TRACK_PADDING;
-				textBounds.Width -= (TRACK_PADDING * 2);
-				textBounds.Height -= (TRACK_PADDING * 2);
+			DrawTrackName(g, track, headerBounds);
 
-				StringFormat^ format = gcnew StringFormat();
-				format->Alignment = StringAlignment::Near;
-				format->LineAlignment = StringAlignment::Center;
-				format->Trimming = StringTrimming::EllipsisCharacter;
-
-				g->DrawString(track->Name, measureFont,
-					resourceManager->GetBrush(currentTheme.Text),
-					textBounds, format);
-
-				delete format;
-			}
-
-			// Draw borders if requested
-			if (drawBorders) {
-				Pen^ borderPen = resourceManager->GetGridPen(currentTheme.TrackBorder, 1.0f);
-				g->DrawRectangle(borderPen, headerBounds);
-				g->DrawLine(borderPen,
-					TRACK_HEADER_WIDTH, headerBounds.Y,
-					TRACK_HEADER_WIDTH, headerBounds.Bottom);
-			}
-		}
-	}
-
-	void Widget_Timeline::DrawTrackNames(Graphics^ g)
-	{
-		if (tracks->Count == 0) return;
-
-		// Fill header background area
-		Rectangle headerBackground(0, HEADER_HEIGHT, TRACK_HEADER_WIDTH, Height - HEADER_HEIGHT);
-		g->FillRectangle(gcnew SolidBrush(currentTheme.HeaderBackground), headerBackground);
-
-		for each(Track ^ track in tracks) {
-			// Get track positions
-			int trackTop = GetTrackTop(track) + scrollPosition->Y;
-			int trackHeight = GetTrackHeight(track);
-
-			// Create header bounds
-			Rectangle headerBounds(0, trackTop, TRACK_HEADER_WIDTH, trackHeight);
-
-			// Draw header background
-			Color headerBg = track->IsSelected ? currentTheme.SelectionHighlight : currentTheme.HeaderBackground;
-			g->FillRectangle(gcnew SolidBrush(headerBg), headerBounds);
-
-			// Draw track name
-			if (!String::IsNullOrEmpty(track->Name)) {
-				Rectangle textBounds = headerBounds;
-				textBounds.X += TRACK_PADDING;
-				textBounds.Y += TRACK_PADDING;
-				textBounds.Width -= (TRACK_PADDING * 2);
-				textBounds.Height -= (TRACK_PADDING * 2);
-
-				StringFormat^ format = gcnew StringFormat();
-				format->Alignment = StringAlignment::Near;
-				format->LineAlignment = StringAlignment::Center;
-
-				g->DrawString(track->Name, measureFont,
-					gcnew SolidBrush(currentTheme.Text),
-					textBounds, format);
-
-				delete format;
-			}
+			// Draw borders
+			Pen^ borderPen = resourceManager->GetGridPen(currentTheme.TrackBorder, 1.0f);
+			g->DrawRectangle(borderPen, headerBounds);
+			g->DrawLine(borderPen, TRACK_HEADER_WIDTH, headerBounds.Y, TRACK_HEADER_WIDTH, headerBounds.Bottom);
 		}
 	}
 
@@ -1932,21 +1824,22 @@ namespace MIDILightDrawer
 
 			if (trackBottom < HEADER_HEIGHT || trackTop > Height) continue;
 
-			Rectangle trackBounds = GetTrackBounds(track);
-			trackBounds.Y = trackTop;
+			//Rectangle trackBounds = GetTrackBounds(track);
+			//trackBounds.Y = trackTop;
 
 			Rectangle contentBounds = GetTrackContentBounds(track);
 			contentBounds.Y = trackTop;
 
 			// Draw events and tablature
 			DrawTrackEvents(g, track, contentBounds);
-			if (track->ShowTablature) {
+			if (track->ShowTablature)
+			{
 				DrawTrackTablature(g, track, contentBounds);
 			}
 		}
 
 		// 4. Draw track headers and borders (these should be on top)
-		DrawTrackHeaders(g, true);  // true indicates to draw borders
+		DrawTrackHeaders(g);
 		DrawTrackDividers(g);
 
 		// 5. Draw selection rectangles and tool previews
@@ -1984,7 +1877,7 @@ namespace MIDILightDrawer
 
 		for each (Track ^ track in tracks) {
 			Rectangle trackContentBounds = GetTrackContentBounds(track);
-			int dividerY = trackContentBounds.Bottom;
+			int dividerY = trackContentBounds.Bottom + scrollPosition->Y;
 
 			if (dividerY >= 0 && dividerY <= this->Height) {
 				// Draw differently if this is the hover track
@@ -2014,23 +1907,20 @@ namespace MIDILightDrawer
 	void Widget_Timeline::DrawTrackName(Graphics^ g, Track^ track, Rectangle headerBounds)
 	{
 		// Only draw if we have a track name
-		if (!String::IsNullOrEmpty(track->Name)) {
+		if (!String::IsNullOrEmpty(track->Name))
+		{
 			Rectangle textBounds = headerBounds;
 			textBounds.X += TRACK_PADDING;
 			textBounds.Y += TRACK_PADDING;
 			textBounds.Width -= (TRACK_PADDING * 2);
 			textBounds.Height -= (TRACK_PADDING * 2);
 
-			// Create string format for proper text alignment
 			StringFormat^ format = gcnew StringFormat();
-			format->Alignment = StringAlignment::Near;
-			format->LineAlignment = StringAlignment::Center;
-			format->Trimming = StringTrimming::EllipsisCharacter;
+			format->Alignment		= StringAlignment::Near;
+			format->LineAlignment	= StringAlignment::Center;
+			format->Trimming		= StringTrimming::EllipsisCharacter;
 
-			// Draw the track name
-			g->DrawString(track->Name, measureFont,
-				gcnew SolidBrush(currentTheme.Text),
-				textBounds, format);
+			g->DrawString(track->Name, measureFont, resourceManager->GetBrush(currentTheme.Text), textBounds, format);
 
 			delete format;
 		}
@@ -2816,38 +2706,6 @@ namespace MIDILightDrawer
 		// Convert pixel width to scroll units
 		return (int)Math::Ceiling(width / SCROLL_UNIT);
 	}
-
-	//void Widget_Timeline::UpdateVerticalScrollBarRange()
-	//{
-	//	int totalHeight = GetTotalTracksHeight();
-	//	// Calculate viewport height (subtract header height and horizontal scrollbar height)
-	//	int viewportHeight = Height - HEADER_HEIGHT - hScrollBar->Height;
-
-	//	// Only enable scrolling if content exceeds viewport
-	//	if (totalHeight > viewportHeight)
-	//	{
-	//		vScrollBar->Minimum = 0;
-	//		// Maximum should be the difference between total height and viewport
-	//		vScrollBar->Maximum = totalHeight - viewportHeight;
-	//		vScrollBar->LargeChange = Math::Max(1, viewportHeight / 2); // Half page scroll
-	//		vScrollBar->SmallChange = Math::Max(1, viewportHeight / 10); // 1/10th page scroll
-
-	//		// Ensure current scroll position is valid
-	//		scrollPosition->Y = Math::Max(-vScrollBar->Maximum, Math::Min(0, scrollPosition->Y));
-	//		vScrollBar->Value = -scrollPosition->Y;
-	//	}
-	//	else
-	//	{
-	//		// Content fits in viewport - disable scrolling
-	//		vScrollBar->Minimum = 0;
-	//		vScrollBar->Maximum = 0;
-	//		vScrollBar->LargeChange = 1;
-	//		vScrollBar->Value = 0;
-	//		scrollPosition->Y = 0;
-	//	}
-
-	//	vScrollBar->Visible = true;
-	//}
 
 	void Widget_Timeline::UpdateVerticalScrollBarRange()
 	{

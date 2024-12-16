@@ -20,7 +20,8 @@ namespace MIDILightDrawer
 
 		this->_Toolbar = gcnew Widget_Toolbar();
 		this->_Toolbar->Dock = DockStyle::Fill;
-		this->_Toolbar->ToolChanged += gcnew System::EventHandler<MIDILightDrawer::Widget_Toolbar::ToolType>(this, &MIDILightDrawer::Widget_Tools_And_Control::OnToolbar_ModeChanged);
+		this->_Toolbar->OnToolChanged += gcnew System::EventHandler<MIDILightDrawer::TimelineToolType>(this, &MIDILightDrawer::Widget_Tools_And_Control::Toolbar_OnToolChanged);
+		//this->_Toolbar->ToolChanged += gcnew System::EventHandler<Widget_Toolbar::ToolType>(this, &Widget_Tools_And_Control::OnToolbar_ModeChanged);
 		Table_Layout_Main->Controls->Add(this->_Toolbar, 0, 0);
 
 
@@ -63,7 +64,7 @@ namespace MIDILightDrawer
 		this->_Options_Container->Controls->Add(this->_Bucket_Options, 0, 0);
 
 		// Set initial visibility based on default tool
-		UpdateOptionsVisibility(this->_Toolbar->Get_Current_Tool());
+		UpdateOptionsVisibility(this->_Toolbar->CurrentTool);
 
 
 		this->Controls->Add(Table_Layout_Main);
@@ -71,20 +72,14 @@ namespace MIDILightDrawer
 
 	void Widget_Tools_And_Control::Select_Color_From_Preset(int color_index)
 	{
-		Widget_Toolbar::ToolType Current_Tool = _Toolbar->Get_Current_Tool();
-
-		switch (Current_Tool)
+		switch (_Toolbar->CurrentTool)
 		{
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Draw:			_Draw_Options->PresetColor = color_index;	break;
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Change_Color:	_Color_Options->PresetColor = color_index;	break;
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Bucket_Fill:	_Bucket_Options->PresetColor = color_index;	break;
+		case TimelineToolType::Draw:		_Draw_Options->PresetColor = color_index;	break;
+		case TimelineToolType::Color:		_Color_Options->PresetColor = color_index;	break;
+		//case TimelineToolType::Bucket_Fill:	_Bucket_Options->PresetColor = color_index;	break;
 
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Fade:
+		//case MIDILightDrawer::Widget_Toolbar::ToolType::Fade:
 			break;
-
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Selection:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Erase:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Duration:
 		default:
 			break;
 		}
@@ -92,18 +87,10 @@ namespace MIDILightDrawer
 
 	void Widget_Tools_And_Control::Quantization_Up(void)
 	{
-		Widget_Toolbar::ToolType Current_Tool = _Toolbar->Get_Current_Tool();
-
-		switch (Current_Tool)
+		switch (_Toolbar->CurrentTool)
 		{
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Draw:			_Draw_Options->Select_Next_Draw_Value();		break;
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Duration:	_Length_Options->Select_Next_Length_Value();	break;
-			
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Fade:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Selection:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Erase:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Change_Color:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Bucket_Fill:
+		case TimelineToolType::Draw:			_Draw_Options->Select_Next_Draw_Value();		break;
+		case TimelineToolType::Duration:	_Length_Options->Select_Next_Length_Value();	break;
 		default:
 			break;
 		}
@@ -111,18 +98,11 @@ namespace MIDILightDrawer
 
 	void Widget_Tools_And_Control::Quantization_Down(void)
 	{
-		Widget_Toolbar::ToolType Current_Tool = _Toolbar->Get_Current_Tool();
-
-		switch (Current_Tool)
+		switch (_Toolbar->CurrentTool)
 		{
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Draw:			_Draw_Options->Select_Previous_Draw_Value();		break;
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Duration:	_Length_Options->Select_Previous_Length_Value();	break;
-
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Fade:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Selection:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Erase:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Change_Color:
-		case MIDILightDrawer::Widget_Toolbar::ToolType::Bucket_Fill:
+		case TimelineToolType::Draw:		_Draw_Options->Select_Previous_Draw_Value();		break;
+		case TimelineToolType::Duration:	_Length_Options->Select_Previous_Length_Value();	break;
+		
 		default:
 			break;
 		}
@@ -163,7 +143,7 @@ namespace MIDILightDrawer
 
 	}
 
-	void Widget_Tools_And_Control::UpdateOptionsVisibility(Widget_Toolbar::ToolType tool)
+	void Widget_Tools_And_Control::UpdateOptionsVisibility(TimelineToolType tool)
 	{
 		// Hide all option panels first
 		this->_Draw_Options->Visible = false;
@@ -175,38 +155,38 @@ namespace MIDILightDrawer
 		// Show the appropriate panel based on the selected tool
 		switch (tool)
 		{
-		case Widget_Toolbar::ToolType::Draw:
+		case TimelineToolType::Draw:
 			this->_Draw_Options->Visible = true;
 			this->_Color_Picker->Enabled = true;
 			break;
-		case Widget_Toolbar::ToolType::Fade:
-			this->_Fade_Options->Visible = true;
-			this->_Color_Picker->Enabled = true;
-			break;
-		case Widget_Toolbar::ToolType::Selection:
-		case Widget_Toolbar::ToolType::Erase:
+		//case TimelineToolType::Fade:
+		//	this->_Fade_Options->Visible = true;
+		//	this->_Color_Picker->Enabled = true;
+		//	break;
+		case TimelineToolType::Pointer:
+		case TimelineToolType::Erase:
 			// No options to show for these tools
 			this->_Color_Picker->Enabled = false;
 			break;
 
-		case Widget_Toolbar::ToolType::Duration: 
+		case TimelineToolType::Duration:
 			this->_Length_Options->Visible = true;
 			this->_Color_Picker->Enabled = false;
 			break;
 
-		case Widget_Toolbar::ToolType::Change_Color:
+		case TimelineToolType::Color:
 			this->_Color_Options->Visible = true;
 			this->_Color_Picker->Enabled = true;
 			break;
 
-		case Widget_Toolbar::ToolType::Bucket_Fill:
-			this->_Bucket_Options->Visible = true;
-			this->_Color_Picker->Enabled = true;
-			break;
+		//case TimelineToolType::Bucket_Fill:
+		//	this->_Bucket_Options->Visible = true;
+		//	this->_Color_Picker->Enabled = true;
+		//	break;
 		}
 	}
 
-	void Widget_Tools_And_Control::OnToolbar_ModeChanged(System::Object^ sender, MIDILightDrawer::Widget_Toolbar::ToolType e)
+	void MIDILightDrawer::Widget_Tools_And_Control::Toolbar_OnToolChanged(System::Object^ sender, MIDILightDrawer::TimelineToolType e)
 	{
 		UpdateOptionsVisibility(e);
 	}

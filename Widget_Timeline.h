@@ -6,6 +6,7 @@ using namespace System::Windows::Forms;
 using namespace System::Drawing;
 using namespace System::Collections::Generic;
 
+#include "Theme_Manager.h"
 #include "Widget_Timeline_Common.h"
 #include "Timeline_Resource_Manager.h"
 #include "Timeline_Performance_Metrics.h"
@@ -114,22 +115,6 @@ namespace MIDILightDrawer
 	};
 
 	public ref class Widget_Timeline : public UserControl {
-	public:
-		// Theme colors struct
-		value struct ThemeColors {
-			Color Background;
-			Color HeaderBackground;
-			Color Text;
-			Color MeasureLine;
-			Color BeatLine;
-			Color SubdivisionLine;
-			Color TempoMarker;
-			Color KeySignature;
-			Color SelectionHighlight;
-			Color TrackBackground;
-			Color TrackBorder;
-		};
-
 	public:
 		Widget_Timeline();
 		~Widget_Timeline();
@@ -354,7 +339,6 @@ namespace MIDILightDrawer
 		void InitializeTablatureResources();
 		void UpdateBuffer();
 		void DrawTimeline(Graphics^ g);
-		void DrawTracks(Graphics^ g);
 		
 		void UpdateScrollPosition(Point mousePosition);
 		void UpdateScrollBounds();
@@ -377,8 +361,7 @@ namespace MIDILightDrawer
 		float GetSubdivisionLevel	();
 
 		// Track-related methods
-		void DrawTrackHeaders	(Graphics^ g, bool drawBorders);
-		void DrawTrackNames		(Graphics^ g);
+		void DrawTrackHeaders	(Graphics^ g);
 		void DrawTrackContent	(Graphics^ g);
 		void DrawTrackBackground(Graphics^ g);
 		void DrawTrackDividers	(Graphics^ g);

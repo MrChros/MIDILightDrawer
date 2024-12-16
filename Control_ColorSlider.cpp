@@ -15,6 +15,11 @@ namespace MIDILightDrawer
 		_IsDragging = false;
 	}
 
+	void Control_ColorSlider::ApplyTheme(Color backgroundColor)
+	{
+		this->BackColor = backgroundColor;
+	}
+
 	void Control_ColorSlider::OnPaint(PaintEventArgs^ e)
 	{
 		Graphics^ g = e->Graphics;

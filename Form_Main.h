@@ -59,6 +59,11 @@ namespace MIDILightDrawer
 
 			Dictionary<String^, Keys>^			_Active_Hotkeys;
 
+			// Internal Setup Methods
+			void InitializeBottomControls(Panel^ container);
+			void InitializeToolOptions();
+			void InitializeMainMenu();
+
 			// Menu Callbacks
 			void Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e);
 			void Menu_File_Open_Light_Click(System::Object^ sender, System::EventArgs^ e);
@@ -69,7 +74,7 @@ namespace MIDILightDrawer
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);
 
 			// Control and Widget Callbacks
-			void OnToolbar_ModeChanged(System::Object^ sender, Widget_Toolbar::ToolType e);
+			void Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e);
 			void OnMidiSettingsAccepted();
 			void DropDown_View_Marker_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void TrackBar_Zoom_OnValue_Changed(System::Object^ sender, Track_Bar_Value_Changed_Event_Args^ e);
@@ -89,5 +94,6 @@ namespace MIDILightDrawer
 			// Debug Members
 			void Button_1_Click(System::Object^ sender, System::EventArgs^ e);
 			void Button_2_Click(System::Object^ sender, System::EventArgs^ e);
+			
 	};
 }

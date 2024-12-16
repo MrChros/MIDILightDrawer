@@ -219,16 +219,16 @@ namespace MIDILightDrawer {
 			return;
 		}
 
-		for each(DataGridViewRow ^ Row in _Grid_Octaves->Rows) {
-			if (String::IsNullOrWhiteSpace(Row->Cells[0]->Value->ToString())) {
-				MessageBox::Show("Please provide names for all octave entries.",
-					"Validation Error",
-					MessageBoxButtons::OK,
-					MessageBoxIcon::Warning);
-				this->DialogResult = System::Windows::Forms::DialogResult::None;
-				return;
-			}
-		}
+		//for each(DataGridViewRow ^ Row in _Grid_Octaves->Rows) {
+		//	if (String::IsNullOrWhiteSpace(Row->Cells[0]->Value->ToString())) {
+		//		MessageBox::Show("Please provide names for all octave entries.",
+		//			"Validation Error",
+		//			MessageBoxButtons::OK,
+		//			MessageBoxIcon::Warning);
+		//		this->DialogResult = System::Windows::Forms::DialogResult::None;
+		//		return;
+		//	}
+		//}
 
 		Save_Settings();
 		Save_Octave_Entries();
@@ -446,23 +446,23 @@ namespace MIDILightDrawer {
 			}
 		}
 		// Octave validation
-		else if (e->ColumnIndex == _Column_Octave->Index) {
-			String^ newOctave = e->FormattedValue->ToString();
+		//else if (e->ColumnIndex == _Column_Octave->Index) {
+		//	String^ newOctave = e->FormattedValue->ToString();
 
-			// Check all other rows for duplicate octave
-			for (int i = 0; i < _Grid_Octaves->RowCount; i++) {
-				if (i != e->RowIndex &&
-					_Grid_Octaves->Rows[i]->Cells[_Column_Octave->Index]->Value->ToString() == newOctave) {
-					_Grid_Octaves->Rows[e->RowIndex]->ErrorText = "Octave already in use";
-					MessageBox::Show("This octave is already assigned to another track.",
-						"Duplicate Octave",
-						MessageBoxButtons::OK,
-						MessageBoxIcon::Warning);
-					e->Cancel = true;
-					return;
-				}
-			}
-			_Grid_Octaves->Rows[e->RowIndex]->ErrorText = "";
-		}
+		//	// Check all other rows for duplicate octave
+		//	for (int i = 0; i < _Grid_Octaves->RowCount; i++) {
+		//		if (i != e->RowIndex &&
+		//			_Grid_Octaves->Rows[i]->Cells[_Column_Octave->Index]->Value->ToString() == newOctave) {
+		//			_Grid_Octaves->Rows[e->RowIndex]->ErrorText = "Octave already in use";
+		//			MessageBox::Show("This octave is already assigned to another track.",
+		//				"Duplicate Octave",
+		//				MessageBoxButtons::OK,
+		//				MessageBoxIcon::Warning);
+		//			e->Cancel = true;
+		//			return;
+		//		}
+		//	}
+		//	_Grid_Octaves->Rows[e->RowIndex]->ErrorText = "";
+		//}
 	}
 }

@@ -6,6 +6,7 @@ using namespace System::Windows::Forms;
 using namespace System::Drawing::Drawing2D;
 using namespace System::Drawing::Imaging;
 
+#include "Theme_Manager.h"
 #include "Control_ColorSlider.h"
 
 namespace MIDILightDrawer

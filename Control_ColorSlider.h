@@ -16,6 +16,8 @@ namespace MIDILightDrawer
 	public:
 		Control_ColorSlider(SliderType type);
 
+		void ApplyTheme(Color backgroundColor);
+
 		property int Value {
 			int get();
 			void set(int value);

@@ -12,8 +12,6 @@
     "Select Color 9": "D9",
     "Draw/Length Quantization Down": "",
     "Draw/Length Quantization Up": "R",
-    "View Quantization Down": "W",
-    "View Quantization Up": "Q",
     "Bucket Tool": "B",
     "Color Tool": "C",
     "Draw Tool": "D",
@@ -30,6 +28,7 @@
   "OctaveEntries": [
     {"Name": "Guitar", "Octave": 0},
     {"Name": "Bass", "Octave": 1},
+    {"Name": "Bass Drive", "Octave": 1},
     {"Name": "Drums", "Octave": 2}
   ]
   "ColorPresets": [

@@ -124,13 +124,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ColorTable_DarkMode.h" />
     <ClInclude Include="Control_ColorPicker.h" />
     <ClInclude Include="Control_ColorPreset.h" />
     <ClInclude Include="Control_ColorSlider.h" />
     <ClInclude Include="Control_DropDown.h" />
     <ClInclude Include="Control_ScrollBar.h" />
     <ClInclude Include="Control_Trackbar_Zoom.h" />
+    <ClInclude Include="Custom_Color_Table.h" />
     <ClInclude Include="Form_Settings_Hotkeys.h">
       <FileType>CppForm</FileType>
     </ClInclude>
@@ -149,6 +149,7 @@
     <ClInclude Include="gp_parser.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="Theme_Manager.h" />
     <ClInclude Include="Timeline_Enhanced_Visibility_Tracker.h" />
     <ClInclude Include="Timeline_Performance_Metrics.h" />
     <ClInclude Include="Timeline_Resource_Manager.h" />
@@ -176,7 +177,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp" />
-    <ClCompile Include="ColorTable_DarkMode.cpp" />
     <ClCompile Include="Control_ColorPicker.cpp" />
     <ClCompile Include="Control_ColorPreset.cpp" />
     <ClCompile Include="Control_ColorSlider.cpp" />
@@ -200,6 +200,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Theme_Manager.cpp" />
     <ClCompile Include="Timeline_Enhanced_Visibility_Tracker.cpp" />
     <ClCompile Include="Timeline_Performance_Metrics.cpp" />
     <ClCompile Include="Timeline_Resource_Manager.cpp" />

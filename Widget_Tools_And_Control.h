@@ -49,7 +49,7 @@ namespace MIDILightDrawer {
 		Widget_Color_Options^		_Color_Options;
 		Widget_Bucket_Options^		_Bucket_Options;
 
-		void UpdateOptionsVisibility(Widget_Toolbar::ToolType tool);
-		void OnToolbar_ModeChanged(System::Object^ sender, MIDILightDrawer::Widget_Toolbar::ToolType e);
+		void UpdateOptionsVisibility(TimelineToolType tool);
+		void Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e);
 	};
 }

@@ -33,11 +33,13 @@ namespace MIDILightDrawer
 		// Initialize Saturation Slider
 		_Saturation_Slider = gcnew Control_ColorSlider(SliderType::Saturation);
 		_Saturation_Slider->Height = SLIDER_HEIGHT;
+		_Saturation_Slider->ApplyTheme(Theme_Manager::Instance()->BackgroundAlt);
 		_Saturation_Slider->ValueChanged += gcnew EventHandler(this, &Control_ColorPicker::OnSliderValueChanged);
 
 		// Initialize Value Slider
 		_Value_Slider = gcnew Control_ColorSlider(SliderType::Value);
 		_Value_Slider->Height = SLIDER_HEIGHT;
+		_Value_Slider->ApplyTheme(Theme_Manager::Instance()->BackgroundAlt);
 		_Value_Slider->ValueChanged += gcnew EventHandler(this, &Control_ColorPicker::OnSliderValueChanged);
 
 		this->Controls->Add(_Saturation_Slider);
@@ -350,7 +352,7 @@ namespace MIDILightDrawer
 			delete fillBrush;
 
 			// Draw borders for better visibility
-			Color borderColor = this->Enabled ? Color::White : Color::LightGray;
+			Color borderColor = this->Enabled ? Color::Black : Color::LightGray;
 			Pen^ whitePen = gcnew Pen(borderColor, 2);
 			e->Graphics->DrawEllipse(whitePen, selectorRect);
 			delete whitePen;

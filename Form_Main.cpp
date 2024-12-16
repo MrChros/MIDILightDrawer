@@ -1,0 +1,677 @@
+#include "pch.h"
+#include "Form_Main.h"
+#include "ColorTable_DarkMode.h"
+
+
+using namespace System::Windows::Forms;
+using namespace System::Drawing;
+using namespace System::Runtime::InteropServices;
+
+namespace MIDILightDrawer
+{
+
+	Form_Main::Form_Main(void)
+	{
+		this->Text = "MIDI Light Drawer";
+
+
+		this->_GP_Tab = NULL;
+		this->Size = System::Drawing::Size(1000, 800);
+		this->MinimumSize = System::Drawing::Size(850, 600);
+
+
+		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
+
+		Settings::Initialize("settings.json");
+
+		TableLayoutPanel^ Table_Layout_Main = gcnew TableLayoutPanel();
+		Table_Layout_Main->Dock = DockStyle::Fill;
+
+		Table_Layout_Main->RowCount = 3;
+		Table_Layout_Main->ColumnCount = 4;
+
+		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 300));
+		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 50.0f));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 270));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
+
+
+		//////////////
+		// Tab Info //
+		//////////////
+		this->_Tab_Info = gcnew Widget_Tab_Info();
+		//Table_Layout_Main->Controls->Add(this->_Tab_Info, 2, 0);
+
+
+		////////////////////////
+		// Tools and Controls //
+		////////////////////////
+		this->_Tools_And_Control = gcnew Widget_Tools_And_Control();
+		this->_Tools_And_Control->Dock = DockStyle::Fill;
+		this->_Tools_And_Control->Margin = System::Windows::Forms::Padding(5);
+		Table_Layout_Main->Controls->Add(this->_Tools_And_Control, 0, 0);
+		Table_Layout_Main->SetColumnSpan(this->_Tools_And_Control, Table_Layout_Main->ColumnCount);
+
+		this->_Toolbar = this->_Tools_And_Control->Get_Widget_Toolbar();
+		this->_Toolbar->ToolChanged += gcnew System::EventHandler<Widget_Toolbar::ToolType>(this, &Form_Main::OnToolbar_ModeChanged);
+
+		this->_Draw_Options = this->_Tools_And_Control->Get_Widget_Draw_Options();
+		this->_Draw_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Draw_Options_OnQuantizationChanged);
+		this->_Draw_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Draw_Options_OnColorChanged);
+
+		this->_Fade_Options = this->_Tools_And_Control->Get_Widget_Fade_Options();
+
+		this->_Length_Options = this->_Tools_And_Control->Get_Widget_Length_Options();
+		this->_Length_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Length_Options_OnQuantizationChanged);
+
+		this->_Color_Options = this->_Tools_And_Control->Get_Widget_Color_Options();
+		this->_Color_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Color_Options_OnColorChanged);
+
+		this->_Bucket_Options = this->_Tools_And_Control->Get_Widget_Bucket_Options();
+		this->_Bucket_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Bucket_Options_OnColorChanged);
+
+
+		//////////////////////
+		// Widget Timelinee //
+		//////////////////////
+		this->_Timeline = gcnew Widget_Timeline();
+		this->_Timeline->Dock = System::Windows::Forms::DockStyle::Fill;
+		this->_Timeline->Name = L"timeline";
+
+		Table_Layout_Main->Controls->Add(this->_Timeline, 0, 1);
+		Table_Layout_Main->SetColumnSpan(this->_Timeline, Table_Layout_Main->ColumnCount);
+
+
+		/////////////////////
+		// DropDown Marker //
+		/////////////////////
+		this->_DropDown_Marker = gcnew Control_DropDown();
+		this->_DropDown_Marker->Dock = DockStyle::Fill;
+		this->_DropDown_Marker->Set_Tile_Layout(264, 25, 1);
+		this->_DropDown_Marker->Title_Text = "Jump to Marker";
+		this->_DropDown_Marker->Set_Title_Color(Color::DarkGray);
+		this->_DropDown_Marker->Set_Open_Direction(true);
+		this->_DropDown_Marker->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
+		this->_DropDown_Marker->Item_Selected += gcnew MIDILightDrawer::Control_DropDown_Item_Selected_Event_Handler(this, &Form_Main::DropDown_View_Marker_OnItem_Selected);
+
+		Table_Layout_Main->Controls->Add(this->_DropDown_Marker, 2, 2);
+
+
+		////////////////////
+		// Track Bar Zoom //
+		////////////////////
+		array<double>^ Zoom_Values = { 0.1, 0.25, 0.5, 0.75, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+		_TrackBar_Zoom = gcnew Control_TrackBar_Zoom();
+		_TrackBar_Zoom->Slider_Color = Color::DarkSlateGray;
+		_TrackBar_Zoom->Set_Values(Zoom_Values);
+		_TrackBar_Zoom->Value_Changed += gcnew System::EventHandler<MIDILightDrawer::Track_Bar_Value_Changed_Event_Args^>(this, &Form_Main::TrackBar_Zoom_OnValue_Changed);
+		_TrackBar_Zoom->Value = 1;
+		Table_Layout_Main->Controls->Add(this->_TrackBar_Zoom, 3, 2);
+
+
+		//////////////////
+		// Test Buttons //
+		//////////////////
+		Button^ Button_1 = gcnew Button();
+		Button_1->Dock = DockStyle::Fill;
+		Button_1->Text = "Button 1";
+		Button_1->Click += gcnew System::EventHandler(this, &MIDILightDrawer::Form_Main::Button_1_Click);
+		Table_Layout_Main->Controls->Add(Button_1, 0, 2);
+
+		Button^ Button_2 = gcnew Button();
+		Button_2->Dock = DockStyle::Fill;
+		Button_2->Text = "Button 2";
+		Button_2->Click += gcnew System::EventHandler(this, &MIDILightDrawer::Form_Main::Button_2_Click);
+		Table_Layout_Main->Controls->Add(Button_2, 1, 2);
+
+		this->Controls->Add(Table_Layout_Main);
+
+
+		///////////////
+		// File Menu //
+		///////////////
+		this->_Menu_Strip = gcnew MenuStrip();
+		//this->_Menu_Strip->Renderer = gcnew ToolStripProfessionalRenderer(gcnew ColorTable_DarkMode());
+		
+		ToolStripMenuItem^ Menu_File = gcnew ToolStripMenuItem("File");
+
+		ToolStripMenuItem^ Menu_File_Open_GP = gcnew ToolStripMenuItem("Open Guitar Pro 5 File");
+		Menu_File_Open_GP->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"GP5")));
+		Menu_File_Open_GP->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Open_GP_Click);
+
+		ToolStripMenuItem^ Menu_File_Open_Light = gcnew ToolStripMenuItem("Open Light Information File");
+		Menu_File_Open_Light->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Light_Open")));
+		Menu_File_Open_Light->Click += gcnew System::EventHandler(this, &MIDILightDrawer::Form_Main::Menu_File_Open_Light_Click);
+
+		ToolStripMenuItem^ Menu_File_Save_Light = gcnew ToolStripMenuItem("Save Light Information to File");
+		Menu_File_Save_Light->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Save")));
+		Menu_File_Save_Light->Click += gcnew System::EventHandler(this, &MIDILightDrawer::Form_Main::Menu_File_Save_Light_Click);
+
+		ToolStripMenuItem^ Menu_File_Export_MIDI = gcnew ToolStripMenuItem("Export Light to MIDI File");
+		Menu_File_Export_MIDI->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Midi")));
+		Menu_File_Export_MIDI->Click += gcnew System::EventHandler(this, &MIDILightDrawer::Form_Main::Menu_File_Export_MIDI_Click);
+
+		ToolStripMenuItem^ Menu_File_Exit = gcnew ToolStripMenuItem("Exit");
+		//Menu_File_Exit->Image = Icons::exit;
+		Menu_File_Exit->Click += gcnew System::EventHandler(this, &MIDILightDrawer::Form_Main::Menu_File_Exit_Click);
+
+
+
+		Menu_File->DropDownItems->Add(Menu_File_Open_GP);
+		Menu_File->DropDownItems->Add(Menu_File_Open_Light);
+		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
+		Menu_File->DropDownItems->Add(Menu_File_Save_Light);
+		Menu_File->DropDownItems->Add(Menu_File_Export_MIDI);
+		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
+		Menu_File->DropDownItems->Add(Menu_File_Exit);
+
+		// Options Menu
+		ToolStripMenuItem^ Menu_Settings = gcnew ToolStripMenuItem("Settings");
+
+		ToolStripMenuItem^ Menu_Settings_Hotkeys = gcnew ToolStripMenuItem("Hotkeys");
+		Menu_Settings_Hotkeys->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Hotkey")));
+		Menu_Settings_Hotkeys->Click += gcnew System::EventHandler(this, &MIDILightDrawer::Form_Main::Menu_Settings_Hotkeys_Click);
+
+		ToolStripMenuItem^ Menu_Settings_Midi = gcnew ToolStripMenuItem("MIDI");
+		Menu_Settings_Midi->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Midi_Settings")));
+		Menu_Settings_Midi->Click += gcnew System::EventHandler(this, &MIDILightDrawer::Form_Main::Menu_Settings_Midi_Click);
+
+		Menu_Settings->DropDownItems->Add(Menu_Settings_Hotkeys);
+		Menu_Settings->DropDownItems->Add(gcnew ToolStripSeparator());
+		Menu_Settings->DropDownItems->Add(Menu_Settings_Midi);
+
+		// Add menus to strip
+		this->_Menu_Strip->Items->Add(Menu_File);
+		this->_Menu_Strip->Items->Add(Menu_Settings);
+
+		// Add menu strip to form
+		this->Controls->Add(this->_Menu_Strip);
+
+		Initialize_Hotkeys();
+
+		OnMidiSettingsAccepted(); 
+	}
+
+	Form_Main::~Form_Main()
+	{
+
+	}
+
+	void Form_Main::Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e)
+	{
+		OpenFileDialog^ Open_Dialog_File = gcnew OpenFileDialog();
+		Open_Dialog_File->InitialDirectory = ".";
+		Open_Dialog_File->Filter = "Guitar Pro 5 Files (*.gp5)|*.gp5|All Files (*.*)|*.*";
+		Open_Dialog_File->RestoreDirectory = true;
+
+		if (Open_Dialog_File->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+		{
+			System::String^ GuiterPro5_Filename = Open_Dialog_File->FileName;
+
+			IntPtr ptrToNativeString = Marshal::StringToHGlobalAnsi(GuiterPro5_Filename);
+			char* nativeString = static_cast<char*>(ptrToNativeString.ToPointer());
+
+			if (this->_GP_Tab != NULL) {
+				delete(this->_GP_Tab);
+				this->_GP_Tab = NULL;
+			}
+
+			this->_GP_Tab = new gp_parser::Parser(nativeString);
+
+			this->_Tab_Info->Update_Info(gcnew String(this->_GP_Tab->getTabFile().title.data()), (unsigned int)this->_GP_Tab->getTabFile().measureHeaders.size(), this->_GP_Tab->getTabFile().trackCount);
+
+			this->_Timeline->Clear();
+			OnMidiSettingsAccepted();
+
+			//delete[] nativeString;
+		}
+	}
+
+	void Form_Main::Menu_File_Open_Light_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		OpenFileDialog^ Open_Dialog_File = gcnew OpenFileDialog();
+		Open_Dialog_File->InitialDirectory = ".";
+		Open_Dialog_File->Filter = "Light Information Files (*.light)|*.light|All Files (*.*)|*.*";
+		Open_Dialog_File->RestoreDirectory = true;
+
+		if (Open_Dialog_File->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+		{
+			System::String^ Filename = Open_Dialog_File->FileName;
+
+			String^ Error_Message = this->_Timeline->LoadBarEventsFromFile(Filename);
+
+			if (Error_Message->Length > 0) {
+				MessageBox::Show(this, "Error:\n" + Error_Message,
+					"Failed to load light information file",
+					MessageBoxButtons::OK,
+					MessageBoxIcon::Error);
+			}
+		}
+	}
+
+	void Form_Main::Menu_File_Save_Light_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		String^ Default_Filename = "untitled.light";
+		if (this->_GP_Tab != NULL) {
+			String^ Song_Title = gcnew String(this->_GP_Tab->getTabFile().title.data());
+			if (Song_Title->Length > 0) {
+				Default_Filename = Song_Title + ".light";
+			}
+		}
+
+		SaveFileDialog^ Save_Dialog_File = gcnew SaveFileDialog();
+		Save_Dialog_File->InitialDirectory = ".";
+		Save_Dialog_File->Filter = "Light Information Files (*.light)|*.light|All Files (*.*)|*.*";
+		Save_Dialog_File->RestoreDirectory = true;
+		Save_Dialog_File->FileName = Default_Filename;
+
+		if (Save_Dialog_File->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+		{
+			System::String^ Filename = Save_Dialog_File->FileName;
+
+			String^ Error_Message = this->_Timeline->SaveBarEventsToFile(Filename);
+
+			if (Error_Message->Length > 0) {
+				MessageBox::Show(this, "Error:\n" + Error_Message,
+					"Failed to save light information to file",
+					MessageBoxButtons::OK,
+					MessageBoxIcon::Error);
+			}
+		}
+	}
+
+	void Form_Main::Menu_File_Export_MIDI_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		const int OCTAVE_OFFSET = 2;
+		const int NOTES_PER_OCTAVE = 12;
+
+		String^ Default_Filename = "untitled.mid";
+		if (this->_GP_Tab != NULL) {
+			String^ Song_Title = gcnew String(this->_GP_Tab->getTabFile().title.data());
+			if (Song_Title->Length > 0) {
+				Default_Filename = Song_Title + ".mid";
+			}
+		}
+
+		SaveFileDialog^ Save_Dialog_File = gcnew SaveFileDialog();
+		Save_Dialog_File->InitialDirectory = ".";
+		Save_Dialog_File->Filter = "MIDI Files (*.mid)|*.mid|All Files (*.*)|*.*";
+		Save_Dialog_File->RestoreDirectory = true;
+		Save_Dialog_File->FileName = Default_Filename;
+
+		if (Save_Dialog_File->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+		{
+			try {
+				IntPtr ptrToNativeString = Marshal::StringToHGlobalAnsi(Save_Dialog_File->FileName);
+				char* nativeString = static_cast<char*>(ptrToNativeString.ToPointer());
+
+				std::string Filename(nativeString);
+
+				Settings^ Settings = Settings::Get_Instance();
+				List<Settings::Octave_Entry^>^ Octave_Entries = Settings->Octave_Entries;
+
+				MIDI_Writer Writer(960);  // Use 960 ticks per quarter note
+
+				if (this->_GP_Tab == NULL) {
+					throw gcnew Exception("No Guitar Pro 5 file opened");
+				}
+
+				// First, add all measures from the Guitar Pro file
+				bool has_measures = false;
+				for (auto i = 0; i < this->_GP_Tab->getTabFile().measureHeaders.size(); i++)
+				{
+					has_measures = true;
+					gp_parser::MeasureHeader* MH = &(this->_GP_Tab->getTabFile().measureHeaders.at(i));
+					Writer.Add_Measure(MH->timeSignature.numerator,
+						MH->timeSignature.denominator.value,
+						MH->tempo.value);
+				}
+
+				// Then add all the notes
+				int Count_RGB_Bars = 0;
+
+				for each(Track ^ T in this->_Timeline->Tracks)
+				{
+					String^ Track_Name	= T->Name;
+					int Octave			= T->Octave;
+
+					int Octave_Note_Offset = (Octave + OCTAVE_OFFSET) * NOTES_PER_OCTAVE;
+
+					for each(BarEvent ^ B in T->Events)
+					{
+						int Tick_Start	= B->StartTick;
+						int Tick_Length = B->Length;
+						Color Bar_Color = B->Color;
+
+						uint8_t Value_Red	= (Bar_Color.R >> 1);
+						uint8_t Value_Green = (Bar_Color.G >> 1);
+						uint8_t Value_Blue	= (Bar_Color.B >> 1);
+
+						if (Value_Red > 0) {
+							Writer.Add_Note(Tick_Start, Tick_Length, 0, Octave_Note_Offset + Settings->MIDI_Note_Red, Value_Red);
+						}
+
+						if (Value_Green > 0) {
+							Writer.Add_Note(Tick_Start, Tick_Length, 0, Octave_Note_Offset + Settings->MIDI_Note_Green, Value_Green);
+						}
+
+						if (Value_Blue > 0) {
+							Writer.Add_Note(Tick_Start, Tick_Length, 0, Octave_Note_Offset + Settings->MIDI_Note_Blue, Value_Blue);
+						}
+					}
+				}
+				
+				if (!Writer.Save_To_File(Filename)) {
+					throw gcnew Exception("Failed to write MIDI file");
+				}
+
+				// Show success message
+				MessageBox::Show(this, "MIDI file has been successfully exported.",
+					"Export Successful",
+					MessageBoxButtons::OK,
+					MessageBoxIcon::Information);
+			}
+			catch (Exception^ ex) {
+				MessageBox::Show(this, "Error:\n" + ex->Message,
+					"Failed to export MIDI file",
+					MessageBoxButtons::OK,
+					MessageBoxIcon::Error);
+			}
+		}
+	}
+
+	void Form_Main::Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		this->Close();
+	}
+
+	void Form_Main::Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		Form_Settings_Hotkeys^ hotkeyForm = gcnew Form_Settings_Hotkeys();
+		hotkeyForm->Owner = this;
+		hotkeyForm->ShowDialog();
+	}
+
+	void Form_Main::Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		Form_Settings_MIDI^ midiForm = gcnew Form_Settings_MIDI();
+		midiForm->On_Settings_Accepted += gcnew On_Settings_Accepted_Handler(this, &Form_Main::OnMidiSettingsAccepted);
+		midiForm->ShowDialog();
+	}
+
+	void Form_Main::OnToolbar_ModeChanged(System::Object^ sender, Widget_Toolbar::ToolType e)
+	{
+		DrawTool^		Draw_Tool		= this->_Timeline->GetDrawTool();
+		DurationTool^	Duration_Tool	= this->_Timeline->GetDurationTool();
+		ColorTool^		Color_Tool		= this->_Timeline->GetColorTool();
+		
+		switch (e)
+		{
+		case Widget_Toolbar::ToolType::Selection:
+			this->_Timeline->SetCurrentTool(TimelineToolType::Pointer);
+			break;
+
+		case Widget_Toolbar::ToolType::Draw:
+			this->_Timeline->SetCurrentTool(TimelineToolType::Draw);
+
+			Draw_Tool->DrawTickLength = _Draw_Options->Value;
+			Draw_Tool->DrawColor = _Draw_Options->SelectedColor;
+
+			break;
+
+		case Widget_Toolbar::ToolType::Erase:
+			this->_Timeline->SetCurrentTool(TimelineToolType::Erase);
+			break;
+
+		case Widget_Toolbar::ToolType::Duration:
+			this->_Timeline->SetCurrentTool(TimelineToolType::Duration);
+
+			Duration_Tool->ChangeTickLength = this->_Length_Options->Value;
+			break;
+
+		case Widget_Toolbar::ToolType::Change_Color:
+			this->_Timeline->SetCurrentTool(TimelineToolType::Color);
+
+			Color_Tool->CurrentColor = this->_Color_Options->SelectedColor;
+			break;
+		}
+	}
+
+	void Form_Main::OnMidiSettingsAccepted()
+	{
+		Settings^ Settings = Settings::Get_Instance();
+
+		if (Settings->Octave_Entries->Count != this->_Timeline->Tracks->Count)
+		{
+			this->_DropDown_Marker->Clear();
+			this->_Timeline->Clear();
+
+			List<String^>^ First_Marker_List = gcnew List<String^>();
+			List<String^>^ Second_Marker_List = gcnew List<String^>();
+			List<int>^ Values_List = gcnew List<int>();
+
+			for (int i = 0;i < Settings->Octave_Entries->Count;i++)
+			{
+				this->_Timeline->AddTrack(Settings->Octave_Entries[i]->Name, Settings->Octave_Entries[i]->Octave_Number);
+			}
+
+			if (this->_GP_Tab != NULL)
+			{
+				for (auto i = 0;i < this->_GP_Tab->getTabFile().measureHeaders.size();i++)
+				{
+					gp_parser::MeasureHeader* MH = &(this->_GP_Tab->getTabFile().measureHeaders.at(i));
+
+
+					String^ Marker_Text = gcnew String(MH->marker.title.data());
+
+					this->_Timeline->AddMeasure(MH->timeSignature.numerator,
+												MH->timeSignature.denominator.value,
+												Marker_Text);
+
+					if (Marker_Text->Length > 0) {
+						String^ markerTitle = Marker_Text;
+						First_Marker_List->Add(markerTitle);
+						Second_Marker_List->Add(""); 
+						Values_List->Add(MH->number);
+					}
+
+					for (auto t = 0; t < this->_GP_Tab->getTabFile().tracks.size();t++)
+					{
+						String^ Track_Name = gcnew String(_GP_Tab->getTabFile().tracks.at(t).name.data());
+						Track^ Track_Target = nullptr;
+
+						for each(Track ^ T in this->_Timeline->Tracks) {
+							if (T->Name == Track_Name) {
+								Track_Target = T;
+								break;
+							}
+						}
+						if (Track_Target == nullptr) {
+							continue;
+						}
+
+						gp_parser::Track* Track_Source = &(this->_GP_Tab->getTabFile().tracks.at(t));
+
+						for (auto m = 0; m < Track_Source->measures.size();m++)
+						{
+							gp_parser::Measure* M = &(Track_Source->measures.at(m));
+
+							for (auto b = 0; b < M->beats.size();b++)
+							{
+								gp_parser::Beat* B = &(M->beats.at(b));
+								int Duration	= B->voices.at(0).duration;
+								bool Empty		= B->voices.at(0).empty;
+
+								if (Empty == true) {
+									continue;
+								}
+
+								Beat^ New_Beat =  this->_Timeline->AddBeat(Track_Target, (int)m, B->start, Duration);
+
+								for (auto n = 0; n < B->voices.at(0).notes.size();n++)
+								{
+									this->_Timeline->AddNote(New_Beat, B->voices.at(0).notes.at(n).string, B->voices.at(0).notes.at(n).value);
+								}
+							}
+						}
+					}
+
+				}
+
+				array<String^>^ Lines_First_Marker = First_Marker_List->ToArray();
+				array<String^>^ Lines_Second_Marker = Second_Marker_List->ToArray();
+				array<int>^ Values_Marker = Values_List->ToArray();
+
+				this->_DropDown_Marker->Set_Items(Lines_First_Marker, Lines_Second_Marker, Values_Marker);
+			}
+		}
+		else
+		{
+			for (int i = 0;i < Settings->Octave_Entries->Count;i++)
+			{
+				this->_Timeline->Tracks[i]->Name = Settings->Octave_Entries[i]->Name;
+			}
+		}
+	}
+
+	void Form_Main::DropDown_View_Marker_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
+	{
+		this->_Timeline->ScrollToMeasure(e->Value);
+	}
+
+	void Form_Main::TrackBar_Zoom_OnValue_Changed(System::Object^ sender, Track_Bar_Value_Changed_Event_Args^ e)
+	{
+		this->_Timeline->SetZoom(e->Value);
+	}
+
+	void Form_Main::Initialize_Hotkeys()
+	{
+		_Active_Hotkeys = gcnew Dictionary<String^, System::Windows::Forms::Keys>();
+		Update_Hotkeys();
+		Register_Hotkey_Handlers();
+	}
+
+	void Form_Main::Update_Hotkeys()
+	{
+		_Active_Hotkeys->Clear();
+		auto bindings = Hotkey_Manager::Instance->Get_All_Bindings();
+
+		for each (KeyValuePair<String^, String^> binding in bindings)
+		{
+			array<String^>^ parts = binding.Value->Split('+');
+			Keys key_code = Keys::None;
+
+			String^ main_key = parts[parts->Length - 1]->Trim();
+			if (main_key == "") {
+				continue;
+			}
+			key_code = safe_cast<Keys>(Enum::Parse(Keys::typeid, main_key));
+
+			if (binding.Value->Contains("Ctrl"))
+				key_code = key_code | Keys::Control;
+			if (binding.Value->Contains("Shift"))
+				key_code = key_code | Keys::Shift;
+			if (binding.Value->Contains("Alt"))
+				key_code = key_code | Keys::Alt;
+
+			_Active_Hotkeys->Add(binding.Key, key_code);
+		}
+	}
+
+	bool Form_Main::Process_Hotkey(System::Windows::Forms::Keys key_code)
+	{
+		// Get current key with modifiers
+		Keys currentKey = key_code;
+		if (ModifierKeys.HasFlag(Keys::Control)) {
+			currentKey = currentKey | Keys::Control;
+		}
+		if (ModifierKeys.HasFlag(Keys::Shift)) {
+			currentKey = currentKey | Keys::Shift;
+		}
+		if (ModifierKeys.HasFlag(Keys::Alt)) {
+			currentKey = currentKey | Keys::Alt;
+		}
+
+		for each (KeyValuePair<String^, System::Windows::Forms::Keys> hotkey in _Active_Hotkeys)
+		{
+			if (currentKey == hotkey.Value)
+			{
+					 if (hotkey.Key == "Select Tool") { this->_Toolbar->Select_Button(0); return true; }
+				else if (hotkey.Key == "Draw Tool"	) { this->_Toolbar->Select_Button(1); return true; }
+				else if (hotkey.Key == "Erase Tool"	) { this->_Toolbar->Select_Button(2); return true; }
+				else if (hotkey.Key == "Fade Tool"	) { this->_Toolbar->Select_Button(3); return true; }
+				else if (hotkey.Key == "Color Tool"	) { this->_Toolbar->Select_Button(4); return true; }
+				else if (hotkey.Key == "Bucket Tool") { this->_Toolbar->Select_Button(5); return true; }
+				else if (hotkey.Key->StartsWith("Select Color "))
+				{
+					String^ color_num = hotkey.Key->Substring(13);
+					int color_index = Int32::Parse(color_num);
+					this->_Tools_And_Control->Select_Color_From_Preset(color_index-1);
+					return true;
+				}
+				else if (hotkey.Key == "Draw/Length Quantization Up"	) { this->_Tools_And_Control->Quantization_Up();			return true; }
+				else if (hotkey.Key == "Draw/Length Quantization Down"	) { this->_Tools_And_Control->Quantization_Down();			return true; }
+				else if (hotkey.Key == "Zoom In"						) { this->_TrackBar_Zoom->Move_To_Next_Value();				return true; }
+				else if (hotkey.Key == "Zoom Out"						) { this->_TrackBar_Zoom->Move_To_Previous_Value();			return true; }
+				else if (hotkey.Key == "Reset Zoom"						) { this->_TrackBar_Zoom->Value = 1;						return true; }
+			}
+		}
+		return false;
+	}
+
+	void Form_Main::Register_Hotkey_Handlers()
+	{
+		this->KeyDown += gcnew System::Windows::Forms::KeyEventHandler(this, &Form_Main::Form_KeyDown);
+		this->KeyPreview = true;
+	}
+
+	void Form_Main::Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e)
+	{
+		if (Process_Hotkey(e->KeyCode))
+		{
+			e->Handled = true;
+		}
+	}
+
+	void Form_Main::Draw_Options_OnQuantizationChanged(int value)
+	{
+		DrawTool^ Draw_Tool = this->_Timeline->GetDrawTool();
+		Draw_Tool->DrawTickLength = value;
+	}
+
+	void Form_Main::Draw_Options_OnColorChanged(System::Drawing::Color color)
+	{
+		DrawTool^ Draw_Tool = this->_Timeline->GetDrawTool();
+		Draw_Tool->DrawColor = color;
+	}
+
+	void Form_Main::Length_Options_OnQuantizationChanged(int value)
+	{
+		DurationTool^ Duration_Tool = this->_Timeline->GetDurationTool();
+		Duration_Tool->ChangeTickLength = value;
+	}
+
+	void Form_Main::Color_Options_OnColorChanged(System::Drawing::Color color)
+	{
+		ColorTool^ Color_Tool = this->_Timeline->GetColorTool();
+		Color_Tool->CurrentColor = color;
+	}
+
+	void Form_Main::Bucket_Options_OnColorChanged(System::Drawing::Color color)
+	{
+
+	}
+
+	void Form_Main::Button_1_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		Console::WriteLine("Button 1 Clicked");
+	}
+
+	void Form_Main::Button_2_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		Console::WriteLine("Button 2 Clicked");
+	}
+}

@@ -1,0 +1,47 @@
+{
+  "HotkeyBindings": {
+    "Select Color 1": "D1",
+    "Select Color 10": "D0",
+    "Select Color 2": "D2",
+    "Select Color 3": "D3",
+    "Select Color 4": "D4",
+    "Select Color 5": "D5",
+    "Select Color 6": "D6",
+    "Select Color 7": "D7",
+    "Select Color 8": "D8",
+    "Select Color 9": "D9",
+    "Draw/Length Quantization Down": "",
+    "Draw/Length Quantization Up": "R",
+    "View Quantization Down": "W",
+    "View Quantization Up": "Q",
+    "Bucket Tool": "B",
+    "Color Tool": "C",
+    "Draw Tool": "D",
+    "Erase Tool": "E",
+    "Fade Tool": "F",
+    "Select Tool": "S",
+    "Reset Zoom": "",
+    "Zoom In": "Add",
+    "Zoom Out": "Subtract"
+  },
+  "MidiNoteRed": 0,
+  "MidiNoteGreen": 2,
+  "MidiNoteBlue": 4
+  "OctaveEntries": [
+    {"Name": "Guitar", "Octave": 0},
+    {"Name": "Bass", "Octave": 1},
+    {"Name": "Drums", "Octave": 2}
+  ]
+  "ColorPresets": [
+    "255,0,0",
+    "255,128,64",
+    "255,255,128",
+    "0,255,136",
+    "0,255,137",
+    "0,255,136",
+    "255,255,255",
+    "239,255,5",
+    "255,255,255",
+    "255,0,0"
+  ]
+}

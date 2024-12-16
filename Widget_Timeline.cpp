@@ -2730,22 +2730,12 @@ namespace MIDILightDrawer
 
 	int Widget_Timeline::GetTrackHeight(Track^ track)
 	{
-		// Get base track height from dictionary or use default
-		int baseHeight;
-		if (!trackHeights->TryGetValue(track, baseHeight)) {
-			baseHeight = DEFAULT_TRACK_HEIGHT;
+		// Get track height from parent's dictionary or use default
+		int height;
+		if (trackHeights->TryGetValue(track, height)) {
+			return height;
 		}
-
-		// If tablature is shown, add the fixed tablature height
-		if (track->ShowTablature) {
-			// Calculate tablature section height:
-			// - 5 gaps between 6 strings at FIXED_STRING_SPACING
-			// - Additional padding top and bottom
-			const int TAB_SECTION_HEIGHT = (int)(FIXED_STRING_SPACING * 5 + TRACK_PADDING * 2);
-			return baseHeight + TAB_SECTION_HEIGHT;
-		}
-
-		return baseHeight;
+		return Widget_Timeline::DEFAULT_TRACK_HEIGHT;
 	}
 
 	int Widget_Timeline::GetTotalTracksHeight() {

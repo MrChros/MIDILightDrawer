@@ -3,7 +3,8 @@
 using namespace System;
 using namespace System::Collections::Generic;
 
-namespace MIDILightDrawer {
+namespace MIDILightDrawer
+{
 	public ref class Hotkey_Definition {
 	public:
 		String^ Action;

@@ -9,6 +9,8 @@ namespace MIDILightDrawer {
 		Initialize_Octaves_Section();
 		Load_Current_Settings();
 		Load_Octave_Entries();
+
+		Theme_Manager::Get_Instance()->ApplyTheme(this);
 	}
 
 	void Form_Settings_MIDI::Initialize_Note_Names()
@@ -28,8 +30,7 @@ namespace MIDILightDrawer {
 		this->StartPosition = System::Windows::Forms::FormStartPosition::CenterParent;
 		this->Size = System::Drawing::Size(400, 600);
 
-		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons",
-			System::Reflection::Assembly::GetExecutingAssembly());
+		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
 
 		_Main_Layout = gcnew System::Windows::Forms::TableLayoutPanel();
 		_Main_Layout->Dock = System::Windows::Forms::DockStyle::Fill;
@@ -42,10 +43,12 @@ namespace MIDILightDrawer {
 		_Main_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 50));
 
 		_Group_Box_Notes = gcnew System::Windows::Forms::GroupBox();
-		_Group_Box_Notes->Text = "Color MIDI Notes";
-		_Group_Box_Notes->Dock = System::Windows::Forms::DockStyle::Fill;
-		_Group_Box_Notes->Padding = System::Windows::Forms::Padding(10);
-		_Group_Box_Notes->Height = 150;
+		_Group_Box_Notes->Text		= "Color MIDI Notes";
+		_Group_Box_Notes->Dock		= System::Windows::Forms::DockStyle::Fill;
+		_Group_Box_Notes->Height	= 150;
+		_Group_Box_Notes->Padding	= System::Windows::Forms::Padding(10, 15, 10, 10);
+		_Group_Box_Notes->Paint += gcnew PaintEventHandler(this, &Form_Settings_MIDI::GroupBox_Paint);
+		
 
 		_Notes_Layout = gcnew System::Windows::Forms::TableLayoutPanel();
 		_Notes_Layout->Dock = System::Windows::Forms::DockStyle::Fill;
@@ -119,10 +122,15 @@ namespace MIDILightDrawer {
 		_Group_Box_Notes->Controls->Add(_Notes_Layout);
 		_Main_Layout->Controls->Add(_Group_Box_Notes, 0, 0);
 
+
+		///////////////////////
+		// Group Box Octaves //
+		///////////////////////
 		_Group_Box_Octaves = gcnew System::Windows::Forms::GroupBox();
-		_Group_Box_Octaves->Text = "Define Light Track Octaves";
-		_Group_Box_Octaves->Dock = System::Windows::Forms::DockStyle::Fill;
-		_Group_Box_Octaves->Padding = System::Windows::Forms::Padding(10);
+		_Group_Box_Octaves->Text	= "Define Light Track Octaves";
+		_Group_Box_Octaves->Dock	= System::Windows::Forms::DockStyle::Fill;
+		_Group_Box_Octaves->Padding = System::Windows::Forms::Padding(10, 15, 10, 10);
+		_Group_Box_Octaves->Paint += gcnew PaintEventHandler(this, &Form_Settings_MIDI::GroupBox_Paint);
 
 		_Octaves_Layout = gcnew System::Windows::Forms::TableLayoutPanel();
 		_Octaves_Layout->Dock = System::Windows::Forms::DockStyle::Fill;
@@ -136,10 +144,12 @@ namespace MIDILightDrawer {
 		_Button_OK->Text = "OK";
 		_Button_OK->DialogResult = System::Windows::Forms::DialogResult::OK;
 		_Button_OK->Click += gcnew System::EventHandler(this, &Form_Settings_MIDI::Button_OK_Click);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_OK);
 
 		_Button_Cancel = gcnew System::Windows::Forms::Button();
 		_Button_Cancel->Text = "Cancel";
 		_Button_Cancel->DialogResult = System::Windows::Forms::DialogResult::Cancel;
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Cancel);
 
 		Button_Panel->Controls->Add(_Button_Cancel);
 		Button_Panel->Controls->Add(_Button_OK);
@@ -251,9 +261,9 @@ namespace MIDILightDrawer {
 		buttonPanel->Dock = DockStyle::Fill;
 
 		// Set fixed size for all buttons to accommodate 16x16 icon plus padding
-		int buttonWidth = 33;  // 16px icon + 8px padding on each side
-		int buttonHeight = 33; // 16px icon + 8px padding on top and bottom + 1px extra
-		int buttonSpacing = 8; // Space between buttons
+		int buttonWidth		= 33;	// 16px icon + 8px padding on each side
+		int buttonHeight	= 33;	// 16px icon + 8px padding on top and bottom + 1px extra
+		int buttonSpacing	= 8;	// Space between buttons
 
 		// Calculate total width needed for all buttons
 		int totalButtonsWidth = (buttonWidth * 4) + (buttonSpacing * 3); // 4 buttons, 3 gaps
@@ -264,39 +274,37 @@ namespace MIDILightDrawer {
 		int startY = (41 - buttonHeight) / 2;
 
 		_Button_Add_Octave = gcnew Button();
-		_Button_Add_Octave->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Add")));
 		_Button_Add_Octave->Size = System::Drawing::Size(buttonWidth, buttonHeight);
 		_Button_Add_Octave->Location = Point(startX, startY);
 		_Button_Add_Octave->Click += gcnew EventHandler(this, &Form_Settings_MIDI::Add_Octave_Entry_Click);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Add_Octave);
+		_Button_Add_Octave->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Add")));
 
 		_Button_Remove = gcnew Button();
-		_Button_Remove->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Delete")));
 		_Button_Remove->Size = System::Drawing::Size(buttonWidth, buttonHeight);
 		_Button_Remove->Location = Point(startX + buttonWidth + buttonSpacing, startY);
 		_Button_Remove->Click += gcnew EventHandler(this, &Form_Settings_MIDI::Remove_Entry_Click);
 		_Button_Remove->Enabled = false;
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Remove);
+		_Button_Remove->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Delete")));
 
 		_Button_Move_Up = gcnew Button();
-		_Button_Move_Up->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Arrow_Up")));
 		_Button_Move_Up->Size = System::Drawing::Size(buttonWidth, buttonHeight);
 		_Button_Move_Up->Location = Point(startX + (buttonWidth + buttonSpacing) * 2, startY);
 		_Button_Move_Up->Click += gcnew EventHandler(this, &Form_Settings_MIDI::Move_Up_Click);
 		_Button_Move_Up->Enabled = false;
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Move_Up);
+		_Button_Move_Up->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Arrow_Up")));
 
 		_Button_Move_Down = gcnew Button();
-		_Button_Move_Down->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Arrow_Down")));
 		_Button_Move_Down->Size = System::Drawing::Size(buttonWidth, buttonHeight);
 		_Button_Move_Down->Location = Point(startX + (buttonWidth + buttonSpacing) * 3, startY);
 		_Button_Move_Down->Click += gcnew EventHandler(this, &Form_Settings_MIDI::Move_Down_Click);
 		_Button_Move_Down->Enabled = false;
-
-		// Add common button styling
-		for each (Button ^ button in gcnew array<Button^> { _Button_Add_Octave, _Button_Remove, _Button_Move_Up, _Button_Move_Down }) {
-			button->FlatStyle = FlatStyle::Standard;
-			button->ImageAlign = ContentAlignment::MiddleCenter;
-			button->Padding = System::Windows::Forms::Padding::Empty;
-		}
-
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Move_Down);
+		_Button_Move_Down->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Arrow_Down")));
+		
+		
 		buttonPanel->Controls->Add(_Button_Add_Octave);
 		buttonPanel->Controls->Add(_Button_Remove);
 		buttonPanel->Controls->Add(_Button_Move_Up);
@@ -305,7 +313,7 @@ namespace MIDILightDrawer {
 		_Octaves_Layout->Controls->Add(buttonPanel, 0, 0);
 
 		// Initialize DataGridView
-		_Grid_Octaves = gcnew DataGridView();
+		_Grid_Octaves = gcnew Control_DataGrid();
 		_Grid_Octaves->Dock = DockStyle::Fill;
 		_Grid_Octaves->AllowUserToAddRows = false;
 		_Grid_Octaves->AllowUserToDeleteRows = false;
@@ -315,24 +323,26 @@ namespace MIDILightDrawer {
 		_Grid_Octaves->AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode::Fill;
 		_Grid_Octaves->AllowUserToResizeRows = false;
 		_Grid_Octaves->RowTemplate->Height = 24;  // Set a fixed height for all rows
+		_Grid_Octaves->ColumnHeadersHeight = 32;
+		_Grid_Octaves->ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode::DisableResizing;
 		_Grid_Octaves->EditMode = DataGridViewEditMode::EditOnEnter;
 		_Grid_Octaves->AllowUserToOrderColumns = false;
 		_Grid_Octaves->AllowUserToResizeColumns = false;
 
 		// Name column
 		_Column_Name = gcnew DataGridViewTextBoxColumn();
-		_Column_Name->Name = "Light Track Name";
-		_Column_Name->HeaderText = "Light Track Name";
-		_Column_Name->DataPropertyName = "Light Track Name";
-		_Column_Name->FillWeight = 70;
+		_Column_Name->Name				= "Light Track Name";
+		_Column_Name->HeaderText		= "Light Track Name";
+		_Column_Name->DataPropertyName	= "Light Track Name";
+		_Column_Name->FillWeight		= 70;
 		_Column_Name->SortMode = DataGridViewColumnSortMode::NotSortable;
 
 		// Octave column with ComboBox
 		_Column_Octave = gcnew DataGridViewComboBoxColumn();
-		_Column_Octave->Name = "Octave";
-		_Column_Octave->HeaderText = "Octave";
-		_Column_Octave->DataPropertyName = "Octave";
-		_Column_Octave->FillWeight = 30;
+		_Column_Octave->Name				= "Octave";
+		_Column_Octave->HeaderText			= "Octave";
+		_Column_Octave->DataPropertyName	= "Octave";
+		_Column_Octave->FillWeight			= 30;
 		_Column_Octave->SortMode = DataGridViewColumnSortMode::NotSortable;
 
 		// Add octave range options
@@ -345,6 +355,8 @@ namespace MIDILightDrawer {
 
 		_Grid_Octaves->SelectionChanged += gcnew EventHandler(this, &Form_Settings_MIDI::Grid_Selection_Changed);
 		_Grid_Octaves->CellValidating += gcnew DataGridViewCellValidatingEventHandler(this, &Form_Settings_MIDI::Grid_Cell_Validating);
+
+		Theme_Manager::Get_Instance()->ApplyThemeToDataGridView(_Grid_Octaves);
 
 		_Octaves_Layout->Controls->Add(_Grid_Octaves, 0, 1);
 	}
@@ -464,5 +476,47 @@ namespace MIDILightDrawer {
 		//	}
 		//	_Grid_Octaves->Rows[e->RowIndex]->ErrorText = "";
 		//}
+	}
+
+	void Form_Settings_MIDI::GroupBox_Paint(Object^ sender, PaintEventArgs^ e)
+	{
+		GroupBox^ box = safe_cast<GroupBox^>(sender);
+		Theme_Manager^ theme = Theme_Manager::Get_Instance();
+
+		Graphics^ g = e->Graphics;
+		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
+
+		// Calculate text size and positions
+		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
+		SizeF textSize = g->MeasureString(box->Text, titleFont);
+
+		// Define header rect
+		Rectangle headerRect = Rectangle(0, 0, box->Width, 28);
+
+		// Draw header background with gradient
+		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
+			headerRect,
+			theme->BackgroundAlt,
+			theme->Background,
+			Drawing2D::LinearGradientMode::Vertical);
+
+		g->FillRectangle(headerBrush, headerRect);
+
+		// Draw title
+		g->DrawString(box->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
+
+		// Draw border
+		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
+		g->DrawRectangle(borderPen, 0, 0, box->Width - 1, box->Height - 1);
+
+		// Draw header bottom line with accent
+		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
+		g->DrawLine(accentPen, 0, headerRect.Bottom, box->Width, headerRect.Bottom);
+
+		// Clean up
+		delete headerBrush;
+		delete borderPen;
+		delete accentPen;
+		delete titleFont;
 	}
 }

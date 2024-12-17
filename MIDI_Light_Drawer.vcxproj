@@ -127,25 +127,17 @@
     <ClInclude Include="Control_ColorPicker.h" />
     <ClInclude Include="Control_ColorPreset.h" />
     <ClInclude Include="Control_ColorSlider.h" />
+    <ClInclude Include="Control_DataGrid.h" />
     <ClInclude Include="Control_DropDown.h" />
     <ClInclude Include="Control_ScrollBar.h" />
     <ClInclude Include="Control_Trackbar_Zoom.h" />
     <ClInclude Include="Custom_Color_Table.h" />
-    <ClInclude Include="Form_Settings_Hotkeys.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
-    <ClInclude Include="Form_Settings_MIDI.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
+    <ClInclude Include="Form_Main.h" />
+    <ClInclude Include="Form_Settings_Hotkeys.h" />
+    <ClInclude Include="Form_Settings_MIDI.h" />
     <ClInclude Include="Hotkey_Manager.h" />
     <ClInclude Include="MIDI_Writer.h" />
     <ClInclude Include="Settings.h" />
-    <ClInclude Include="CustomTableWidget.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
-    <ClInclude Include="Form_Main.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
     <ClInclude Include="gp_parser.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
@@ -155,25 +147,15 @@
     <ClInclude Include="Timeline_Resource_Manager.h" />
     <ClInclude Include="Widget_Bucket_Options.h" />
     <ClInclude Include="Widget_Color_Options.h" />
-    <ClInclude Include="Widget_Draw_Table_Container.h" />
+    <ClInclude Include="Widget_Draw_Options.h" />
     <ClInclude Include="Widget_Fade_Options.h" />
     <ClInclude Include="Widget_Length_Options.h" />
-    <ClInclude Include="Widget_Tab_Info.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
+    <ClInclude Include="Widget_Tab_Info.h" />
     <ClInclude Include="Widget_Timeline.h" />
     <ClInclude Include="Widget_Timeline_Common.h" />
     <ClInclude Include="Widget_Timeline_Tools.h" />
-    <ClInclude Include="Widget_Tools_And_Control.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
-    <ClInclude Include="Widget_Draw_Options.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
-    <ClInclude Include="Widget_Draw_Table.h" />
-    <ClInclude Include="Widget_Toolbar.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
+    <ClInclude Include="Widget_Toolbar.h" />
+    <ClInclude Include="Widget_Tools_And_Control.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp" />
@@ -188,7 +170,6 @@
     <ClCompile Include="Hotkey_Manager.cpp" />
     <ClCompile Include="MIDI_Writer.cpp" />
     <ClCompile Include="Settings.cpp" />
-    <ClCompile Include="CustomTableWidget.cpp" />
     <ClCompile Include="Form_Main.cpp" />
     <ClCompile Include="gp_parser.cpp">
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</LanguageStandard>
@@ -206,7 +187,6 @@
     <ClCompile Include="Timeline_Resource_Manager.cpp" />
     <ClCompile Include="Widget_Bucket_Options.cpp" />
     <ClCompile Include="Widget_Color_Options.cpp" />
-    <ClCompile Include="Widget_Draw_Table_Container.cpp" />
     <ClCompile Include="Widget_Fade_Options.cpp" />
     <ClCompile Include="Widget_Length_Options.cpp" />
     <ClCompile Include="Widget_Tab_Info.cpp" />
@@ -214,8 +194,6 @@
     <ClCompile Include="Widget_Timeline_Tools.cpp" />
     <ClCompile Include="Widget_Tools_And_Control.cpp" />
     <ClCompile Include="Widget_Draw_Options.cpp" />
-    <ClCompile Include="Widget_Draw_Table.cpp" />
-    <ClCompile Include="Widget_Draw_Table_RGB_Bar.cpp" />
     <ClCompile Include="Widget_Toolbar.cpp" />
     <ClCompile Include="xml_module.cpp">
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp17</LanguageStandard>

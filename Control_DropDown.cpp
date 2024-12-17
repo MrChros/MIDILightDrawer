@@ -14,15 +14,19 @@ namespace MIDILightDrawer {
 	}
 
 	void Control_DropDown::Initialize_Component() {
-		_Selected_Index = -1;
-		_Is_Dropped = false;
-		_Highlight_Index = -1;
-		_Tile_Width = 150;
-		_Tile_Height = 50;
-		_Columns = 3;
+		_Selected_Index		= -1;
+		_Is_Dropped			= false;
+		_Highlight_Index	= -1;
+		_Tile_Width			= 150;
+		_Tile_Height		= 50;
+		_Columns			= 3;
+
 		_Title_Color = Color::Black;
 		_Open_Above = false;  // Default to opening below
 		_Horizontal_Alignment = Panel_Horizontal_Alignment::Left;
+
+		// Apply theme colors
+		Apply_Theme();
 
 		// Calculate optimal height
 		int optimal_height = 20 + 20;  // title height + content height
@@ -30,19 +34,19 @@ namespace MIDILightDrawer {
 		this->BackColor = Color::White;
 
 		// Adjust arrow position for new height
-		_Arrow_Bounds = Rectangle(Width - 15, optimal_height - 15, 8, 6);
+		_Arrow_Bounds = Rectangle(Width - 20, (optimal_height - 8) / 2, 10, 8);
 
 		_Drop_Down_Panel = gcnew Double_Buffered_Panel();
-		_Drop_Down_Panel->Visible = false;
-		_Drop_Down_Panel->BorderStyle = BorderStyle::FixedSingle;
-		_Drop_Down_Panel->BackColor = Color::White;
+		_Drop_Down_Panel->Visible		= false;
+		_Drop_Down_Panel->BorderStyle	= BorderStyle::None;
 
 		_Drop_Down_Panel->Paint += gcnew PaintEventHandler(this, &Control_DropDown::Paint_Drop_Down);
 		_Drop_Down_Panel->MouseMove += gcnew MouseEventHandler(this, &Control_DropDown::Handle_Mouse_Move);
 		_Drop_Down_Panel->MouseClick += gcnew MouseEventHandler(this, &Control_DropDown::Handle_Mouse_Click);
 	}
 
-	void Control_DropDown::Show_Drop_Down() {
+	void Control_DropDown::Show_Drop_Down()
+	{
 		if (_Drop_Down_Panel->Parent == nullptr && this->FindForm() != nullptr) {
 			Form^ parent_form = this->FindForm();
 
@@ -168,6 +172,26 @@ namespace MIDILightDrawer {
 		}
 	}
 
+	void Control_DropDown::Apply_Theme()
+	{
+		auto theme = Theme_Manager::Get_Instance();
+		_Background_Color	= theme->BackgroundLight;
+		_Border_Color		= theme->BorderStrong;
+		_Hover_Color		= theme->AccentPrimary;
+
+		_Selected_Color = Color::FromArgb(80, theme->AccentPrimary.R, theme->AccentPrimary.G, theme->AccentPrimary.B);
+		
+		_Dropdown_Background	= theme->Background;        // Darker background for dropdown
+		_Dropdown_Border		= theme->BorderPrimary;
+		_Title_Color			= theme->ForegroundText;
+
+		if (_Drop_Down_Panel != nullptr) {
+			_Drop_Down_Panel->BackColor = _Dropdown_Background;
+		}
+		this->BackColor = _Background_Color;
+		this->ForeColor = _Title_Color;
+	}
+
 	Rectangle Control_DropDown::Get_Tile_Bounds(int index) {
 		int row = index / _Columns;
 		int col = index % _Columns;
@@ -272,15 +296,15 @@ namespace MIDILightDrawer {
 	void Control_DropDown::Clear()
 	{
 		// Clear all arrays
-		_First_Lines = nullptr;
-		_Second_Lines = nullptr;
-		_Values = nullptr;
+		_First_Lines	= nullptr;
+		_Second_Lines	= nullptr;
+		_Values			= nullptr;
 		//_First_Line_Colors = nullptr;
 		//_Second_Line_Colors = nullptr;
 
 		// Reset selection and highlight
-		_Selected_Index = -1;
-		_Highlight_Index = -1;
+		_Selected_Index		= -1;
+		_Highlight_Index	= -1;
 
 		// Close dropdown if it's open
 		if (_Is_Dropped) {
@@ -291,47 +315,46 @@ namespace MIDILightDrawer {
 		this->Invalidate();
 	}
 
-	void Control_DropDown::OnPaint(PaintEventArgs^ e) {
+	void Control_DropDown::OnPaint(PaintEventArgs^ e)
+	{
 		Graphics^ g = e->Graphics;
+		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 
-		// Draw 3D border like a ComboBox
-		ControlPaint::DrawBorder3D(g, 0, 0, Width, Height, Border3DStyle::Flat);
+		Rectangle bounds = this->ClientRectangle;
 
-		// Fixed title height
-		const int title_height = 20;
+		// Fill background
+		g->FillRectangle(gcnew SolidBrush(_Background_Color), bounds);
 
+		// Draw simple border
+		g->DrawRectangle(gcnew Pen(_Border_Color), 0, 0, Width - 1, Height - 1);
+
+		// Draw title text
 		if (!String::IsNullOrEmpty(_Title_Text)) {
-			// Draw title
-			Rectangle title_rect(2, 2, Width - 4, title_height);  // Adjusted for border
-			StringFormat^ format = gcnew StringFormat();
-			format->Alignment = StringAlignment::Center;
-			format->LineAlignment = StringAlignment::Center;
-			g->DrawString(_Title_Text, this->Font, gcnew SolidBrush(_Title_Color), title_rect, format);
+			Rectangle title_rect(8, 2, Width - 30, Height / 2);
+			StringFormat^ title_format = gcnew StringFormat();
+			title_format->Alignment = StringAlignment::Center;
+			title_format->LineAlignment = StringAlignment::Center;
+			g->DrawString(_Title_Text, this->Font, gcnew SolidBrush(_Title_Color), title_rect, title_format);
 		}
 
-		// Draw selected item immediately below title with adjusted margins for border
+		// Draw selected item
 		if (_Selected_Index >= 0) {
-			Rectangle content_rect = Rectangle(2, title_height, Width - 4, Height - title_height - 2);
-			Draw_Item(g, _Selected_Index, content_rect, false, true);
+			Rectangle value_rect = Rectangle(8, Height / 2, Width - 30, Height / 2);
+			Draw_Item(g, _Selected_Index, value_rect, false, true);
 		}
 
 		// Draw arrow
 		array<Point>^ arrow_points = gcnew array<Point>{
 			Point(_Arrow_Bounds.Left, _Arrow_Bounds.Top),
-				Point(_Arrow_Bounds.Right, _Arrow_Bounds.Top),
-				Point(_Arrow_Bounds.Left + _Arrow_Bounds.Width / 2, _Arrow_Bounds.Bottom)
+			Point(_Arrow_Bounds.Right, _Arrow_Bounds.Top),
+			Point(_Arrow_Bounds.Left + _Arrow_Bounds.Width / 2, _Arrow_Bounds.Bottom)
 		};
-		g->FillPolygon(Brushes::Black, arrow_points);
+
+		g->FillPolygon(gcnew SolidBrush(_Title_Color), arrow_points);
 	}
 
 	void Control_DropDown::Draw_Item(Graphics^ g, int index, Rectangle bounds, bool is_highlighted, bool is_main_control) {
 		if (index < 0 || index >= _First_Lines->Length) return;
-
-		// Draw highlight without spacing
-		if (is_highlighted) {
-			g->FillRectangle(Brushes::LightBlue, bounds);
-			g->DrawRectangle(Pens::Red, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
-		}
 
 		// Create string format for center alignment
 		StringFormat^ format = gcnew StringFormat();
@@ -339,7 +362,7 @@ namespace MIDILightDrawer {
 
 		if (is_main_control) {
 			// For main control, combine both lines into one and align center
-			format->LineAlignment = StringAlignment::Near;  // Align to top
+			format->LineAlignment = StringAlignment::Center;
 			String^ combined_text;
 			if (!String::IsNullOrEmpty(_Second_Lines[index])) {
 				combined_text = _First_Lines[index] + " " + _Second_Lines[index];
@@ -347,7 +370,7 @@ namespace MIDILightDrawer {
 			else {
 				combined_text = _First_Lines[index];
 			}
-			g->DrawString(combined_text, this->Font, gcnew SolidBrush(_First_Line_Colors[index]), bounds, format);
+			g->DrawString(combined_text, this->Font, gcnew SolidBrush(_Title_Color), bounds, format);
 		}
 		else {
 			// Normal two-line drawing for dropdown panel
@@ -358,7 +381,7 @@ namespace MIDILightDrawer {
 				// Center single line vertically in the whole bounds
 				first_line_bounds = bounds;
 				format->LineAlignment = StringAlignment::Center;
-				g->DrawString(_First_Lines[index], this->Font, gcnew SolidBrush(_First_Line_Colors[index]), first_line_bounds, format);
+				g->DrawString(_First_Lines[index], this->Font, gcnew SolidBrush(_Title_Color), first_line_bounds, format);
 			}
 			else {
 				// Increased overlap between lines
@@ -368,35 +391,56 @@ namespace MIDILightDrawer {
 				second_line_bounds = Rectangle(bounds.X, bounds.Y + (int)first_line_height - 12, bounds.Width, bounds.Height - (int)first_line_height + 12);
 
 				format->LineAlignment = StringAlignment::Center;
-				g->DrawString(_First_Lines[index], this->Font, gcnew SolidBrush(_First_Line_Colors[index]), first_line_bounds, format);
+				g->DrawString(_First_Lines[index], this->Font, gcnew SolidBrush(_Title_Color), first_line_bounds, format);
 
 				Drawing::Font^ smaller_font = gcnew Drawing::Font(this->Font->FontFamily, this->Font->Size * 0.8f, this->Font->Style);
-				g->DrawString(_Second_Lines[index], smaller_font, gcnew SolidBrush(_Second_Line_Colors[index]), second_line_bounds, format);
+				g->DrawString(_Second_Lines[index], smaller_font, gcnew SolidBrush(_Title_Color), second_line_bounds, format);
 				delete smaller_font;
 			}
 		}
 	}
 
-	void Control_DropDown::Paint_Drop_Down(Object^ sender, PaintEventArgs^ e) {
+	void Control_DropDown::Paint_Drop_Down(Object^ sender, PaintEventArgs^ e)
+	{
 		Graphics^ g = e->Graphics;
+		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 
+		// Draw panel background and border
+		Rectangle bounds = _Drop_Down_Panel->ClientRectangle;
+
+		// Fill background
+		g->FillRectangle(gcnew SolidBrush(_Dropdown_Background), bounds);
+
+		// Draw simple border
+		g->DrawRectangle(gcnew Pen(_Dropdown_Border), 0, 0, bounds.Width - 1, bounds.Height - 1);
+
+		// Draw items
 		for (int i = 0; i < _First_Lines->Length; i++) {
 			Rectangle tile_bounds = Get_Tile_Bounds(i);
+			tile_bounds.Inflate(-2, -2);  // Add padding
 
-			// Adjust the bounds to account for the panel border
-			if (tile_bounds.Right == _Drop_Down_Panel->Width - 1) {
-				tile_bounds.Width += 1;
-			}
-			if (tile_bounds.Bottom == _Drop_Down_Panel->Height - 1) {
-				tile_bounds.Height += 1;
+			// Draw highlight for hovered item
+			if (i == _Highlight_Index) {
+				Rectangle highlight_bounds = tile_bounds;
+				highlight_bounds.Inflate(-2, -2);
+				g->FillRectangle(gcnew SolidBrush(_Hover_Color), highlight_bounds);
 			}
 
-			Draw_Item(g, i, tile_bounds, i == _Highlight_Index, false);  // false for dropdown panel
+			// Draw selection for selected item
+			if (i == _Selected_Index) {
+				Rectangle select_bounds = tile_bounds;
+				select_bounds.Inflate(-2, -2);
+				g->FillRectangle(gcnew SolidBrush(_Selected_Color), select_bounds);
+			}
+
+			Draw_Item(g, i, tile_bounds, i == _Highlight_Index, false);
 		}
 	}
 
-	void Control_DropDown::OnMouseClick(MouseEventArgs^ e) {
-		if (e->Button == Windows::Forms::MouseButtons::Left) {
+	void Control_DropDown::OnMouseClick(MouseEventArgs^ e)
+	{
+		if (e->Button == Windows::Forms::MouseButtons::Left)
+		{
 			if (!_Is_Dropped) {
 				Show_Drop_Down();
 			}
@@ -407,7 +451,8 @@ namespace MIDILightDrawer {
 		Control::OnMouseClick(e);
 	}
 
-	void Control_DropDown::Handle_Mouse_Move(Object^ sender, MouseEventArgs^ e) {
+	void Control_DropDown::Handle_Mouse_Move(Object^ sender, MouseEventArgs^ e)
+	{
 		if (!_Is_Dropped) return;
 
 		int col = e->X / _Tile_Width;
@@ -415,14 +460,17 @@ namespace MIDILightDrawer {
 		int index = (row * _Columns) + col;
 
 		// Only redraw if we're hovering over a valid tile and the highlight has changed
-		if (index != _Highlight_Index && index >= 0 && index < _First_Lines->Length) {
+		if (index != _Highlight_Index && index >= 0 && index < _First_Lines->Length)
+		{
 			_Highlight_Index = index;
 			_Drop_Down_Panel->Invalidate();
 		}
 	}
 
-	void Control_DropDown::Handle_Mouse_Click(Object^ sender, MouseEventArgs^ e) {
-		if (_Highlight_Index >= 0 && _Highlight_Index < _First_Lines->Length) {
+	void Control_DropDown::Handle_Mouse_Click(Object^ sender, MouseEventArgs^ e)
+	{
+		if (_Highlight_Index >= 0 && _Highlight_Index < _First_Lines->Length)
+		{
 			Selected_Index = _Highlight_Index;
 
 			// Raise the event with the index and value
@@ -434,7 +482,8 @@ namespace MIDILightDrawer {
 		}
 	}
 
-	void Control_DropDown::Close_Drop_Down(Object^ sender, EventArgs^ e) {
+	void Control_DropDown::Close_Drop_Down(Object^ sender, EventArgs^ e)
+	{
 		if (_Drop_Down_Panel != nullptr) {
 			Form^ parent_form = this->FindForm();
 			if (parent_form != nullptr) {
@@ -454,12 +503,14 @@ namespace MIDILightDrawer {
 		_Highlight_Index = -1;
 	}
 
-	void Control_DropDown::OnSizeChanged(EventArgs^ e) {
+	void Control_DropDown::OnSizeChanged(EventArgs^ e)
+	{
 		_Arrow_Bounds = Rectangle(Width - 15, Height - 15, 8, 6);
 		Control::OnSizeChanged(e);
 	}
 
-	void Control_DropDown::Selected_Index::set(int value) {
+	void Control_DropDown::Selected_Index::set(int value)
+	{
 		if (value >= -1 && value < _First_Lines->Length && value != _Selected_Index) {
 			_Selected_Index = value;
 

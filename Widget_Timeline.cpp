@@ -4,7 +4,8 @@
 namespace MIDILightDrawer
 {
 	// Widget_Timeline Implementation
-	Widget_Timeline::Widget_Timeline() {
+	Widget_Timeline::Widget_Timeline()
+	{
 		InitializeComponent();
 
 		this->SetStyle(ControlStyles::Selectable, true);
@@ -1120,6 +1121,13 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::ToolPreview(Graphics^ g)
 	{
+		// Save the original clip region
+		System::Drawing::Region^ originalClip = g->Clip;
+
+		// Create a clipping region for the content area
+		Rectangle contentArea(0, HEADER_HEIGHT, Width, Height - HEADER_HEIGHT);
+		g->SetClip(contentArea);
+		
 		// Get current tool
 		if (currentToolType == TimelineToolType::Draw)
 		{
@@ -1175,12 +1183,10 @@ namespace MIDILightDrawer
 					if (track != nullptr)
 					{
 						Rectangle bounds = GetTrackContentBounds(track);
-						int x = TicksToPixels(hoverBar->StartTick) +
-							scrollPosition->X + TRACK_HEADER_WIDTH;
+						int x = TicksToPixels(hoverBar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
 						int width = TicksToPixels(hoverBar->Length);
 
-						Rectangle barBounds(x, bounds.Y + TRACK_PADDING,
-							width, bounds.Height - TRACK_PADDING * 2);
+						Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
 
 						// Draw delete preview
 						Color deleteColor = Color::FromArgb(100, 255, 0, 0); // Light red
@@ -1208,7 +1214,8 @@ namespace MIDILightDrawer
 				{
 					// Get track containing hover bar
 					Track^ track = nullptr;
-					for each(Track ^ t in tracks) {
+					for each(Track ^ t in tracks)
+					{
 						if (t->Events->Contains(hoverBar)) {
 							track = t;
 							break;
@@ -1218,12 +1225,10 @@ namespace MIDILightDrawer
 					if (track != nullptr)
 					{
 						Rectangle bounds = GetTrackContentBounds(track);
-						int x = TicksToPixels(hoverBar->StartTick) +
-							scrollPosition->X + TRACK_HEADER_WIDTH;
+						int x = TicksToPixels(hoverBar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
 						int width = TicksToPixels(hoverBar->Length);
 
-						Rectangle barBounds(x, bounds.Y + TRACK_PADDING,
-							width, bounds.Height - TRACK_PADDING * 2);
+						Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
 
 						// Draw move preview (highlight)
 						Color moveColor = Color::FromArgb(100, currentTheme.SelectionHighlight);
@@ -1435,6 +1440,9 @@ namespace MIDILightDrawer
 				g->DrawRectangle(gcnew Pen(colorTool->CurrentColor), previewRect);
 			}
 		}
+
+		// Restore original clip region
+		g->Clip = originalClip;
 	}
 
 	void Widget_Timeline::DrawNormalBar(Graphics^ g, BarEvent^ bar, Rectangle bounds)
@@ -1783,7 +1791,7 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::DrawTrackContent(Graphics^ g)
 	{
-		if (tracks->Count == 0) return;
+		if (tracks->Count == 0 || measures->Count == 0) return;
 
 		// Save the original clip region
 		System::Drawing::Region^ originalClip = g->Clip;
@@ -1851,7 +1859,7 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::DrawTrackBackground(Graphics^ g)
 	{
-		if (tracks->Count == 0) return;
+		if (tracks->Count == 0 || measures->Count == 0) return;
 
 		// Set up the graphics context
 		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
@@ -1962,8 +1970,8 @@ namespace MIDILightDrawer
 
 		// Draw grid lines in order
 		DrawSubdivisionLines(g, contentRect);
-		DrawBeatLines(g, contentRect);
-		DrawMeasureLines(g, contentRect);
+		DrawBeatLines		(g, contentRect);
+		DrawMeasureLines	(g, contentRect);
 	}
 
 	void Widget_Timeline::DrawSelectionAndPreviews(Graphics^ g)
@@ -2622,15 +2630,20 @@ namespace MIDILightDrawer
 	{
 		// Get track height from parent's dictionary or use default
 		int height;
-		if (trackHeights->TryGetValue(track, height)) {
+
+		if (trackHeights->TryGetValue(track, height))
+		{
 			return height;
 		}
+
 		return Widget_Timeline::DEFAULT_TRACK_HEIGHT;
 	}
 
-	int Widget_Timeline::GetTotalTracksHeight() {
+	int Widget_Timeline::GetTotalTracksHeight()
+	{
 		int totalHeight = 0;
-		for each (Track ^ track in tracks) {
+		for each (Track ^ track in tracks)
+		{
 			totalHeight += GetTrackHeight(track);
 		}
 		return totalHeight;
@@ -2640,10 +2653,13 @@ namespace MIDILightDrawer
 	{
 		if (p.Y < HEADER_HEIGHT) return nullptr;
 
-		int y = HEADER_HEIGHT;
-		for each (Track ^ track in tracks) {
+		int y = HEADER_HEIGHT + ScrollPosition->Y;
+		for each (Track ^ track in tracks)
+		{
 			int height = GetTrackHeight(track);
-			if (p.Y >= y && p.Y < y + height) {
+
+			if (p.Y >= y && p.Y < y + height)
+			{
 				return track;
 			}
 			y += height;
@@ -2661,17 +2677,17 @@ namespace MIDILightDrawer
 
 		// Get track content bounds for vertical check
 		Rectangle trackBounds = GetTrackContentBounds(track);
+		trackBounds.Y += scrollPosition->Y;
 
 		// Check each bar in the track
-		for each (BarEvent ^ bar in track->Events) {
+		for each (BarEvent ^ bar in track->Events)
+		{
 			// First check if the click is within the bar's time range
-			if (clickTick >= bar->StartTick &&
-				clickTick <= bar->StartTick + bar->Length) {
-
+			if (clickTick >= bar->StartTick && clickTick <= bar->StartTick + bar->Length)
+			{
 				// Then check if the click is within the track's vertical bounds
-				if (p.Y >= trackBounds.Y + TRACK_PADDING &&
-					p.Y <= trackBounds.Y + trackBounds.Height - TRACK_PADDING) {
-
+				if (p.Y >= trackBounds.Y + TRACK_PADDING && p.Y <= trackBounds.Y + trackBounds.Height - TRACK_PADDING)
+				{
 					return bar;
 				}
 			}

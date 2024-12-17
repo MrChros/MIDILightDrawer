@@ -3,6 +3,7 @@
 using namespace System;
 using namespace System::Drawing;
 using namespace System::Windows::Forms;
+using namespace System::Collections::Generic;
 
 #include "Custom_Color_Table.h"
 
@@ -58,13 +59,6 @@ namespace MIDILightDrawer {
 
 		static Theme_Manager^ Get_Instance();
 
-		static Theme_Manager^ Instance() {
-			if (_Instance == nullptr) {
-				_Instance = gcnew Theme_Manager();
-			}
-			return _Instance;
-		}
-
 		// Timeline theme colors - now uses the centralized colors
 		ThemeColors GetTimelineTheme();
 
@@ -78,13 +72,21 @@ namespace MIDILightDrawer {
 		void ApplyThemeToButton(Button^ button);
 		void ApplyThemeToButton(Button^ button, Color backgroundColor);
 
+		// Apply theme to DataGridView
+		void ApplyThemeToDataGridView(DataGridView^ grid);
+
 	private:
+		Dictionary<Button^, String^>^ _Button_Texts;
+
 		void ApplyThemeToControls(Control::ControlCollection^ controls);
 		void ApplyThemeToMenuItem(ToolStripItem^ item);
 
 		void OnButtonPaint(Object^ sender, PaintEventArgs^ e);
 		void OnButtonMouseEnter(Object^ sender, EventArgs^ e);
 		void OnButtonMouseLeave(Object^ sender, EventArgs^ e);
+
+		void OnDataGridViewScroll(Object^ sender, ScrollEventArgs^ e);
+		void OnDataGridViewPaint(Object^ sender, PaintEventArgs^ e);
 
 		ProfessionalColorTable^ GetColorTable();
 	};

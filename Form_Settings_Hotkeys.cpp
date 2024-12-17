@@ -10,12 +10,14 @@ namespace MIDILightDrawer
 		Initialize_Component();
 		Load_Hotkeys();
 		Update_Row_Status_Icons();
+
+		Theme_Manager::Get_Instance()->ApplyTheme(this);
 	}
 
 	void Form_Settings_Hotkeys::Initialize_Component()
 	{
 		this->Text = "Hotkey Settings";
-		this->Size = System::Drawing::Size(619, 600);
+		this->Size = System::Drawing::Size(650, 700);
 		this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::FixedDialog;
 		this->MaximizeBox = false;
 		this->MinimizeBox = false;
@@ -35,13 +37,13 @@ namespace MIDILightDrawer
 		_Main_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 96));
 		_Main_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent,  2));
 
-		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 80));  // Height for filter panel
+		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 100));  // Height for filter panel
 		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 90));   // Grid
 		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 10));   // Buttons
 
 		Initialize_Filter_Controls();
 
-		_Grid_Hotkeys = gcnew DataGridView();
+		_Grid_Hotkeys = gcnew Control_DataGrid();
 		_Grid_Hotkeys->Dock = DockStyle::Fill;
 		_Grid_Hotkeys->AutoGenerateColumns = false;
 		_Grid_Hotkeys->AllowUserToAddRows = false;
@@ -51,6 +53,7 @@ namespace MIDILightDrawer
 		_Grid_Hotkeys->AllowUserToResizeRows = false;
 		_Grid_Hotkeys->AllowUserToResizeColumns = false;
 		_Grid_Hotkeys->AllowUserToOrderColumns = false;
+		_Grid_Hotkeys->ColumnHeadersHeight = 32;
 		_Grid_Hotkeys->ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode::DisableResizing;
 		_Grid_Hotkeys->RowHeadersVisible = true;
 		_Grid_Hotkeys->RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode::DisableResizing;
@@ -105,6 +108,8 @@ namespace MIDILightDrawer
 		_Grid_Hotkeys->CellClick += gcnew DataGridViewCellEventHandler(this, &Form_Settings_Hotkeys::Grid_CellClick);
 		_Grid_Hotkeys->RowPostPaint += gcnew DataGridViewRowPostPaintEventHandler(this, &Form_Settings_Hotkeys::Grid_Hotkeys_RowPostPaint);
 		
+		Theme_Manager::Get_Instance()->ApplyThemeToDataGridView(_Grid_Hotkeys);
+
 		_Main_Layout->Controls->Add(_Grid_Hotkeys, 1, 1);
 
 		FlowLayoutPanel^ button_panel = gcnew FlowLayoutPanel();
@@ -116,6 +121,7 @@ namespace MIDILightDrawer
 		_Button_Cancel->Text = "Cancel";
 		_Button_Cancel->DialogResult = System::Windows::Forms::DialogResult::Cancel;
 		_Button_Cancel->Width = 80;
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Cancel);
 		button_panel->Controls->Add(_Button_Cancel);
 
 		_Button_OK = gcnew Button();
@@ -124,6 +130,7 @@ namespace MIDILightDrawer
 		_Button_OK->Width = 80;
 		_Button_OK->Margin = System::Windows::Forms::Padding(10, 3, 3, 3);
 		_Button_OK->Click += gcnew EventHandler(this, &Form_Settings_Hotkeys::Button_OK_Click);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_OK);
 		button_panel->Controls->Add(_Button_OK);
 
 		_Main_Layout->Controls->Add(button_panel, 1, 2);
@@ -133,12 +140,14 @@ namespace MIDILightDrawer
 		this->CancelButton = _Button_Cancel;
 	}
 
-	void Form_Settings_Hotkeys::Initialize_Filter_Controls() {
+	void Form_Settings_Hotkeys::Initialize_Filter_Controls()
+	{
 		GroupBox^ Filter_Group = gcnew GroupBox();
 		Filter_Group->Text = "Filters";
 		Filter_Group->Dock = DockStyle::Fill;
-		Filter_Group->Padding = System::Windows::Forms::Padding(10, 5, 10, 5);
 		Filter_Group->FlatStyle = FlatStyle::Standard;
+		Filter_Group->Padding = System::Windows::Forms::Padding(10, 25, 10, 10);
+		Filter_Group->Paint += gcnew PaintEventHandler(this, &Form_Settings_Hotkeys::GroupBox_Paint);
 
 		TableLayoutPanel^ Filter_Panel = gcnew TableLayoutPanel();
 		Filter_Panel->Dock = DockStyle::Fill;
@@ -406,5 +415,47 @@ namespace MIDILightDrawer
 
 		if (a->Action == nullptr || b->Action == nullptr) return 0;
 		return String::Compare(a->Action, b->Action);
+	}
+
+	void Form_Settings_Hotkeys::GroupBox_Paint(Object^ sender, PaintEventArgs^ e)
+	{
+		GroupBox^ box = safe_cast<GroupBox^>(sender);
+		Theme_Manager^ theme = Theme_Manager::Get_Instance();
+
+		Graphics^ g = e->Graphics;
+		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
+
+		// Calculate text size and positions
+		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
+		SizeF textSize = g->MeasureString(box->Text, titleFont);
+
+		// Define header rect
+		Rectangle headerRect = Rectangle(0, 0, box->Width, 28);
+
+		// Draw header background with gradient
+		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
+			headerRect,
+			theme->BackgroundAlt,
+			theme->Background,
+			Drawing2D::LinearGradientMode::Vertical);
+
+		g->FillRectangle(headerBrush, headerRect);
+
+		// Draw title
+		g->DrawString(box->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
+
+		// Draw border
+		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
+		g->DrawRectangle(borderPen, 0, 0, box->Width - 1, box->Height - 1);
+
+		// Draw header bottom line with accent
+		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
+		g->DrawLine(accentPen, 0, headerRect.Bottom, box->Width, headerRect.Bottom);
+
+		// Clean up
+		delete headerBrush;
+		delete borderPen;
+		delete accentPen;
+		delete titleFont;
 	}
 }

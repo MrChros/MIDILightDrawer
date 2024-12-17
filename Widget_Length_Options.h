@@ -25,6 +25,7 @@ namespace MIDILightDrawer
 
 		void Initialize_Component(void);
 		void DropDown_Length_Quantization_OnItem_Selected(System::Object^ sender, MIDILightDrawer::Control_DropDown_Item_Selected_Event_Args^ e);
+		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	public:
 		void Select_Next_Length_Value(void);

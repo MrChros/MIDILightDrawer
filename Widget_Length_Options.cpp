@@ -16,21 +16,22 @@ namespace MIDILightDrawer
 		this->_GroupBox = gcnew GroupBox();
 		this->_GroupBox->Text = "Duration Options";
 		this->_GroupBox->Dock = DockStyle::Fill;
+		this->_GroupBox->Paint += gcnew PaintEventHandler(this, &Widget_Length_Options::GroupBox_Paint);
+		this->_GroupBox->Padding = System::Windows::Forms::Padding(10, 15, 10, 10);
 
 		// Create layout for GroupBox contents
 		TableLayoutPanel^ Table_Layout_Main = gcnew TableLayoutPanel();
-		Table_Layout_Main->RowCount = 3;
+		Table_Layout_Main->RowCount = 2;
 		Table_Layout_Main->ColumnCount = 2;
 		Table_Layout_Main->Dock = DockStyle::Fill;
 		Table_Layout_Main->Padding = System::Windows::Forms::Padding(5);
 
 		// Configure row styles
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 45));	// Row for combo and color button
-		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 10));	// Spacing
-		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 75));	// Row for color presets
+		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 80));	// Row for color presets
 
 		// Configure column styles
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 200));  // Combo box column
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 250));  // Combo box column
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));  // Combo box column
 
 
@@ -46,7 +47,7 @@ namespace MIDILightDrawer
 		this->_DropDown_Length_Quantization->Set_Title_Color(Color::DarkGray);
 		this->_DropDown_Length_Quantization->Set_Open_Direction(false);
 		this->_DropDown_Length_Quantization->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
-		this->_DropDown_Length_Quantization->Margin = System::Windows::Forms::Padding(2);
+		this->_DropDown_Length_Quantization->Margin = System::Windows::Forms::Padding(1, 2, 2, 2);
 		this->_DropDown_Length_Quantization->Set_Items(Lines_First_Quantization, Lines_Second_Quantization, Values_Quantization);
 		this->_DropDown_Length_Quantization->Item_Selected += gcnew MIDILightDrawer::Control_DropDown_Item_Selected_Event_Handler(this, &Widget_Length_Options::DropDown_Length_Quantization_OnItem_Selected);
 
@@ -65,6 +66,48 @@ namespace MIDILightDrawer
 		_Length_Quantization_Ticks = e->Value;
 
 		QuantizationChanged(_Length_Quantization_Ticks);
+	}
+
+	void Widget_Length_Options::GroupBox_Paint(Object^ sender, PaintEventArgs^ e)
+	{
+		GroupBox^ box = safe_cast<GroupBox^>(sender);
+		Theme_Manager^ theme = Theme_Manager::Get_Instance();
+
+		Graphics^ g = e->Graphics;
+		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
+
+		// Calculate text size and positions
+		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
+		SizeF textSize = g->MeasureString(box->Text, titleFont);
+
+		// Define header rect
+		Rectangle headerRect = Rectangle(0, 0, box->Width, 28);
+
+		// Draw header background with gradient
+		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
+			headerRect,
+			theme->BackgroundAlt,
+			theme->Background,
+			Drawing2D::LinearGradientMode::Vertical);
+
+		g->FillRectangle(headerBrush, headerRect);
+
+		// Draw title
+		g->DrawString(box->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
+
+		// Draw border
+		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
+		g->DrawRectangle(borderPen, 0, 0, box->Width - 1, box->Height - 1);
+
+		// Draw header bottom line with accent
+		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
+		g->DrawLine(accentPen, 0, headerRect.Bottom, box->Width, headerRect.Bottom);
+
+		// Clean up
+		delete headerBrush;
+		delete borderPen;
+		delete accentPen;
+		delete titleFont;
 	}
 
 	void Widget_Length_Options::Select_Next_Length_Value(void)

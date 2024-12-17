@@ -7,6 +7,7 @@ namespace MIDILightDrawer
 	Theme_Manager::Theme_Manager()
 	{
 		_Instance = nullptr;
+		_Button_Texts = gcnew Dictionary<Button^, String^>();
 	}
 
 	Theme_Manager^ Theme_Manager::Get_Instance() {
@@ -38,7 +39,7 @@ namespace MIDILightDrawer
 	{
 		form->BackColor = Background;
 		form->ForeColor = ForegroundText;
-		ApplyThemeToControls(form->Controls);
+		//ApplyThemeToControls(form->Controls);
 	}
 
 	// Apply theme to menu strip
@@ -62,15 +63,25 @@ namespace MIDILightDrawer
 
 	void Theme_Manager::ApplyThemeToButton(Button^ button, Color backgroundColor)
 	{
+		// Store the original text
+		if (!_Button_Texts->ContainsKey(button)) {
+			_Button_Texts->Add(button, button->Text);
+		}
+		else {
+			_Button_Texts[button] = button->Text;
+		}
+		button->Text = "";
+		
 		// Basic button properties
-		button->BackColor = backgroundColor;  // Use provided background color
-		button->ForeColor = ForegroundText;
-		button->FlatStyle = FlatStyle::Flat;
-		button->Font = gcnew Drawing::Font("Segoe UI", 9, FontStyle::Regular);
-		button->Padding = Padding(6, 2, 6, 2);
-		button->TextImageRelation = TextImageRelation::ImageBeforeText;
-		button->ImageAlign = ContentAlignment::MiddleLeft;
-		button->TextAlign = ContentAlignment::MiddleCenter;
+		button->BackColor			= backgroundColor;  // Use provided background color
+		button->ForeColor			= ForegroundText;
+		button->FlatStyle			= FlatStyle::Flat;
+		button->Font				= gcnew Drawing::Font("Segoe UI", 9, FontStyle::Regular);
+		button->Padding				= Padding(6, 2, 6, 2);
+		button->TextImageRelation	= TextImageRelation::Overlay;
+		button->ImageAlign			= ContentAlignment::MiddleCenter;
+		button->TextAlign			= ContentAlignment::MiddleCenter;
+		button->UseVisualStyleBackColor = false;
 
 		// Custom border and appearance
 		button->FlatAppearance->BorderSize = 1;
@@ -95,6 +106,68 @@ namespace MIDILightDrawer
 		button->MouseLeave += gcnew EventHandler(this, &Theme_Manager::OnButtonMouseLeave);
 	}
 
+	void Theme_Manager::ApplyThemeToDataGridView(DataGridView^ grid)
+	{
+		// Add scroll event handlers
+		grid->Scroll += gcnew ScrollEventHandler(this, &Theme_Manager::OnDataGridViewScroll);
+		grid->Paint += gcnew PaintEventHandler(this, &Theme_Manager::OnDataGridViewPaint);
+		
+		// Basic colors
+		grid->BackgroundColor = Background;
+		grid->GridColor = BorderPrimary;
+		grid->BorderStyle = BorderStyle::None;
+
+		// Default cell style
+		DataGridViewCellStyle^ defaultStyle = gcnew DataGridViewCellStyle();
+		defaultStyle->BackColor = Background;
+		defaultStyle->ForeColor = ForegroundText;
+		defaultStyle->SelectionBackColor = AccentPrimary;
+		defaultStyle->SelectionForeColor = ForegroundText;
+		defaultStyle->Font = gcnew Drawing::Font("Segoe UI", 9);
+		grid->DefaultCellStyle = defaultStyle;
+
+		// Column header style
+		DataGridViewCellStyle^ headerStyle = gcnew DataGridViewCellStyle();
+		headerStyle->BackColor = BackgroundAlt;
+		headerStyle->ForeColor = ForegroundText;
+		headerStyle->SelectionBackColor = BackgroundAlt;
+		headerStyle->SelectionForeColor = ForegroundText;
+		headerStyle->Font = gcnew Drawing::Font("Segoe UI Semibold", 9);
+		headerStyle->Padding = Padding(10, 5, 10, 5);
+		grid->ColumnHeadersDefaultCellStyle = headerStyle;
+		grid->ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle::Single;
+		grid->EnableHeadersVisualStyles = false;
+
+		// Row header style (if visible)
+		grid->RowHeadersDefaultCellStyle = defaultStyle;
+
+		// ComboBox column style
+		for each (DataGridViewColumn ^ column in grid->Columns)
+		{
+			if (DataGridViewComboBoxColumn^ comboColumn = dynamic_cast<DataGridViewComboBoxColumn^>(column))
+			{
+				DataGridViewComboBoxCell^ cell = dynamic_cast<DataGridViewComboBoxCell^>(comboColumn->CellTemplate);
+				if (cell != nullptr)
+				{
+					// Style for the combo box cells
+					cell->FlatStyle = FlatStyle::Flat;
+
+					DataGridViewCellStyle^ comboStyle = gcnew DataGridViewCellStyle();
+					comboStyle->BackColor = BackgroundLight;
+					comboStyle->ForeColor = ForegroundText;
+					comboStyle->SelectionBackColor = AccentPrimary;
+					comboStyle->SelectionForeColor = ForegroundText;
+
+					comboColumn->DefaultCellStyle = comboStyle;
+				}
+			}
+		}
+
+		// Alternate row color
+		grid->AlternatingRowsDefaultCellStyle->BackColor = BackgroundAlt;
+		grid->AlternatingRowsDefaultCellStyle->SelectionBackColor = AccentPrimary;
+		grid->AlternatingRowsDefaultCellStyle->SelectionForeColor = ForegroundText;
+	}
 
 	void Theme_Manager::ApplyThemeToControls(Control::ControlCollection^ controls)
 	{
@@ -144,9 +217,11 @@ namespace MIDILightDrawer
 		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 		g->InterpolationMode = Drawing2D::InterpolationMode::HighQualityBicubic;
 
+		bool isHotOrFocused = button->Focused || button->ClientRectangle.Contains(button->PointToClient(Control::MousePosition));
+
 		// Create gradient based on button's actual background color
 		Drawing2D::LinearGradientBrush^ gradientBrush;
-		if (button->Focused || button->ClientRectangle.Contains(button->PointToClient(Control::MousePosition)))
+		if (isHotOrFocused)
 		{
 			gradientBrush = gcnew Drawing2D::LinearGradientBrush(
 				rect,
@@ -170,9 +245,45 @@ namespace MIDILightDrawer
 		}
 
 		// Draw button background
-		g->FillRectangle(gradientBrush, rect);
+		//SolidBrush^ backgroundBrush = gcnew SolidBrush(button->BackColor);
+		//g->FillRectangle(backgroundBrush, rect);
+		//g->FillRectangle(gradientBrush, rect);
 
-		// Draw subtle inner shadow
+		int centerX = rect.Width / 2;
+		int centerY = rect.Height / 2;
+
+		if (button->Image != nullptr)
+		{
+			int imageX = centerX - (button->Image->Width / 2);
+			int imageY = centerY - (button->Image->Height / 2);
+			g->DrawImage(button->Image, imageX, imageY);
+		}
+
+		String^ Button_Text;
+		if (_Button_Texts->TryGetValue(button, Button_Text))
+		{
+			if (Button_Text != nullptr && Button_Text->Length > 0)
+			{
+				// Measure text to center it
+				SizeF textSize = g->MeasureString(Button_Text, button->Font);
+				float textX = centerX - (textSize.Width / 2);
+				float textY = centerY - (textSize.Height / 2);
+
+				if (button->Enabled)
+				{
+					// Draw shadow
+					g->DrawString(Button_Text, button->Font, gcnew SolidBrush(Color::FromArgb(50, 0, 0, 0)), textX + 1, textY + 1);
+
+					// Draw text
+					g->DrawString(Button_Text, button->Font, gcnew SolidBrush(button->ForeColor), textX, textY);
+				}
+				else
+				{
+					g->DrawString(Button_Text, button->Font, gcnew SolidBrush(Color::FromArgb(120, button->ForeColor)), textX, textY);
+				}
+			}
+		}
+
 		Pen^ shadowPen = gcnew Pen(Color::FromArgb(20, 0, 0, 0));
 		g->DrawLine(shadowPen, 1, 1, rect.Width - 2, 1);
 
@@ -190,41 +301,6 @@ namespace MIDILightDrawer
 			delete borderPen;
 		}
 
-		// Calculate text bounds
-		Rectangle textBounds = rect;
-		textBounds.Inflate(-4, -4);
-
-		// Draw icon if present
-		if (button->Image != nullptr)
-		{
-			int imageX = textBounds.Left + 4; // Add some padding
-			int imageY = (rect.Height - button->Image->Height) / 2;
-			g->DrawImage(button->Image, imageX, imageY);
-
-			// Adjust text bounds to account for image
-			int imageOffset = button->Image->Width + 8; // Image width plus padding
-			textBounds.X += imageOffset;
-			textBounds.Width -= imageOffset;
-		}
-
-		// Draw text with shadow effect
-		if (button->Enabled)
-		{
-			g->DrawString(button->Text, button->Font,
-				gcnew SolidBrush(Color::FromArgb(50, 0, 0, 0)),
-				RectangleF(textBounds.X + 1, textBounds.Y + 1, textBounds.Width, textBounds.Height));
-
-			g->DrawString(button->Text, button->Font,
-				gcnew SolidBrush(button->ForeColor),
-				textBounds);
-		}
-		else
-		{
-			g->DrawString(button->Text, button->Font,
-				gcnew SolidBrush(Color::FromArgb(120, button->ForeColor)),
-				textBounds);
-		}
-
 		delete gradientBrush;
 		delete shadowPen;
 	}
@@ -239,6 +315,34 @@ namespace MIDILightDrawer
 	{
 		Button^ button = safe_cast<Button^>(sender);
 		button->Invalidate(); // Force repaint to remove hover effect
+	}
+
+	void Theme_Manager::OnDataGridViewScroll(Object^ sender, ScrollEventArgs^ e)
+	{
+		DataGridView^ grid = safe_cast<DataGridView^>(sender);
+		// Force redraw of the border by invalidating the control
+		grid->Invalidate();
+	}
+
+	void Theme_Manager::OnDataGridViewPaint(Object^ sender, PaintEventArgs^ e)
+	{
+		DataGridView^ grid = safe_cast<DataGridView^>(sender);
+		Graphics^ g = e->Graphics;
+
+		// Draw border
+		Rectangle bounds = grid->ClientRectangle;
+		Pen^ borderPen = gcnew Pen(BorderStrong, 1);
+		g->DrawRectangle(borderPen, 0, 0, bounds.Width - 1, bounds.Height - 1);
+
+		// Optional: Draw accent line under header
+		if (grid->ColumnHeadersVisible)
+		{
+			Pen^ accentPen = gcnew Pen(AccentPrimary, 1);
+			g->DrawLine(accentPen, 0, grid->ColumnHeadersHeight, bounds.Width, grid->ColumnHeadersHeight);
+			delete accentPen;
+		}
+
+		delete borderPen;
 	}
 
 	ProfessionalColorTable^ Theme_Manager::GetColorTable()

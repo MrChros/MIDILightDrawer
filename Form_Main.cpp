@@ -12,10 +12,10 @@ namespace MIDILightDrawer
 	Form_Main::Form_Main(void)
 	{
 		// Basic form setup with modern styling
-		this->Text = "MIDI Light Drawer";
-		this->Size = System::Drawing::Size(1200, 800);
-		this->MinimumSize = System::Drawing::Size(850, 600);
-		this->Padding = System::Windows::Forms::Padding(1); // Border padding
+		this->Text			= "MIDI Light Drawer";
+		this->Size			= System::Drawing::Size(1200, 800);
+		this->MinimumSize	= System::Drawing::Size(850, 600);
+		this->Padding		= System::Windows::Forms::Padding(1); // Border padding
 
 		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
 		Settings::Initialize("settings.json");
@@ -36,7 +36,7 @@ namespace MIDILightDrawer
 		Table_Layout_Main->ColumnCount = 1;
 
 		// Configure row styles with better proportions
-		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 280)); // Tools section
+		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 260)); // Tools section
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100));  // Timeline
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 60));  // Bottom controls
 

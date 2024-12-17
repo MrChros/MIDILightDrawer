@@ -6,8 +6,11 @@ using namespace System::Collections;
 using namespace System::Collections::Generic;
 
 #include "Form_Main.h"
+#include "Theme_Manager.h"
+#include "Control_DataGrid.h"
 
-namespace MIDILightDrawer {
+namespace MIDILightDrawer
+{
 	public ref class Form_Settings_Hotkeys : public Form
 	{
 	private:
@@ -21,7 +24,7 @@ namespace MIDILightDrawer {
 		TableLayoutPanel^		_Main_Layout;
 		Button^					_Button_OK;
 		Button^					_Button_Cancel;
-		DataGridView^			_Grid_Hotkeys;
+		Control_DataGrid^		_Grid_Hotkeys;
 
 
 		int _Current_Edit_Row;
@@ -45,6 +48,8 @@ namespace MIDILightDrawer {
 		String^ GetDisplayKeyName(Keys key);
 
 		static int CompareHotkeyDefinitions(Hotkey_Definition^ a, Hotkey_Definition^ b);
+
+		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	public:
 		Form_Settings_Hotkeys();

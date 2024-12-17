@@ -5,6 +5,8 @@ using namespace System::Windows::Forms;
 using namespace System::Drawing;
 using namespace System::Collections::Generic;
 
+#include "Theme_Manager.h"
+
 namespace MIDILightDrawer {
 
 	public ref class Control_DropDown_Item_Selected_Event_Args : public EventArgs {
@@ -64,6 +66,14 @@ namespace MIDILightDrawer {
 		int _Tile_Height;
 		int _Columns;
 
+		// Theme-related members
+		Color _Background_Color;
+		Color _Border_Color;
+		Color _Hover_Color;
+		Color _Selected_Color;
+		Color _Dropdown_Background;
+		Color _Dropdown_Border;
+
 		// Private methods
 		void Initialize_Component();
 		void Show_Drop_Down();
@@ -79,6 +89,8 @@ namespace MIDILightDrawer {
 		int Find_Index_By_Value(int value);
 		void Find_Scrollable_Controls(Control^ control, Dictionary<ScrollableControl^, Point>^ scroll_positions);
 		void Restore_Scroll_Positions(Dictionary<ScrollableControl^, Point>^ scroll_positions);
+
+		void Apply_Theme();
 
 	protected:
 		virtual void OnPaint(PaintEventArgs^ e) override;

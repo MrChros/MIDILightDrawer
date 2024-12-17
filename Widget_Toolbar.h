@@ -24,9 +24,6 @@ namespace MIDILightDrawer {
 			void set(TimelineToolType tool);
 		}
 
-	protected:
-		virtual void OnPaint(PaintEventArgs^ e) override;
-
 	private:
 		// Constants for layout
 		literal int BUTTON_SIZE = 48;

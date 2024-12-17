@@ -14,7 +14,7 @@ namespace MIDILightDrawer {
 		// Basic control setup
 		this->AutoSize = true;
 		this->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
-		this->BackColor = Theme_Manager::Instance()->BackgroundAlt;
+		this->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 		this->Padding = System::Windows::Forms::Padding(4);
 
 		// Initialize collections
@@ -57,9 +57,9 @@ namespace MIDILightDrawer {
 		toolPanel->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
 		toolPanel->FlowDirection = FlowDirection::LeftToRight;
 		toolPanel->WrapContents = false;
-		toolPanel->Padding = System::Windows::Forms::Padding(0);
-		toolPanel->Margin = System::Windows::Forms::Padding(0);
-		toolPanel->BackColor = Theme_Manager::Instance()->BackgroundAlt;
+		toolPanel->Padding = System::Windows::Forms::Padding(1, 0, 0, 0);
+		toolPanel->Margin = System::Windows::Forms::Padding(0, 0, 0, 0);
+		toolPanel->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 
 		// Create a button for each tool
 		array<TimelineToolType>^ tools = {
@@ -82,7 +82,7 @@ namespace MIDILightDrawer {
 			btn->Click += gcnew EventHandler(this, &Widget_Toolbar::OnToolButtonClick);
 
 			// Style the button using Theme Manager
-			Theme_Manager::Instance()->ApplyThemeToButton(btn);
+			Theme_Manager::Get_Instance()->ApplyThemeToButton(btn);
 
 			// Set icon and tooltip
 			StyleButton(btn, _Tool_Icons[tools[i]], tools[i].ToString());
@@ -127,17 +127,18 @@ namespace MIDILightDrawer {
 		for each (Button ^ btn in _Tool_Buttons) {
 			TimelineToolType buttonTool = safe_cast<TimelineToolType>(btn->Tag);
 			if (buttonTool == _Current_Tool) {
-				btn->BackColor = Theme_Manager::Instance()->AccentPrimary;
+				btn->BackColor = Theme_Manager::Get_Instance()->AccentPrimary;
 			}
 			else {
-				btn->BackColor = Theme_Manager::Instance()->BackgroundAlt;
+				btn->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 			}
 		}
 	}
 
 	Drawing::Image^ Widget_Toolbar::GetIconForTool(String^ iconName)
 	{
-		try {
+		try
+		{
 			Drawing::Image^ originalImage = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(iconName)));
 
 			// Calculate the target size (slightly smaller than button for padding)
@@ -148,17 +149,17 @@ namespace MIDILightDrawer {
 
 			// Use high quality scaling
 			Graphics^ g = Graphics::FromImage(scaledImage);
-			g->InterpolationMode = Drawing2D::InterpolationMode::HighQualityBicubic;
-			g->SmoothingMode = Drawing2D::SmoothingMode::HighQuality;
-			g->PixelOffsetMode = Drawing2D::PixelOffsetMode::HighQuality;
-			g->CompositingQuality = Drawing2D::CompositingQuality::HighQuality;
+			g->InterpolationMode	= Drawing2D::InterpolationMode::HighQualityBicubic;
+			g->SmoothingMode		= Drawing2D::SmoothingMode::HighQuality;
+			g->PixelOffsetMode		= Drawing2D::PixelOffsetMode::HighQuality;
+			g->CompositingQuality	= Drawing2D::CompositingQuality::HighQuality;
 
 			// Clear the background (make it transparent)
 			g->Clear(Color::Transparent);
 
 			// Draw the scaled image centered in the bitmap
-			Rectangle destRect = Rectangle(0, 0, targetSize, targetSize);
-			Rectangle srcRect = Rectangle(0, 0, originalImage->Width, originalImage->Height);
+			Rectangle destRect	= Rectangle(0, 0, targetSize, targetSize);
+			Rectangle srcRect	= Rectangle(0, 0, originalImage->Width, originalImage->Height);
 			g->DrawImage(originalImage, destRect, srcRect, GraphicsUnit::Pixel);
 
 			delete g;
@@ -182,19 +183,5 @@ namespace MIDILightDrawer {
 			delete g;
 			return placeholder;
 		}
-	}
-
-	void Widget_Toolbar::OnPaint(PaintEventArgs^ e)
-	{
-		UserControl::OnPaint(e);
-
-		// Draw border around the toolbar
-		Rectangle rect = this->ClientRectangle;
-		rect.Width -= 1;
-		rect.Height -= 1;
-
-		Pen^ borderPen = gcnew Pen(Theme_Manager::Instance()->BorderPrimary);
-		e->Graphics->DrawRectangle(borderPen, rect);
-		delete borderPen;
 	}
 }

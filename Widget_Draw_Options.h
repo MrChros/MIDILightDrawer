@@ -34,6 +34,7 @@ namespace MIDILightDrawer
 		void DropDown_Draw_Quantization_OnItem_Selected(System::Object^ sender, MIDILightDrawer::Control_DropDown_Item_Selected_Event_Args^ e);
 		void PresetPanel_SelectedColorChanged(System::Object^ sender, System::EventArgs^ e);
 		void Color_Picker_OnColorChanged(Object^ sender, EventArgs^ e);
+		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	protected:
 		~Widget_Draw_Options();

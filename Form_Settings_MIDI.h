@@ -4,6 +4,9 @@ using namespace System;
 using namespace System::Drawing;
 using namespace System::Windows::Forms;
 
+#include "Theme_Manager.h"
+#include "Control_DataGrid.h"
+
 namespace MIDILightDrawer {
 
 	public delegate void On_Settings_Accepted_Handler();
@@ -16,33 +19,33 @@ namespace MIDILightDrawer {
 	private:
 		System::Resources::ResourceManager^ _Resources;
 
-		System::Windows::Forms::TableLayoutPanel^ _Main_Layout;
-		System::Windows::Forms::Button^ _Button_OK;
-		System::Windows::Forms::Button^ _Button_Cancel;
+		TableLayoutPanel^ _Main_Layout;
+		Button^ _Button_OK;
+		Button^ _Button_Cancel;
 
 		// Controls for note selection
-		System::Windows::Forms::ComboBox^ _Combo_Box_Red;
-		System::Windows::Forms::ComboBox^ _Combo_Box_Green;
-		System::Windows::Forms::ComboBox^ _Combo_Box_Blue;
+		ComboBox^ _Combo_Box_Red;
+		ComboBox^ _Combo_Box_Green;
+		ComboBox^ _Combo_Box_Blue;
 
 		// Status icons
-		System::Windows::Forms::PictureBox^ _Icon_Red;
-		System::Windows::Forms::PictureBox^ _Icon_Green;
-		System::Windows::Forms::PictureBox^ _Icon_Blue;
+		PictureBox^ _Icon_Red;
+		PictureBox^ _Icon_Green;
+		PictureBox^ _Icon_Blue;
 
-		System::Windows::Forms::GroupBox^ _Group_Box_Notes;
-		System::Windows::Forms::GroupBox^ _Group_Box_Octaves;
-		System::Windows::Forms::TableLayoutPanel^ _Notes_Layout;
-		System::Windows::Forms::TableLayoutPanel^ _Octaves_Layout;
+		GroupBox^			_Group_Box_Notes;
+		GroupBox^			_Group_Box_Octaves;
+		TableLayoutPanel^	_Notes_Layout;
+		TableLayoutPanel^	_Octaves_Layout;
 
-		System::Windows::Forms::Button^ _Button_Add_Octave;
-		System::Windows::Forms::Button^ _Button_Remove;
-		System::Windows::Forms::Button^ _Button_Move_Up;
-		System::Windows::Forms::Button^ _Button_Move_Down;
+		Button^ _Button_Add_Octave;
+		Button^ _Button_Remove;
+		Button^ _Button_Move_Up;
+		Button^ _Button_Move_Down;
 
-		System::Windows::Forms::DataGridView^ _Grid_Octaves;
-		System::Windows::Forms::DataGridViewTextBoxColumn^ _Column_Name;
-		System::Windows::Forms::DataGridViewComboBoxColumn^ _Column_Octave;
+		Control_DataGrid^			_Grid_Octaves;
+		DataGridViewTextBoxColumn^	_Column_Name;
+		DataGridViewComboBoxColumn^ _Column_Octave;
 
 		array<String^>^ _Note_Names;
 		static array<int>^ VALID_OCTAVES = { -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -66,6 +69,8 @@ namespace MIDILightDrawer {
 
 		void Grid_Selection_Changed(System::Object^ sender, System::EventArgs^ e);
 		void Grid_Cell_Validating(System::Object^ sender, DataGridViewCellValidatingEventArgs^ e);
+
+		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	public:
 		Form_Settings_MIDI();

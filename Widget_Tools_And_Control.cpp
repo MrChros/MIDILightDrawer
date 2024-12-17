@@ -15,13 +15,12 @@ namespace MIDILightDrawer
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 60));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 300.0f));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
 
 
 		this->_Toolbar = gcnew Widget_Toolbar();
 		this->_Toolbar->Dock = DockStyle::Fill;
 		this->_Toolbar->OnToolChanged += gcnew System::EventHandler<MIDILightDrawer::TimelineToolType>(this, &MIDILightDrawer::Widget_Tools_And_Control::Toolbar_OnToolChanged);
-		//this->_Toolbar->ToolChanged += gcnew System::EventHandler<Widget_Toolbar::ToolType>(this, &Widget_Tools_And_Control::OnToolbar_ModeChanged);
 		Table_Layout_Main->Controls->Add(this->_Toolbar, 0, 0);
 
 

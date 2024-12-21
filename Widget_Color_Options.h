@@ -27,6 +27,7 @@ namespace MIDILightDrawer
 		void Initialize_Component(void);
 		void PresetPanel_SelectedColorChanged(System::Object^ sender, System::EventArgs^ e);
 		void Color_Picker_OnColorChanged(Object^ sender, EventArgs^ e);
+		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	public:
 		property Color SelectedColor {

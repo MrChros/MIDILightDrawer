@@ -4,167 +4,189 @@ namespace MIDILightDrawer {
 
 	Widget_Toolbar::Widget_Toolbar()
 	{
-		Initialize_Component();
-		_Toolbar_Buttons = gcnew List<Button^>();
-		_Tool_Icons = gcnew Dictionary<ToolType, Image^>();
+		_Resources		= gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
+		_Current_Tool	= TimelineToolType::Pointer;
 
-		_ToolTip = gcnew ToolTip();
-		_ToolTip->InitialDelay = 500;    // Half second delay before showing
-		_ToolTip->ReshowDelay = 100;     // Short delay when moving between controls
-		_ToolTip->ShowAlways = true;     // Show tooltip even when form is inactive
-		_ToolTip->UseAnimation = true;
-		_ToolTip->UseFading = true;
-
-		Initialize_Buttons();
+		InitializeComponent();
 	}
 
-	void Widget_Toolbar::Initialize_Component()
-	{
+	void Widget_Toolbar::InitializeComponent() {
+		// Basic control setup
 		this->AutoSize = true;
 		this->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
-		this->Dock = System::Windows::Forms::DockStyle::Top;
+		this->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
+		this->Padding = System::Windows::Forms::Padding(4);
+
+		// Initialize collections
+		_Tool_Buttons = gcnew List<Button^>;
+		_Tool_Icons = gcnew Dictionary<TimelineToolType, String^>();
+
+		// Setup icons and create buttons
+		SetupToolIcons();
+		CreateToolButtons();
+
+		// Initial state
+		UpdateButtonStates();
 	}
 
-	void Widget_Toolbar::Initialize_Buttons()
+	void Widget_Toolbar::CurrentTool::set(TimelineToolType tool)
 	{
-		System::Resources::ResourceManager^ Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
-		
-		Create_Tool_Button(ToolType::Selection, "btnSelection");
-		Set_Tool_Icon(ToolType::Selection, (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Cursor_Select"))));
-
-		Create_Tool_Button(ToolType::Draw, "btnDraw");
-		Set_Tool_Icon(ToolType::Draw, (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Cursor_Pen"))));
-
-		Create_Tool_Button(ToolType::Erase, "btnErase");
-		Set_Tool_Icon(ToolType::Erase, (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Cursor_Eraser"))));
-
-		Create_Tool_Button(ToolType::Fade, "btnFade");
-		Set_Tool_Icon(ToolType::Fade, (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Cursor_Fade"))));
-		
-		Create_Tool_Button(ToolType::Duration, "btnChangeLength");
-		Set_Tool_Icon(ToolType::Duration, (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Cursor_Length"))));
-
-		Create_Tool_Button(ToolType::Change_Color, "btnChangeColor");
-		Set_Tool_Icon(ToolType::Change_Color, (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Cursor_Color"))));
-
-		Create_Tool_Button(ToolType::Bucket_Fill, "btnBuccketFill");
-		Set_Tool_Icon(ToolType::Bucket_Fill, (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Cursor_Bucket"))));
-
-		// Select Selection tool by default
-		Select_Button(0);
+		if (_Current_Tool != tool)
+		{
+			_Current_Tool = tool;
+			UpdateButtonStates();
+			OnToolChanged(this, _Current_Tool);
+		}
 	}
 
-	Button^ Widget_Toolbar::Create_Tool_Button(ToolType toolType, String^ name)
-	{
-		Button^ button = gcnew Button();
-		button->Name = name;
-		button->Width = 40;  // Reduced width since we're using icons
-		button->Height = 40;  // Made square for icons
-		button->FlatStyle = FlatStyle::Standard;
-
-		// Set the image if available
-		if (_Tool_Icons->ContainsKey(toolType)) {
-			button->Image = _Tool_Icons[toolType];
-			button->ImageAlign = System::Drawing::ContentAlignment::MiddleCenter;
-		}
-
-		button->Tag = toolType;
-
-		// Set tooltip
-		String^ Tooltip_Text = Get_Tooltip_Text(toolType);
-		_ToolTip->SetToolTip(button, Tooltip_Text);
-
-		// Calculate position for the new button
-		if (_Toolbar_Buttons->Count > 0)
-		{
-			Button^ lastButton = _Toolbar_Buttons[_Toolbar_Buttons->Count - 1];
-			button->Left = lastButton->Right + 5;
-		}
-		else
-		{
-			button->Left = 5;
-		}
-		button->Top = 5;
-
-		// Add click event handler
-		button->Click += gcnew EventHandler(this, &Widget_Toolbar::Button_Click);
-
-		// Add to controls and internal list
-		this->Controls->Add(button);
-		_Toolbar_Buttons->Add(button);
-
-		return button;
+	void Widget_Toolbar::SetupToolIcons() {
+		// Map tools to their corresponding icon names
+		// Note: These are placeholder names - replace with actual icon resources
+		_Tool_Icons->Add(TimelineToolType::Pointer	, "Pointer_White"	);
+		_Tool_Icons->Add(TimelineToolType::Draw		, "Draw_White"		);
+		//_Tool_Icons->Add(TimelineToolType::Split	, "Split_White"		);
+		_Tool_Icons->Add(TimelineToolType::Erase	, "Erase_White"		);
+		_Tool_Icons->Add(TimelineToolType::Duration	, "Duration_White"	);
+		_Tool_Icons->Add(TimelineToolType::Color	, "Color_White"		);
+		_Tool_Icons->Add(TimelineToolType::Fade		, "Fade_White"		);
+		_Tool_Icons->Add(TimelineToolType::Strobe	, "Strobe_White"	);
 	}
 
-	void Widget_Toolbar::Set_Tool_Icon(ToolType tool, Image^ icon)
+	void Widget_Toolbar::CreateToolButtons()
 	{
-		_Tool_Icons[tool] = icon;
+		FlowLayoutPanel^ toolPanel = gcnew FlowLayoutPanel();
+		toolPanel->AutoSize = true;
+		toolPanel->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
+		toolPanel->FlowDirection = FlowDirection::LeftToRight;
+		toolPanel->WrapContents = false;
+		toolPanel->Padding = System::Windows::Forms::Padding(1, 0, 0, 0);
+		toolPanel->Margin = System::Windows::Forms::Padding(0, 0, 0, 0);
+		toolPanel->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 
-		// Update existing button if it exists
-		for each (Button ^ btn in _Toolbar_Buttons)
+		// Create a button for each tool
+		array<TimelineToolType>^ tools = {
+			TimelineToolType::Pointer,
+			TimelineToolType::Draw,
+			TimelineToolType::Split,
+			TimelineToolType::Erase,
+			TimelineToolType::Duration,
+			TimelineToolType::Color,
+			TimelineToolType::Fade
+		};
+
+		//for (int i = 0; i < tools->Length; i++)
+		for each (KeyValuePair<TimelineToolType, String^> toolEntry in _Tool_Icons)
 		{
-			if (safe_cast<ToolType>(btn->Tag) == tool)
-			{
-				btn->Image = icon;
-				btn->ImageAlign = System::Drawing::ContentAlignment::MiddleCenter;
-				break;
+			Button^ btn = gcnew Button();
+			btn->Size		= Drawing::Size(BUTTON_SIZE, BUTTON_SIZE);
+			btn->Margin		= System::Windows::Forms::Padding(BUTTON_SPACING);
+			btn->FlatStyle	= FlatStyle::Flat;
+			btn->Tag		= toolEntry.Key;
+			btn->Text		= "";
+			btn->UseVisualStyleBackColor = false;
+			btn->Click += gcnew EventHandler(this, &Widget_Toolbar::OnToolButtonClick);
+
+			// Style the button using Theme Manager
+			Theme_Manager::Get_Instance()->ApplyThemeToButton(btn);
+
+			// Set icon and tooltip
+			StyleButton(btn, toolEntry.Value, toolEntry.Key.ToString());
+
+			_Tool_Buttons->Add(btn);
+			toolPanel->Controls->Add(btn);
+		}
+
+		this->Controls->Add(toolPanel);
+	}
+
+	void Widget_Toolbar::StyleButton(Button^ button, String^ iconName, String^ toolTip)
+	{
+		// Set up the button's appearance
+		button->ImageAlign			= ContentAlignment::MiddleCenter;
+		button->TextAlign			= ContentAlignment::MiddleCenter;
+		button->TextImageRelation	= TextImageRelation::ImageBeforeText;
+		button->Padding				= System::Windows::Forms::Padding(0);
+		button->Image				= GetIconForTool(iconName);
+
+		// Create and assign tooltip
+		ToolTip^ tip = gcnew ToolTip();
+		tip->SetToolTip(button, toolTip);
+	}
+
+	void Widget_Toolbar::OnToolButtonClick(Object^ sender, EventArgs^ e)
+	{
+		Button^ clickedButton = safe_cast<Button^>(sender);
+		TimelineToolType newTool = safe_cast<TimelineToolType>(clickedButton->Tag);
+
+		if (_Current_Tool != newTool) {
+			_Current_Tool = newTool;
+			UpdateButtonStates();
+
+			// Raise the tool changed event
+			OnToolChanged(this, _Current_Tool);
+		}
+	}
+
+	void Widget_Toolbar::UpdateButtonStates()
+	{
+		for each (Button ^ btn in _Tool_Buttons) {
+			TimelineToolType buttonTool = safe_cast<TimelineToolType>(btn->Tag);
+			if (buttonTool == _Current_Tool) {
+				btn->BackColor = Theme_Manager::Get_Instance()->AccentPrimary;
+			}
+			else {
+				btn->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 			}
 		}
 	}
 
-	String^ Widget_Toolbar::Get_Tooltip_Text(ToolType toolType)
+	Drawing::Image^ Widget_Toolbar::GetIconForTool(String^ iconName)
 	{
-		switch (toolType)
+		try
 		{
-		case ToolType::Selection:		return "Selection Tool";
-		case ToolType::Draw:			return "Draw Tool";
-		case ToolType::Erase:			return "Erase Tool";
-		case ToolType::Fade:			return "Fade Tool";
-		case ToolType::Duration:	return "Change Length Tool";
-		case ToolType::Change_Color:	return "Color Change Tool";
-		case ToolType::Bucket_Fill:		return "Bucket Fill Tool";
-		default:
-			return "";
+			Drawing::Image^ originalImage = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(iconName)));
+
+			// Calculate the target size (slightly smaller than button for padding)
+			int targetSize = (int)(BUTTON_SIZE * 0.7);  // Increased padding for better appearance
+
+			// Create a new bitmap at the target size
+			Bitmap^ scaledImage = gcnew Bitmap(targetSize, targetSize);
+
+			// Use high quality scaling
+			Graphics^ g = Graphics::FromImage(scaledImage);
+			g->InterpolationMode	= Drawing2D::InterpolationMode::HighQualityBicubic;
+			g->SmoothingMode		= Drawing2D::SmoothingMode::HighQuality;
+			g->PixelOffsetMode		= Drawing2D::PixelOffsetMode::HighQuality;
+			g->CompositingQuality	= Drawing2D::CompositingQuality::HighQuality;
+
+			// Clear the background (make it transparent)
+			g->Clear(Color::Transparent);
+
+			// Draw the scaled image centered in the bitmap
+			Rectangle destRect	= Rectangle(0, 0, targetSize, targetSize);
+			Rectangle srcRect	= Rectangle(0, 0, originalImage->Width, originalImage->Height);
+			g->DrawImage(originalImage, destRect, srcRect, GraphicsUnit::Pixel);
+
+			delete g;
+			delete originalImage;
+
+			return scaledImage;
 		}
-	}
-
-	void Widget_Toolbar::Button_Click(Object^ sender, EventArgs^ e)
-	{
-		Button^ Clicked_Button = safe_cast<Button^>(sender);
-
-		// If the clicked button is already selected, do nothing
-		if (_Selected_Button == Clicked_Button)
-			return;
-
-		// Unselect all buttons
-		for each (Button ^ btn in _Toolbar_Buttons)
+		catch (...)
 		{
-			btn->BackColor = System::Drawing::SystemColors::Control;
-			btn->FlatStyle = FlatStyle::Standard;
-		}
+			// Create a simple placeholder if image loading fails
+			int targetSize = BUTTON_SIZE - 12;
+			Bitmap^ placeholder = gcnew Bitmap(targetSize, targetSize);
+			Graphics^ g = Graphics::FromImage(placeholder);
+			g->Clear(Color::Transparent);
 
-		// Select clicked button
-		Clicked_Button->BackColor = System::Drawing::SystemColors::ActiveCaption;
-		Clicked_Button->FlatStyle = FlatStyle::Flat;
-		_Selected_Button = Clicked_Button;
+			// Draw a simple shape as placeholder
+			Pen^ pen = gcnew Pen(Color::White, 2);
+			g->DrawRectangle(pen, 2, 2, targetSize - 4, targetSize - 4);
 
-		// Update current tool
-		_Current_Tool = safe_cast<ToolType>(Clicked_Button->Tag);
-
-		// Raise the ToolChanged event
-		ToolChanged(this, _Current_Tool);
-	}
-
-	Widget_Toolbar::ToolType Widget_Toolbar::Get_Current_Tool()
-	{
-		return _Current_Tool;
-	}
-
-	void Widget_Toolbar::Select_Button(int index)
-	{
-		if (index >= 0 && index < _Toolbar_Buttons->Count)
-		{
-			Button_Click(_Toolbar_Buttons[index], EventArgs::Empty);
+			delete pen;
+			delete g;
+			return placeholder;
 		}
 	}
 }

@@ -1,6 +1,7 @@
 #pragma once
 
-namespace MIDILightDrawer {
+namespace MIDILightDrawer
+{
 	// Tool types enumeration
 	public enum class TimelineToolType {
 		Pointer,	// Select and move
@@ -8,7 +9,9 @@ namespace MIDILightDrawer {
 		Split,		// Cut bars
 		Erase,		// Delete bars
 		Duration,	// Change Duration of bars,
-		Color		// Change Corlor of bars
+		Color,		// Change Corlor of bars
+		Fade,		// Create Color Fades
+		Strobe		// Create Strobe Sequences
 	};
 
 	public enum class TimelineCursor {

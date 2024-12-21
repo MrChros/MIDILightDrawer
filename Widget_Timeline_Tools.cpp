@@ -276,7 +276,7 @@ namespace MIDILightDrawer
 			if (trackBounds.IntersectsWith(region)) {
 				for each (BarEvent ^ bar in track->Events) {
 					// Check if bar intersects with selection
-					if (bar->StartTick + bar->Length >= startTick &&
+					if (bar->StartTick + bar->Duration >= startTick &&
 						bar->StartTick <= endTick) {
 						selectedBars->Add(bar);
 					}
@@ -306,7 +306,7 @@ namespace MIDILightDrawer
 				if (selectedBars->Contains(bar)) {
 					BarEvent^ copy = gcnew BarEvent(
 						bar->StartTick - earliestTick,  // Store relative position
-						bar->Length,
+						bar->Duration,
 						bar->Color
 					);
 
@@ -347,7 +347,7 @@ namespace MIDILightDrawer
 
 			BarEvent^ previewBar = gcnew BarEvent(
 				pasteStartTick + item->Bar->StartTick,
-				item->Bar->Length,
+				item->Bar->Duration,
 				Color::FromArgb(128, item->Bar->Color) // Semi-transparent
 			);
 			pastePreviewBars->Add(previewBar);
@@ -401,7 +401,7 @@ namespace MIDILightDrawer
 			// Create preview bar with track-specific information
 			BarEvent^ previewBar = gcnew BarEvent(
 				newStartTick + item->Bar->StartTick,
-				item->Bar->Length,
+				item->Bar->Duration,
 				Color::FromArgb(128, item->Bar->Color)
 			);
 
@@ -457,8 +457,8 @@ namespace MIDILightDrawer
 
 			BarEvent^ newBar = gcnew BarEvent(
 				previewBar->StartTick,
-				previewBar->Length,
-				Color::FromArgb(255, previewBar->Color.R, previewBar->Color.G, previewBar->Color.B)
+				previewBar->Duration,
+				Color::FromArgb(255, (int)previewBar->Color.R, (int)previewBar->Color.G, (int)previewBar->Color.B)
 			);
 
 			// Add to appropriate track and selection
@@ -545,7 +545,7 @@ namespace MIDILightDrawer
 		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
 		
 		targetTrack		= nullptr;
-		sourceTrack = nullptr;
+		sourceTrack		= nullptr;
 		previewBar		= nullptr;
 		_Current_Color	= Color::FromArgb(200, 100, 100, 255);
 		_Draw_Tick_Length	= 960;
@@ -678,7 +678,7 @@ namespace MIDILightDrawer
 				if (!HasOverlappingBars(track, snapTick, _Draw_Tick_Length)) {
 					if (previewBar == nullptr) {
 						previewBar = gcnew BarEvent(snapTick, _Draw_Tick_Length,
-							Color::FromArgb(100, _Current_Color.R, _Current_Color.G, _Current_Color.B));
+							Color::FromArgb(100, (int)_Current_Color.R, (int)_Current_Color.G, (int)_Current_Color.B));
 					}
 					else {
 						previewBar->StartTick = snapTick;
@@ -790,7 +790,7 @@ namespace MIDILightDrawer
 		Rectangle bounds = timeline->GetTrackContentBounds(track);
 
 		// Calculate bar end position in pixels
-		int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Length) +
+		int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Duration) +
 			timeline->ScrollPosition->X + Widget_Timeline::TRACK_HEADER_WIDTH;
 
 		// Define handle region - make it a bit larger for easier interaction
@@ -850,7 +850,7 @@ namespace MIDILightDrawer
 			// Skip checking against the bar we're currently moving
 			if (existingBar == hoverBar) continue;
 
-			int existingEnd = existingBar->StartTick + existingBar->Length;
+			int existingEnd = existingBar->StartTick + existingBar->Duration;
 
 			// Check for any overlap
 			if (startTick < existingEnd && endTick > existingBar->StartTick) {
@@ -921,7 +921,7 @@ namespace MIDILightDrawer
 		hoverBar->StartTick = newStartTick;
 
 		// Check for overlaps with other bars
-		bool hasOverlap = HasOverlappingBars(targetTrack, newStartTick, hoverBar->Length);
+		bool hasOverlap = HasOverlappingBars(targetTrack, newStartTick, hoverBar->Duration);
 
 		if (hasOverlap) {
 			// If overlap detected, revert to original position
@@ -933,7 +933,7 @@ namespace MIDILightDrawer
 
 			if (trackUnderMouse != nullptr && trackUnderMouse != targetTrack) {
 				// Ensure the new track doesn't have overlapping bars
-				if (!HasOverlappingBars(trackUnderMouse, newStartTick, hoverBar->Length)) {
+				if (!HasOverlappingBars(trackUnderMouse, newStartTick, hoverBar->Duration)) {
 					// Remove from original track
 					targetTrack->Events->Remove(hoverBar);
 
@@ -963,7 +963,7 @@ namespace MIDILightDrawer
 			currentMode = DrawMode::Resize;
 			Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE);
 			dragStartPoint = mousePos;
-			dragStartTick = hoverBar->Length;
+			dragStartTick = hoverBar->Duration;
 			targetTrack = timeline->GetTrackAtPoint(mousePos);
 		}
 	}
@@ -993,14 +993,14 @@ namespace MIDILightDrawer
 		for each(BarEvent ^ existingBar in targetTrack->Events) {
 			if (existingBar != hoverBar &&
 				existingBar->StartTick < (hoverBar->StartTick + snappedLength) &&
-				(existingBar->StartTick + existingBar->Length) > hoverBar->StartTick) {
+				(existingBar->StartTick + existingBar->Duration) > hoverBar->StartTick) {
 				hasOverlap = true;
 				break;
 			}
 		}
 
 		if (!hasOverlap) {
-			hoverBar->Length = snappedLength;
+			hoverBar->Duration = snappedLength;
 			timeline->Invalidate();
 		}
 	}
@@ -1036,7 +1036,7 @@ namespace MIDILightDrawer
 		
 		if (previewBar != nullptr)
 		{
-			previewBar->Color = Color::FromArgb(100, value.R, value.G, value.B);
+			previewBar->Color = Color::FromArgb(100, (int)value.R, (int)value.G, (int)value.B);
 			timeline->Invalidate();
 		}
 	}
@@ -1047,7 +1047,7 @@ namespace MIDILightDrawer
 
 		if (previewBar != nullptr)
 		{
-			previewBar->Length = value;
+			previewBar->Duration = value;
 			timeline->Invalidate();
 		}
 	}
@@ -1069,10 +1069,10 @@ namespace MIDILightDrawer
 					int splitTick = timeline->SnapTickToGrid(
 						timeline->PixelsToTicks(e->X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X));
 
-					if (splitTick > bar->StartTick && splitTick < bar->StartTick + bar->Length) {
+					if (splitTick > bar->StartTick && splitTick < bar->StartTick + bar->Duration) {
 						// Create two new bars
 						int firstLength = splitTick - bar->StartTick;
-						int secondLength = bar->Length - firstLength;
+						int secondLength = bar->Duration - firstLength;
 
 						timeline->AddBarToTrack(track, bar->StartTick, firstLength, bar->Color);
 						timeline->AddBarToTrack(track, splitTick, secondLength, bar->Color);
@@ -1102,7 +1102,7 @@ namespace MIDILightDrawer
 						timeline->ScrollPosition->X));
 
 				if (splitPreviewTick > bar->StartTick &&
-					splitPreviewTick < bar->StartTick + bar->Length) {
+					splitPreviewTick < bar->StartTick + bar->Duration) {
 					Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::HSplit);
 				}
 				else {
@@ -1131,7 +1131,7 @@ namespace MIDILightDrawer
 
 			// Only show preview if split position is valid
 			if (splitPreviewTick > hoverBar->StartTick &&
-				splitPreviewTick < hoverBar->StartTick + hoverBar->Length) {
+				splitPreviewTick < hoverBar->StartTick + hoverBar->Duration) {
 				// The actual preview drawing is handled in the widget's paint routine
 				timeline->Invalidate();
 			}
@@ -1279,7 +1279,7 @@ namespace MIDILightDrawer
 			if (trackBounds.IntersectsWith(region)) {
 				for each(BarEvent ^ bar in track->Events) {
 					// Check if bar intersects with selection
-					if (bar->StartTick + bar->Length >= startTick &&
+					if (bar->StartTick + bar->Duration >= startTick &&
 						bar->StartTick <= endTick) {
 						selectedBars->Add(bar);
 					}
@@ -1355,7 +1355,7 @@ namespace MIDILightDrawer
 				erasePreviewRect = Rectangle(
 					x,
 					trackBounds.Y + Widget_Timeline::TRACK_PADDING,
-					timeline->TicksToPixels(bar->Length),
+					timeline->TicksToPixels(bar->Duration),
 					trackBounds.Height - (Widget_Timeline::TRACK_PADDING * 2)
 				);
 
@@ -1495,7 +1495,7 @@ namespace MIDILightDrawer
 				}
 
 				// Ensure minimum length
-				bar->Length = Math::Max(newLength, (int)MIN_LENGTH_TICKS);
+				bar->Duration = Math::Max(newLength, (int)MIN_LENGTH_TICKS);
 			}
 
 			timeline->Invalidate();
@@ -1543,7 +1543,7 @@ namespace MIDILightDrawer
 		if (bar == nullptr || track == nullptr) return false;
 
 		Rectangle bounds = timeline->GetTrackContentBounds(track);
-		int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Length) +
+		int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Duration) +
 			timeline->ScrollPosition->X +
 			Widget_Timeline::TRACK_HEADER_WIDTH;
 
@@ -1563,24 +1563,24 @@ namespace MIDILightDrawer
 			if (track != nullptr && bar != nullptr && IsOverHandle(mousePos, bar, track)) {
 				if (Control::ModifierKeys == Keys::Control)
 				{
-					int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Length) +
+					int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Duration) +
 						timeline->ScrollPosition->X +
 						Widget_Timeline::TRACK_HEADER_WIDTH;
 
 					int deltaPixels = mousePos.X - barEndX;
 					int deltaTicks = timeline->PixelsToTicks(deltaPixels);
-					previewLength = timeline->SnapTickToGrid(bar->Length + deltaTicks);
+					previewLength = timeline->SnapTickToGrid(bar->Duration + deltaTicks);
 				}
 				else
 				{
 					// Calculate total desired length from mouse position
-					int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Length) +
+					int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Duration) +
 						timeline->ScrollPosition->X +
 						Widget_Timeline::TRACK_HEADER_WIDTH;
 					int deltaPixels = mousePos.X - barEndX;
 					int deltaTicks = timeline->PixelsToTicks(deltaPixels);
 
-					int totalDesiredLength = bar->Length + deltaTicks;
+					int totalDesiredLength = bar->Duration + deltaTicks;
 					int numUnits = Math::Max(1, (totalDesiredLength + (changeTickLength / 2)) / changeTickLength);
 					previewLength = numUnits * changeTickLength;
 				}
@@ -1664,7 +1664,7 @@ namespace MIDILightDrawer
 			{
 				for each (BarEvent ^ bar in track->Events)
 				{
-					if (bar->StartTick + bar->Length >= startTick && bar->StartTick <= endTick)
+					if (bar->StartTick + bar->Duration >= startTick && bar->StartTick <= endTick)
 					{
 						selectedBars->Add(bar);
 					}
@@ -1686,7 +1686,7 @@ namespace MIDILightDrawer
 		originalLengths->Clear();
 		for each (BarEvent ^ bar in selectedBars)
 		{
-			originalLengths->Add(bar, bar->Length);
+			originalLengths->Add(bar, bar->Duration);
 		}
 	}
 
@@ -1807,7 +1807,7 @@ namespace MIDILightDrawer
 			if (trackBounds.IntersectsWith(region)) {
 				for each (BarEvent ^ bar in track->Events) {
 					// Check if bar intersects with selection
-					if (bar->StartTick + bar->Length >= startTick &&
+					if (bar->StartTick + bar->Duration >= startTick &&
 						bar->StartTick <= endTick) {
 						selectedBars->Add(bar);
 					}
@@ -1848,7 +1848,7 @@ namespace MIDILightDrawer
 				previewRect = Rectangle(
 					x,
 					trackBounds.Y + Widget_Timeline::TRACK_PADDING,
-					timeline->TicksToPixels(bar->Length),
+					timeline->TicksToPixels(bar->Duration),
 					trackBounds.Height - (Widget_Timeline::TRACK_PADDING * 2)
 				);
 
@@ -1889,5 +1889,405 @@ namespace MIDILightDrawer
 			ApplyColorToSelection();
 		}
 		timeline->Invalidate();
+	}
+
+
+	/////////////////////////////
+	// FadeTool Implementation //
+	/////////////////////////////
+	FadeTool::FadeTool(Widget_Timeline^ timeline) : TimelineTool(timeline)
+	{
+		Cursor		= TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
+		isDrawing	= false;
+		drawStart	= nullptr;
+		targetTrack	= nullptr;
+		previewBars	= nullptr;
+		previewBar	= nullptr;
+		TickLength	= DEFAULT_TICK_LENGTH;
+		ColorStart	= Color::Red;
+		ColorEnd	= Color::Green;
+	}
+
+	void FadeTool::OnMouseDown(MouseEventArgs^ e)
+	{
+		if (e->Button == Windows::Forms::MouseButtons::Left && e->X > Widget_Timeline::TRACK_HEADER_WIDTH)
+		{
+			Point mousePos(e->X, e->Y);
+			Track^ track = timeline->GetTrackAtPoint(mousePos);
+
+			if (track != nullptr) {
+				isDrawing = true;
+				drawStart = mousePos;
+				targetTrack = track;
+
+				// Calculate start tick with grid snap
+				startTick = timeline->SnapTickToGrid(
+					timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X));
+
+				previewBar = nullptr;
+				timeline->Invalidate();
+			}
+		}
+	}
+
+	void FadeTool::OnMouseMove(MouseEventArgs^ e)
+	{
+		Point mousePos(e->X, e->Y);
+		lastMousePos = mousePos;
+
+		if (isDrawing && targetTrack != nullptr)
+		{
+			// Calculate pixels moved
+			int deltaX = Math::Abs(mousePos.X - drawStart->X);
+
+			// Only start creating bars after minimum drag distance
+			if (deltaX >= MIN_DRAG_PIXELS)
+			{
+				CreatePreviewBars(mousePos);
+				previewBar = nullptr;
+				timeline->Invalidate();
+			}
+		}
+		else if (e->X > Widget_Timeline::TRACK_HEADER_WIDTH)
+		{
+			Track^ track = timeline->GetTrackAtPoint(mousePos);
+			if (track != nullptr)
+			{
+				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
+				UpdateSinglePreview(mousePos);
+			}
+			else
+			{
+				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::No);
+				ClearPreviews();
+			}
+		}
+		else
+		{
+			Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Default);
+		}
+	}
+
+	void FadeTool::OnMouseUp(MouseEventArgs^ e)
+	{
+		if (isDrawing)
+		{
+			Point mousePos(e->X, e->Y);
+			Track^ track = timeline->GetTrackAtPoint(mousePos);
+
+			// Only add bars if released over the same track
+			if (track == targetTrack && previewBars != nullptr && previewBars->Count > 0) {
+				AddBarsToTrack();
+			}
+
+			// Reset state
+			isDrawing	= false;
+			drawStart	= nullptr;
+			targetTrack	= nullptr;
+			ClearPreviews();
+
+			timeline->Invalidate();
+		}
+	}
+
+	void FadeTool::OnKeyDown(KeyEventArgs^ e) {}
+	void FadeTool::OnKeyUp(KeyEventArgs^ e) {}
+
+	Color FadeTool::InterpolateColor(Color start, Color end, float ratio)
+	{
+		int r = start.R + (int)((end.R - start.R) * ratio);
+		int g = start.G + (int)((end.G - start.G) * ratio);
+		int b = start.B + (int)((end.B - start.B) * ratio);
+		return Color::FromArgb(255, r, g, b);
+	}
+
+	void FadeTool::CreatePreviewBars(Point currentPos)
+	{
+		if (previewBars == nullptr) {
+			previewBars = gcnew List<BarEvent^>();
+		}
+		else {
+			previewBars->Clear();
+		}
+
+		// Calculate total distance in ticks
+		int currentTick = timeline->PixelsToTicks(
+			currentPos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
+		int totalTicks = currentTick - startTick;
+
+		if (totalTicks <= 0) return;
+
+		// Calculate number of bars needed
+		int numBars = (int)Math::Ceiling((double)totalTicks / TickLength);
+		if (numBars == 0) return;
+
+		// Create bars with interpolated colors
+		for (int i = 0; i < numBars; i++)
+		{
+			float ratio = (float)i / (numBars - 1);
+			if (numBars == 1) ratio = 0; // Single bar case
+
+			Color barColor = InterpolateColor(ColorStart, ColorEnd, ratio);
+
+			int barStartTick = startTick + (i * TickLength);
+			int barLength = TickLength;
+
+			BarEvent^ bar = gcnew BarEvent(barStartTick, barLength, Color::FromArgb(180, barColor));	// Semi-transparent for preview
+			previewBars->Add(bar);
+		}
+	}
+
+	void FadeTool::AddBarsToTrack()
+	{
+		if (previewBars == nullptr || targetTrack == nullptr) return;
+
+		// Create final bars with full opacity
+		for each (BarEvent ^ previewBar in previewBars)
+		{
+			BarEvent^ finalBar = gcnew BarEvent(
+				previewBar->StartTick,
+				previewBar->Duration,
+				Color::FromArgb(255,
+					(int)previewBar->Color.R,
+					(int)previewBar->Color.G,
+					(int)previewBar->Color.B)
+			);
+			targetTrack->Events->Add(finalBar);
+		}
+
+		// Sort events in track
+		targetTrack->Events->Sort(Track::barComparer);
+	}
+
+	void FadeTool::UpdateSinglePreview(Point mousePos)
+	{
+		Track^ track = timeline->GetTrackAtPoint(mousePos);
+
+		if (track != nullptr && !isDrawing)
+		{
+			int snapTick = timeline->SnapTickToGrid(
+				timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X));
+
+			// Create or update single preview bar
+			if (previewBar == nullptr) {
+				previewBar = gcnew BarEvent(snapTick, TickLength, Color::FromArgb(100, ColorStart.R, ColorStart.G, ColorStart.B));
+			}
+			else {
+				previewBar->StartTick	= snapTick;
+				previewBar->Duration	= TickLength;
+			}
+
+			timeline->Invalidate();
+		}
+		else
+		{
+			ClearPreviews();
+		}
+	}
+
+	void FadeTool::ClearPreviews()
+	{
+		if (previewBar != nullptr || (previewBars != nullptr && previewBars->Count > 0))
+		{
+			previewBar = nullptr;
+			if (previewBars != nullptr)
+			{
+				previewBars->Clear();
+			}
+			timeline->Invalidate();
+		}
+	}
+
+
+	///////////////////////////////
+	// StrobeTool Implementation //
+	///////////////////////////////
+	StrobeTool::StrobeTool(Widget_Timeline^ timeline) : TimelineTool(timeline)
+	{
+		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
+		isDrawing = false;
+		drawStart = nullptr;
+		targetTrack = nullptr;
+		previewBars = nullptr;
+		previewBar	= nullptr;
+		TickLength	= DEFAULT_TICK_LENGTH;
+		StrobeColor = Color::Red;
+	}
+
+	void StrobeTool::OnMouseDown(MouseEventArgs^ e)
+	{
+		if (e->Button == Windows::Forms::MouseButtons::Left && e->X > Widget_Timeline::TRACK_HEADER_WIDTH)
+		{
+			Point mousePos(e->X, e->Y);
+			Track^ track = timeline->GetTrackAtPoint(mousePos);
+
+			if (track != nullptr) {
+				isDrawing = true;
+				drawStart = mousePos;
+				targetTrack = track;
+
+				// Calculate start tick with grid snap
+				startTick = timeline->SnapTickToGrid(
+					timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X));
+
+				previewBar = nullptr;
+				timeline->Invalidate();
+			}
+		}
+	}
+
+	void StrobeTool::OnMouseMove(MouseEventArgs^ e)
+	{
+		Point mousePos(e->X, e->Y);
+		lastMousePos = mousePos;
+
+		if (isDrawing && targetTrack != nullptr)
+		{
+			// Calculate pixels moved
+			int deltaX = Math::Abs(mousePos.X - drawStart->X);
+
+			// Only start creating bars after minimum drag distance
+			if (deltaX >= MIN_DRAG_PIXELS)
+			{
+				CreatePreviewBars(mousePos);
+				previewBar = nullptr;
+				timeline->Invalidate();
+			}
+		}
+		else if (e->X > Widget_Timeline::TRACK_HEADER_WIDTH)
+		{
+			Track^ track = timeline->GetTrackAtPoint(mousePos);
+			if (track != nullptr)
+			{
+				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
+				UpdateSinglePreview(mousePos);
+			}
+			else
+			{
+				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::No);
+				ClearPreviews();
+			}
+		}
+		else
+		{
+			Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Default);
+		}
+	}
+
+	void StrobeTool::OnMouseUp(MouseEventArgs^ e)
+	{
+		if (isDrawing)
+		{
+			Point mousePos(e->X, e->Y);
+			Track^ track = timeline->GetTrackAtPoint(mousePos);
+
+			// Only add bars if released over the same track
+			if (track == targetTrack && previewBars != nullptr && previewBars->Count > 0) {
+				AddBarsToTrack();
+			}
+
+			// Reset state
+			isDrawing	= false;
+			drawStart	= nullptr;
+			targetTrack	= nullptr;
+			ClearPreviews();
+			timeline->Invalidate();
+		}
+	}
+
+	void StrobeTool::OnKeyDown(KeyEventArgs^ e) {}
+	void StrobeTool::OnKeyUp(KeyEventArgs^ e) {}
+
+	void StrobeTool::CreatePreviewBars(Point currentPos)
+	{
+		if (previewBars == nullptr) {
+			previewBars = gcnew List<BarEvent^>();
+		}
+		else {
+			previewBars->Clear();
+		}
+
+		// Calculate total distance in ticks
+		int currentTick = timeline->PixelsToTicks(currentPos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
+		int totalTicks = currentTick - startTick;
+
+		if (totalTicks <= 0) return;
+
+		// Calculate number of bars needed
+		int numBars = (int)Math::Ceiling((double)totalTicks / TickLength);
+		if (numBars == 0) return;
+
+		// Create bars with interpolated colors
+		for (int i = 0; i < numBars; i++)
+		{
+			if (i % 2 == 1) continue;
+
+			int barStartTick = startTick + (i * TickLength);
+			int barLength = TickLength;
+
+			BarEvent^ bar = gcnew BarEvent(barStartTick, barLength, Color::FromArgb(180, StrobeColor));	// Semi-transparent for preview
+			previewBars->Add(bar);
+		}
+	}
+
+	void StrobeTool::AddBarsToTrack()
+	{
+		if (previewBars == nullptr || targetTrack == nullptr) return;
+
+		// Create final bars with full opacity
+		for each (BarEvent ^ previewBar in previewBars)
+		{
+			BarEvent^ finalBar = gcnew BarEvent(
+				previewBar->StartTick,
+				previewBar->Duration,
+				Color::FromArgb(255,
+					(int)previewBar->Color.R,
+					(int)previewBar->Color.G,
+					(int)previewBar->Color.B)
+			);
+			targetTrack->Events->Add(finalBar);
+		}
+
+		// Sort events in track
+		targetTrack->Events->Sort(Track::barComparer);
+	}
+
+	void StrobeTool::UpdateSinglePreview(Point mousePos)
+	{
+		Track^ track = timeline->GetTrackAtPoint(mousePos);
+
+		if (track != nullptr && !isDrawing)
+		{
+			int snapTick = timeline->SnapTickToGrid(
+				timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X));
+
+			// Create or update single preview bar
+			if (previewBar == nullptr) {
+				previewBar = gcnew BarEvent(snapTick, TickLength, Color::FromArgb(100, StrobeColor.R, StrobeColor.G, StrobeColor.B));
+			}
+			else {
+				previewBar->StartTick = snapTick;
+				previewBar->Duration = TickLength;
+			}
+
+			timeline->Invalidate();
+		}
+		else
+		{
+			ClearPreviews();
+		}
+	}
+
+	void StrobeTool::ClearPreviews()
+	{
+		if (previewBar != nullptr || (previewBars != nullptr && previewBars->Count > 0))
+		{
+			previewBar = nullptr;
+			if (previewBars != nullptr)
+			{
+				previewBars->Clear();
+			}
+			timeline->Invalidate();
+		}
 	}
 }

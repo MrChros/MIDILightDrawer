@@ -5,6 +5,8 @@ using namespace System::Windows::Forms;
 using namespace System::Drawing;
 using namespace System::Collections::Generic;
 
+#include "Theme_Manager.h"
+
 namespace MIDILightDrawer {
 
 	public ref class Control_DropDown_Item_Selected_Event_Args : public EventArgs {
@@ -42,43 +44,68 @@ namespace MIDILightDrawer {
 	};
 	
 	public ref class Control_DropDown : public Control {
+	public:
+		// Constructor
+		Control_DropDown();
+
 	private:
 		// Private members
 		array<String^>^ _First_Lines;
 		array<String^>^ _Second_Lines;
-		array<int>^ _Values;
-		array<Color>^ _First_Line_Colors;
-		array<Color>^ _Second_Line_Colors;
-		int _Selected_Index;
-		bool _Is_Dropped;
-		Rectangle _Arrow_Bounds;
-		Double_Buffered_Panel^ _Drop_Down_Panel;
-		int _Highlight_Index;
-		String^ _Title_Text;
-		Color _Title_Color;
-		bool _Open_Above;
-		Panel_Horizontal_Alignment _Horizontal_Alignment;
+		array<int>^		_Values;
 
-		// Tile layout properties
+		array<Color>^	_First_Line_Colors;
+		array<Color>^	_Second_Line_Colors;
+
+		Double_Buffered_Panel^		_Drop_Down_Panel;
+		Panel_Horizontal_Alignment	_Horizontal_Alignment;
+		EventHandler^				_Mouse_Leave_Handler;
+		Timer^						_Close_Timer;
+
+		Rectangle	_Arrow_Bounds;
+		String^		_Title_Text;
+
+		Color _Title_Color;
+		Color _Background_Color;
+		Color _Border_Color;
+		Color _Hover_Color;
+		Color _Selected_Color;
+		Color _Dropdown_Background;
+		Color _Dropdown_Border;
+
+		bool _Is_Dropped;
+		bool _Open_Above;
+			
+		int _Selected_Index;
+		int _Highlight_Index;
 		int _Tile_Width;
 		int _Tile_Height;
 		int _Columns;
-
+		int _Close_Delay_Ms;
+	
 		// Private methods
 		void Initialize_Component();
 		void Show_Drop_Down();
-		void Draw_Item(Graphics^ g, int index, Rectangle bounds, bool is_highlighted, bool is_main_control);
-		void Handle_Mouse_Move(Object^ sender, MouseEventArgs^ e);
-		void Handle_Mouse_Click(Object^ sender, MouseEventArgs^ e);
 		void Close_Drop_Down(Object^ sender, EventArgs^ e);
 		void Paint_Drop_Down(Object^ sender, PaintEventArgs^ e);
-		Rectangle Get_Tile_Bounds(int index);
-		int Get_Row_Count();
+		void Draw_Item(Graphics^ g, int index, Rectangle bounds, bool is_highlighted, bool is_main_control);
+
+		void Handle_Mouse_Move(Object^ sender, MouseEventArgs^ e);
+		void Handle_Mouse_Click(Object^ sender, MouseEventArgs^ e);
+		void Handle_Mouse_Leave(Object^ sender, EventArgs^ e);
+		void Handle_Close_Timer_Tick(Object^ sender, EventArgs^ e);
+
+		bool Is_Mouse_Over_Controls();
 		void Update_Panel_Position();
-		void Form_Click(Object^ sender, EventArgs^ e);
+
+		int Get_Row_Count();
 		int Find_Index_By_Value(int value);
-		void Find_Scrollable_Controls(Control^ control, Dictionary<ScrollableControl^, Point>^ scroll_positions);
-		void Restore_Scroll_Positions(Dictionary<ScrollableControl^, Point>^ scroll_positions);
+
+		Rectangle Get_Control_Screen_Bounds();
+		Rectangle Get_Panel_Screen_Bounds();
+		Rectangle Get_Tile_Bounds(int index);
+
+		void Apply_Theme();
 
 	protected:
 		virtual void OnPaint(PaintEventArgs^ e) override;
@@ -86,10 +113,6 @@ namespace MIDILightDrawer {
 		virtual void OnSizeChanged(EventArgs^ e) override;
 
 	public:
-		// Constructor
-		Control_DropDown();
-
-		// Public methods
 		void Set_Title_Color(Color color);
 		void Set_Items(array<String^>^ first_lines, array<String^>^ second_lines, array<int>^ values);
 		void Set_First_Line_Color(int index, Color color);

@@ -11,9 +11,10 @@ using namespace System::Drawing;
 
 #include "Widget_Toolbar.h"
 #include "Widget_Draw_Options.h"
-#include "Widget_Fade_Options.h"
 #include "Widget_Length_Options.h"
 #include "Widget_Color_Options.h"
+#include "Widget_Fade_Options.h"
+#include "Widget_Strobe_Options.h"
 #include "Widget_Bucket_Options.h"
 
 namespace MIDILightDrawer {
@@ -29,9 +30,10 @@ namespace MIDILightDrawer {
 
 		Widget_Toolbar^			Get_Widget_Toolbar(void);
 		Widget_Draw_Options^	Get_Widget_Draw_Options(void);
-		Widget_Fade_Options^	Get_Widget_Fade_Options(void);
 		Widget_Length_Options^	Get_Widget_Length_Options(void);
 		Widget_Color_Options^	Get_Widget_Color_Options(void);
+		Widget_Fade_Options^	Get_Widget_Fade_Options(void);
+		Widget_Strobe_Options^	Get_Widget_Strobe_Options(void);
 		Widget_Bucket_Options^	Get_Widget_Bucket_Options(void);
 
 	protected:
@@ -44,12 +46,13 @@ namespace MIDILightDrawer {
 		TableLayoutPanel^			_Options_Container;
 
 		Widget_Draw_Options^		_Draw_Options;
-		Widget_Fade_Options^		_Fade_Options;
 		Widget_Length_Options^		_Length_Options;
 		Widget_Color_Options^		_Color_Options;
+		Widget_Fade_Options^		_Fade_Options;
+		Widget_Strobe_Options^		_Strobe_Options;
 		Widget_Bucket_Options^		_Bucket_Options;
 
-		void UpdateOptionsVisibility(Widget_Toolbar::ToolType tool);
-		void OnToolbar_ModeChanged(System::Object^ sender, MIDILightDrawer::Widget_Toolbar::ToolType e);
+		void UpdateOptionsVisibility(TimelineToolType tool);
+		void Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e);
 	};
 }

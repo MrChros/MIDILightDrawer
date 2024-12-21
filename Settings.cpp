@@ -142,7 +142,7 @@ namespace MIDILightDrawer {
 
 				if (inOctaveEntries && currentLine->Contains("\"Name\"")) {
 					String^ name = currentLine->Split('"')[3];
-					String^ octaveStr = currentLine->Split(':')[2]->Trim('}', ' ', ',');
+					String^ octaveStr = currentLine->Split(':')[2]->Trim(L'}', L' ', L',');
 					int octave = Int32::Parse(octaveStr);
 					_Octave_Entries->Add(gcnew Octave_Entry(name, octave));
 				}
@@ -167,8 +167,8 @@ namespace MIDILightDrawer {
 				if (inHotkeyBindings) {
 					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
 					if (parts->Length == 2) {
-						String^ key = parts[0]->Trim()->Trim('"', ' ');
-						String^ value = parts[1]->Trim()->Trim('"', ' ', ',');
+						String^ key = parts[0]->Trim()->Trim(L'"', L' ');
+						String^ value = parts[1]->Trim()->Trim(L'"', L' ', L',');
 						if (!String::IsNullOrEmpty(key)) {
 							hotkeyBindings->Add(key, value);
 						}
@@ -180,19 +180,19 @@ namespace MIDILightDrawer {
 				if (currentLine->StartsWith("\"MidiNoteRed\"")) {
 					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
 					if (parts->Length == 2) {
-						_MIDI_Note_Red = Int32::Parse(parts[1]->Trim(',', ' '));
+						_MIDI_Note_Red = Int32::Parse(parts[1]->Trim(L',', L' '));
 					}
 				}
 				else if (currentLine->StartsWith("\"MidiNoteGreen\"")) {
 					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
 					if (parts->Length == 2) {
-						_MIDI_Note_Green = Int32::Parse(parts[1]->Trim(',', ' '));
+						_MIDI_Note_Green = Int32::Parse(parts[1]->Trim(L',', L' '));
 					}
 				}
 				else if (currentLine->StartsWith("\"MidiNoteBlue\"")) {
 					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
 					if (parts->Length == 2) {
-						_MIDI_Note_Blue = Int32::Parse(parts[1]->Trim(',', ' '));
+						_MIDI_Note_Blue = Int32::Parse(parts[1]->Trim(L',', L' '));
 					}
 				}
 
@@ -208,7 +208,7 @@ namespace MIDILightDrawer {
 				}
 
 				if (inColorPresets && currentLine->StartsWith("\"")) {
-					String^ colorStr = currentLine->Trim('"', ' ', ',');
+					String^ colorStr = currentLine->Trim(L'"', L' ', L',');
 					_ColorPresets->Add(colorStr);
 				}
 			}

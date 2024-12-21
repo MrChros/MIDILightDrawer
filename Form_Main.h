@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vcclr.h>
+
 #include "gp_parser.h"
 #include "Settings.h"
 #include "MIDI_Writer.h"
@@ -46,18 +49,25 @@ namespace MIDILightDrawer
 			Widget_Tab_Info^					_Tab_Info;
 			Widget_Tools_And_Control^			_Tools_And_Control;
 
+			Control_DropDown^					_DropDown_Track_Height;
 			Control_DropDown^					_DropDown_Marker;
 			Control_TrackBar_Zoom^				_TrackBar_Zoom;
 
 			Widget_Timeline^					_Timeline;
 			Widget_Toolbar^						_Toolbar;
 			Widget_Draw_Options^				_Draw_Options;
-			Widget_Fade_Options^				_Fade_Options;
 			Widget_Length_Options^				_Length_Options;
 			Widget_Color_Options^				_Color_Options;
+			Widget_Fade_Options^				_Fade_Options;
+			Widget_Strobe_Options^				_Strobe_Options;
 			Widget_Bucket_Options^				_Bucket_Options;
 
 			Dictionary<String^, Keys>^			_Active_Hotkeys;
+
+			// Internal Setup Methods
+			void InitializeBottomControls(Panel^ container);
+			void InitializeToolOptions();
+			void InitializeMainMenu();
 
 			// Menu Callbacks
 			void Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e);
@@ -69,8 +79,9 @@ namespace MIDILightDrawer
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);
 
 			// Control and Widget Callbacks
-			void OnToolbar_ModeChanged(System::Object^ sender, Widget_Toolbar::ToolType e);
+			void Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e);
 			void OnMidiSettingsAccepted();
+			void DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void DropDown_View_Marker_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void TrackBar_Zoom_OnValue_Changed(System::Object^ sender, Track_Bar_Value_Changed_Event_Args^ e);
 
@@ -84,7 +95,14 @@ namespace MIDILightDrawer
 			void Draw_Options_OnColorChanged(System::Drawing::Color color);
 			void Length_Options_OnQuantizationChanged(int value);
 			void Color_Options_OnColorChanged(System::Drawing::Color color);
+			void Fade_Options_OnQuantizationChanged(int value);
+			void Fade_Options_OnColorStartChanged(System::Drawing::Color color);
+			void Fade_Options_OnColorEndChanged(System::Drawing::Color color);
+			void Strobe_Options_OnQuantizationChanged(int value);
+			void Strobe_Options_OnColorChanged(System::Drawing::Color color);
 			void Bucket_Options_OnColorChanged(System::Drawing::Color color);
+
+			std::string ConvertToStdString(System::String^ input_string);
 
 			// Debug Members
 			void Button_1_Click(System::Object^ sender, System::EventArgs^ e);

@@ -127,9 +127,11 @@ struct MeasureHeader {
 	std::int8_t repeatClose;	
 	std::uint8_t repeatAlternative;
 	std::string tripletFeel;
+	std::uint8_t beams[4];
 	Tempo tempo;
 	TimeSignature timeSignature;
 	Marker marker;
+	
 
 	void addToXML(std::ostringstream& outputStream, std::int32_t indentLevel) const;
 };
@@ -246,7 +248,8 @@ struct Note {
 // Define voice struct
 struct Voice {
 	bool empty;
-	double duration;	
+	double durationInTicks;
+	Duration duration;
 	std::vector<Note> notes;
 
 	void addToXML(std::ostringstream& outputStream, std::int32_t indentLevel) const;
@@ -311,13 +314,36 @@ struct Track {
 	std::int32_t channelId;
 	std::int32_t number;
 	std::string name;
+	std::int32_t fretCount;
 	std::int32_t offset;
+	bool isDrumsTrack;
 	Lyric lyrics;
 	Color color;
 	std::vector<GuitarString> strings;
 	std::vector<Measure> measures;
 
 	void addToXML(std::ostringstream& outputStream, std::int32_t indentLevel) const;
+};
+
+// Define Page Setup struct
+struct PageSetup {
+	std::int32_t pageWidth;
+	std::int32_t pageHeight;
+	std::int32_t marginLeft;
+	std::int32_t marginRight;
+	std::int32_t marginTop;
+	std::int32_t marginBottom;
+	std::float_t scoreSizeProportion;
+	std::int16_t headerAndFooter;
+	std::string title;
+	std::string subtitle;
+	std::string artist;
+	std::string album;
+	std::string words;
+	std::string music;
+	std::string wordsAndMusic;
+	std::string copyright;
+	std::string pageNumber;
 };
 
 // Define struct to return overall tab - it only contains references to real values
@@ -337,6 +363,8 @@ struct TabFile {
 	std::string& instructions;
 	std::vector<std::string>& comments;
 	Lyric& lyric;
+	PageSetup& pageSetup;
+	std::string& tempoName;
 	std::int32_t& tempoValue;
 	std::int8_t& globalKeySignature;
 	std::vector<Channel>& channels;
@@ -350,22 +378,23 @@ struct TabFile {
 		std::string& subtitle, std::string& artist, std::string& album,
 		std::string& lyricsAuthor, std::string& musicAuthor, std::string& copyright,
 		std::string& tab, std::string& instructions, std::vector<std::string>& comments,
-		Lyric& lyric, std::int32_t& tempoValue, std::int8_t& globalKeySignature,
+		Lyric& lyric, PageSetup& pageSetup, std::string& tempoName, std::int32_t& tempoValue, std::int8_t& globalKeySignature,
 		std::vector<Channel>& channels, std::int32_t& measures, std::int32_t& trackCount,
 		std::vector<MeasureHeader>& measureHeaders, std::vector<Track>& tracks)
 		: major(major), minor(minor), title(title), subtitle(subtitle),
 		  artist(artist), album(album), lyricsAuthor(lyricsAuthor), musicAuthor(musicAuthor),
 		  copyright(copyright), tab(tab), instructions(instructions), comments(comments),
-		  lyric(lyric), tempoValue(tempoValue), globalKeySignature(globalKeySignature),
-		  channels(channels), measures(measures), trackCount(trackCount),
-		  measureHeaders(measureHeaders), tracks(tracks) {}
+		  lyric(lyric), pageSetup(pageSetup), tempoName(tempoName), tempoValue(tempoValue),
+		  globalKeySignature(globalKeySignature),  channels(channels), measures(measures),
+		  trackCount(trackCount), measureHeaders(measureHeaders), tracks(tracks) {}
 };
 
 class Parser {
 public:
-	Parser(const char *filePath);
+	Parser(const std::string& filePath);
 	std::string getXML() const;
 	TabFile getTabFile();
+
 private:
 	// Private member properties
 	std::vector<char> fileBuffer;
@@ -386,17 +415,20 @@ private:
 	std::vector<std::string> comments;
 	std::int32_t lyricTrack;
 	Lyric lyric;
+	PageSetup pageSetup;
+	std::string tempoName;
 	std::int32_t tempoValue;
 	std::int8_t globalKeySignature;
 	std::vector<Channel> channels;
-	std::int32_t measures;
+	std::int32_t measureCount;
 	std::int32_t trackCount;
 	std::vector<MeasureHeader> measureHeaders;
 	std::vector<Track> tracks;
 
 	// Private member functions for reading low-level file data
 	std::uint8_t readUnsignedByte();
-	std::int8_t readByte();
+	std::int8_t	readByte();
+	std::int16_t readShort();
 	std::int32_t readInt();
 	std::string readString(std::size_t size);
 	std::string readString(std::size_t size, std::size_t len);
@@ -409,7 +441,7 @@ private:
 	void readVersion();
 	bool isSupportedVersion(std::string& version);
 	Lyric readLyrics();
-	void readPageSetup();
+	PageSetup readPageSetup();
 	std::int8_t readKeySignature();
 	std::vector<Channel> readChannels();
 	Color readColor();
@@ -423,7 +455,8 @@ private:
 	void readText(Beat& beat);
 	void readChord(std::vector<GuitarString>& strings, Beat& beat);
 	double getTime(Duration duration);
-	double readDuration(std::uint8_t flags);
+	//double readDuration(std::uint8_t flags);
+	Duration readDuration(std::uint8_t flags);
 	double readBeat(std::int32_t start, Measure& measure, Track& track, Tempo& tempo, std::size_t voiceIndex);
 	Note readNote(GuitarString& string, Track& track, NoteEffect& effect);
 	std::int8_t getTiedNoteValue(std::int32_t string, Track& track);
@@ -440,6 +473,11 @@ private:
 std::int32_t numOfDigits(std::int32_t num);
 Duration denominatorToDuration(Denominator& denominator);
 void addSpacingToXML(std::ostringstream& outputStream, std::int32_t indentLevel);
+
+union IntToChars {
+	std::int32_t value;
+	std::uint8_t bytes[4];
+};
 
 }
 

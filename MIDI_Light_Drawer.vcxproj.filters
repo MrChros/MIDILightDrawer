@@ -24,37 +24,10 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Form_Main.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="gp_parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Widget_Tab_Info.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CustomTableWidget.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Widget_Tools_And_Control.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Widget_Toolbar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Widget_Draw_Options.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Widget_Draw_Table.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Settings.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Form_Settings_Hotkeys.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Form_Settings_MIDI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Hotkey_Manager.h">
@@ -90,9 +63,6 @@
     <ClInclude Include="Widget_Bucket_Options.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Widget_Draw_Table_Container.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Control_ScrollBar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -105,16 +75,49 @@
     <ClInclude Include="Widget_Timeline_Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ColorTable_DarkMode.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Timeline_Resource_Manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Timeline_Performance_Metrics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Timeline_Enhanced_Visibility_Tracker.h">
+    <ClInclude Include="Theme_Manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Custom_Color_Table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget_Draw_Options.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget_Tab_Info.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget_Toolbar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget_Tools_And_Control.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Form_Settings_MIDI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Form_Settings_Hotkeys.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Form_Main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Control_DataGrid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget_Timeline_Classes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Control_FadePreview.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget_Strobe_Options.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -140,9 +143,6 @@
     <ClCompile Include="Widget_Tab_Info.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CustomTableWidget.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Widget_Tools_And_Control.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -150,12 +150,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Widget_Draw_Options.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Widget_Draw_Table.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Widget_Draw_Table_RGB_Bar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Settings.cpp">
@@ -200,9 +194,6 @@
     <ClCompile Include="Widget_Bucket_Options.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Widget_Draw_Table_Container.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Control_ScrollBar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -212,16 +203,22 @@
     <ClCompile Include="Widget_Timeline_Tools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ColorTable_DarkMode.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Timeline_Resource_Manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Timeline_Performance_Metrics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Timeline_Enhanced_Visibility_Tracker.cpp">
+    <ClCompile Include="Theme_Manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Widget_Timeline_Classes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Control_FadePreview.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Widget_Strobe_Options.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -239,5 +236,7 @@
     <None Include="settings.json">
       <Filter>Other Files</Filter>
     </None>
+    <None Include="app.config" />
+    <None Include="MIDI_Light_Drawer.targets" />
   </ItemGroup>
 </Project>

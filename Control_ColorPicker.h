@@ -6,6 +6,7 @@ using namespace System::Windows::Forms;
 using namespace System::Drawing::Drawing2D;
 using namespace System::Drawing::Imaging;
 
+#include "Theme_Manager.h"
 #include "Control_ColorSlider.h"
 
 namespace MIDILightDrawer
@@ -15,27 +16,26 @@ namespace MIDILightDrawer
 		Control_ColorPicker();
 
 	private:
-		Bitmap^ _Wheel_Bitmap;
-		Control_ColorSlider^ _Saturation_Slider;
-		Control_ColorSlider^ _Value_Slider;
+		Bitmap^					_Wheel_Bitmap;
+		Control_ColorSlider^	_Saturation_Slider;
+		Control_ColorSlider^	_Value_Slider;
 		TextBox^ _TextBox_Red;
 		TextBox^ _TextBox_Green;
 		TextBox^ _TextBox_Blue;
-		Label^ _Label_Red;
-		Label^ _Label_Green;
-		Label^ _Label_Blue;
-		float _Radius_Wheel;
-		bool _Is_Dragging_Wheel;
-		float _Current_Hue;
-		float _Current_Saturation;
-		float _Current_Value;
-		bool _Updating_Text_Boxes;
-		static int SLIDER_HEIGHT = 20;
-		static int SPACING = 10;
-		static int TEXT_BOX_WIDTH = 50;
-		static int TEXT_BOX_HEIGHT = 20;
-		static const int RING_WIDTH = 10;
-		static const int INNER_SPACING = 20;
+		Label^	_Label_Red;
+		Label^	_Label_Green;
+		Label^	_Label_Blue;
+		float	_Radius_Wheel;
+		float	_Current_Hue;
+		float	_Current_Saturation;
+		float	_Current_Value;
+		bool	_Is_Dragging_Wheel;
+		bool	_Updating_Text_Boxes;
+		static int SLIDER_HEIGHT		= 20;
+		static int SPACING				= 10;
+		static int TEXT_BOX_WIDTH		= 50;
+		static int TEXT_BOX_HEIGHT		= 20;
+		static const int RING_WIDTH		= 10;
 
 	protected:
 		void Initialize_Sliders();

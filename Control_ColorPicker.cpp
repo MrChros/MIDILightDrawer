@@ -4,16 +4,15 @@ namespace MIDILightDrawer
 {
 	Control_ColorPicker::Control_ColorPicker()
 	{
-		this->DoubleBuffered = true;
-		this->MinimumSize = System::Drawing::Size(200, 140);
-		this->Size = System::Drawing::Size(300, 200 + 2 * (SLIDER_HEIGHT + SPACING));
-		this->BackColor = Color::Transparent;
+		this->DoubleBuffered	= true;
+		this->MinimumSize		= System::Drawing::Size(200, 140);
+		this->BackColor			= Color::Transparent;
 
-		_Current_Hue = 0.0f;
-		_Current_Saturation = 1.0f;
-		_Current_Value = 1.0f;
-		_Is_Dragging_Wheel = false;
-		_Updating_Text_Boxes = false;
+		_Current_Hue			= 0.0f;
+		_Current_Saturation		= 1.0f;
+		_Current_Value			= 1.0f;
+		_Is_Dragging_Wheel		= false;
+		_Updating_Text_Boxes	= false;
 
 		// Initialize all controls first
 		Initialize_Text_Boxes();
@@ -21,8 +20,8 @@ namespace MIDILightDrawer
 
 		this->MouseDown += gcnew MouseEventHandler(this, &Control_ColorPicker::OnMouseDown);
 		this->MouseMove += gcnew MouseEventHandler(this, &Control_ColorPicker::OnMouseMove);
-		this->MouseUp += gcnew MouseEventHandler(this, &Control_ColorPicker::OnMouseUp);
-		this->Resize += gcnew EventHandler(this, &Control_ColorPicker::OnResize);
+		this->MouseUp	+= gcnew MouseEventHandler(this, &Control_ColorPicker::OnMouseUp);
+		this->Resize	+= gcnew EventHandler(this, &Control_ColorPicker::OnResize);
 
 		// Create wheel bitmap last
 		Create_Wheel_Bitmap();
@@ -33,11 +32,13 @@ namespace MIDILightDrawer
 		// Initialize Saturation Slider
 		_Saturation_Slider = gcnew Control_ColorSlider(SliderType::Saturation);
 		_Saturation_Slider->Height = SLIDER_HEIGHT;
+		_Saturation_Slider->ApplyTheme(Theme_Manager::Get_Instance()->BackgroundAlt);
 		_Saturation_Slider->ValueChanged += gcnew EventHandler(this, &Control_ColorPicker::OnSliderValueChanged);
 
 		// Initialize Value Slider
 		_Value_Slider = gcnew Control_ColorSlider(SliderType::Value);
 		_Value_Slider->Height = SLIDER_HEIGHT;
+		_Value_Slider->ApplyTheme(Theme_Manager::Get_Instance()->BackgroundAlt);
 		_Value_Slider->ValueChanged += gcnew EventHandler(this, &Control_ColorPicker::OnSliderValueChanged);
 
 		this->Controls->Add(_Saturation_Slider);
@@ -52,14 +53,17 @@ namespace MIDILightDrawer
 		_Label_Red = gcnew Label();
 		_Label_Red->Text = "R:";
 		_Label_Red->AutoSize = true;
+		_Label_Red->ForeColor = Theme_Manager::Get_Instance()->ForegroundText;
 
 		_Label_Green = gcnew Label();
 		_Label_Green->Text = "G:";
 		_Label_Green->AutoSize = true;
-
+		_Label_Green->ForeColor = Theme_Manager::Get_Instance()->ForegroundText;
+		
 		_Label_Blue = gcnew Label();
 		_Label_Blue->Text = "B:";
 		_Label_Blue->AutoSize = true;
+		_Label_Blue->ForeColor = Theme_Manager::Get_Instance()->ForegroundText;
 
 		// Create textboxes
 		_TextBox_Red = gcnew TextBox();
@@ -97,14 +101,21 @@ namespace MIDILightDrawer
 
 		_Label_Blue->Location = Point(textStartX, textStartY + 2 * (TEXT_BOX_HEIGHT + SPACING));
 		_TextBox_Blue->Location = Point(textStartX + 25, textStartY + 2 * (TEXT_BOX_HEIGHT + SPACING));
+
+		Update_TextBox_Positions();
 	}
 
 	void Control_ColorPicker::Create_Wheel_Bitmap()
 	{
-		// Make wheel fill the width of the control minus padding
-		int wheelSize = Math::Min(Width - 2 * SPACING, Height - 3 * SPACING - TEXT_BOX_HEIGHT);
+		// Calculate available space for wheel
+		int controlsWidth = SPACING * 2 + 25 + TEXT_BOX_WIDTH + SPACING * 2;
+		int availableWidth = Width - controlsWidth - SPACING * 2;
+		int availableHeight = Height - SPACING * 2;
+
+		// Use the smaller dimension to ensure the wheel stays circular and fits
+		int wheelSize = Math::Min(availableWidth, availableHeight);
 		_Radius_Wheel = (wheelSize / 2.0f);
-		float innerRadius = _Radius_Wheel - RING_WIDTH;
+		float innerRadius = _Radius_Wheel - RING_WIDTH; // Maintain exact 10-pixel ring width
 
 		if (wheelSize <= 0) return;
 
@@ -117,7 +128,7 @@ namespace MIDILightDrawer
 			_Wheel_Bitmap = gcnew Bitmap(wheelSize, wheelSize);
 			Graphics^ g = Graphics::FromImage(_Wheel_Bitmap);
 			g->SmoothingMode = SmoothingMode::AntiAlias;
-			g->Clear(Color::Transparent); // Use transparent background
+			g->Clear(Color::Transparent);
 
 			// Draw color ring
 			for (int x = 0; x < wheelSize; x++) {
@@ -166,8 +177,11 @@ namespace MIDILightDrawer
 
 	void Control_ColorPicker::Update_Color_From_Mouse(int x, int y)
 	{
-		int wheelX = (Width - _Wheel_Bitmap->Width) / 2;
+		// Calculate wheel position (same as in OnPaint)
+		int controlsWidth = SPACING * 2 + 25 + TEXT_BOX_WIDTH + SPACING * 2;
+		int wheelX = controlsWidth;
 		int wheelY = SPACING;
+
 		Point center(wheelX + _Wheel_Bitmap->Width / 2, wheelY + _Wheel_Bitmap->Height / 2);
 
 		float dx = (float)(x - center.X);
@@ -176,7 +190,7 @@ namespace MIDILightDrawer
 		if (angle < 0) angle += 360;
 
 		_Current_Hue = angle;
-		
+
 		Update_Sliders_Hue();
 		this->Invalidate();
 		OnColorChanged();
@@ -186,51 +200,49 @@ namespace MIDILightDrawer
 	{
 		if (_Wheel_Bitmap == nullptr) return;
 
-		int wheelBottom = SPACING + _Wheel_Bitmap->Height;
+		// Calculate left-side margin
+		int leftMargin = SPACING * 2;
+		int labelWidth = 25;
+		int textBoxX = leftMargin + labelWidth;
 
-		// Calculate the total width needed for all controls
-		int controlGroup = TEXT_BOX_WIDTH + 25; // Width of textbox + label
-		int totalWidth = (controlGroup * 3) + (SPACING * 2); // 3 groups with 2 spaces between
+		// Center RGB controls vertically relative to the wheel
+		int wheelCenterY = SPACING + _Wheel_Bitmap->Height / 2;
+		int totalControlsHeight = (TEXT_BOX_HEIGHT + SPACING) * 3 - SPACING;
+		int startY = wheelCenterY - totalControlsHeight / 2;
 
-		// Start position for first control group
-		int startX = (Width - totalWidth) / 2;
-		int y = wheelBottom + SPACING;
+		// Position RGB controls
+		_Label_Red->Location = Point(leftMargin, startY + (TEXT_BOX_HEIGHT - _Label_Red->Height) / 2);
+		_TextBox_Red->Location = Point(textBoxX, startY);
 
-		// Calculate vertical alignment for labels
-		int labelOffset = (TEXT_BOX_HEIGHT - _Label_Red->Height) / 2;
+		_Label_Green->Location = Point(leftMargin, startY + TEXT_BOX_HEIGHT + SPACING + (TEXT_BOX_HEIGHT - _Label_Green->Height) / 2);
+		_TextBox_Green->Location = Point(textBoxX, startY + TEXT_BOX_HEIGHT + SPACING);
 
-		// Position all controls in a row
-		// R controls
-		_Label_Red->Location = Point(startX, y + labelOffset);
-		_TextBox_Red->Location = Point(startX + 25, y);
-
-		// G controls
-		startX += controlGroup + SPACING;
-		_Label_Green->Location = Point(startX, y + labelOffset);
-		_TextBox_Green->Location = Point(startX + 25, y);
-
-		// B controls
-		startX += controlGroup + SPACING;
-		_Label_Blue->Location = Point(startX, y + labelOffset);
-		_TextBox_Blue->Location = Point(startX + 25, y);
+		_Label_Blue->Location = Point(leftMargin, startY + 2 * (TEXT_BOX_HEIGHT + SPACING) + (TEXT_BOX_HEIGHT - _Label_Blue->Height) / 2);
+		_TextBox_Blue->Location = Point(textBoxX, startY + 2 * (TEXT_BOX_HEIGHT + SPACING));
 	}
 	
 	void Control_ColorPicker::Update_Slider_Positions()
 	{
 		if (_Wheel_Bitmap == nullptr) return;
 
+		// Calculate wheel position
+		int controlsWidth = SPACING * 2 + 25 + TEXT_BOX_WIDTH + SPACING * 2;
+		int wheelX = controlsWidth;
+		int wheelY = SPACING;
 		int wheelSize = _Wheel_Bitmap->Width;
+
+		// Use exact inner radius based on RING_WIDTH
 		float innerRadius = _Radius_Wheel - RING_WIDTH;
 
-		// Calculate slider width to fit inside the ring
-		int sliderWidth = (int)(innerRadius * 1.4f);
+		// Make sliders fit comfortably inside the inner circle
+		// Use 80% of inner diameter for slider width to leave some padding
+		int sliderWidth = (int)(innerRadius * 1.6f);
 
-		// Center point of the wheel (not the control)
-		int wheelX = (Width - wheelSize) / 2;
+		// Center point of the wheel
 		int centerX = wheelX + wheelSize / 2;
-		int centerY = SPACING + wheelSize / 2;
+		int centerY = wheelY + wheelSize / 2;
 
-		// Position sliders in the center of the ring
+		// Position sliders in the center of the wheel with proper spacing
 		_Saturation_Slider->Width = sliderWidth;
 		_Saturation_Slider->Location = Point(
 			centerX - sliderWidth / 2,
@@ -246,13 +258,16 @@ namespace MIDILightDrawer
 
 	void Control_ColorPicker::Update_Text_Boxes()
 	{
-		if (!_Updating_Text_Boxes) {
+		if (!_Updating_Text_Boxes)
+		{
 			_Updating_Text_Boxes = true;
+
 			Color currentColor = SelectedColor;
-			_TextBox_Red->Text = currentColor.R.ToString();
-			_TextBox_Green->Text = currentColor.G.ToString();
-			_TextBox_Blue->Text = currentColor.B.ToString();
-			_Updating_Text_Boxes = false;
+
+			_TextBox_Red->Text		= currentColor.R.ToString();
+			_TextBox_Green->Text	= currentColor.G.ToString();
+			_TextBox_Blue->Text		= currentColor.B.ToString();
+			_Updating_Text_Boxes	= false;
 		}
 	}
 
@@ -292,81 +307,84 @@ namespace MIDILightDrawer
 
 	void Control_ColorPicker::OnPaint(PaintEventArgs^ e)
 	{
-		if (_Wheel_Bitmap != nullptr) {
-			// Center the wheel horizontally and vertically in the available space
-			int x = (Width - _Wheel_Bitmap->Width) / 2;
-			int y = SPACING;
-
-			if (this->Enabled) {
-				e->Graphics->DrawImage(_Wheel_Bitmap, x, y);
-			}
-			else {
-				// Create grayscale version for disabled state
-				ColorMatrix^ grayMatrix = gcnew ColorMatrix(
-					gcnew array<array<float>^>{
-					gcnew array<float>{0.3f, 0.3f, 0.3f, 0, 0},
-						gcnew array<float>{0.3f, 0.3f, 0.3f, 0, 0},
-						gcnew array<float>{0.3f, 0.3f, 0.3f, 0, 0},
-						gcnew array<float>{0, 0, 0, 1, 0},
-						gcnew array<float>{0.1f, 0.1f, 0.1f, 0, 1}
-				}
-				);
-
-				ImageAttributes^ attributes = gcnew ImageAttributes();
-				attributes->SetColorMatrix(grayMatrix);
-
-				e->Graphics->DrawImage(_Wheel_Bitmap,
-					Rectangle(x, y, _Wheel_Bitmap->Width, _Wheel_Bitmap->Height),
-					0, 0, _Wheel_Bitmap->Width, _Wheel_Bitmap->Height,
-					GraphicsUnit::Pixel, attributes);
-
-				delete attributes;
-				delete grayMatrix;
-			}
-
-			// Draw the selected point on the ring
-			float angleRad = _Current_Hue * (float)Math::PI / 180.0f;
-			int centerX = x + _Wheel_Bitmap->Width / 2;
-			int centerY = y + _Wheel_Bitmap->Height / 2;
-			int pointX = centerX + (int)((_Radius_Wheel - RING_WIDTH / 2) * Math::Cos(angleRad));
-			int pointY = centerY + (int)((_Radius_Wheel - RING_WIDTH / 2) * Math::Sin(angleRad));
-
-			// Create larger selector (20 pixels diameter)
-			int selectorSize = 20;
-			Rectangle selectorRect(pointX - selectorSize / 2, pointY - selectorSize / 2,
-				selectorSize, selectorSize);
-
-			// Fill with current hue color at full saturation and value
-			Color selectorColor;
-			if (this->Enabled) {
-				selectorColor = ColorFromHSV(_Current_Hue, 1.0f, 1.0f);
-			}
-			else {
-				selectorColor = Color::Gray;
-			}
-
-			SolidBrush^ fillBrush = gcnew SolidBrush(selectorColor);
-			e->Graphics->FillEllipse(fillBrush, selectorRect);
-			delete fillBrush;
-
-			// Draw borders for better visibility
-			Color borderColor = this->Enabled ? Color::White : Color::LightGray;
-			Pen^ whitePen = gcnew Pen(borderColor, 2);
-			e->Graphics->DrawEllipse(whitePen, selectorRect);
-			delete whitePen;
-
-			Pen^ blackPen = gcnew Pen(this->Enabled ? Color::Black : Color::DarkGray, 1);
-			e->Graphics->DrawEllipse(blackPen, selectorRect);
-			delete blackPen;
+		if (_Wheel_Bitmap == nullptr) {
+			return;
 		}
+
+		int controlsWidth = SPACING * 2 + 25 + TEXT_BOX_WIDTH + SPACING * 2;
+		int wheelX = controlsWidth;
+
+		// Center wheel vertically
+		int wheelY = (Height - _Wheel_Bitmap->Height) / 2;
+
+		if (this->Enabled) {
+			e->Graphics->DrawImage(_Wheel_Bitmap, wheelX, wheelY);
+		}
+		else {
+			// Create grayscale version for disabled state
+			ColorMatrix^ grayMatrix = gcnew ColorMatrix(
+				gcnew array<array<float>^>{
+				gcnew array<float>{0.3f, 0.3f, 0.3f, 0, 0},
+					gcnew array<float>{0.3f, 0.3f, 0.3f, 0, 0},
+					gcnew array<float>{0.3f, 0.3f, 0.3f, 0, 0},
+					gcnew array<float>{0, 0, 0, 1, 0},
+					gcnew array<float>{0.1f, 0.1f, 0.1f, 0, 1}
+			}
+			);
+
+			ImageAttributes^ attributes = gcnew ImageAttributes();
+			attributes->SetColorMatrix(grayMatrix);
+
+			e->Graphics->DrawImage(_Wheel_Bitmap,
+				Rectangle(wheelX, wheelY, _Wheel_Bitmap->Width, _Wheel_Bitmap->Height),
+				0, 0, _Wheel_Bitmap->Width, _Wheel_Bitmap->Height,
+				GraphicsUnit::Pixel, attributes);
+
+			delete attributes;
+			delete grayMatrix;
+		}
+
+		// Draw the selected point on the ring
+		float angleRad = _Current_Hue * (float)Math::PI / 180.0f;
+		int centerX = wheelX + _Wheel_Bitmap->Width / 2;
+		int centerY = wheelY + _Wheel_Bitmap->Height / 2;
+		float midRadius = _Radius_Wheel - (RING_WIDTH / 2.0f); // Center of the ring
+		int pointX = centerX + (int)(midRadius * Math::Cos(angleRad));
+		int pointY = centerY + (int)(midRadius * Math::Sin(angleRad));
+
+		// Create larger selector (20 pixels diameter)
+		int selectorSize = 20;
+		Rectangle selectorRect(pointX - selectorSize / 2, pointY - selectorSize / 2,
+			selectorSize, selectorSize);
+
+		// Fill with current hue color at full saturation and value
+		Color selectorColor = this->Enabled ? ColorFromHSV(_Current_Hue, 1.0f, 1.0f) : Color::Gray;
+
+		SolidBrush^ fillBrush = gcnew SolidBrush(selectorColor);
+		e->Graphics->FillEllipse(fillBrush, selectorRect);
+		delete fillBrush;
+
+		// Draw borders for better visibility
+		Color borderColor = this->Enabled ? Color::Black : Color::LightGray;
+		Pen^ whitePen = gcnew Pen(borderColor, 2);
+		e->Graphics->DrawEllipse(whitePen, selectorRect);
+		delete whitePen;
+
+		Pen^ blackPen = gcnew Pen(this->Enabled ? Color::Black : Color::DarkGray, 1);
+		e->Graphics->DrawEllipse(blackPen, selectorRect);
+		delete blackPen;
 	}
 
 	void Control_ColorPicker::OnMouseDown(Object^ sender, MouseEventArgs^ e)
 	{
 		if (_Wheel_Bitmap == nullptr) return;
 
-		int wheelX = (Width - _Wheel_Bitmap->Width) / 2;
+		// Calculate wheel position (same as in OnPaint)
+		int controlsWidth = SPACING * 2 + 25 + TEXT_BOX_WIDTH + SPACING * 2;
+		int wheelX = controlsWidth;
 		int wheelY = SPACING;
+
+		// Calculate relative coordinates
 		Point center(wheelX + _Wheel_Bitmap->Width / 2, wheelY + _Wheel_Bitmap->Height / 2);
 
 		float dx = (float)(e->X - center.X);

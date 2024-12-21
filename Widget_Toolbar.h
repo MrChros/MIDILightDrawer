@@ -1,53 +1,52 @@
 #pragma once
 
-using namespace System;
-using namespace System::Windows::Forms;
 using namespace System::Collections::Generic;
-using namespace System::Drawing;
+
+#include "Widget_Timeline_Common.h"
+#include "Theme_Manager.h"
 
 namespace MIDILightDrawer {
 
-	public ref class Widget_Toolbar : public System::Windows::Forms::UserControl
-	{
-	public:
-		// Enum for tool types
-		enum class ToolType
-		{
-			Selection,
-			Draw,
-			Erase,
-			Fade,
-			Duration,
-			Change_Color,
-			Bucket_Fill
-		};
+	using namespace System;
+	using namespace System::Windows::Forms;
+	using namespace System::Drawing;
 
-	private:
-		List<Button^>^ _Toolbar_Buttons;
-		Button^ _Selected_Button;
-		ToolType _Current_Tool;
-		ToolTip^ _ToolTip;
-		Dictionary<ToolType, Image^>^ _Tool_Icons;
-
-		void Initialize_Component();
-		void Initialize_Buttons();
-		Button^ Create_Tool_Button(ToolType toolType, String^ name);
-		void Set_Tool_Icon(ToolType tool, Image^ icon);
-		String^ Get_Tooltip_Text(ToolType toolType);
-		void Button_Click(Object^ sender, EventArgs^ e);
-
+	public ref class Widget_Toolbar : public UserControl {
 	public:
 		Widget_Toolbar();
 
-		// Event that fires when a tool is selected
-		event EventHandler<ToolType>^ ToolChanged;
+		// Event that fires when tool selection changes
+		event EventHandler<TimelineToolType>^ OnToolChanged;
 
-		// Get the currently selected tool
-		ToolType Get_Current_Tool();
+		// Current selected tool
+		property TimelineToolType CurrentTool {
+			TimelineToolType get() { return _Current_Tool; }
+			void set(TimelineToolType tool);
+		}
 
-		// Programmatically select a button by index
-		void Select_Button(int index);
+	private:
+		// Constants for layout
+		literal int BUTTON_SIZE		= 48;
+		literal int BUTTON_PADDING	= 4;
+		literal int BUTTON_SPACING	= 2;
+
+		// Member variables
+		System::Resources::ResourceManager^		_Resources;
+		TimelineToolType						_Current_Tool;
+		List<Button^>^							_Tool_Buttons;
+		Dictionary<TimelineToolType, String^>^	_Tool_Icons;
+
+		// Initialize controls and layout
+		void InitializeComponent();
+		void SetupToolIcons();
+		void CreateToolButtons();
+
+		// Event handlers
+		void OnToolButtonClick(Object^ sender, EventArgs^ e);
+		void UpdateButtonStates();
+
+		// Helper methods
+		void StyleButton(Button^ button, String^ iconName, String^ toolTip);
+		Drawing::Image^ GetIconForTool(String^ iconName);
 	};
-
-	public delegate void ToolChangedEventHandler(Widget_Toolbar::ToolType newTool);
 }

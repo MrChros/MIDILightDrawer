@@ -69,7 +69,7 @@ std::string Parser::getXML() const
 	addObjectsToXML("Channels", channels, outputStream, 1);
 
 	// Output measures
-	outputStream << XML_SPACING << "<Measures>" << measures << "</Measures>\n";
+	outputStream << XML_SPACING << "<Measures>" << measureCount << "</Measures>\n";
 
 	// Output track count
 	outputStream << XML_SPACING << "<TrackCount>" << trackCount << "</TrackCount>\n";
@@ -394,7 +394,7 @@ void Voice::addToXML(std::ostringstream& outputStream, std::int32_t indentLevel)
 	addSpacingToXML(outputStream, indentLevel + 1);
 	outputStream << "<Empty>" << (empty ? "true" : "false") << "</Empty>\n";
 	addSpacingToXML(outputStream, indentLevel + 1);
-	outputStream << "<Duration>" << duration << "</Duration>\n";
+	outputStream << "<Duration>" << durationInTicks << "</Duration>\n";
 	addObjectsToXML("Notes", notes, outputStream, indentLevel + 1);
 
 	addSpacingToXML(outputStream, indentLevel);

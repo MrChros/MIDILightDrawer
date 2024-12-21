@@ -73,7 +73,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -113,74 +115,63 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>main</EntryPointSymbol>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(SolutionDir)Dependencies\*.dll" "$(TargetDir)" /Y /I</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ColorTable_DarkMode.h" />
     <ClInclude Include="Control_ColorPicker.h" />
     <ClInclude Include="Control_ColorPreset.h" />
     <ClInclude Include="Control_ColorSlider.h" />
+    <ClInclude Include="Control_DataGrid.h" />
     <ClInclude Include="Control_DropDown.h" />
+    <ClInclude Include="Control_FadePreview.h" />
     <ClInclude Include="Control_ScrollBar.h" />
     <ClInclude Include="Control_Trackbar_Zoom.h" />
-    <ClInclude Include="Form_Settings_Hotkeys.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
-    <ClInclude Include="Form_Settings_MIDI.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
+    <ClInclude Include="Custom_Color_Table.h" />
+    <ClInclude Include="Form_Main.h" />
+    <ClInclude Include="Form_Settings_Hotkeys.h" />
+    <ClInclude Include="Form_Settings_MIDI.h" />
     <ClInclude Include="Hotkey_Manager.h" />
     <ClInclude Include="MIDI_Writer.h" />
     <ClInclude Include="Settings.h" />
-    <ClInclude Include="CustomTableWidget.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
-    <ClInclude Include="Form_Main.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
     <ClInclude Include="gp_parser.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="Timeline_Enhanced_Visibility_Tracker.h" />
+    <ClInclude Include="Theme_Manager.h" />
     <ClInclude Include="Timeline_Performance_Metrics.h" />
     <ClInclude Include="Timeline_Resource_Manager.h" />
     <ClInclude Include="Widget_Bucket_Options.h" />
     <ClInclude Include="Widget_Color_Options.h" />
-    <ClInclude Include="Widget_Draw_Table_Container.h" />
+    <ClInclude Include="Widget_Draw_Options.h" />
     <ClInclude Include="Widget_Fade_Options.h" />
     <ClInclude Include="Widget_Length_Options.h" />
-    <ClInclude Include="Widget_Tab_Info.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
+    <ClInclude Include="Widget_Strobe_Options.h" />
+    <ClInclude Include="Widget_Tab_Info.h" />
     <ClInclude Include="Widget_Timeline.h" />
+    <ClInclude Include="Widget_Timeline_Classes.h" />
     <ClInclude Include="Widget_Timeline_Common.h" />
     <ClInclude Include="Widget_Timeline_Tools.h" />
-    <ClInclude Include="Widget_Tools_And_Control.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
-    <ClInclude Include="Widget_Draw_Options.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
-    <ClInclude Include="Widget_Draw_Table.h" />
-    <ClInclude Include="Widget_Toolbar.h">
-      <FileType>CppControl</FileType>
-    </ClInclude>
+    <ClInclude Include="Widget_Toolbar.h" />
+    <ClInclude Include="Widget_Tools_And_Control.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp" />
-    <ClCompile Include="ColorTable_DarkMode.cpp" />
     <ClCompile Include="Control_ColorPicker.cpp" />
     <ClCompile Include="Control_ColorPreset.cpp" />
     <ClCompile Include="Control_ColorSlider.cpp" />
     <ClCompile Include="Control_DropDown.cpp" />
+    <ClCompile Include="Control_FadePreview.cpp" />
     <ClCompile Include="Control_ScrollBar.cpp" />
     <ClCompile Include="Control_Trackbar_Zoom.cpp" />
     <ClCompile Include="Form_Settings_Hotkeys.cpp" />
@@ -188,7 +179,6 @@
     <ClCompile Include="Hotkey_Manager.cpp" />
     <ClCompile Include="MIDI_Writer.cpp" />
     <ClCompile Include="Settings.cpp" />
-    <ClCompile Include="CustomTableWidget.cpp" />
     <ClCompile Include="Form_Main.cpp" />
     <ClCompile Include="gp_parser.cpp">
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</LanguageStandard>
@@ -200,21 +190,20 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Timeline_Enhanced_Visibility_Tracker.cpp" />
+    <ClCompile Include="Theme_Manager.cpp" />
     <ClCompile Include="Timeline_Performance_Metrics.cpp" />
     <ClCompile Include="Timeline_Resource_Manager.cpp" />
     <ClCompile Include="Widget_Bucket_Options.cpp" />
     <ClCompile Include="Widget_Color_Options.cpp" />
-    <ClCompile Include="Widget_Draw_Table_Container.cpp" />
     <ClCompile Include="Widget_Fade_Options.cpp" />
     <ClCompile Include="Widget_Length_Options.cpp" />
+    <ClCompile Include="Widget_Strobe_Options.cpp" />
     <ClCompile Include="Widget_Tab_Info.cpp" />
     <ClCompile Include="Widget_Timeline.cpp" />
+    <ClCompile Include="Widget_Timeline_Classes.cpp" />
     <ClCompile Include="Widget_Timeline_Tools.cpp" />
     <ClCompile Include="Widget_Tools_And_Control.cpp" />
     <ClCompile Include="Widget_Draw_Options.cpp" />
-    <ClCompile Include="Widget_Draw_Table.cpp" />
-    <ClCompile Include="Widget_Draw_Table_RGB_Bar.cpp" />
     <ClCompile Include="Widget_Toolbar.cpp" />
     <ClCompile Include="xml_module.cpp">
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp17</LanguageStandard>
@@ -224,16 +213,28 @@
     <Image Include="app.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
+    <Reference Include="System">
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Data">
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Drawing">
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Windows.Forms">
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Xml">
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Icons.resx" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
+    <None Include="MIDI_Light_Drawer.targets" />
     <None Include="settings.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

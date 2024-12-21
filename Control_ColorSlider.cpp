@@ -15,6 +15,11 @@ namespace MIDILightDrawer
 		_IsDragging = false;
 	}
 
+	void Control_ColorSlider::ApplyTheme(Color backgroundColor)
+	{
+		this->BackColor = backgroundColor;
+	}
+
 	void Control_ColorSlider::OnPaint(PaintEventArgs^ e)
 	{
 		Graphics^ g = e->Graphics;
@@ -25,7 +30,8 @@ namespace MIDILightDrawer
 		int trackY = (Height - trackHeight) / 2;
 		Rectangle trackRect(0, trackY, Width, trackHeight);
 
-		if (this->Enabled) {
+		if (this->Enabled)
+		{
 			// Create gradient based on slider type
 			LinearGradientBrush^ brush;
 			if (_Type == SliderType::Saturation) {

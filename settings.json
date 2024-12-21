@@ -1,7 +1,13 @@
 {
   "HotkeyBindings": {
+    "Select Tool": "S",
+    "Draw Tool": "D",
+    "Erase Tool": "E",
+    "Color Tool": "C",
+    "Duration Tool": "X",
+    "Fade Tool": "F",
+    "Strobe Tool": "U",
     "Select Color 1": "D1",
-    "Select Color 10": "D0",
     "Select Color 2": "D2",
     "Select Color 3": "D3",
     "Select Color 4": "D4",
@@ -10,19 +16,15 @@
     "Select Color 7": "D7",
     "Select Color 8": "D8",
     "Select Color 9": "D9",
-    "Draw/Length Quantization Down": "",
+    "Select Color 10": "D0",
     "Draw/Length Quantization Up": "R",
-    "View Quantization Down": "W",
-    "View Quantization Up": "Q",
-    "Bucket Tool": "B",
-    "Color Tool": "C",
-    "Draw Tool": "D",
-    "Erase Tool": "E",
-    "Fade Tool": "F",
-    "Select Tool": "S",
-    "Reset Zoom": "",
+    "Draw/Length Quantization Down": "",
     "Zoom In": "Add",
-    "Zoom Out": "Subtract"
+    "Zoom Out": "Subtract",
+    "Zoom Reset": "",
+    "Track Height Increase": "",
+    "Track Height Decrease": "",
+    "Track Height Reset": ""
   },
   "MidiNoteRed": 0,
   "MidiNoteGreen": 2,
@@ -30,17 +32,18 @@
   "OctaveEntries": [
     {"Name": "Guitar", "Octave": 0},
     {"Name": "Bass", "Octave": 1},
-    {"Name": "Drums", "Octave": 2}
+    {"Name": "Drums", "Octave": 2},
+    {"Name": "Synth", "Octave": 4}
   ]
   "ColorPresets": [
     "255,0,0",
     "255,128,64",
-    "255,255,128",
+    "255,0,210",
     "0,255,136",
     "0,255,137",
     "0,255,136",
-    "255,255,255",
-    "239,255,5",
+    "255,244,0",
+    "0,255,136",
     "255,255,255",
     "255,0,0"
   ]

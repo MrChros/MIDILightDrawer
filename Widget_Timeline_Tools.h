@@ -456,4 +456,111 @@ namespace MIDILightDrawer
 			void set(Color value);
 		}
 	};
+
+
+	/////////////////////////////
+	// FadeTool Implementation //
+	/////////////////////////////
+	public ref class FadeTool : public TimelineTool
+	{
+	private:
+		bool				isDrawing;
+		Point^				drawStart;
+		Track^				targetTrack;
+		List<BarEvent^>^	previewBars;
+		BarEvent^			previewBar;
+		int					startTick;
+		
+
+		static const int DEFAULT_TICK_LENGTH	= 960 / 4; // 16th Note
+		static const int MIN_DRAG_PIXELS		= 5;
+		
+	public:
+		FadeTool(Widget_Timeline^ timeline);
+
+		virtual void OnMouseDown(MouseEventArgs^ e) override;
+		virtual void OnMouseMove(MouseEventArgs^ e) override;
+		virtual void OnMouseUp(MouseEventArgs^ e) override;
+		virtual void OnKeyDown(KeyEventArgs^ e) override;
+		virtual void OnKeyUp(KeyEventArgs^ e) override;
+
+		property int TickLength;
+		property Color ColorStart;
+		property Color ColorEnd;
+
+		property List<BarEvent^>^ PreviewBars {
+			List<BarEvent^>^ get() { return previewBars; }
+		}
+
+		property Track^ TargetTrack {
+			Track^ get() { return targetTrack; }
+		}
+
+		property BarEvent^ PreviewBar {
+			BarEvent^ get() { return previewBar; }
+		}
+
+		property Point CurrentMousePosition {
+			Point get() { return lastMousePos; }
+		}
+
+	private:
+		Color InterpolateColor(Color start, Color end, float ratio);
+		void CreatePreviewBars(Point currentPos);
+		void AddBarsToTrack();
+		void UpdateSinglePreview(Point mousePos);
+		void ClearPreviews();
+	};
+
+
+	///////////////////////////////
+	// StrobeTool Implementation //
+	///////////////////////////////
+	public ref class StrobeTool : public TimelineTool
+	{
+	private:
+		bool				isDrawing;
+		Point^				drawStart;
+		Track^				targetTrack;
+		List<BarEvent^>^	previewBars;
+		BarEvent^			previewBar;
+		int					startTick;
+
+		static const int DEFAULT_TICK_LENGTH = 960 / 4; // 16th Note
+		static const int MIN_DRAG_PIXELS = 5;
+
+	public:
+		StrobeTool(Widget_Timeline^ timeline);
+
+		virtual void OnMouseDown(MouseEventArgs^ e) override;
+		virtual void OnMouseMove(MouseEventArgs^ e) override;
+		virtual void OnMouseUp(MouseEventArgs^ e) override;
+		virtual void OnKeyDown(KeyEventArgs^ e) override;
+		virtual void OnKeyUp(KeyEventArgs^ e) override;
+
+		property int TickLength;
+		property Color StrobeColor;
+
+		property List<BarEvent^>^ PreviewBars {
+			List<BarEvent^>^ get() { return previewBars; }
+		}
+
+		property Track^ TargetTrack {
+			Track^ get() { return targetTrack; }
+		}
+
+		property BarEvent^ PreviewBar{
+			BarEvent ^ get() { return previewBar; }
+		}
+
+		property Point CurrentMousePosition {
+			Point get() { return lastMousePos; }
+		}
+
+	private:
+		void CreatePreviewBars(Point currentPos);
+		void AddBarsToTrack();
+		void UpdateSinglePreview(Point mousePos);
+		void ClearPreviews();
+	};
 }

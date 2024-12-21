@@ -197,7 +197,7 @@ namespace MIDILightDrawer
 			int Slider_Center = New_X + SLIDER_WIDTH / 2;
 
 			// Find closest step
-			int New_Step = (float)Math::Round((float)(Slider_Center - Track_Start) / Step_Size);
+			int New_Step = (int)((float)Math::Round((float)(Slider_Center - Track_Start) / Step_Size));
 			New_Step = Math::Max(0, Math::Min(New_Step, _Values->Length - 1));
 
 			if (New_Step != _Current_Step) {

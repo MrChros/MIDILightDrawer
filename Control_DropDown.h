@@ -81,20 +81,8 @@ namespace MIDILightDrawer {
 		int _Tile_Width;
 		int _Tile_Height;
 		int _Columns;
-<<<<<<< HEAD
 		int _Close_Delay_Ms;
 	
-=======
-
-		// Theme-related members
-		Color _Background_Color;
-		Color _Border_Color;
-		Color _Hover_Color;
-		Color _Selected_Color;
-		Color _Dropdown_Background;
-		Color _Dropdown_Border;
-
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		// Private methods
 		void Initialize_Component();
 		void Show_Drop_Down();
@@ -116,8 +104,6 @@ namespace MIDILightDrawer {
 		Rectangle Get_Control_Screen_Bounds();
 		Rectangle Get_Panel_Screen_Bounds();
 		Rectangle Get_Tile_Bounds(int index);
-
-		void Apply_Theme();
 
 		void Apply_Theme();
 

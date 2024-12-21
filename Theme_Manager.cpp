@@ -252,21 +252,15 @@ namespace MIDILightDrawer
 		int centerX = rect.Width / 2;
 		int centerY = rect.Height / 2;
 
-<<<<<<< HEAD
 		// Not sure why that here is needed
 		/*
-=======
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		if (button->Image != nullptr)
 		{
 			int imageX = centerX - (button->Image->Width / 2);
 			int imageY = centerY - (button->Image->Height / 2);
 			g->DrawImage(button->Image, imageX, imageY);
 		}
-<<<<<<< HEAD
 		*/
-=======
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 		String^ Button_Text;
 		if (_Button_Texts->TryGetValue(button, Button_Text))

@@ -14,11 +14,7 @@ namespace MIDILightDrawer
 		// Basic form setup with modern styling
 		this->Text			= "MIDI Light Drawer";
 		this->Size			= System::Drawing::Size(1200, 800);
-<<<<<<< HEAD
 		this->MinimumSize	= System::Drawing::Size(1200, 800);
-=======
-		this->MinimumSize	= System::Drawing::Size(850, 600);
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		this->Padding		= System::Windows::Forms::Padding(1); // Border padding
 
 		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
@@ -46,12 +42,6 @@ namespace MIDILightDrawer
 
 		// Configure column styles
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
-<<<<<<< HEAD
-=======
-		//Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
-		//Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 270));
-		//Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 		// Create tools container with styling
 		Panel^ toolsContainer = gcnew Panel();
@@ -98,7 +88,6 @@ namespace MIDILightDrawer
 		Table_Layout_Main->Controls->Add(timelineContainer, 0, 1);
 		Table_Layout_Main->SetColumnSpan(timelineContainer, Table_Layout_Main->ColumnCount);
 
-<<<<<<< HEAD
 
 		///////////////////////////
 		// Bottom Controls Panel //
@@ -152,38 +141,8 @@ namespace MIDILightDrawer
 		// Create the Tablature Info Widget
 		this->_Tab_Info = gcnew Widget_Tab_Info();
 		this->_Tab_Info->Dock = DockStyle::Fill;
-=======
 
-		///////////////////////////
-		// Bottom Controls Panel //
-		///////////////////////////
-		Panel^ bottomControlsPanel = gcnew Panel();
-		bottomControlsPanel->Dock = DockStyle::Fill;
-		bottomControlsPanel->Padding = System::Windows::Forms::Padding(0, 10, 0, 0);
-		bottomControlsPanel->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
-		// Configure and add bottom controls
-		InitializeBottomControls(bottomControlsPanel);
-		Table_Layout_Main->Controls->Add(bottomControlsPanel, 0, 2);
-		Table_Layout_Main->SetColumnSpan(bottomControlsPanel, Table_Layout_Main->ColumnCount);
-
-		mainContainer->Controls->Add(Table_Layout_Main);
-		this->Controls->Add(mainContainer);
-
-		// Initialize menu
-		InitializeMainMenu();
-
-		// Apply theme
-		//Theme_Manager::Get_Instance()->ApplyTheme(this);
-		this->BackColor = Theme_Manager::Get_Instance()->BackgroundLight;
-		Theme_Manager::Get_Instance()->ApplyThemeToMenuStrip(this->_Menu_Strip);
-
-		// Initialize hotkeys and settings
-		Initialize_Hotkeys();
-		OnMidiSettingsAccepted();
-
-<<<<<<< HEAD
 		// Track Preset Widget
 		array<String^>^ Lines_First_Track_Height	= gcnew array<String^>	{ "Compact", "Normal", "Large", "Extended"	};
 		array<String^>^ Lines_Second_Track_Height	= gcnew array<String^>	{ "", "", "", "" };
@@ -198,30 +157,6 @@ namespace MIDILightDrawer
 		this->_DropDown_Track_Height->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
 		this->_DropDown_Track_Height->Set_Items(Lines_First_Track_Height, Lines_Second_Track_Height, Values_Track_Height);
 		this->_DropDown_Track_Height->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Form_Main::DropDown_Track_Height_OnItem_Selected);
-=======
-		this->_Tab_Info = gcnew Widget_Tab_Info();
-	}
-
-	Form_Main::~Form_Main()
-	{
-
-	}
-
-	void Form_Main::InitializeBottomControls(Panel^ container)
-	{
-		TableLayoutPanel^ bottomLayout = gcnew TableLayoutPanel();
-		bottomLayout->Dock = DockStyle::Fill;
-		bottomLayout->ColumnCount = 4;
-		bottomLayout->RowCount = 1;
-
-		// Configure column styles
-		bottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 25));
-		bottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 25));
-		bottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 270));
-		bottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
-
-		bottomLayout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.f));
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 		// Style the marker dropdown
 		this->_DropDown_Marker = gcnew Control_DropDown();
@@ -232,19 +167,11 @@ namespace MIDILightDrawer
 		this->_DropDown_Marker->Set_Open_Direction(true);
 		this->_DropDown_Marker->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
 		this->_DropDown_Marker->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Form_Main::DropDown_View_Marker_OnItem_Selected);
-<<<<<<< HEAD
 
 		// Configure zoom control with container for right alignment
 		Panel^ zoomPanel = gcnew Panel();
 		zoomPanel->Dock			= DockStyle::Fill;
 
-=======
-
-		// Configure zoom control with container for right alignment
-		Panel^ zoomPanel = gcnew Panel();
-		zoomPanel->Dock			= DockStyle::Fill;
-
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		array<double>^ Zoom_Values = { 0.1, 0.25, 0.5, 0.75, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 		_TrackBar_Zoom = gcnew Control_TrackBar_Zoom();
 		_TrackBar_Zoom->Dock = DockStyle::Fill;
@@ -255,7 +182,6 @@ namespace MIDILightDrawer
 
 		// Add zoom control to its container
 		zoomPanel->Controls->Add(_TrackBar_Zoom);
-<<<<<<< HEAD
 
 		// Add controls to layout with margins
 		bottomLayout->Controls->Add(this->_Tab_Info				, 0, 0);
@@ -292,34 +218,6 @@ namespace MIDILightDrawer
 		this->_Strobe_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Strobe_Options_OnQuantizationChanged);
 		this->_Strobe_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Strobe_Options_OnColorChanged);
 
-=======
-
-		// Add controls to layout with margins
-		bottomLayout->Controls->Add(this->_DropDown_Marker, 2, 0);
-		bottomLayout->Controls->Add(zoomPanel, 3, 0);
-
-		container->Controls->Add(bottomLayout);
-	}
-
-	void Form_Main::InitializeToolOptions()
-	{
-		// Draw Options
-		this->_Draw_Options = this->_Tools_And_Control->Get_Widget_Draw_Options();
-		this->_Draw_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Draw_Options_OnQuantizationChanged);
-		this->_Draw_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Draw_Options_OnColorChanged);
-
-		// Fade Options
-		this->_Fade_Options = this->_Tools_And_Control->Get_Widget_Fade_Options();
-
-		// Length Options
-		this->_Length_Options = this->_Tools_And_Control->Get_Widget_Length_Options();
-		this->_Length_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Length_Options_OnQuantizationChanged);
-
-		// Color Options
-		this->_Color_Options = this->_Tools_And_Control->Get_Widget_Color_Options();
-		this->_Color_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Color_Options_OnColorChanged);
-
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		// Bucket Options
 		this->_Bucket_Options = this->_Tools_And_Control->Get_Widget_Bucket_Options();
 		this->_Bucket_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Bucket_Options_OnColorChanged);
@@ -579,17 +477,11 @@ namespace MIDILightDrawer
 
 	void Form_Main::Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e)
 	{
-<<<<<<< HEAD
 		DrawTool^ Draw_Tool			= this->_Timeline->GetDrawTool();
 		DurationTool^ Duration_Tool = this->_Timeline->GetDurationTool();
 		ColorTool^ Color_Tool		= this->_Timeline->GetColorTool();
 		FadeTool^ Fade_Tool			= this->_Timeline->GetFadeTool();
 		StrobeTool^ Strobe_Tool		= this->_Timeline->GetStrobeTool();
-=======
-		DrawTool^ Draw_Tool = this->_Timeline->GetDrawTool();
-		DurationTool^ Duration_Tool = this->_Timeline->GetDurationTool();
-		ColorTool^ Color_Tool = this->_Timeline->GetColorTool();
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 		switch (e)
 		{
@@ -680,16 +572,9 @@ namespace MIDILightDrawer
 					}
 				}
 
-<<<<<<< HEAD
 				array<String^>^ Lines_First_Marker = First_Marker_List->ToArray();
 				array<String^>^ Lines_Second_Marker = Second_Marker_List->ToArray();
 				array<int>^ Values_Marker = Values_List->ToArray();
-=======
-					/*for (auto t = 0; t < this->_GP_Tab->getTabFile().tracks.size();t++)
-					{
-						String^ Track_Name = gcnew String(_GP_Tab->getTabFile().tracks.at(t).name.data());
-						Track^ Track_Target = nullptr;
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 				this->_DropDown_Marker->Set_Items(Lines_First_Marker, Lines_Second_Marker, Values_Marker);
 
@@ -737,12 +622,7 @@ namespace MIDILightDrawer
 								this->_Timeline->AddNote(New_Beat, B->voices.at(0).notes.at(n).string, B->voices.at(0).notes.at(n).value, B->voices.at(0).notes.at(n).tiedNote);
 							}
 						}
-<<<<<<< HEAD
 					}
-=======
-					}*/
-
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 				}
 
 			}
@@ -828,15 +708,10 @@ namespace MIDILightDrawer
 				else if (hotkey.Key == "Erase Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Erase;	return true; }
 				else if (hotkey.Key == "Color Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Color;	return true; }
 				else if (hotkey.Key == "Duration Tool") { this->_Toolbar->CurrentTool = TimelineToolType::Duration; return true; }
-<<<<<<< HEAD
 				else if (hotkey.Key == "Fade Tool")		{ this->_Toolbar->CurrentTool = TimelineToolType::Fade;		return true; }
 				else if (hotkey.Key == "Strobe Tool")	{ this->_Toolbar->CurrentTool = TimelineToolType::Strobe;	return true; }
 				//else if (hotkey.Key == "Bucket Tool") { this->_Toolbar->CurrentTool = TimelineToolType::Pointer; return true; }
 
-=======
-				//else if (hotkey.Key == "Fade Tool")	{ this->_Toolbar->CurrentTool = TimelineToolType::Pointer; return true; }
-				//else if (hotkey.Key == "Bucket Tool") { this->_Toolbar->CurrentTool = TimelineToolType::Pointer; return true; }
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 				else if (hotkey.Key->StartsWith("Select Color "))
 				{
 					String^ color_num = hotkey.Key->Substring(13);
@@ -960,9 +835,6 @@ namespace MIDILightDrawer
 		Console::WriteLine("Button 2 Clicked");
 	}
 }
-<<<<<<< HEAD
 
 
 
-=======
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3

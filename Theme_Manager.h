@@ -7,17 +7,10 @@ using namespace System::Collections::Generic;
 
 #include "Custom_Color_Table.h"
 
-<<<<<<< HEAD
 namespace MIDILightDrawer
 {
 	// Theme colors struct
 	public value struct ThemeColors {
-=======
-namespace MIDILightDrawer {
-
-	// Theme colors struct
-	value struct ThemeColors {
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		Color Background;
 		Color HeaderBackground;
 		Color Text;

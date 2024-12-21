@@ -28,6 +28,81 @@ namespace MIDILightDrawer
 
 	public ref class Widget_Timeline : public UserControl {
 	public:
+<<<<<<< HEAD
+=======
+		Widget_Timeline();
+		~Widget_Timeline();
+
+		// Theme property
+		property ThemeColors Theme {
+			ThemeColors get() { return currentTheme; }
+			void set(ThemeColors value) { currentTheme = value; }
+		}
+
+		property List<Track^>^ Tracks {
+			List<Track^>^ get() { return tracks; }
+		}
+
+		property List<Measure^>^ Measures {
+			List<Measure^>^ get() { return measures; }
+		}
+
+		property int TotalTicks {
+			int get() {
+				int total = 0;
+				for each (Measure ^ m in measures) {
+					total += m->Length;
+				}
+				return total;
+			}
+		}
+
+		property TimelineToolType CurrentTool {
+			TimelineToolType get() { return currentToolType; }
+			void set(TimelineToolType value) { SetCurrentTool(value); }
+		}
+
+		property Point^ ScrollPosition {
+			Point^ get() { return scrollPosition; }
+		}
+
+		property Track^ SelectedTrack {
+			Track^ get() { return selectedTrack; }
+			void set(Track^ value) { selectedTrack = value; }
+		}
+
+		property BarEvent^ SelectedBar {
+			BarEvent^ get() { return selectedBar; }
+			void set(BarEvent^ value) { selectedBar = value; }
+		}
+
+		property Rectangle SelectionRectangle {
+			Rectangle get();
+		}
+
+	protected:
+		virtual void OnPaint(PaintEventArgs^ e) override;
+		virtual void OnResize(EventArgs^ e) override;
+		void OnMouseDown(MouseEventArgs^ e) override;
+		void OnMouseMove(MouseEventArgs^ e) override;
+		void OnMouseUp(MouseEventArgs^ e) override;
+		void OnMouseWheel(MouseEventArgs^ e) override;
+		void OnKeyDown(KeyEventArgs^ e) override;
+		void OnKeyUp(KeyEventArgs^ e) override;
+		void OnHandleCreated(EventArgs^ e) override;
+
+		virtual bool ProcessDialogKey(Keys keyData) override {
+			OnKeyDown(gcnew KeyEventArgs(keyData));
+			return true;
+		}
+
+		virtual bool IsInputKey(Keys keyData) override {
+			return true;  // Tell Windows Forms that all keys are input keys
+		}
+		
+
+	public:
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		// Constants
 		static const int TICKS_PER_QUARTER				= 960;
 		static const int INITIAL_TICK_OFFSET			= TICKS_PER_QUARTER;
@@ -200,6 +275,16 @@ namespace MIDILightDrawer
 		void InitializeToolSystem();
 		void InitializeTablatureResources();
 		void UpdateBuffer();
+<<<<<<< HEAD
+=======
+		void DrawTimeline(Graphics^ g);
+		
+		void UpdateScrollPosition(Point mousePosition);
+		void UpdateScrollBounds();
+		double GetRelativePositionInMeasure(int tick);
+		void SetZoomLevelAtPoint(double newZoom, Point referencePoint);
+		void UpdateVisibilityTracker(Graphics^ g);
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 		// New helper methods for timeline drawing
 		void DrawMeasureLines				(Graphics^ g, Rectangle contentRect);

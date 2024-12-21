@@ -17,11 +17,19 @@ namespace MIDILightDrawer
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 800));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
+<<<<<<< HEAD
+=======
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 
 		this->_Toolbar = gcnew Widget_Toolbar();
 		this->_Toolbar->Dock = DockStyle::Fill;
+<<<<<<< HEAD
 		this->_Toolbar->OnToolChanged += gcnew System::EventHandler<TimelineToolType>(this, &Widget_Tools_And_Control::Toolbar_OnToolChanged);
+=======
+		this->_Toolbar->OnToolChanged += gcnew System::EventHandler<MIDILightDrawer::TimelineToolType>(this, &MIDILightDrawer::Widget_Tools_And_Control::Toolbar_OnToolChanged);
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		Table_Layout_Main->Controls->Add(this->_Toolbar, 0, 0);
 
 
@@ -68,6 +76,10 @@ namespace MIDILightDrawer
 
 		// Set initial visibility based on default tool
 		UpdateOptionsVisibility(this->_Toolbar->CurrentTool);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 		this->Controls->Add(Table_Layout_Main);
 	}
@@ -76,11 +88,20 @@ namespace MIDILightDrawer
 	{
 		switch (_Toolbar->CurrentTool)
 		{
+<<<<<<< HEAD
 		case TimelineToolType::Draw:		_Draw_Options->PresetColor		= color_index;	break;
 		case TimelineToolType::Color:		_Color_Options->PresetColor		= color_index;	break;
 		case TimelineToolType::Strobe:		_Strobe_Options->PresetColor	= color_index;	break;
 		//case TimelineToolType::Bucket_Fill:	_Bucket_Options->PresetColor = color_index;	break;
 
+=======
+		case TimelineToolType::Draw:		_Draw_Options->PresetColor = color_index;	break;
+		case TimelineToolType::Color:		_Color_Options->PresetColor = color_index;	break;
+		//case TimelineToolType::Bucket_Fill:	_Bucket_Options->PresetColor = color_index;	break;
+
+		//case MIDILightDrawer::Widget_Toolbar::ToolType::Fade:
+			break;
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		default:
 			break;
 		}
@@ -90,11 +111,16 @@ namespace MIDILightDrawer
 	{
 		switch (_Toolbar->CurrentTool)
 		{
+<<<<<<< HEAD
 		case TimelineToolType::Draw:		_Draw_Options->Select_Next_Draw_Value();		break;
 		case TimelineToolType::Duration:	_Length_Options->Select_Next_Length_Value();	break;
 		case TimelineToolType::Fade:		_Fade_Options->Select_Next_Fade_Value();		break;
 		case TimelineToolType::Strobe:		_Strobe_Options->Select_Next_Strobe_Value();	break;
 
+=======
+		case TimelineToolType::Draw:			_Draw_Options->Select_Next_Draw_Value();		break;
+		case TimelineToolType::Duration:	_Length_Options->Select_Next_Length_Value();	break;
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		default:
 			break;
 		}
@@ -106,8 +132,11 @@ namespace MIDILightDrawer
 		{
 		case TimelineToolType::Draw:		_Draw_Options->Select_Previous_Draw_Value();		break;
 		case TimelineToolType::Duration:	_Length_Options->Select_Previous_Length_Value();	break;
+<<<<<<< HEAD
 		case TimelineToolType::Fade:		_Fade_Options->Select_Previous_Fade_Value();		break;
 		case TimelineToolType::Strobe:		_Strobe_Options->Select_Previous_Strobe_Value();	break;
+=======
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		
 		default:
 			break;
@@ -171,7 +200,14 @@ namespace MIDILightDrawer
 			this->_Draw_Options->Visible = true;
 			this->_Color_Picker->Enabled = true;
 			break;
+<<<<<<< HEAD
 
+=======
+		//case TimelineToolType::Fade:
+		//	this->_Fade_Options->Visible = true;
+		//	this->_Color_Picker->Enabled = true;
+		//	break;
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		case TimelineToolType::Pointer:
 		case TimelineToolType::Erase:
 			// No options to show for these tools
@@ -188,6 +224,7 @@ namespace MIDILightDrawer
 			this->_Color_Picker->Enabled = true;
 			break;
 
+<<<<<<< HEAD
 		case TimelineToolType::Fade:
 			this->_Fade_Options->Visible = true;
 			this->_Color_Picker->Enabled = true;
@@ -198,6 +235,8 @@ namespace MIDILightDrawer
 			this->_Color_Picker->Enabled = true;
 			break;
 
+=======
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		//case TimelineToolType::Bucket_Fill:
 		//	this->_Bucket_Options->Visible = true;
 		//	this->_Color_Picker->Enabled = true;
@@ -205,7 +244,11 @@ namespace MIDILightDrawer
 		}
 	}
 
+<<<<<<< HEAD
 	void Widget_Tools_And_Control::Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e)
+=======
+	void MIDILightDrawer::Widget_Tools_And_Control::Toolbar_OnToolChanged(System::Object^ sender, MIDILightDrawer::TimelineToolType e)
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 	{
 		UpdateOptionsVisibility(e);
 	}

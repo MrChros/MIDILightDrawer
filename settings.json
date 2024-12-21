@@ -18,7 +18,17 @@
     "Select Color 9": "D9",
     "Select Color 10": "D0",
     "Draw/Length Quantization Up": "R",
+<<<<<<< HEAD
     "Draw/Length Quantization Down": "",
+=======
+    "Bucket Tool": "B",
+    "Color Tool": "C",
+    "Draw Tool": "D",
+    "Erase Tool": "E",
+    "Fade Tool": "F",
+    "Select Tool": "S",
+    "Reset Zoom": "",
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
     "Zoom In": "Add",
     "Zoom Out": "Subtract",
     "Zoom Reset": "",
@@ -32,8 +42,13 @@
   "OctaveEntries": [
     {"Name": "Guitar", "Octave": 0},
     {"Name": "Bass", "Octave": 1},
+<<<<<<< HEAD
     {"Name": "Drums", "Octave": 2},
     {"Name": "Synth", "Octave": 4}
+=======
+    {"Name": "Bass Drive", "Octave": 1},
+    {"Name": "Drums", "Octave": 2}
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
   ]
   "ColorPresets": [
     "255,0,0",

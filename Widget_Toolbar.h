@@ -26,14 +26,24 @@ namespace MIDILightDrawer {
 
 	private:
 		// Constants for layout
+<<<<<<< HEAD
 		literal int BUTTON_SIZE		= 48;
 		literal int BUTTON_PADDING	= 4;
 		literal int BUTTON_SPACING	= 2;
+=======
+		literal int BUTTON_SIZE = 48;
+		literal int BUTTON_PADDING = 4;
+		literal int BUTTON_SPACING = 2;
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 
 		// Member variables
 		System::Resources::ResourceManager^		_Resources;
 		TimelineToolType						_Current_Tool;
+<<<<<<< HEAD
 		List<Button^>^							_Tool_Buttons;
+=======
+		array<Button^>^							_Tool_Buttons;
+>>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
 		Dictionary<TimelineToolType, String^>^	_Tool_Icons;
 
 		// Initialize controls and layout

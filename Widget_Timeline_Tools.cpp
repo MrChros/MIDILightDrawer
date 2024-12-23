@@ -2070,7 +2070,7 @@ namespace MIDILightDrawer
 
 			// Create or update single preview bar
 			if (previewBar == nullptr) {
-				previewBar = gcnew BarEvent(snapTick, TickLength, Color::FromArgb(100, ColorStart.R, ColorStart.G, ColorStart.B));
+				previewBar = gcnew BarEvent(snapTick, TickLength, Color::FromArgb(100, (int)ColorStart.R, (int)ColorStart.G, (int)ColorStart.B));
 			}
 			else {
 				previewBar->StartTick	= snapTick;
@@ -2263,7 +2263,7 @@ namespace MIDILightDrawer
 
 			// Create or update single preview bar
 			if (previewBar == nullptr) {
-				previewBar = gcnew BarEvent(snapTick, TickLength, Color::FromArgb(100, StrobeColor.R, StrobeColor.G, StrobeColor.B));
+				previewBar = gcnew BarEvent(snapTick, TickLength, Color::FromArgb(100, (int)StrobeColor.R, (int)StrobeColor.G, (int)StrobeColor.B));
 			}
 			else {
 				previewBar->StartTick = snapTick;

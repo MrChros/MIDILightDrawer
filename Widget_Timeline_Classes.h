@@ -8,8 +8,60 @@ using namespace System::Collections::Generic;
 
 namespace MIDILightDrawer
 {
+	//////////////////////////////
+	// Drum Track Visualization //
+	//////////////////////////////
+	public enum class DrumNotationType {
+		FilledDiamond,
+		HollowDiamond,
+		CircledX,
+		AccentedX,    // X with ^ on top
+		RegularX,
+		NoteEllipse,
+		Unknown
+	};
+
+
+	public value struct DrumNoteInfo
+	{
+		DrumNotationType SymbolType;
+		float StringPosition;  // Can be whole numbers for on-line, decimals for between lines
+		String^ Description;   // For future reference/documentation
+	};
+
+
+	public ref class DrumNotationMap
+	{
+	private:
+		static Dictionary<int, DrumNoteInfo>^ _Notation_Map	= nullptr;
+
+	public:
+		static DrumNoteInfo GetNoteInfo(int noteNumber);
+		static Dictionary<int, DrumNoteInfo>^ GetMap();
+
+	private:
+		static void InitializeMap();
+	};
+	
+
+	//////////////////////
+	// Tablature String //
+	//////////////////////
+	value struct TabStringInfo
+	{
+		array<float>^ StringYPositions;
+		float TotalHeight;
+		float VerticalOffset;
+		float StringSpacing;
+	};
+
+	
+	//////////////////////////
+	// Forward Declarations //
+	//////////////////////////
 	ref class Track;
 	ref class BarEvent;
+
 
 	/////////////
 	// Measure //
@@ -92,6 +144,11 @@ namespace MIDILightDrawer
 	///////////
 	// Track //
 	///////////
+	value struct TrackButtonId {
+		Track^ Track;
+		int ButtonIndex;
+	};
+
 	public ref class Track {
 	public:
 		Track(String^ trackName, int octave);
@@ -117,6 +174,8 @@ namespace MIDILightDrawer
 		property List<TrackMeasure^>^ Measures;
 
 		property bool ShowTablature;
+		property bool IsDrumTrack;
+		property bool ShowAsStandardNotation;
 
 		// Add methods for bar management
 		void AddBar(int startTick, int length, Color color);

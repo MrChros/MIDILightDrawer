@@ -28,6 +28,19 @@ static const int TGVELOCITIES_VELOCITY_INCREMENT = 16;
 // Spacing for XML output
 #define XML_SPACING "    "
 
+// Forward Declarations
+struct Measure;
+struct Voice;
+struct Beat;
+
+
+enum BeatStatus {
+	BEAT_EMTPY = 0,
+	BEAT_NORMAL	= 1,
+	BEAT_REST = 2,
+	BEAT_UNKNOWN
+};
+
 // Define struct to hold lyrics data
 struct Lyric {
 	std::int32_t from;
@@ -236,21 +249,12 @@ struct NoteEffect {
 
 // Define note struct
 struct Note {
+	Beat* beat;
 	std::int32_t string;
 	bool tiedNote;
 	std::int8_t value;
 	std::int32_t velocity;
 	NoteEffect effect;
-
-	void addToXML(std::ostringstream& outputStream, std::int32_t indentLevel) const;
-};
-
-// Define voice struct
-struct Voice {
-	bool empty;
-	double durationInTicks;
-	Duration duration;
-	std::vector<Note> notes;
 
 	void addToXML(std::ostringstream& outputStream, std::int32_t indentLevel) const;
 };
@@ -289,11 +293,27 @@ struct BeatText {
 
 // Define beat struct
 struct Beat {
+	Voice* voice;
 	std::int32_t start;
+	std::int32_t startInMeasure;
+	std::int32_t durationInTicks;
+	
+	BeatStatus status;
 	BeatText text;
 	Stroke stroke;
 	Chord chord;
-	std::vector<Voice> voices;
+	Duration duration;
+	
+	std::vector<Note> notes;
+
+	void addToXML(std::ostringstream& outputStream, std::int32_t indentLevel) const;
+};
+
+// Define voice struct
+struct Voice {
+	Measure* measure;
+	bool empty;
+	std::vector<Beat> beats;
 
 	void addToXML(std::ostringstream& outputStream, std::int32_t indentLevel) const;
 };
@@ -304,7 +324,7 @@ struct Measure {
 	std::int32_t start;
 	std::int8_t keySignature;
 	std::string clef;
-	std::vector<Beat> beats;
+	std::vector<Voice> voices;
 
 	void addToXML(std::ostringstream& outputStream, std::int32_t indentLevel) const;
 };
@@ -448,7 +468,7 @@ private:
 	void readChannel(Track& track);
 	void readMeasure(Measure& measure, Track& track, Tempo& tempo, std::int8_t keySignature);
 	std::int32_t getLength(MeasureHeader& header);
-	Beat& getBeat(Measure& measure, std::int32_t start);
+	Beat& getBeat(Voice& voice, std::int32_t start);
 	void readMixChange(Tempo& tempo);
 	void readBeatEffects(Beat& beat, NoteEffect& noteEffect);
 	void readTremoloBar(NoteEffect& effect);
@@ -457,7 +477,7 @@ private:
 	double getTime(Duration duration);
 	//double readDuration(std::uint8_t flags);
 	Duration readDuration(std::uint8_t flags);
-	double readBeat(std::int32_t start, Measure& measure, Track& track, Tempo& tempo, std::size_t voiceIndex);
+	double readBeat(std::int32_t start, Measure& measure, Track& track, Tempo& tempo, Voice& voice);
 	Note readNote(GuitarString& string, Track& track, NoteEffect& effect);
 	std::int8_t getTiedNoteValue(std::int32_t string, Track& track);
 	void readNoteEffects(NoteEffect& noteEffect);

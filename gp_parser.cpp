@@ -224,10 +224,6 @@ Parser::Parser(const std::string& filePath)
 		// Only the Drum Track information is interesting for me
 		track.isDrumsTrack = (track_flags & 0x01) > 0 ? true : false;
 
-		//if (number == 1 || versionIndex == 0) {
-		//	skip(1);
-		//}
-
 		track.number = number;
 		track.lyrics = number == lyricTrack ? lyric : Lyric();
 		track.name = readStringByte(40);
@@ -302,11 +298,15 @@ Parser::Parser(const std::string& filePath)
 		for (auto j = 0; j < trackCount; ++j)
 		{
 			Track& track = tracks[j];
+			
 			auto measure = Measure();
 			measure.header = &header;
 			measure.start = start;
+			measure.voices.resize(2);
 			track.measures.push_back(measure);
+
 			readMeasure(track.measures.back(), track, tempo, globalKeySignature);
+
 			skip(1);
 		}
 		header.tempo = tempo;
@@ -570,35 +570,20 @@ void Parser::readChannel(Track& track)
 /* Read a measure */
 void Parser::readMeasure(Measure& measure, Track& track, Tempo& tempo, std::int8_t keySignature)
 {
-	for (auto voice = 0; voice < 2; ++voice)
+	for (auto v = 0; v < 2; ++v)
 	{
-		auto start = measure.start;
-		
-		auto beats = readInt();
-		for (auto k = 0; k < beats; ++k) {
+		int32_t start = measure.start;
+		Voice& voice = measure.voices[v];
+		voice.measure = &measure;
+
+		int32_t beats = readInt();
+		for (int32_t k = 0; k < beats; ++k) {
 			start += (int32_t)readBeat(start, measure, track, tempo, voice);
-		}	
+		}
+
+		voice.empty = (beats == 0);
 	}
 
-	std::vector<Beat*> emptyBeats;
-	for (auto i = 0; i < measure.beats.size(); ++i) {
-		auto beatPtr = &measure.beats[i];
-		auto empty = true;
-		for (auto v = 0; v < beatPtr->voices.size(); ++v) {
-			if (beatPtr->voices[v].notes.size() != 0)
-				empty = false;
-		}
-		if (empty)
-			emptyBeats.push_back(beatPtr);
-	}
-	for (auto beatPtr : emptyBeats) {
-		for (auto i = 0; i < measure.beats.size(); ++i) {
-			if (beatPtr == &measure.beats[i]) {
-				measure.beats.erase(measure.beats.begin() + i);
-				break;
-			}
-		}
-	}
 	measure.clef = getClef(track);
 	measure.keySignature = keySignature;
 }
@@ -611,19 +596,22 @@ std::int32_t Parser::getLength(MeasureHeader& header)
 }
 
 /* Adds a new measure to the beat */
-Beat& Parser::getBeat(Measure& measure, std::int32_t start)
+Beat& Parser::getBeat(Voice& voice, std::int32_t start)
 {
-	for (auto& beat : measure.beats) {
-		if (beat.start == start)
+	for (auto& beat : voice.beats)
+	{
+		if (beat.start == start) {
 			return beat;
+		}
 	}
 
 	auto beat = Beat();
-	beat.voices.resize(2);
+	beat.voice = &voice;
 	beat.start = start;
-	measure.beats.push_back(beat);
+	beat.startInMeasure = start - voice.measure->start;
+	voice.beats.push_back(beat);
 
-	return measure.beats[measure.beats.size() - 1];
+	return voice.beats.back();
 }
 
 /* Read mix change */
@@ -784,7 +772,6 @@ double Parser::getTime(Duration duration)
 }
 
 /* Read duration */
-//double Parser::readDuration(std::uint8_t flags)
 Duration Parser::readDuration(std::uint8_t flags)
 {
 	auto duration = Duration();
@@ -841,16 +828,19 @@ Duration Parser::readDuration(std::uint8_t flags)
 }
 
 /* Read beat */
-double Parser::readBeat(std::int32_t start, Measure& measure, Track& track, Tempo& tempo, std::size_t voiceIndex)
+double Parser::readBeat(std::int32_t start, Measure& measure, Track& track, Tempo& tempo, Voice& voice)
 {
 	auto flags = readUnsignedByte();
 	
-	auto& beat = getBeat(measure, start);
-	auto& voice = beat.voices[voiceIndex];
+	auto& beat = getBeat(voice, start);
+	beat.status = BEAT_UNKNOWN;
 
 	if ((flags & 0x40) != 0) {
-		auto beatType = readUnsignedByte();
-		voice.empty = (beatType & 0x02) == 0;
+		uint8_t beatType = readUnsignedByte();
+
+		if (beatType < 3) {
+			beat.status = (BeatStatus)beatType;
+		}
 	}
 
 	auto duration = readDuration(flags);
@@ -879,10 +869,11 @@ double Parser::readBeat(std::int32_t start, Measure& measure, Track& track, Temp
 		if ((stringFlags & (1 << i)) != 0 && (6 - i) < track.strings.size()) {
 			auto string = track.strings[6 - i];
 			auto note = readNote(string, track, effect);
-			voice.notes.push_back(note);
+			note.beat = &beat;
+			beat.notes.push_back(note);
 		}
-		voice.duration = duration;
-		voice.durationInTicks = getTime(duration);
+		beat.duration = duration;
+		beat.durationInTicks = (int32_t)getTime(duration);
 	}
 
 	
@@ -891,7 +882,11 @@ double Parser::readBeat(std::int32_t start, Measure& measure, Track& track, Temp
 		readByte();	// Display - Break Secondary, skipped here...
 	}
 
-	return (voice.notes.size() != 0 ? voice.durationInTicks : 0);
+	if (beat.status == BEAT_UNKNOWN && beat.notes.size() > 0) {
+		beat.status = BEAT_NORMAL;
+	}
+
+	return beat.durationInTicks;
 }
 
 /* Read note */
@@ -964,17 +959,17 @@ std::int8_t Parser::getTiedNoteValue(std::int32_t string, Track& track)
 		for (std::int32_t m = measureCount - 1; m >= 0; --m)
 		{
 			auto& measure = track.measures[m];
-			for (std::int64_t b = static_cast<std::int64_t>(measure.beats.size()) - 1; b >= 0; --b)
+			for (std::int32_t v = 0; v < static_cast<std::int32_t>(measure.voices.size()); ++v)
 			{
-				auto& beat = measure.beats[b];
-				for (std::int32_t v = 0; v < static_cast<std::int32_t>(beat.voices.size()); ++v)
+				auto& voice = measure.voices[v];
+				if (!voice.empty)
 				{
-					auto& voice = beat.voices[v];
-					if (!voice.empty)
+					for (std::int64_t b = static_cast<std::int64_t>(voice.beats.size()) - 1; b >= 0; --b)
 					{
-						for (std::int32_t n = 0; n < static_cast<std::int32_t>(voice.notes.size()); ++n)
+						auto& beat = voice.beats[b];
+						for (std::int32_t n = 0; n < static_cast<std::int32_t>(beat.notes.size()); ++n)
 						{
-							auto& note = voice.notes[n];
+							auto& note = beat.notes[n];
 							if (note.string == string) {
 								return note.value;
 							}

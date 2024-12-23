@@ -205,6 +205,9 @@
   <data name="Midi_Settings" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Pictures\Midi_Settings.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="Note_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Pictures\Note_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="Pointer_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Pictures\Pointer_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -214,15 +217,12 @@
   <data name="Split_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Pictures\Split_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-<<<<<<< HEAD
   <data name="Strobe_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Pictures\Strobe_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="Switch_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Pictures\Switch_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-=======
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
   <data name="Tick" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Pictures\Tick.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>

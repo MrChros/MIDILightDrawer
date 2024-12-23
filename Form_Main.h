@@ -78,6 +78,9 @@ namespace MIDILightDrawer
 			void Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);
 
+			// Form Callbacks
+			void Form_Main_FormClosing(System::Object^ sender, System::Windows::Forms::FormClosingEventArgs^ e);
+
 			// Control and Widget Callbacks
 			void Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e);
 			void OnMidiSettingsAccepted();

@@ -6,6 +6,8 @@ namespace MIDILightDrawer
 	// Widget_Timeline Implementation
 	Widget_Timeline::Widget_Timeline()
 	{
+		this->_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
+
 		InitializeComponent();
 
 		this->SetStyle(ControlStyles::Selectable, true);
@@ -776,7 +778,6 @@ namespace MIDILightDrawer
 
 			// Draw components in correct order
 			DrawTrackBackground(graphicsBuffer->Graphics);	// Draw track backgrounds first
-			//DrawTimeline(graphicsBuffer->Graphics);	// Draw timeline (including grid lines)
 			DrawMeasureNumbers(graphicsBuffer->Graphics);
 			DrawTrackContent(graphicsBuffer->Graphics);	// Draw track content and headers
 			DrawToolPreview(graphicsBuffer->Graphics);	// Draw tool preview last
@@ -788,7 +789,6 @@ namespace MIDILightDrawer
 		{
 			e->Graphics->Clear(currentTheme.Background);
 			DrawTrackBackground(e->Graphics);
-			//DrawTimeline(e->Graphics);
 			DrawMeasureNumbers(e->Graphics);
 			DrawTrackContent(e->Graphics);
 			DrawToolPreview(e->Graphics);
@@ -809,10 +809,19 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::OnMouseDown(MouseEventArgs^ e)
 	{
-		if (buttonHoverTrack != nullptr && isOverTrackButton)
+		if (hoveredButton.Track != nullptr)
 		{
-			// Toggle tablature visibility
-			buttonHoverTrack->ShowTablature = !buttonHoverTrack->ShowTablature;
+			switch (hoveredButton.ButtonIndex)
+			{
+				case 0: // Tablature toggle button
+					hoveredButton.Track->ShowTablature = !hoveredButton.Track->ShowTablature;
+					break;
+				case 1: // Notation toggle button (only for drum tracks)
+					if (hoveredButton.Track->IsDrumTrack) {
+						hoveredButton.Track->ShowAsStandardNotation = !hoveredButton.Track->ShowAsStandardNotation;
+					}
+					break;
+			}
 			Invalidate();
 			return;  // Don't process other mouse down logic
 		}
@@ -840,23 +849,34 @@ namespace MIDILightDrawer
 		bool isOverDivider = IsOverTrackDivider(Point(e->X, e->Y), hoverTrack);
 
 		Track^ currentTrack = GetTrackAtPoint(Point(e->X, e->Y));
-		bool wasOverButton	= (buttonHoverTrack != nullptr);
-		bool isOverButton	= false;
+		TrackButtonId newHoveredButton;
+		bool isOverAnyButton = false;
 
 		if (currentTrack != nullptr) {
-			isOverButton = IsOverTrackButton(currentTrack, Point(e->X, e->Y));
+			// Check each button
+			// Adjust number based on max buttons
+			for (int i = 0; i < 2; i++)	
+			{ 
+				if (IsOverTrackButton(currentTrack, i, Point(e->X, e->Y)))
+				{
+					newHoveredButton.Track = currentTrack;
+					newHoveredButton.ButtonIndex = i;
+					isOverAnyButton = true;
+					break;
+				}
+			}
 		}
 
 		// Update hover states
-		if (isOverButton != isOverTrackButton || currentTrack != buttonHoverTrack) {
-			buttonHoverTrack	= isOverButton ? currentTrack : nullptr;
-			isOverTrackButton	= isOverButton;
+		if (newHoveredButton.Track != hoveredButton.Track ||
+			newHoveredButton.ButtonIndex != hoveredButton.ButtonIndex) {
+			hoveredButton = newHoveredButton;
 			Invalidate();
 		}
 
-		if (isOverButton) {
+		if (isOverAnyButton) {
 			this->Cursor = Cursors::Hand;
-			return;  // Don't process other mouse move logic when over button
+			return;  // Don't process other mouse move logic
 		}
 
 		if (trackBeingResized != nullptr)
@@ -2109,6 +2129,21 @@ namespace MIDILightDrawer
 
 		// Draw background for tracks area
 		g->FillRectangle(gcnew SolidBrush(currentTheme.TrackBackground), tracksArea);
+
+		for (int i = 0;i < tracks->Count;i++)
+		{
+			if (i % 2 == 1) {
+				continue;
+			}
+			
+			Track^ track = tracks[i];
+			Rectangle trackBounds = GetTrackBounds(track);
+			trackBounds.Y += scrollPosition->Y;
+
+			// Draw header background
+			Color headerBg = track->IsSelected ? currentTheme.SelectionHighlight : Theme_Manager::Get_Instance()->BackgroundAlt;
+			g->FillRectangle(gcnew SolidBrush(headerBg), trackBounds);
+		}
 	}
 
 	void Widget_Timeline::DrawTrackDividers(Graphics^ g)
@@ -2169,18 +2204,28 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::DrawTrackButtons(Graphics^ g, Track^ track, Rectangle headerBounds)
 	{
-		// Calculate button position in top right corner
-		Rectangle buttonBounds(headerBounds.Right - BUTTON_SIZE - BUTTON_MARGIN, headerBounds.Y + BUTTON_MARGIN, BUTTON_SIZE, BUTTON_SIZE);
+		DrawTrackButtonText(g, headerBounds, 0, "T",
+			track->ShowTablature,
+			(track == hoveredButton.Track && hoveredButton.ButtonIndex == 0),
+			currentTheme.HeaderBackground,
+			currentTheme.Text);
 
-		// Determine button state
-		bool isPressed = track->ShowTablature;
-		bool isHovered = (track == buttonHoverTrack && isOverTrackButton);
+		if (track->IsDrumTrack) {
+			DrawTrackButtonIcon(g, headerBounds, 1, (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Note_White"))),  // Index 1 for second button
+				track->ShowAsStandardNotation,
+				(track == hoveredButton.Track && hoveredButton.ButtonIndex == 1),
+				currentTheme.HeaderBackground,
+				currentTheme.Text);
+		}
+	}
 
-		// Create colors
-		Color baseColor = currentTheme.HeaderBackground;
+	void Widget_Timeline::DrawTrackButtonText(Graphics^ g, Rectangle headerBounds, int buttonIndex, String^ text, bool isPressed, bool isHovered, Color baseColor, Color textColor)
+	{
+		// Calculate button position based on index (right to left)
+		Rectangle buttonBounds = GetTrackButtonBounds(headerBounds, buttonIndex);
 
 		// Define colors for different states
-		Color buttonColor, textColor;
+		Color buttonColor;
 
 		if (isHovered) {
 			// Slightly lighter for hover
@@ -2189,7 +2234,6 @@ namespace MIDILightDrawer
 				Math::Min(255, (int)baseColor.G + 20),
 				Math::Min(255, (int)baseColor.B + 20)
 			);
-			textColor = currentTheme.Text;
 		}
 		else if (isPressed) {
 			// Darker, solid color for active state
@@ -2198,47 +2242,91 @@ namespace MIDILightDrawer
 				Math::Min(255, (int)baseColor.G + 40),
 				Math::Min(255, (int)baseColor.B + 40)
 			);
-			textColor = currentTheme.Text;
 		}
 		else {
 			// Normal state
 			buttonColor = baseColor;
 			textColor = Color::FromArgb(
-				Math::Max(0, currentTheme.Text.R - 40),
-				Math::Max(0, currentTheme.Text.G - 40),
-				Math::Max(0, currentTheme.Text.B - 40)
+				Math::Max(0, textColor.R - 40),
+				Math::Max(0, textColor.G - 40),
+				Math::Max(0, textColor.B - 40)
 			);
 		}
 
 		// Draw button with rounded corners
 		Drawing2D::GraphicsPath^ buttonPath = gcnew Drawing2D::GraphicsPath();
-		int radius = 6;  // Slightly larger corner radius for modern look
+		int radius = 6;  // Rounded corner radius
 		buttonPath->AddArc(buttonBounds.X, buttonBounds.Y, radius * 2, radius * 2, 180, 90);
 		buttonPath->AddArc(buttonBounds.Right - (radius * 2), buttonBounds.Y, radius * 2, radius * 2, 270, 90);
 		buttonPath->AddArc(buttonBounds.Right - (radius * 2), buttonBounds.Bottom - (radius * 2), radius * 2, radius * 2, 0, 90);
 		buttonPath->AddArc(buttonBounds.X, buttonBounds.Bottom - (radius * 2), radius * 2, radius * 2, 90, 90);
 		buttonPath->CloseFigure();
 
-		// Draw flat button background
+		// Draw button background
 		g->FillPath(gcnew SolidBrush(buttonColor), buttonPath);
 
+		// Draw border
 		Color borderColor = Color::FromArgb(60, currentTheme.Text);
 		g->DrawPath(gcnew Pen(borderColor, 1.0f), buttonPath);
 
-
+		// Draw text
 		Drawing::Font^ buttonFont = gcnew Drawing::Font("Segoe UI", 14, FontStyle::Bold);
-		String^ text = "T";
 		SizeF textSize = g->MeasureString(text, buttonFont);
 
-		// Calculate precise center position for text
+		// Center text
 		float textX = (float)(buttonBounds.X + 1 + (buttonBounds.Width - textSize.Width) / 2);
 		float textY = (float)(buttonBounds.Y + 1 + (buttonBounds.Height - textSize.Height) / 2);
 
-		// Draw text directly at calculated position
 		g->DrawString(text, buttonFont, gcnew SolidBrush(textColor), textX, textY);
 
 		delete buttonFont;
 		delete buttonPath;
+	}
+
+	void Widget_Timeline::DrawTrackButtonIcon(Graphics^ g, Rectangle headerBounds, int buttonIndex, Image^ icon, bool isPressed, bool isHovered, Color baseColor, Color textColor)
+	{
+		// First draw the button background using existing method with empty text
+		DrawTrackButtonText(g, headerBounds, buttonIndex, "", isPressed, isHovered, baseColor, textColor);
+
+		// Get the button bounds for the icon
+		Rectangle buttonBounds = GetTrackButtonBounds(headerBounds, buttonIndex);
+
+		// Draw the icon with padding
+		if (icon != nullptr) {
+			int padding = 4;
+			Rectangle iconBounds = Rectangle(
+				buttonBounds.X + padding,
+				buttonBounds.Y + padding,
+				buttonBounds.Width - (padding * 2),
+				buttonBounds.Height - (padding * 2)
+			);
+
+			// Draw the image with color transformation if needed
+			System::Drawing::Imaging::ColorMatrix^ colorMatrix = nullptr;
+			if (textColor != Color::White) {  // If we need to recolor the icon
+				colorMatrix = gcnew System::Drawing::Imaging::ColorMatrix(
+					gcnew array<array<float>^>{
+					gcnew array<float>{textColor.R / 255.0f, 0, 0, 0, 0},
+					gcnew array<float>{0, textColor.G / 255.0f, 0, 0, 0},
+					gcnew array<float>{0, 0, textColor.B / 255.0f, 0, 0},
+					gcnew array<float>{0, 0, 0, textColor.A / 255.0f, 0},
+					gcnew array<float>{0, 0, 0, 0, 1.0f}
+				}
+				);
+			}
+
+			if (colorMatrix != nullptr)
+			{
+				System::Drawing::Imaging::ImageAttributes^ attributes = gcnew System::Drawing::Imaging::ImageAttributes();
+				attributes->SetColorMatrix(colorMatrix);
+				g->DrawImage(icon, iconBounds, 0, 0, icon->Width, icon->Height, GraphicsUnit::Pixel, attributes);
+				delete attributes;
+				delete colorMatrix;
+			}
+			else {
+				g->DrawImage(icon, iconBounds);
+			}
+		}
 	}
 
 	void Widget_Timeline::DrawTrackBorders(Graphics^ g, Track^ track, Rectangle bounds)
@@ -2481,8 +2569,103 @@ namespace MIDILightDrawer
 
 		float logScale = (float)Math::Log(zoomLevel + 1, 2);
 
-		//Console::WriteLine("Log Scale = {0}", logScale);
+		if (track->IsDrumTrack && track->ShowAsStandardNotation)
+		{
+			DrawTrackTablatureDrum(g, track, bounds, logScale);
+		}
+		else
+		{
+			DrawTrackTablatureRegular(g, track, bounds, logScale);
+		}
+	}
 
+	void Widget_Timeline::DrawTrackTablatureDrum(Graphics^ g, Track^ track, Rectangle bounds, float logScale)
+	{
+		float availableHeight = (float)(bounds.Height - TRACK_PADDING * 2);
+		
+		TabStringInfo String_Info = DrawTablatureStrings(g, bounds, availableHeight, logScale, 5);
+
+		if (String_Info.TotalHeight > availableHeight) {
+			return;
+		}
+
+		try
+		{
+			// Calculate visible range
+			int visibleStartTick = PixelsToTicks(-scrollPosition->X);
+			int visibleEndTick = PixelsToTicks(-scrollPosition->X + bounds.Width);
+
+			// Calculate required space for Beat Duration drawing
+			const float BASE_DURATION_SPACE = 23.0f;
+			const float DURATION_SCALE_FACTOR = 20.0f;
+			float requiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
+
+			// Draw notes with symbols
+			int measureStartTick = 0;
+
+			for (int i = 0; i < track->Measures->Count; i++)
+			{
+				TrackMeasure^ measure = track->Measures[i];
+				if (measure == nullptr) {
+					measureStartTick += measure->Length;
+					continue;
+				}
+
+				int measureEndTick = measureStartTick + measure->Length;
+
+				// Skip if measure is out of visible range
+				if (measureStartTick > visibleEndTick || measureEndTick < visibleStartTick)
+				{
+					measureStartTick = measureEndTick;
+					continue;
+				}
+
+				for each(Beat ^ beat in measure->Beats)
+				{
+					if (beat == nullptr || beat->Notes == nullptr || beat->Notes->Count == 0) {
+						continue;
+					}
+
+					if ((beat->Duration > 0) && (beat->Notes->Count > 0) && availableHeight > String_Info.TotalHeight + requiredSpace) {
+						DrawBeatDuration(g, beat, bounds, String_Info.StringYPositions);
+					}
+
+					float xPos = (float)(TicksToPixels(beat->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH);
+
+					for each(Note ^ note in beat->Notes)
+					{
+						DrumNoteInfo noteInfo = DrumNotationMap::GetNoteInfo(note->Value);
+
+						// Calculate Y position (can be between lines)
+						float yPos;
+						int lineIndex = (int)Math::Floor(noteInfo.StringPosition);
+						float fraction = noteInfo.StringPosition - lineIndex ;
+
+						lineIndex -=1;
+
+						if (fraction == 0.0f) { // On the line
+							yPos = String_Info.StringYPositions[lineIndex];
+						}
+						else if (lineIndex < 0) {
+							yPos = String_Info.StringYPositions[0] - (String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) * fraction;
+						}
+						else { // Between lines
+							yPos = String_Info.StringYPositions[lineIndex] + (String_Info.StringYPositions[lineIndex + 1] - String_Info.StringYPositions[lineIndex]) * fraction;
+						}
+
+						DrawDrumSymbol(g, noteInfo.SymbolType, xPos, yPos, ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0) - 1);
+					}
+				}
+				measureStartTick += measure->Length;
+			}
+		}
+		finally {
+
+		}
+	}
+
+	void Widget_Timeline::DrawTrackTablatureRegular(Graphics^ g, Track^ track, Rectangle bounds, float logScale)
+	{
 		//////////////////////////////////////////
 		// Calculate zoom-based scaling factors //
 		//////////////////////////////////////////
@@ -2493,30 +2676,12 @@ namespace MIDILightDrawer
 		// Clamp font size between min and max values
 		scaledFontSize = Math::Min(Math::Max(scaledFontSize, 4.0f), 18.0f);
 
-		///////////////////////////////////////////////
-		// Scale string spacing with zoom but cap it //
-		///////////////////////////////////////////////
-		const float BASE_STRING_SPACING = 10.0f;
-		const float SPACING_SCALE_FACTOR = 3.0f;
-		float scaledStringSpacing = BASE_STRING_SPACING + (logScale * SPACING_SCALE_FACTOR);
-		// Clamp string spacing between min and max values
-		scaledStringSpacing = Math::Min(Math::Max(scaledStringSpacing, 12.0f), 40.0f);
-
-		float Total_Tab_Height = scaledStringSpacing * 5;	// Height needed for 6 strings
-
-		// Calculate vertical centering offset
 		float availableHeight = (float)(bounds.Height - TRACK_PADDING * 2);
-		float verticalOffset = bounds.Y + TRACK_PADDING + (availableHeight - Total_Tab_Height) / 2;
 
-		if (Total_Tab_Height > availableHeight) {
+		TabStringInfo String_Info = DrawTablatureStrings(g, bounds, availableHeight, logScale, 6);
+
+		if (String_Info.TotalHeight > availableHeight) {
 			return;
-		}
-
-		// Pre-calculate string Y positions with fixed spacing but centered in available height
-		array<float>^ stringYPositions = gcnew array<float>(6);
-		for (int i = 0; i < 6; i++)
-		{
-			stringYPositions[i] = verticalOffset + (i * scaledStringSpacing);
 		}
 
 		float fontSize = Math::Min(FIXED_STRING_SPACING * 0.7f, 10.0f);
@@ -2525,12 +2690,6 @@ namespace MIDILightDrawer
 		try
 		{
 			Drawing::Font^ scaledFont = gcnew Drawing::Font("Arial", scaledFontSize);
-
-			// Draw the strings with fixed spacing
-			for (int i = 0; i < 6; i++)
-			{
-				g->DrawLine(cachedStringPen, (float)bounds.X, stringYPositions[i], (float)bounds.Right, stringYPositions[i]);
-			}
 
 			// Calculate visible tick range
 			int visibleStartTick = PixelsToTicks(-scrollPosition->X);
@@ -2558,12 +2717,12 @@ namespace MIDILightDrawer
 				}
 
 				// Draw beats in this measure
-				for each (Beat ^ beat in measure->Beats)
+				for each(Beat ^ beat in measure->Beats)
 				{
-					if (beat == nullptr || beat->Notes == nullptr || beat->Notes->Count == 0)
+					if (beat == nullptr || beat->Notes == nullptr || beat->Notes->Count == 0) {
 						continue;
+					}
 
-					//int beatTick = measureStartTick + beat->StartTick;
 					int beatTick = beat->StartTick;
 
 					// Skip if beat is outside visible range
@@ -2578,13 +2737,13 @@ namespace MIDILightDrawer
 					float requiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
 
 					// Draw duration lines for beats with multiple notes
-					if ((beat->Duration > 0) && (beat->Notes->Count > 0) && availableHeight > Total_Tab_Height + requiredSpace)
+					if ((beat->Duration > 0) && (beat->Notes->Count > 0) && availableHeight > String_Info.TotalHeight + requiredSpace)
 					{
-						DrawBeatDuration(g, beat, bounds, stringYPositions);
+						DrawBeatDuration(g, beat, bounds, String_Info.StringYPositions);
 					}
 
 					// Draw the notes
-					for each (Note ^ note in beat->Notes)
+					for each(Note ^ note in beat->Notes)
 					{
 						if (note == nullptr || note->String < 1 || note->String > 6)
 							continue;
@@ -2592,7 +2751,7 @@ namespace MIDILightDrawer
 						String^ fretText = note->Value.ToString();
 						float textWidth = g->MeasureString(fretText, scaledFont).Width;
 						float textX = beatX - (textWidth / 2.0f);
-						float textY = stringYPositions[note->String - 1] - (scaledFont->Height / 2.0f);
+						float textY = String_Info.StringYPositions[note->String - 1] - (scaledFont->Height / 2.0f);
 
 						// Draw background for better readability
 						RectangleF bgRect(textX - 1, textY, textWidth + 2, (float)(scaledFont->Height - 1));
@@ -2606,12 +2765,12 @@ namespace MIDILightDrawer
 				measureStartTick = measureEndTick;
 			}
 
-			DrawTieLines(g, track, bounds, stringYPositions, fontSize);
+			DrawTieLines(g, track, bounds, String_Info.StringYPositions, fontSize);
 
 			delete scaledFont;
 		}
 		finally {
-			delete stringYPositions;
+
 		}
 	}
 
@@ -2636,8 +2795,8 @@ namespace MIDILightDrawer
 		float scaledLineThickness = Math::Min(1.0f + (logScale * 0.2f), 2.0f);
 		float scaledStemOffset = Math::Min(BASE_STEM_OFFSET + (logScale * 2.0f), 20.0f);
 
-		// Get bottom string Y position (string 6)
-		float bottomStringY = stringYPositions[5];
+		// Get bottom string Y position
+		float bottomStringY = stringYPositions[stringYPositions->Length - 1];
 
 		// Calculate x position centered on the note text
 		float noteX = (float)(TicksToPixels(beat->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH);
@@ -2848,6 +3007,124 @@ namespace MIDILightDrawer
 		}
 	}
 
+	void Widget_Timeline::DrawDrumSymbol(Graphics^ g, DrumNotationType symbolType, float x, float y, float size)
+	{
+		// Create pens and brushes for drawing
+		Pen^ outlinePen = gcnew Pen(Color::FromArgb(180, currentTheme.Text), 1.5f);
+		SolidBrush^ fillBrush = gcnew SolidBrush(Color::FromArgb(180, currentTheme.Text));
+
+		try {
+			switch (symbolType)
+			{
+				case DrumNotationType::FilledDiamond:
+				{
+					array<PointF>^ points = gcnew array<PointF>(4) {
+						PointF(x, y - size),	// top
+						PointF(x + size, y),	// right
+						PointF(x, y + size),	// bottom
+						PointF(x - size, y)		// left
+					};
+					g->FillPolygon(fillBrush, points);
+					break;
+				}
+
+				case DrumNotationType::HollowDiamond:
+				{
+					array<PointF>^ points = gcnew array<PointF>(4) {
+						PointF(x, y - size),
+						PointF(x + size, y),
+						PointF(x, y + size),
+						PointF(x - size, y)
+					};
+					g->DrawPolygon(outlinePen, points);
+					break;
+				}
+
+				case DrumNotationType::CircledX:
+				{
+					// Draw circle
+					g->DrawEllipse(outlinePen, x - size, y - size, size * 2, size * 2);
+					// Draw X
+					float xSize = size * 0.7f;
+					g->DrawLine(outlinePen, x - xSize, y - xSize, x + xSize, y + xSize);
+					g->DrawLine(outlinePen, x - xSize, y + xSize, x + xSize, y - xSize);
+					break;
+				}
+
+				case DrumNotationType::AccentedX:
+				{
+					// Draw X
+					float xSize = size * 0.8f;
+					g->DrawLine(outlinePen, x - xSize, y - xSize, x + xSize, y + xSize);
+					g->DrawLine(outlinePen, x - xSize, y + xSize, x + xSize, y - xSize);
+					// Draw accent mark (^)
+					array<PointF>^ accentPoints = gcnew array<PointF>(3) {
+						PointF(x - size, y - size * 1.5f),
+						PointF(x, y - size * 2.0f),
+						PointF(x + size, y - size * 1.5f)
+					};
+					g->DrawLines(outlinePen, accentPoints);
+					break;
+				}
+
+				case DrumNotationType::RegularX:
+				{
+					float xSize = size * 0.8f;
+					g->DrawLine(outlinePen, x - xSize, y - xSize, x + xSize, y + xSize);
+					g->DrawLine(outlinePen, x - xSize, y + xSize, x + xSize, y - xSize);
+					break;
+				}
+
+				case DrumNotationType::NoteEllipse:
+				{
+					g->FillEllipse(fillBrush, x - size * 0.7f, y - size * 0.5f, size * 1.4f, size);
+					break;
+				}
+
+				case DrumNotationType::Unknown:
+				{
+					fillBrush->Color = Color::Red;
+					g->FillEllipse(fillBrush, x - size * 0.7f, y - size * 0.5f, size * 1.4f, size);
+					break;
+				}
+			}
+		}
+		finally {
+			delete outlinePen;
+			delete fillBrush;
+		}
+	}
+
+	TabStringInfo Widget_Timeline::DrawTablatureStrings(Graphics^ g, Rectangle bounds, float availableHeight, float logScale, int numStrings)
+	{
+		TabStringInfo info;
+
+		// Calculate spacing and dimensions
+		const float BASE_STRING_SPACING = 10.0f;
+		const float SPACING_SCALE_FACTOR = 3.0f;
+		float scaledStringSpacing = BASE_STRING_SPACING + (logScale * SPACING_SCALE_FACTOR);
+		scaledStringSpacing = Math::Min(Math::Max(scaledStringSpacing, 12.0f), 40.0f);
+
+		float Total_Tab_Height	= scaledStringSpacing * (numStrings - 1);
+		float verticalOffset	= bounds.Y + TRACK_PADDING + (availableHeight - Total_Tab_Height) / 2;
+
+		// Store calculated values
+		info.StringSpacing		= scaledStringSpacing;
+		info.TotalHeight		= Total_Tab_Height;
+		info.VerticalOffset		= verticalOffset;
+		info.StringYPositions	= gcnew array<float>(numStrings);
+
+		if(Total_Tab_Height < availableHeight) {
+			// Draw string lines and calculate positions
+			for (int i = 0; i < numStrings; i++) {
+				info.StringYPositions[i] = verticalOffset + (i * scaledStringSpacing);
+				g->DrawLine(cachedStringPen, (float)bounds.X, info.StringYPositions[i], (float)bounds.Right, info.StringYPositions[i]);
+			}
+		}
+
+		return info;
+	}
+
 	int Widget_Timeline::GetTicksPerMeasure()
 	{
 		return TICKS_PER_QUARTER * 4 * currentTimeSignatureNumerator / currentTimeSignatureDenominator;
@@ -2996,16 +3273,30 @@ namespace MIDILightDrawer
 		return false;
 	}
 
-	bool Widget_Timeline::IsOverTrackButton(Track^ track, Point mousePoint)
+	bool Widget_Timeline::IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint)
 	{
 		if (track == nullptr) return false;
+
+		if (buttonIndex == 1) {
+			// Notation button only exists for drum tracks
+			if (!track->IsDrumTrack) return false;
+		}
 
 		Rectangle headerBounds = GetTrackHeaderBounds(track);
 		headerBounds.Y += scrollPosition->Y;
 
-		Rectangle buttonBounds(headerBounds.Right - BUTTON_SIZE - BUTTON_MARGIN,headerBounds.Y + BUTTON_MARGIN, BUTTON_SIZE, BUTTON_SIZE);
-
+		Rectangle buttonBounds = GetTrackButtonBounds(headerBounds, buttonIndex);
 		return buttonBounds.Contains(mousePoint);
+	}
+
+	Rectangle Widget_Timeline::GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex)
+	{
+		return Rectangle(
+			headerBounds.Right - (BUTTON_SIZE + BUTTON_MARGIN) * (buttonIndex + 1),
+			headerBounds.Y + BUTTON_MARGIN,
+			BUTTON_SIZE,
+			BUTTON_SIZE
+		);
 	}
 
 	void Widget_Timeline::RecalculateMeasurePositions()

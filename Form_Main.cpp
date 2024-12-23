@@ -17,6 +17,9 @@ namespace MIDILightDrawer
 		this->MinimumSize	= System::Drawing::Size(1200, 800);
 		this->Padding		= System::Windows::Forms::Padding(1); // Border padding
 
+		// Register form closing event
+		this->FormClosing += gcnew System::Windows::Forms::FormClosingEventHandler(this, &Form_Main::Form_Main_FormClosing);
+
 		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
 		Settings::Initialize("settings.json");
 
@@ -475,6 +478,31 @@ namespace MIDILightDrawer
 		midiForm->ShowDialog();
 	}
 
+	void Form_Main::Form_Main_FormClosing(System::Object^ sender, System::Windows::Forms::FormClosingEventArgs^ e)
+	{
+		bool Events_Preset = false;
+		for each(Track ^ T in this->_Timeline->Tracks)
+		{
+			if (T->Events->Count > 0) {
+				Events_Preset = true;
+				break;
+			}
+		}
+
+		if (Events_Preset)
+		{
+			System::Windows::Forms::DialogResult Result = MessageBox::Show(this, "There are unsaved changes in the light configuration.\nDo you want to save them before closing?", "Unsaved Changes", MessageBoxButtons::YesNoCancel, MessageBoxIcon::Question);
+			if (Result == System::Windows::Forms::DialogResult::Yes)
+			{
+				Menu_File_Save_Light_Click(sender, nullptr);
+			}
+			else if (Result == System::Windows::Forms::DialogResult::Cancel)
+			{
+				e->Cancel = true;
+			}
+		}
+	}
+
 	void Form_Main::Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e)
 	{
 		DrawTool^ Draw_Tool			= this->_Timeline->GetDrawTool();
@@ -602,14 +630,17 @@ namespace MIDILightDrawer
 
 					for (auto m = 0; m < Track_Source->measures.size();m++)
 					{
+						Track_Target->IsDrumTrack = Track_Source->isDrumsTrack;
+						
 						gp_parser::Measure* M = &(Track_Source->measures.at(m));
 
-						for (auto b = 0; b < M->beats.size();b++)
+						gp_parser::Voice* V = &M->voices[0];
+						for (auto b = 0; b <V->beats.size();b++)
 						{
-							gp_parser::Beat* B = &(M->beats.at(b));
-							int Duration	= (int)B->voices.at(0).durationInTicks;
-							bool IsDotted	= B->voices.at(0).duration.dotted;
-							bool Empty		= B->voices.at(0).empty;
+							gp_parser::Beat* B = &(V->beats.at(b));
+							int Duration	= (int)B->durationInTicks;
+							bool IsDotted	= B->duration.dotted;
+							bool Empty		= (B->status == gp_parser::BEAT_EMTPY) || (B->status == gp_parser::BEAT_REST);
 
 							if (Empty == true) {
 								continue;
@@ -617,9 +648,9 @@ namespace MIDILightDrawer
 
 							Beat^ New_Beat =  this->_Timeline->AddBeat(Track_Target, (int)m, B->start, Duration, IsDotted);
 
-							for (auto n = 0; n < B->voices.at(0).notes.size();n++)
+							for (auto n = 0; n < B->notes.size();n++)
 							{
-								this->_Timeline->AddNote(New_Beat, B->voices.at(0).notes.at(n).string, B->voices.at(0).notes.at(n).value, B->voices.at(0).notes.at(n).tiedNote);
+								this->_Timeline->AddNote(New_Beat, B->notes.at(n).string, B->notes.at(n).value, B->notes.at(n).tiedNote);
 							}
 						}
 					}
@@ -634,6 +665,8 @@ namespace MIDILightDrawer
 				this->_Timeline->Tracks[i]->Name = Settings->Octave_Entries[i]->Name;
 			}
 		}
+
+		int a = 5;
 	}
 
 	void Form_Main::DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)

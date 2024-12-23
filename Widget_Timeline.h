@@ -14,7 +14,7 @@ using namespace System::Collections::Generic;
 
 namespace MIDILightDrawer 
 {
-	// Forward declarations
+	// Forward Declarations
 	ref class TimelineTool;
 	ref class PointerTool;
 	ref class DrawTool;
@@ -134,10 +134,13 @@ namespace MIDILightDrawer
 		}
 
 	private:
+		System::Resources::ResourceManager^ _Resources;
+		
 		TimelineResourceManager^	resourceManager;
 		PerformanceMetrics^			performanceMetrics;
 
-		ThemeColors currentTheme;
+		ThemeColors		currentTheme;
+		TrackButtonId	hoveredButton;
 		
 		List<Track^>^	tracks;
 		List<Measure^>^ measures;
@@ -173,8 +176,7 @@ namespace MIDILightDrawer
 		Track^ dragTargetTrack;
 		Track^ trackBeingResized;
 		Track^ resizeHoverTrack;
-		Track^ buttonHoverTrack;
-
+		
 		BarEvent^ selectedBar;
 		BarEvent^ draggedBar;
 
@@ -225,19 +227,25 @@ namespace MIDILightDrawer
 		void DrawMoveHandles				(Graphics^ g, Rectangle barBounds);
 
 		// Track-related methods
-		void DrawTrackHeaders	(Graphics^ g);
-		void DrawTrackContent	(Graphics^ g);
-		void DrawTrackBackground(Graphics^ g);
-		void DrawTrackDividers	(Graphics^ g);
-		void DrawTrackName		(Graphics^ g, Track^ track, Rectangle headerBounds);
-		void DrawTrackButtons	(Graphics^ g, Track^ track, Rectangle headerBounds);
-		void DrawTrackBorders	(Graphics^ g, Track^ track, Rectangle bounds);
-		void DrawGridLines		(Graphics^ g);
-		void DrawSelectionAndPreviews(Graphics^ g);
-		void DrawTrackEvents	(Graphics^ g, Track^ track, Rectangle bounds);
-		void DrawTrackTablature	(Graphics^ g, Track^ track, Rectangle bounds);
-		void DrawBeatDuration	(Graphics^ g, Beat^ beat, Rectangle bounds, array<float>^ stringYPositions);
-		void DrawTieLines		(Graphics^ g, Track^ track, Rectangle bounds, array<float>^ stringYPositions, float scaledFontSize);
+		void DrawTrackHeaders			(Graphics^ g);
+		void DrawTrackContent			(Graphics^ g);
+		void DrawTrackBackground		(Graphics^ g);
+		void DrawTrackDividers			(Graphics^ g);
+		void DrawTrackName				(Graphics^ g, Track^ track, Rectangle headerBounds);
+		void DrawTrackButtons			(Graphics^ g, Track^ track, Rectangle headerBounds);
+		void DrawTrackButtonText		(Graphics^ g, Rectangle headerBounds, int buttonIndex, String^ text, bool isPressed, bool isHovered, Color baseColor, Color textColor);
+		void DrawTrackButtonIcon		(Graphics^ g, Rectangle headerBounds, int buttonIndex, Image^ icon , bool isPressed, bool isHovered, Color baseColor, Color textColor);
+		void DrawTrackBorders			(Graphics^ g, Track^ track, Rectangle bounds);
+		void DrawGridLines				(Graphics^ g);
+		void DrawSelectionAndPreviews	(Graphics^ g);
+		void DrawTrackEvents			(Graphics^ g, Track^ track, Rectangle bounds);
+		void DrawTrackTablature			(Graphics^ g, Track^ track, Rectangle bounds);
+		void DrawTrackTablatureDrum		(Graphics^ g, Track^ track, Rectangle bounds, float logScale);
+		void DrawTrackTablatureRegular	(Graphics^ g, Track^ track, Rectangle bounds, float logScale);
+		void DrawBeatDuration			(Graphics^ g, Beat^ beat  , Rectangle bounds, array<float>^ stringYPositions);
+		void DrawTieLines				(Graphics^ g, Track^ track, Rectangle bounds, array<float>^ stringYPositions, float scaledFontSize);
+		void DrawDrumSymbol				(Graphics^ g, DrumNotationType symbolType, float x, float y, float size);
+		TabStringInfo DrawTablatureStrings(Graphics^ g, Rectangle bounds, float availableHeight, float logScale, int numStrings);
 
 		int		GetTicksPerMeasure	();
 		int		GetTicksPerBeat		();
@@ -250,7 +258,8 @@ namespace MIDILightDrawer
 		void	UpdateTrackResize(int mouseY);
 		void	EndTrackResize();
 		bool	IsOverTrackDivider(Point mousePoint, Track^% track);
-		bool	IsOverTrackButton(Track^ track, Point mousePoint);
+		bool	IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint);
+		Rectangle GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex);
 
 		// Helper methods for measure management
 		void	RecalculateMeasurePositions();

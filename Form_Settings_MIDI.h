@@ -66,9 +66,9 @@ namespace MIDILightDrawer {
 		void Load_Octave_Entries();
 		void Save_Octave_Entries();
 		void Update_Button_States();
-
-		void Grid_Selection_Changed(System::Object^ sender, System::EventArgs^ e);
-		void Grid_Cell_Validating(System::Object^ sender, DataGridViewCellValidatingEventArgs^ e);
+				
+		void Grid_Octaves_Selection_Changed(System::Object^ sender, System::EventArgs^ e);
+		void Grid_Octaves_Cell_Validating(System::Object^ sender, DataGridViewCellValidatingEventArgs^ e);
 
 		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 

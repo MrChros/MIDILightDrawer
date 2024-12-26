@@ -628,18 +628,31 @@ void Parser::readMixChange(Tempo& tempo)
 	auto tremolo = readByte();
 	readStringByteSizeOfInteger(); // Tempo Name -> Is this correct
 	auto tempoValue = readInt();
-	if (volume >= 0)
+
+	if (volume >= 0) {
 		readByte();
-	if (pan >= 0)
+	}
+
+	if (pan >= 0) {
 		readByte();
-	if (chorus >= 0)
+	}
+
+	if (chorus >= 0) {
 		readByte();
-	if (reverb >= 0)
+	}
+
+	if (reverb >= 0) {
 		readByte();
-	if (phaser >= 0)
+	}
+
+	if (phaser >= 0) {
 		readByte();
-	if (tremolo >= 0)
+	}
+
+	if (tremolo >= 0) {
 		readByte();
+	}
+
 	if (tempoValue >= 0) {
 		tempo.value = tempoValue;
 		skip(1); // Duration

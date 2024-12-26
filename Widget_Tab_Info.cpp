@@ -33,11 +33,19 @@ namespace MIDILightDrawer
 		this->ForeColor = Theme_Manager::Get_Instance()->ForegroundText;
 
 		this->_Song_Name = "untitled";
+		this->_Track_Titles = gcnew List<String^>;
+
+		// Initialize tooltip
+		this->_Track_Tooltip = gcnew ToolTip();
+		this->_Track_Tooltip->InitialDelay = 500;
+		this->_Track_Tooltip->ShowAlways = true;
+		this->_Track_Tooltip->AutoPopDelay = System::Int32::MaxValue;
 	}
 
 	Widget_Tab_Info::~Widget_Tab_Info(void)
 	{
-
+		delete this->_Track_Titles;
+		delete this->_Track_Tooltip;
 	}
 
 	void Widget_Tab_Info::Update_Info(String^ file_path, String^ song_name, UInt32 count_measures, UInt32 count_tracks)
@@ -61,6 +69,22 @@ namespace MIDILightDrawer
 		this->_Label_File_Path->Text		= file_path;
 		this->_Label_Measures_Count->Text	= "Measures: "	+ count_measures.ToString();
 		this->_Label_Tracks_Count->Text		= "Tracks: "	+ count_tracks.ToString();
+
+		this->_Track_Titles->Clear();
+	}
+
+	void Widget_Tab_Info::Add_Track_Title(String^ track_tilte)
+	{
+		this->_Track_Titles->Add(track_tilte);
+
+		// Update tooltip text when tracks change
+		String^ tooltip_text = "Tracks:\n";
+		for (int i = 0; i < this->_Track_Titles->Count; i++)
+		{
+			tooltip_text += String::Format(" {0}. {1}\n", i + 1, this->_Track_Titles[i]);
+		}
+		this->_Track_Tooltip->SetToolTip(this->_Label_Tracks_Count, tooltip_text);
+		this->_Track_Tooltip->AutoPopDelay = System::Int32::MaxValue;
 	}
 
 	String^ Widget_Tab_Info::Get_Song_Name(void)

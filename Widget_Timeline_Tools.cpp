@@ -53,21 +53,30 @@ namespace MIDILightDrawer
 			Track^ track = timeline->GetTrackAtPoint(*dragStart);
 
 			// Handle different click scenarios
-			if (track != nullptr) {
+			if (track != nullptr)
+			{
 				// Click in track header - select track
-				if (e->X <= Widget_Timeline::TRACK_HEADER_WIDTH) {
+				if (e->X <= Widget_Timeline::TRACK_HEADER_WIDTH)
+				{
 					timeline->SelectedTrack = track;
 					timeline->SelectedBar = nullptr;
 					selectedBars->Clear();
 				}
 				// Click in track content - handle bars
-				else {
+				else
+				{
 					BarEvent^ bar = timeline->GetBarAtPoint(*dragStart);
-					if (bar != nullptr) {
-						if (Control::ModifierKeys == Keys::Control) {
+					if (bar != nullptr)
+					{
+						if (Control::ModifierKeys == Keys::Control)
+						{
 							// Toggle selection with Ctrl key
-							if (selectedBars == nullptr) selectedBars = gcnew List<BarEvent^>();
-							if (selectedBars->Contains(bar)) {
+							if (selectedBars == nullptr) {
+								selectedBars = gcnew List<BarEvent^>();
+							}
+
+							if (selectedBars->Contains(bar))
+							{
 								selectedBars->Remove(bar);
 								if (timeline->SelectedBar == bar) {
 									timeline->SelectedBar = selectedBars->Count > 0 ? selectedBars[0] : nullptr;
@@ -78,17 +87,23 @@ namespace MIDILightDrawer
 								timeline->SelectedBar = bar;
 							}
 						}
-						else {
+						else
+						{
 							// Check if clicking on an already selected bar
-							if (selectedBars != nullptr && selectedBars->Contains(bar)) {
+							if (selectedBars != nullptr && selectedBars->Contains(bar))
+							{
 								// Start group drag
 								isDragging = true;
 								dragSourceTrack = track;
 								StoreOriginalPositions();
 							}
-							else {
+							else
+							{
 								// Clear previous selection and select only this bar
-								if (selectedBars == nullptr) selectedBars = gcnew List<BarEvent^>();
+								if (selectedBars == nullptr) {
+									selectedBars = gcnew List<BarEvent^>();
+								}
+
 								selectedBars->Clear();
 								selectedBars->Add(bar);
 								timeline->SelectedBar = bar;
@@ -122,14 +137,22 @@ namespace MIDILightDrawer
 			return;
 		}
 
-		if (isDragging && selectedBars != nullptr && selectedBars->Count > 0) {
+		if (isDragging && selectedBars != nullptr && selectedBars->Count > 0)
+		{
 			// Calculate movement in ticks
-			int pixelDelta = e->X - dragStart->X;
-			int tickDelta = timeline->PixelsToTicks(pixelDelta);
+			int pixelDelta	= e->X - dragStart->X;
+			int tickDelta	= timeline->PixelsToTicks(pixelDelta);
 
 			// Update positions of selected bars
-			for each (BarEvent ^ bar in selectedBars) {
-				bar->StartTick = timeline->SnapTickToGrid(bar->OriginalStartTick + tickDelta);
+			for each (BarEvent ^ bar in selectedBars)
+			{
+				if(selectedBars->IndexOf(bar) == 0) {
+					bar->StartTick = timeline->SnapTickToGrid(bar->OriginalStartTick + tickDelta);
+				}
+				else {
+					int TickOffsetToFirstBar = bar->OriginalStartTick - selectedBars[0]->OriginalStartTick;
+					bar->StartTick = selectedBars[0]->StartTick + TickOffsetToFirstBar;
+				}
 			}
 
 			// Only update target track if not over header area and not multi-track selection
@@ -139,7 +162,8 @@ namespace MIDILightDrawer
 
 			timeline->Invalidate();
 		}
-		else if (isSelecting) {
+		else if (isSelecting)
+		{
 			UpdateSelection(Point(e->X, e->Y));
 			timeline->Invalidate();
 		}
@@ -151,14 +175,18 @@ namespace MIDILightDrawer
 
 	void PointerTool::OnMouseUp(MouseEventArgs^ e)
 	{
-		if (isDragging) {
+		if (isDragging)
+		{
 			// Don't allow track changes for multi-track selection
-			if (!IsMultiTrackSelection) {
+			if (!IsMultiTrackSelection)
+			{
 				Track^ targetTrack = timeline->GetTrackAtPoint(Point(e->X, e->Y));
 
-				if (targetTrack != nullptr) {
+				if (targetTrack != nullptr)
+				{
 					// First remove bars from source track
-					for each (BarEvent ^ bar in selectedBars) {
+					for each (BarEvent ^ bar in selectedBars)
+					{
 						dragSourceTrack->Events->Remove(bar);
 					}
 
@@ -170,7 +198,8 @@ namespace MIDILightDrawer
 					// Ensure bars are properly sorted in the target track
 					targetTrack->Events->Sort(Track::barComparer);
 				}
-				else {
+				else
+				{
 					// If dropped outside a track, move bars back to original positions
 					for each (BarEvent ^ bar in selectedBars) {
 						bar->StartTick = bar->OriginalStartTick;
@@ -219,6 +248,7 @@ namespace MIDILightDrawer
 
 	void PointerTool::StartSelection(Point start) {
 		selectionRect = Rectangle(start.X, start.Y, 0, 0);
+
 		if (selectedBars == nullptr) {
 			selectedBars = gcnew List<BarEvent^>();
 		}
@@ -232,10 +262,10 @@ namespace MIDILightDrawer
 		if (dragStart == nullptr) return;
 
 		// Calculate rectangle from start point to current point
-		int x = Math::Min(dragStart->X, current.X);
-		int y = Math::Min(dragStart->Y, current.Y);
-		int width = Math::Abs(current.X - dragStart->X);
-		int height = Math::Abs(current.Y - dragStart->Y);
+		int x		= Math::Min(dragStart->X, current.X);
+		int y		= Math::Min(dragStart->Y, current.Y);
+		int width	= Math::Abs(current.X - dragStart->X);
+		int height	= Math::Abs(current.Y - dragStart->Y);
 
 		selectionRect = Rectangle(x, y, width, height);
 

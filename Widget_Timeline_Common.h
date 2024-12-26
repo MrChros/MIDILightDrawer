@@ -44,4 +44,11 @@ namespace MIDILightDrawer
 			}
 		}
 	};
+
+	public enum class BarPreviewType
+	{
+		Creation,    // New bar being created
+		Movement,    // Existing bar being moved
+		Duration     // Duration change preview
+	};
 }

@@ -17,6 +17,7 @@ namespace MIDILightDrawer
 		Widget_Tab_Info(void);
 
 		void Update_Info(String^ file_path, String^ song_name, UInt32 count_measures, UInt32 count_tracks);
+		void Add_Track_Title(String^ track_tilte);
 
 		String^ Get_Song_Name(void);
 
@@ -28,8 +29,10 @@ namespace MIDILightDrawer
 		Label^ _Label_File_Path;
 		Label^ _Label_Measures_Count;
 		Label^ _Label_Tracks_Count;
+		ToolTip^ _Track_Tooltip;
 
 		String^ _Song_Name;
+		List<String^>^ _Track_Titles;
 
 		Label^ Create_Text_Label(String^ text);
 	};

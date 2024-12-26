@@ -2,8 +2,10 @@
 #include "Form_Settings_MIDI.h"
 #include "Settings.h"
 
-namespace MIDILightDrawer {
-	Form_Settings_MIDI::Form_Settings_MIDI() {
+namespace MIDILightDrawer
+{
+	Form_Settings_MIDI::Form_Settings_MIDI()
+	{
 		Initialize_Note_Names();
 		Initialize_Component();
 		Initialize_Octaves_Section();
@@ -353,29 +355,32 @@ namespace MIDILightDrawer {
 		_Grid_Octaves->Columns->Add(_Column_Name);
 		_Grid_Octaves->Columns->Add(_Column_Octave);
 
-		_Grid_Octaves->SelectionChanged += gcnew EventHandler(this, &Form_Settings_MIDI::Grid_Selection_Changed);
-		_Grid_Octaves->CellValidating += gcnew DataGridViewCellValidatingEventHandler(this, &Form_Settings_MIDI::Grid_Cell_Validating);
+		_Grid_Octaves->SelectionChanged += gcnew EventHandler(this, &Form_Settings_MIDI::Grid_Octaves_Selection_Changed);
+		_Grid_Octaves->CellValidating += gcnew DataGridViewCellValidatingEventHandler(this, &Form_Settings_MIDI::Grid_Octaves_Cell_Validating);
 
 		Theme_Manager::Get_Instance()->ApplyThemeToDataGridView(_Grid_Octaves);
 
 		_Octaves_Layout->Controls->Add(_Grid_Octaves, 0, 1);
 	}
 
-	void Form_Settings_MIDI::Add_Octave_Entry_Click(System::Object^ sender, System::EventArgs^ e) {
+	void Form_Settings_MIDI::Add_Octave_Entry_Click(System::Object^ sender, System::EventArgs^ e)
+	{
 		int rowIndex = _Grid_Octaves->Rows->Add("New Entry", "4");
 		_Grid_Octaves->Rows[rowIndex]->Selected = true;
 		_Grid_Octaves->CurrentCell = _Grid_Octaves->Rows[rowIndex]->Cells[0];
 		_Grid_Octaves->BeginEdit(true);
 	}
 
-	void Form_Settings_MIDI::Remove_Entry_Click(System::Object^ sender, System::EventArgs^ e) {
+	void Form_Settings_MIDI::Remove_Entry_Click(System::Object^ sender, System::EventArgs^ e)
+	{
 		if (_Grid_Octaves->SelectedRows->Count > 0) {
 			_Grid_Octaves->Rows->RemoveAt(_Grid_Octaves->SelectedRows[0]->Index);
 			Update_Button_States();
 		}
 	}
 
-	void Form_Settings_MIDI::Move_Up_Click(System::Object^ sender, System::EventArgs^ e) {
+	void Form_Settings_MIDI::Move_Up_Click(System::Object^ sender, System::EventArgs^ e)
+	{
 		if (_Grid_Octaves->SelectedRows->Count > 0) {
 			int selectedIndex = _Grid_Octaves->SelectedRows[0]->Index;
 			if (selectedIndex > 0) {
@@ -431,11 +436,13 @@ namespace MIDILightDrawer {
 		}
 	}
 
-	void Form_Settings_MIDI::Update_Button_States() {
-		Grid_Selection_Changed(nullptr, nullptr);
+	void Form_Settings_MIDI::Update_Button_States()
+	{
+		Grid_Octaves_Selection_Changed(nullptr, nullptr);
 	}
 
-	void Form_Settings_MIDI::Grid_Selection_Changed(System::Object^ sender, System::EventArgs^ e) {
+	void Form_Settings_MIDI::Grid_Octaves_Selection_Changed(System::Object^ sender, System::EventArgs^ e)
+	{
 		bool hasSelection = _Grid_Octaves->SelectedRows->Count > 0;
 		int selectedIndex = hasSelection ? _Grid_Octaves->SelectedRows[0]->Index : -1;
 
@@ -444,7 +451,7 @@ namespace MIDILightDrawer {
 		_Button_Move_Down->Enabled = hasSelection && selectedIndex < _Grid_Octaves->RowCount - 1;
 	}
 
-	void Form_Settings_MIDI::Grid_Cell_Validating(System::Object^ sender, DataGridViewCellValidatingEventArgs^ e)
+	void Form_Settings_MIDI::Grid_Octaves_Cell_Validating(System::Object^ sender, DataGridViewCellValidatingEventArgs^ e)
 	{
 		// Name validation
 		if (e->ColumnIndex == _Column_Name->Index) {
@@ -491,7 +498,7 @@ namespace MIDILightDrawer {
 		SizeF textSize = g->MeasureString(box->Text, titleFont);
 
 		// Define header rect
-		Rectangle headerRect = Rectangle(0, 0, box->Width, 28);
+		System::Drawing::Rectangle headerRect = System::Drawing::Rectangle(0, 0, box->Width, 28);
 
 		// Draw header background with gradient
 		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(

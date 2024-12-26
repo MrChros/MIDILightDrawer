@@ -61,12 +61,14 @@ namespace MIDILightDrawer
 	/////////////
 	// Measure //
 	/////////////
-	Measure::Measure(int startTick, int num, int denom, String^ marker_text)
+	Measure::Measure(int startTick, int num, int denom, int tempo, String^ marker_text)
 	{
 		StartTick = startTick;
 		Numerator = num;
 		Denominator = denom;
+		Tempo = tempo;
 		Marker_Text = marker_text;
+
 		// Calculate length based on time signature
 		Length = 4 * TICKS_PER_QUARTER * num / denom;
 	}

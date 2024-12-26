@@ -69,14 +69,14 @@ namespace MIDILightDrawer
 		Invalidate();
 	}
 
-	void Widget_Timeline::AddMeasure(int numerator, int denominator) {
-		AddMeasure(numerator, denominator, "");
+	void Widget_Timeline::AddMeasure(int numerator, int denominator, int tempo) {
+		AddMeasure(numerator, denominator, tempo, "");
 	}
 
-	void Widget_Timeline::AddMeasure(int numerator, int denominator, String^ marker_text)
+	void Widget_Timeline::AddMeasure(int numerator, int denominator, int tempo, String^ marker_text)
 	{
 		int startTick = TotalTicks;
-		Measure^ newMeasure = gcnew Measure(startTick, numerator, denominator, marker_text);
+		Measure^ newMeasure = gcnew Measure(startTick, numerator, denominator, tempo, marker_text);
 		measures->Add(newMeasure);
 
 		for each (Track ^ track in tracks) {
@@ -1086,12 +1086,22 @@ namespace MIDILightDrawer
 		Pen^ measurePen = gcnew Pen(measureColor, 1.0f);
 
 		try {
-			int startTick = PixelsToTicks(-scrollPosition->X);
-			int endTick = PixelsToTicks(-scrollPosition->X + Width);
+			int startTick	= PixelsToTicks(-scrollPosition->X);
+			int endTick		= PixelsToTicks(-scrollPosition->X + Width);
+
+			// Pixels to extend upward
+			const int measureLineExtension = 4;  
+
+			// Save original clip region
+			System::Drawing::Region^ originalClip = g->Clip;
 
 			int accumulated = 0;
-			for each (Measure ^ measure in measures) {
-				if (accumulated > endTick) break;
+			for each (Measure ^ measure in measures)
+			{
+				if (accumulated > endTick) {
+					break;
+				}
+
 				if (accumulated + measure->Length < startTick) {
 					accumulated += measure->Length;
 					continue;
@@ -1099,14 +1109,24 @@ namespace MIDILightDrawer
 
 				int x = TicksToPixels(accumulated) + scrollPosition->X + TRACK_HEADER_WIDTH;
 
-				if (x >= TRACK_HEADER_WIDTH && x <= Width) {
-					g->DrawLine(measurePen,
-						x, contentRect.Y,
-						x, contentRect.Y + contentRect.Height);
-				}
+				/*if (x >= TRACK_HEADER_WIDTH && x <= Width) {
+					g->DrawLine(measurePen, x, contentRect.Y, x, contentRect.Y + contentRect.Height);
+				}*/
+
+				// Draw the main content area line (with original clip)
+				g->Clip = originalClip;
+				g->DrawLine(measurePen, x, contentRect.Y, x, contentRect.Y + contentRect.Height);
+
+				// Draw the extension in the header area with a different clip region
+				Rectangle headerClip(TRACK_HEADER_WIDTH, contentRect.Y - measureLineExtension, Width - TRACK_HEADER_WIDTH, measureLineExtension);
+				g->SetClip(headerClip);
+				g->DrawLine(measurePen, x, contentRect.Y - measureLineExtension, x, contentRect.Y);
 
 				accumulated += measure->Length;
 			}
+
+			// Restore original clip
+			g->Clip = originalClip;
 		}
 		finally {
 			delete measurePen;
@@ -1225,7 +1245,9 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::DrawMeasureNumbers(Graphics^ g)
 	{
-		if (!measureFont || measures->Count == 0) return;
+		if (!measureFont || measures->Count == 0) {
+			return;
+		}
 
 		// Fill the header area with a solid color first
 		Rectangle headerRect = Rectangle(0, 0, Width, HEADER_HEIGHT);
@@ -1237,6 +1259,17 @@ namespace MIDILightDrawer
 		
 		SolidBrush^ textBrush = gcnew SolidBrush(currentTheme.Text);
 
+		// Create font for quarter note numbers (smaller than measure numbers)
+		Drawing::Font^ quarterNoteFont = gcnew Drawing::Font(measureFont->FontFamily, measureFont->Size * 0.8f);
+
+		// Determine if we should show quarter notes based on zoom level
+		float subdivLevel = GetSubdivisionLevel();
+
+		// Constants for vertical positioning
+		const int markerTextY = 2;												// Marker text at the top
+		const int timeSignatureY = markerTextY		+ markerFont->Height  + 2;	// Time signature below marker
+		const int measureNumberY = timeSignatureY	+ measureFont->Height + 4;	// Measure number at the bottom
+
 		// Calculate visible range in ticks
 		int startTick	= PixelsToTicks(-scrollPosition->X);
 		int endTick		= PixelsToTicks(-scrollPosition->X + headerRect.Width - TRACK_HEADER_WIDTH);
@@ -1244,11 +1277,6 @@ namespace MIDILightDrawer
 		// Draw measure numbers and time signatures
 		int accumulated = 0;
 		int measureNumber = 1;
-
-		// Constants for vertical positioning - updated for marker text
-		const int markerTextY = 2;  // Marker text at the top
-		const int measureNumberY = markerTextY		+ markerFont->Height + 2;	// Measure number below marker
-		const int timeSignatureY = measureNumberY	+ measureFont->Height + 4;	// Time signature at the bottom
 
 		for each (Measure ^ measure in measures)
 		{
@@ -1283,6 +1311,53 @@ namespace MIDILightDrawer
 
 				g->DrawString(numText, measureFont, textBrush, textX, (float)measureNumberY);
 
+
+				// Determine if we should show subdivisions based on time signature and zoom level
+				bool showSubdivisions = (measure->Denominator == 8) ?
+					(subdivLevel >= 3) :  // Eighth-based measures
+					(subdivLevel >= 2);   // Quarter-based measures
+
+				if (showSubdivisions)
+				{
+					// Calculate subdivisions based on time signature
+					int ticksPerBeat;
+
+					if (measure->Denominator == 8)
+					{
+						// For 8th note denominator (e.g. 5/8, 7/8)
+						ticksPerBeat = TICKS_PER_QUARTER / 2;  // Half of a quarter note
+					}
+					else  // denominator == 4
+					{
+						// For 4th note denominator (e.g. 4/4, 3/4)
+						ticksPerBeat = TICKS_PER_QUARTER;
+					}
+
+					// Draw beat numbers
+					for (int beat = 1; beat < measure->Numerator; beat++)
+					{
+						int beatTick = accumulated + (beat * ticksPerBeat);
+						int beatX = TicksToPixels(beatTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
+
+						if (beatX >= TRACK_HEADER_WIDTH && beatX <= Width)
+						{
+							String^ beatText = String::Format("{0}.{1}", measureNumber, beat + 1);
+
+							SizeF beatSize = g->MeasureString(beatText, quarterNoteFont);
+							float beatTextX = beatX - (beatSize.Width / 2);
+
+							// Ensure beat number doesn't get cut off
+							beatTextX = Math::Max(beatTextX, (float)TRACK_HEADER_WIDTH + 2);
+
+							// Draw with slightly transparent color
+							Color beatColor = Color::FromArgb(180, currentTheme.Text);
+							g->DrawString(beatText, quarterNoteFont, gcnew SolidBrush(beatColor), beatTextX, (float)measureNumberY + 4);
+						}
+					}
+				}
+
+
+
 				String^ timeSignature = measure->ToString();
 				SizeF sigSize = g->MeasureString(timeSignature, markerFont);
 				float sigX = x - (sigSize.Width / 2);
@@ -1297,6 +1372,7 @@ namespace MIDILightDrawer
 			measureNumber++;
 		}
 
+		delete quarterNoteFont;
 		delete textBrush;
 	}
 
@@ -1359,7 +1435,7 @@ namespace MIDILightDrawer
 	{
 		if (drawTool->PreviewBar != nullptr)
 		{
-			DrawPreviewBar(g, drawTool->PreviewBar, drawTool->CurrentMousePosition);
+			DrawPreviewBar(g, drawTool->PreviewBar, nullptr, drawTool->CurrentMousePosition, BarPreviewType::Creation);
 		}
 	}
 
@@ -1382,10 +1458,10 @@ namespace MIDILightDrawer
 			if (track != nullptr)
 			{
 				Rectangle bounds = GetTrackContentBounds(track);
-				int x = TicksToPixels(hoverBar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
-				int width = TicksToPixels(hoverBar->Duration);
 
-				Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
+				int x, width;
+				Rectangle barBounds;
+				CalculateBarBounds(hoverBar, bounds, x, width, barBounds);
 
 				// Draw delete preview
 				Color deleteColor = Color::FromArgb(100, 255, 0, 0); // Light red
@@ -1421,10 +1497,10 @@ namespace MIDILightDrawer
 			if (track != nullptr)
 			{
 				Rectangle bounds = GetTrackContentBounds(track);
-				int x = TicksToPixels(hoverBar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
-				int width = TicksToPixels(hoverBar->Duration);
 
-				Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
+				int x, width;
+				Rectangle barBounds;
+				CalculateBarBounds(hoverBar, bounds, x, width, barBounds);
 
 				// Draw move preview (highlight)
 				Color moveColor = Color::FromArgb(100, currentTheme.SelectionHighlight);
@@ -1460,10 +1536,10 @@ namespace MIDILightDrawer
 			if (track != nullptr)
 			{
 				Rectangle bounds = GetTrackContentBounds(track);
-				int x = TicksToPixels(hoverBar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
-				int width = TicksToPixels(hoverBar->Duration);
 
-				Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
+				int x, width;
+				Rectangle barBounds;
+				CalculateBarBounds(hoverBar, bounds, x, width, barBounds);
 
 				// Draw resize preview
 				Color resizeColor = Color::FromArgb(100, currentTheme.SelectionHighlight);
@@ -1601,15 +1677,7 @@ namespace MIDILightDrawer
 				// If this bar is being hovered over, show stronger highlight
 				if (bar == colorTool->HoverBar)
 				{
-					for (int i = 2; i >= 0; i--)
-					{
-						Rectangle glowBounds = barRect;
-						glowBounds.Inflate(i, i);
-
-						Pen^ glowPen = gcnew Pen(Color::FromArgb(60 - i * 15, colorTool->CurrentColor), 1);
-						g->DrawRectangle(glowPen, glowBounds);
-						delete glowPen;
-					}
+					DrawBarGlowEffect(g, barRect, colorTool->CurrentColor, 2);
 				}
 			}
 		}
@@ -1651,7 +1719,7 @@ namespace MIDILightDrawer
 		}
 		else if (Single_Preview != nullptr)
 		{
-			DrawPreviewBar(g, Single_Preview, Fade_Tool->CurrentMousePosition);
+			DrawPreviewBar(g, Single_Preview, nullptr, Fade_Tool->CurrentMousePosition, BarPreviewType::Creation);
 		}
 
 		// Restore original clip region
@@ -1684,15 +1752,44 @@ namespace MIDILightDrawer
 		}
 		else if (Single_Preview != nullptr)
 		{
-			DrawPreviewBar(g, Single_Preview, Strobe_Tool->CurrentMousePosition);
+			DrawPreviewBar(g, Single_Preview, nullptr, Strobe_Tool->CurrentMousePosition, BarPreviewType::Creation);
 		}
 
 		// Restore original clip region
 		g->Clip = originalClip;
 	}
 
-	void Widget_Timeline::DrawPreviewBar(Graphics^ g, BarEvent^ bar, Point mousePos)
+	void Widget_Timeline::DrawPreviewBar(Graphics^ g, BarEvent^ bar, Track^ track, Point mousePos, BarPreviewType previewType)
 	{
+		// For Creation/Movement previews, we need to determine the track
+		Track^ targetTrack = track == nullptr ? GetTrackAtPoint(mousePos) : track;
+
+		if (bar != nullptr && targetTrack != nullptr)
+		{
+			// Get the track bounds for drawing
+			Rectangle bounds = GetTrackContentBounds(targetTrack);
+			bounds.Y += scrollPosition->Y;
+
+			int x, width;
+			Rectangle barBounds;
+			CalculateBarBounds(bar, bounds, x, width, barBounds);
+
+			// Different visual treatments based on preview type
+			switch (previewType)
+			{
+			case BarPreviewType::Creation:
+			case BarPreviewType::Movement:
+				DrawCreationMovementPreview(g, bar, barBounds);
+				break;
+
+			case BarPreviewType::Duration:
+				DrawDurationPreview(g, bar, barBounds);
+				break;
+			}
+		}
+		
+		
+		/*
 		Track^ hoverTrack = GetTrackAtPoint(mousePos);
 
 		if (bar != nullptr && hoverTrack != nullptr)
@@ -1701,18 +1798,16 @@ namespace MIDILightDrawer
 			Rectangle bounds = GetTrackContentBounds(hoverTrack);
 			bounds.Y += scrollPosition->Y;
 
-			// Calculate bar position and width
-			int x = TicksToPixels(bar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
-			int width = TicksToPixels(bar->Duration);
-
-			// Create rectangle for preview bar
-			Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
+			int x, width;
+			Rectangle barBounds;
+			CalculateBarBounds(bar, bounds, x, width, barBounds);
 
 			// Draw semi-transparent preview
 			Color previewColor = bar->Color;
 			g->FillRectangle(gcnew SolidBrush(previewColor), barBounds);
 			g->DrawRectangle(gcnew Pen(Color::FromArgb(180, previewColor)), barBounds);
 		}
+		*/
 	}
 
 	void Widget_Timeline::DrawPreviewBarList(Graphics^ g, List<BarEvent^>^ bar_list, Track^ track)
@@ -1721,173 +1816,106 @@ namespace MIDILightDrawer
 
 		for each (BarEvent ^ bar in bar_list)
 		{
-			int x = TicksToPixels(bar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
-			int width = TicksToPixels(bar->Duration);
-
 			// Get track bounds
 			Rectangle bounds = GetTrackContentBounds(track);
 			bounds.Y += scrollPosition->Y;
 
-			Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - (TRACK_PADDING * 2));
-
-			// Draw semi-transparent bar
-			g->FillRectangle(gcnew SolidBrush(bar->Color), barBounds);
-
-			// Draw border
-			g->DrawRectangle(gcnew Pen(Color::FromArgb(100, bar->Color)), barBounds);
-
-			// Add subtle glow effect
-			for (int i = 1; i <= 2; i++)
-			{
-				Rectangle glowBounds = barBounds;
-				glowBounds.Inflate(i, i);
-				g->DrawRectangle(gcnew Pen(Color::FromArgb(40 - i * 15, bar->Color)), glowBounds);
-			}
+			DrawPreviewBar(g, bar, track, Point(), BarPreviewType::Creation);
 		}
 	}
 
+	void Widget_Timeline::DrawCreationMovementPreview(Graphics^ g, BarEvent^ bar, Rectangle bounds)
+	{
+		// Semi-transparent preview with border
+		Color previewColor = bar->Color;
+		g->FillRectangle(gcnew SolidBrush(Color::FromArgb(180, previewColor)), bounds);
+		g->DrawRectangle(gcnew Pen(Color::FromArgb(180, previewColor)), bounds);
+
+		// Add subtle glow effect
+		DrawBarGlowEffect(g, bounds, Color::FromArgb(100, previewColor), 2);
+	}
+
+	void Widget_Timeline::DrawDurationPreview(Graphics^ g, BarEvent^ bar, Rectangle bounds)
+	{
+		// Draw original bar with reduced opacity
+		Rectangle originalBounds = bounds;
+		originalBounds.Width = TicksToPixels(bar->Duration);
+		g->FillRectangle(gcnew SolidBrush(Color::FromArgb(80, bar->Color)), originalBounds);
+
+		// Draw preview with enhanced brightness
+		Color previewColor = Color::FromArgb(
+			Math::Min(255, bar->Color.R + 40),
+			Math::Min(255, bar->Color.G + 40),
+			Math::Min(255, bar->Color.B + 40)
+		);
+		g->FillRectangle(gcnew SolidBrush(previewColor), bounds);
+
+		// Add glow effect for the preview
+		DrawBarGlowEffect(g, bounds, currentTheme.SelectionHighlight, 3);
+	}
+
+
 	void Widget_Timeline::DrawNormalBar(Graphics^ g, BarEvent^ bar, Rectangle bounds)
 	{
-		int x = TicksToPixels(bar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
-		int width = TicksToPixels(bar->Duration);
+		int x, width;
+		Rectangle barBounds;
+		CalculateBarBounds(bar, bounds, x, width, barBounds);
+
+		
+		bool isDurationTarget = false;
 
 		// Check for duration preview
-		bool isPreview = false;
-		bool isDurationTarget = false;
-		if (currentToolType == TimelineToolType::Duration) {
+		if (currentToolType == TimelineToolType::Duration)
+		{
 			DurationTool^ durationTool = GetDurationTool();
 			isDurationTarget = (bar == durationTool->PreviewBar);
-			if (isDurationTarget && durationTool->IsPreviewVisible) {
-				width = TicksToPixels(durationTool->PreviewLength);
-				isPreview = true;
+
+			if (isDurationTarget && durationTool->IsPreviewVisible)
+			{
+				DrawPreviewBar(g, bar, nullptr, Point(), BarPreviewType::Duration);
+				return;  // Important: early return if preview was drawn
 			}
 		}
 
-		Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
-
-		// Draw the bar with appropriate transparency
-		if (isPreview) {
-			// Draw original bar with higher transparency
-			g->FillRectangle(gcnew SolidBrush(Color::FromArgb(80, bar->Color)),
-				Rectangle(x, bounds.Y + TRACK_PADDING, TicksToPixels(bar->Duration), bounds.Height - TRACK_PADDING * 2));
-
-			// Draw preview length with normal transparency and highlight
+		// Draw normal bar appearance
+		if (isDurationTarget)
+		{
+			// Highlight the bar being targeted for duration change
 			Color highlightColor = Color::FromArgb(
-				Math::Min(255, bar->Color.R + 40),
-				Math::Min(255, bar->Color.G + 40),
-				Math::Min(255, bar->Color.B + 40)
+				Math::Min(255, bar->Color.R + 30),
+				Math::Min(255, bar->Color.G + 30),
+				Math::Min(255, bar->Color.B + 30)
 			);
 			g->FillRectangle(gcnew SolidBrush(highlightColor), barBounds);
 
-			// Draw preview outline with glow effect
-			Color glowColor = currentTheme.SelectionHighlight;
-			for (int i = 3; i >= 0; i--)
-			{
-				Rectangle glowBounds = barBounds;
-				glowBounds.Inflate(i, i);
-				Pen^ glowPen = gcnew Pen(Color::FromArgb(60 - i * 15, glowColor), 1);
-				g->DrawRectangle(glowPen, glowBounds);
-				delete glowPen;
-			}
+			Pen^ highlightPen = gcnew Pen(currentTheme.SelectionHighlight, 2);
+			g->DrawRectangle(highlightPen, barBounds);
+			delete highlightPen;
 		}
 		else
 		{
-			// Normal drawing
-			if (isDurationTarget) {
-				// Highlight the bar being targeted for duration change
-				Color highlightColor = Color::FromArgb(
-					Math::Min(255, bar->Color.R + 30),
-					Math::Min(255, bar->Color.G + 30),
-					Math::Min(255, bar->Color.B + 30)
-				);
-				g->FillRectangle(gcnew SolidBrush(highlightColor), barBounds);
-				Pen^ highlightPen = gcnew Pen(currentTheme.SelectionHighlight, 2);
-				g->DrawRectangle(highlightPen, barBounds);
-				delete highlightPen;
-			}
-			else {
-				g->FillRectangle(gcnew SolidBrush(Color::FromArgb(200, bar->Color)), barBounds);
-				g->DrawRectangle(gcnew Pen(Color::FromArgb(100, 0, 0, 0)), barBounds);
-			}
+			// Normal appearance
+			g->FillRectangle(gcnew SolidBrush(Color::FromArgb(200, bar->Color)), barBounds);
+			g->DrawRectangle(gcnew Pen(Color::FromArgb(100, 0, 0, 0)), barBounds);
 		}
 
-		// Add DrawTool-specific resize handle visualization
-		if (currentToolType == TimelineToolType::Draw) {
+		// Add tool-specific enhancements
+		if (currentToolType == TimelineToolType::Draw)
+		{
 			DrawTool^ drawTool = GetDrawTool();
-			if (drawTool->CurrentMode == DrawTool::DrawMode::Resize &&
-				bar == drawTool->HoverBar) {
-				// Draw enhanced resize handle
-				Rectangle handleBounds(
-					barBounds.Right - 4,
-					barBounds.Y,
-					4,
-					barBounds.Height
-				);
-
-				// Draw handle with highlight color
-				Color handleColor = currentTheme.SelectionHighlight;
-				g->FillRectangle(gcnew SolidBrush(handleColor), handleBounds);
-
-				// Add grip lines
-				Pen^ gripPen = gcnew Pen(Color::White, 1);
-				for (int i = 0; i < 3; i++) {
-					g->DrawLine(gripPen,
-						handleBounds.X + i,
-						handleBounds.Y + 2,
-						handleBounds.X + i,
-						handleBounds.Bottom - 2);
-				}
-				delete gripPen;
+			if (drawTool->CurrentMode == DrawTool::DrawMode::Resize && bar == drawTool->HoverBar)
+			{
+				DrawResizeHandle(g, barBounds, currentTheme.SelectionHighlight, false);
 			}
 		}
+		else if (currentToolType == TimelineToolType::Duration)
+		{
+			// Create handle color based on target state
+			Color handleColor = isDurationTarget ?
+				currentTheme.SelectionHighlight :
+				Color::FromArgb(bar->Color.R * 8 / 10, bar->Color.G * 8 / 10, bar->Color.B * 8 / 10);
 
-		// Draw resize handle if Duration tool is active
-		if (currentToolType == TimelineToolType::Duration) {
-			// Create handle color (brighter if this is the target bar)
-			Color handleColor;
-			if (isDurationTarget) {
-				handleColor = currentTheme.SelectionHighlight;
-			}
-			else {
-				handleColor = Color::FromArgb(
-					bar->Color.R * 8 / 10,
-					bar->Color.G * 8 / 10,
-					bar->Color.B * 8 / 10
-				);
-			}
-
-			// Draw handle at right edge with increased visibility
-			Rectangle handleBounds(
-				barBounds.Right - 4,
-				barBounds.Y,
-				4,
-				barBounds.Height
-			);
-
-			g->FillRectangle(gcnew SolidBrush(handleColor), handleBounds);
-
-			// Add more visible grip lines
-			Color gripColor = isDurationTarget ? Color::White : Color::FromArgb(180, 255, 255, 255);
-			Pen^ gripPen = gcnew Pen(gripColor, 1);
-			for (int i = 0; i < 3; i++) {
-				g->DrawLine(gripPen,
-					handleBounds.X + i,
-					handleBounds.Y + 2,
-					handleBounds.X + i,
-					handleBounds.Bottom - 2);
-			}
-			delete gripPen;
-
-			// Add subtle glow to handle if this is the target
-			if (isDurationTarget) {
-				for (int i = 2; i >= 0; i--) {
-					Rectangle glowBounds = handleBounds;
-					glowBounds.Inflate(i, i);
-					Pen^ glowPen = gcnew Pen(Color::FromArgb(40 - i * 10, currentTheme.SelectionHighlight), 1);
-					g->DrawRectangle(glowPen, glowBounds);
-					delete glowPen;
-				}
-			}
+			DrawResizeHandle(g, barBounds, handleColor, isDurationTarget);
 		}
 	}
 
@@ -1895,6 +1923,12 @@ namespace MIDILightDrawer
 	{
 		int x = TicksToPixels(bar->OriginalStartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
 		int width = TicksToPixels(bar->Duration);
+
+		// Ensure that every bar is drawn with at least one pixel width, independent from the zoom level
+		if (width < 1) {
+			width = 1;
+		}
+
 		Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
 
 		// Draw with high transparency
@@ -1903,111 +1937,59 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::DrawSelectedBar(Graphics^ g, BarEvent^ bar, Rectangle bounds)
 	{
-		int x = TicksToPixels(bar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
-		int width = TicksToPixels(bar->Duration);
+		int x, width;
+		Rectangle barBounds;
+		CalculateBarBounds(bar, bounds, x, width, barBounds);
 
 		// Check for duration preview
-		bool isPreview = false;
-		bool isDurationTarget = false;
-		if (currentToolType == TimelineToolType::Duration) {
+		bool isDurationTarget	= false;
+		bool isDurationPreview	= false;
+
+		if (currentToolType == TimelineToolType::Duration)
+		{
 			DurationTool^ durationTool = GetDurationTool();
 			isDurationTarget = (bar == durationTool->PreviewBar);
-			if (isDurationTarget && durationTool->IsPreviewVisible) {
+
+			if (isDurationTarget && durationTool->IsPreviewVisible)
+			{
 				width = TicksToPixels(durationTool->PreviewLength);
-				isPreview = true;
+				isDurationPreview = true;
+				barBounds.Width = width;
 			}
 		}
 
-		Rectangle barBounds(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
-
-		if (isPreview) {
-			// Draw original bar with reduced opacity
-			Rectangle originalBounds(x, bounds.Y + TRACK_PADDING,
-				TicksToPixels(bar->Duration), bounds.Height - TRACK_PADDING * 2);
-			g->FillRectangle(gcnew SolidBrush(Color::FromArgb(120, bar->Color)), originalBounds);
-
-			// Draw preview with enhanced brightness and opacity
-			Color previewColor = Color::FromArgb(
-				Math::Min(255, bar->Color.R + 50),
-				Math::Min(255, bar->Color.G + 50),
-				Math::Min(255, bar->Color.B + 50)
-			);
-			g->FillRectangle(gcnew SolidBrush(Color::FromArgb(255, previewColor)), barBounds);
-
-			// Draw animated glow effect
-			for (int i = 4; i >= 0; i--) {
-				Rectangle glowBounds = barBounds;
-				glowBounds.Inflate(i, i);
-				Pen^ glowPen = gcnew Pen(Color::FromArgb(80 - i * 15, currentTheme.SelectionHighlight), 1);
-				g->DrawRectangle(glowPen, glowBounds);
-				delete glowPen;
-			}
+		if (isDurationPreview)
+		{
+			DrawDurationPreview(g, bar, barBounds);
 		}
-		else {
-			// Normal selected bar drawing with enhanced highlight if being targeted
-			if (isDurationTarget) {
-				Color enhancedColor = Color::FromArgb(
+		else
+		{
+			// Draw bar with enhanced brightness
+			Color fillColor = isDurationTarget ?
+				Color::FromArgb(
 					Math::Min(255, bar->Color.R + 40),
 					Math::Min(255, bar->Color.G + 40),
 					Math::Min(255, bar->Color.B + 40)
-				);
-				g->FillRectangle(gcnew SolidBrush(enhancedColor), barBounds);
-			}
-			else {
-				g->FillRectangle(gcnew SolidBrush(Color::FromArgb(255, bar->Color)), barBounds);
-			}
+				) :
+				Color::FromArgb(255, bar->Color);
 
+			g->FillRectangle(gcnew SolidBrush(fillColor), barBounds);
 			g->DrawRectangle(gcnew Pen(Color::FromArgb(100, 0, 0, 0)), barBounds);
 
-			// Draw selection border with enhanced glow if being targeted
-			Pen^ highlightPen = gcnew Pen(currentTheme.SelectionHighlight, isDurationTarget ? 3.0f : 2.0f);
-			Rectangle highlightBounds = barBounds;
-			highlightBounds.Inflate(-1, -1);
-			g->DrawRectangle(highlightPen, highlightBounds);
-			delete highlightPen;
-		}
+			DrawBarGlowEffect(g, barBounds, currentTheme.SelectionHighlight, isDurationTarget ? 3 : 2);
 
-		// Draw resize handle with enhanced visibility for duration tool
-		if (currentToolType == TimelineToolType::Duration) {
-			Color handleColor = isDurationTarget ?
-				currentTheme.SelectionHighlight :
-				Color::FromArgb(
-					Math::Min(255, bar->Color.R * 13 / 10),
-					Math::Min(255, bar->Color.G * 13 / 10),
-					Math::Min(255, bar->Color.B * 13 / 10)
-				);
+			// Add duration tool handle if needed
+			if (currentToolType == TimelineToolType::Duration)
+			{
+				Color handleColor = isDurationTarget ?
+					currentTheme.SelectionHighlight :
+					Color::FromArgb(
+						Math::Min(255, bar->Color.R * 13 / 10),
+						Math::Min(255, bar->Color.G * 13 / 10),
+						Math::Min(255, bar->Color.B * 13 / 10)
+					);
 
-			// Draw larger handle for selected bars
-			Rectangle handleBounds(
-				barBounds.Right - 5,
-				barBounds.Y,
-				5,
-				barBounds.Height
-			);
-
-			g->FillRectangle(gcnew SolidBrush(handleColor), handleBounds);
-
-			// Add bright grip lines
-			Color gripColor = isDurationTarget ? Color::White : Color::FromArgb(200, 255, 255, 255);
-			Pen^ gripPen = gcnew Pen(gripColor, isDurationTarget ? 2.0f : 1.0f);
-			for (int i = 0; i < 3; i++) {
-				g->DrawLine(gripPen,
-					handleBounds.X + i + 1,
-					handleBounds.Y + 2,
-					handleBounds.X + i + 1,
-					handleBounds.Bottom - 2);
-			}
-			delete gripPen;
-
-			// Add glow effect to handle if targeted
-			if (isDurationTarget) {
-				for (int i = 3; i >= 0; i--) {
-					Rectangle glowBounds = handleBounds;
-					glowBounds.Inflate(i, i);
-					Pen^ glowPen = gcnew Pen(Color::FromArgb(50 - i * 10, currentTheme.SelectionHighlight), 1);
-					g->DrawRectangle(glowPen, glowBounds);
-					delete glowPen;
-				}
+				DrawResizeHandle(g, barBounds, handleColor, isDurationTarget);
 			}
 		}
 	}
@@ -2020,18 +2002,53 @@ namespace MIDILightDrawer
 
 		array<Point>^ leftArrow = gcnew array<Point>(3) {
 			Point(barBounds.Left + arrowSize, barBounds.Top + barBounds.Height / 2 - arrowSize),
-				Point(barBounds.Left, barBounds.Top + barBounds.Height / 2),
-				Point(barBounds.Left + arrowSize, barBounds.Top + barBounds.Height / 2 + arrowSize)
+			Point(barBounds.Left, barBounds.Top + barBounds.Height / 2),
+			Point(barBounds.Left + arrowSize, barBounds.Top + barBounds.Height / 2 + arrowSize)
 		};
 
 		array<Point>^ rightArrow = gcnew array<Point>(3) {
 			Point(barBounds.Right - arrowSize, barBounds.Top + barBounds.Height / 2 - arrowSize),
-				Point(barBounds.Right, barBounds.Top + barBounds.Height / 2),
-				Point(barBounds.Right - arrowSize, barBounds.Top + barBounds.Height / 2 + arrowSize)
+			Point(barBounds.Right, barBounds.Top + barBounds.Height / 2),
+			Point(barBounds.Right - arrowSize, barBounds.Top + barBounds.Height / 2 + arrowSize)
 		};
 
 		g->FillPolygon(gcnew SolidBrush(handleColor), leftArrow);
 		g->FillPolygon(gcnew SolidBrush(handleColor), rightArrow);
+	}
+
+	void Widget_Timeline::DrawBarGlowEffect(Graphics^ g, Rectangle barBounds, Color glowColor, int glowLevels)
+	{
+		for (int i = glowLevels; i >= 0; i--) {
+			Rectangle glowBounds = barBounds;
+			glowBounds.Inflate(i, i);
+
+			Pen^ glowPen = gcnew Pen(Color::FromArgb(80 - i * 15, glowColor), 1);
+			g->DrawRectangle(glowPen, glowBounds);
+			delete glowPen;
+		}
+	}
+
+	void Widget_Timeline::DrawResizeHandle(Graphics^ g, Rectangle barBounds, Color handleColor, bool isTargeted)
+	{
+		Rectangle handleBounds(barBounds.Right - 5, barBounds.Y, 5, barBounds.Height);
+		g->FillRectangle(gcnew SolidBrush(handleColor), handleBounds);
+
+		// Add grip lines
+		Color gripColor = isTargeted ? Color::White : Color::FromArgb(200, 255, 255, 255);
+		Pen^ gripPen = gcnew Pen(gripColor, isTargeted ? 2.0f : 1.0f);
+
+		for (int i = 0; i < 3; i++) {
+			g->DrawLine(gripPen,
+				handleBounds.X + i + 1,
+				handleBounds.Y + 2,
+				handleBounds.X + i + 1,
+				handleBounds.Bottom - 2);
+		}
+		delete gripPen;
+
+		if (isTargeted) {
+			DrawBarGlowEffect(g, handleBounds, currentTheme.SelectionHighlight, 3);
+		}
 	}
 
 	void Widget_Timeline::DrawTrackHeaders(Graphics^ g)
@@ -2129,21 +2146,6 @@ namespace MIDILightDrawer
 
 		// Draw background for tracks area
 		g->FillRectangle(gcnew SolidBrush(currentTheme.TrackBackground), tracksArea);
-
-		for (int i = 0;i < tracks->Count;i++)
-		{
-			if (i % 2 == 1) {
-				continue;
-			}
-			
-			Track^ track = tracks[i];
-			Rectangle trackBounds = GetTrackBounds(track);
-			trackBounds.Y += scrollPosition->Y;
-
-			// Draw header background
-			Color headerBg = track->IsSelected ? currentTheme.SelectionHighlight : Theme_Manager::Get_Instance()->BackgroundAlt;
-			g->FillRectangle(gcnew SolidBrush(headerBg), trackBounds);
-		}
 	}
 
 	void Widget_Timeline::DrawTrackDividers(Graphics^ g)
@@ -2337,16 +2339,12 @@ namespace MIDILightDrawer
 		g->DrawRectangle(borderPen, bounds);
 
 		// Draw vertical separator between header and content
-		g->DrawLine(borderPen,
-			TRACK_HEADER_WIDTH, bounds.Y,
-			TRACK_HEADER_WIDTH, bounds.Bottom);
+		g->DrawLine(borderPen, TRACK_HEADER_WIDTH, bounds.Y, TRACK_HEADER_WIDTH, bounds.Bottom);
 
 		// Draw resize handle if this is not the last track
 		if (track != tracks[tracks->Count - 1]) {
 			int handleY = bounds.Bottom - TRACK_RESIZE_HANDLE_HEIGHT;
-			g->DrawLine(borderPen,
-				0, handleY,
-				Width, handleY);
+			g->DrawLine(borderPen, 0, handleY, Width, handleY);
 		}
 
 		delete borderPen;
@@ -2389,22 +2387,23 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::DrawTrackEvents(Graphics^ g, Track^ track, Rectangle bounds)
 	{
-		int startTick = PixelsToTicks(-scrollPosition->X);
-		int endTick = PixelsToTicks(-scrollPosition->X + Width - TRACK_HEADER_WIDTH);
+		int startTick	= PixelsToTicks(-scrollPosition->X);
+		int endTick		= PixelsToTicks(-scrollPosition->X + Width - TRACK_HEADER_WIDTH);
 
-		PointerTool^ pointerTool = (PointerTool^)tools[TimelineToolType::Pointer];
-		DurationTool^ durationTool = (DurationTool^)tools[TimelineToolType::Duration];
-		bool isDragging = pointerTool->IsDragging;
-		bool isMultiTrackSelection = pointerTool->IsMultiTrackSelection;
+		PointerTool^	pointerTool		= GetPointerTool();
+		DrawTool^		drawTool		= GetDrawTool();
+		DurationTool^	durationTool	= GetDurationTool();
 
-		DrawTool^ drawTool = (DrawTool^)tools[TimelineToolType::Draw];
-		bool isDrawToolMoving = (currentToolType == TimelineToolType::Draw &&
-			drawTool->CurrentMode == DrawTool::DrawMode::Move &&
-			drawTool->IsMoving);
+		bool isDragging				= pointerTool->IsDragging;
+		bool isMultiTrackSelection	= pointerTool->IsMultiTrackSelection;
+		bool isDrawToolMoving		= (currentToolType == TimelineToolType::Draw && drawTool->CurrentMode == DrawTool::DrawMode::Move && drawTool->IsMoving);
 
 		// STEP 1: Draw non-selected bars
-		for each (BarEvent ^ bar in track->Events) {
-			if (bar->StartTick + bar->Duration < startTick || bar->StartTick > endTick) continue;
+		for each (BarEvent ^ bar in track->Events)
+		{
+			if ((bar->StartTick + bar->Duration < startTick) || (bar->StartTick > endTick)) {
+				continue;
+			}
 
 			bool isSelected = false;
 			if (currentToolType == TimelineToolType::Duration) {
@@ -2453,11 +2452,17 @@ namespace MIDILightDrawer
 			Point mousePos = pointerTool->CurrentMousePosition;
 			bool isOverHeader = mousePos.X <= TRACK_HEADER_WIDTH;
 
-			if (!isOverHeader) {  // Only show preview if not over header
-				if (isMultiTrackSelection) {
+			if (!isOverHeader)	// Only show preview if not over header
+			{  
+				if (isMultiTrackSelection)
+				{
 					// For multi-track selection, show dragged bars in their original tracks
-					for each (BarEvent ^ bar in track->Events) {
-						if (bar->StartTick + bar->Duration < startTick || bar->StartTick > endTick) continue;
+					for each (BarEvent ^ bar in track->Events)
+					{
+						if (bar->StartTick + bar->Duration < startTick || bar->StartTick > endTick) {
+							continue;
+						}
+
 						if (pointerTool->SelectedBars->Contains(bar)) {
 							DrawSelectedBar(g, bar, bounds);
 						}
@@ -2480,8 +2485,11 @@ namespace MIDILightDrawer
 		else
 		{
 			// When not dragging, draw selected bars in their current tracks
-			for each (BarEvent ^ bar in track->Events) {
-				if (bar->StartTick + bar->Duration < startTick || bar->StartTick > endTick) continue;
+			for each (BarEvent ^ bar in track->Events)
+			{
+				if (bar->StartTick + bar->Duration < startTick || bar->StartTick > endTick) {
+					continue;
+				}
 
 				bool isSelected = false;
 				if (currentToolType == TimelineToolType::Duration) {
@@ -2529,13 +2537,8 @@ namespace MIDILightDrawer
 						g->FillRectangle(gcnew SolidBrush(previewColor), barBounds);
 
 						// Draw glowing border
-						for (int i = 2; i >= 0; i--) {
-							Rectangle glowBounds = barBounds;
-							glowBounds.Inflate(-i, -i);
-							Color glowColor = Color::FromArgb(180 - (i * 40), 255, 255, 255);
-							g->DrawRectangle(gcnew Pen(glowColor), glowBounds);
-						}
-
+						DrawBarGlowEffect(g, barBounds, Color::FromArgb(180, 255, 255, 255), 2);
+						
 						// Draw dashed outline
 						Pen^ dashPen = gcnew Pen(Color::White, 1);
 						array<float>^ dashPattern = { 4.0f, 4.0f };
@@ -2653,7 +2656,7 @@ namespace MIDILightDrawer
 							yPos = String_Info.StringYPositions[lineIndex] + (String_Info.StringYPositions[lineIndex + 1] - String_Info.StringYPositions[lineIndex]) * fraction;
 						}
 
-						DrawDrumSymbol(g, noteInfo.SymbolType, xPos, yPos, ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0) - 1);
+						DrawDrumSymbol(g, noteInfo.SymbolType, xPos, yPos, ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0f) - 1);
 					}
 				}
 				measureStartTick += measure->Length;
@@ -3053,17 +3056,21 @@ namespace MIDILightDrawer
 
 				case DrumNotationType::AccentedX:
 				{
+					Pen^ thickPen = gcnew Pen(Color::FromArgb(180, currentTheme.Text), 2.5f);
+					
 					// Draw X
 					float xSize = size * 0.8f;
-					g->DrawLine(outlinePen, x - xSize, y - xSize, x + xSize, y + xSize);
-					g->DrawLine(outlinePen, x - xSize, y + xSize, x + xSize, y - xSize);
+					g->DrawLine(thickPen, x - xSize, y - xSize, x + xSize, y + xSize);
+					g->DrawLine(thickPen, x - xSize, y + xSize, x + xSize, y - xSize);
 					// Draw accent mark (^)
 					array<PointF>^ accentPoints = gcnew array<PointF>(3) {
 						PointF(x - size, y - size * 1.5f),
 						PointF(x, y - size * 2.0f),
 						PointF(x + size, y - size * 1.5f)
 					};
-					g->DrawLines(outlinePen, accentPoints);
+					g->DrawLines(thickPen, accentPoints);
+
+					delete thickPen;
 					break;
 				}
 
@@ -3185,11 +3192,37 @@ namespace MIDILightDrawer
 		return totalHeight;
 	}
 
+	void Widget_Timeline::CalculateBarBounds(BarEvent^ bar, Rectangle bounds, int% x, int% width, Rectangle% barBounds)
+	{
+		x = TicksToPixels(bar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
+		width = Math::Max(1, TicksToPixels(bar->Duration)); // Ensure minimum width of 1 pixel
+
+		barBounds = Rectangle(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
+	}
+
+	bool Widget_Timeline::IsBarVisible(BarEvent^ bar, int startTick, int endTick)
+	{
+		return !(bar->StartTick + bar->Duration < startTick || bar->StartTick > endTick);
+	}
+
+	bool Widget_Timeline::IsBarSelected(BarEvent^ bar, TimelineToolType toolType)
+	{
+		if (toolType == TimelineToolType::Duration) {
+			DurationTool^ durationTool = GetDurationTool();
+			return durationTool->SelectedBars->Contains(bar);
+		}
+		else if (toolType == TimelineToolType::Pointer) {
+			PointerTool^ pointerTool = GetPointerTool();
+			return pointerTool->SelectedBars->Contains(bar);
+		}
+		return false;
+	}
+
 	void Widget_Timeline::BeginTrackResize(Track^ track, int mouseY)
 	{
-		trackBeingResized = track;
-		resizeStartY = mouseY;
-		initialTrackHeight = GetTrackHeight(track);
+		trackBeingResized	= track;
+		resizeStartY		= mouseY;
+		initialTrackHeight	= GetTrackHeight(track);
 
 		// Change cursor to resize cursor
 		this->Cursor = Cursors::SizeNS;

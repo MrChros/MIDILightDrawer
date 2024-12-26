@@ -68,6 +68,7 @@ namespace MIDILightDrawer
 			void InitializeBottomControls(Panel^ container);
 			void InitializeToolOptions();
 			void InitializeMainMenu();
+			void InitializeDebugButtons();
 
 			// Menu Callbacks
 			void Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e);

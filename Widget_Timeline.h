@@ -54,8 +54,8 @@ namespace MIDILightDrawer
 
 		// Adding methods
 		void AddTrack(String^ name, int octave);
-		void AddMeasure(int numerator, int denominator);
-		void AddMeasure(int numerator, int denominator, String^ marker_text);
+		void AddMeasure(int numerator, int denominator, int tempo);
+		void AddMeasure(int numerator, int denominator, int tempo, String^ marker_text);
 		Beat^ AddBeat(Track^ track, int measureIndex, int startTick, int durationInTicks, bool is_dotted);
 		void AddNote(Beat^ beat, int stringNumber, int value, bool is_tied);
 		void AddBarToTrack(Track^ track, int startTick, int length, Color color);
@@ -219,12 +219,16 @@ namespace MIDILightDrawer
 		void DrawToolPreviewColorTool		(Graphics^ g);
 		void DrawToolPreviewFadeTool		(Graphics^ g);
 		void DrawToolPreviewStrobeTool		(Graphics^ g);
-		void DrawPreviewBar					(Graphics^ g, BarEvent^ bar, Point mousePos);
+		void DrawPreviewBar					(Graphics^ g, BarEvent^ bar, Track^ track, Point mousePos, BarPreviewType previewType);
 		void DrawPreviewBarList				(Graphics^ g, List<BarEvent^>^ bar_list, Track^ track);
+		void DrawCreationMovementPreview	(Graphics^ g, BarEvent^ bar, Rectangle bounds);
+		void DrawDurationPreview			(Graphics^ g, BarEvent^ bar, Rectangle bounds);
 		void DrawNormalBar					(Graphics^ g, BarEvent^ bar, Rectangle bounds);
 		void DrawGhostBar					(Graphics^ g, BarEvent^ bar, Rectangle bounds);
 		void DrawSelectedBar				(Graphics^ g, BarEvent^ bar, Rectangle bounds);
 		void DrawMoveHandles				(Graphics^ g, Rectangle barBounds);
+		void DrawBarGlowEffect				(Graphics^ g, Rectangle barBounds, Color glowColor, int glowLevels);
+		void DrawResizeHandle				(Graphics^ g, Rectangle barBounds, Color handleColor, bool isTargeted);
 
 		// Track-related methods
 		void DrawTrackHeaders			(Graphics^ g);
@@ -253,6 +257,12 @@ namespace MIDILightDrawer
 		int		GetTrackTop			(Track^ track);
 		int		GetTrackHeight		(Track^ track);
 		int		GetTotalTracksHeight();
+
+		// Bar Drawing Supporting Methods
+		void	CalculateBarBounds(BarEvent^ bar, Rectangle bounds, int% x, int% width, Rectangle% barBounds);
+		bool	IsBarVisible(BarEvent^ bar, int startTick, int endTick);
+		bool	IsBarSelected(BarEvent^ bar, TimelineToolType toolType);
+		
 				
 		void	BeginTrackResize(Track^ track, int mouseY);
 		void	UpdateTrackResize(int mouseY);

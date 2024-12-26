@@ -42,6 +42,7 @@ namespace MIDILightDrawer
 		}
 	};
 
+
 	////////////////////////////////
 	// PointerTool Implementation //
 	////////////////////////////////
@@ -79,18 +80,17 @@ namespace MIDILightDrawer
 
 	public ref class PointerTool : public TimelineTool {
 	private:
-		bool isDragging;
-		bool isSelecting;
-		Point^ dragStart;
-		Track^ dragSourceTrack;
-		Track^ dragTargetTrack;
-		Rectangle selectionRect;
-		List<BarEvent^>^ selectedBars;
-
-		Track^ pasteTargetTrack;
-		List<BarEvent^>^ pastePreviewBars;
-		bool isPasting;
-		int pasteStartTick;
+		int					pasteStartTick;
+		bool				isDragging;
+		bool				isSelecting;
+		bool				isPasting;
+		Point^				dragStart;
+		Track^				dragSourceTrack;
+		Track^				dragTargetTrack;
+		Track^				pasteTargetTrack;
+		Rectangle			selectionRect;
+		List<BarEvent^>^	selectedBars;
+		List<BarEvent^>^	pastePreviewBars;
 		
 		bool Is_Multi_Track_Selection();
 		void StoreOriginalPositions();
@@ -153,6 +153,7 @@ namespace MIDILightDrawer
 			List<BarEvent^>^ get() { return pastePreviewBars; }
 		}
 	};
+
 
 	/////////////////////////////
 	// DrawTool Implementation //

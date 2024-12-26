@@ -119,6 +119,11 @@ namespace MIDILightDrawer
 		// Initialize hotkeys and settings
 		Initialize_Hotkeys();
 		OnMidiSettingsAccepted();
+
+	#ifdef _DEBUG
+
+	#endif
+
 	}
 
 	Form_Main::~Form_Main()
@@ -298,8 +303,29 @@ namespace MIDILightDrawer
 		this->_Menu_Strip->Items->Add(Menu_File);
 		this->_Menu_Strip->Items->Add(Menu_Settings);
 
+		#ifdef _DEBUG
+			InitializeDebugButtons();
+		#endif
+
 		// Add menu strip to form
 		this->Controls->Add(this->_Menu_Strip);
+	}
+
+	void Form_Main::InitializeDebugButtons()
+	{
+	#ifdef _DEBUG
+			// Test 1 button
+			ToolStripMenuItem^ Menu_Debug_Test1 = gcnew ToolStripMenuItem("Test 1");
+			Menu_Debug_Test1->Click += gcnew System::EventHandler(this, &Form_Main::Button_1_Click);
+
+			// Test 2 button
+			ToolStripMenuItem^ Menu_Debug_Test2 = gcnew ToolStripMenuItem("Test 2");
+			Menu_Debug_Test2->Click += gcnew System::EventHandler(this, &Form_Main::Button_2_Click);
+
+			// Add test buttons directly to menu strip
+			this->_Menu_Strip->Items->Add(Menu_Debug_Test1);
+			this->_Menu_Strip->Items->Add(Menu_Debug_Test2);
+	#endif
 	}
 
 	void Form_Main::Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e)
@@ -590,6 +616,7 @@ namespace MIDILightDrawer
 
 					this->_Timeline->AddMeasure(MH->timeSignature.numerator,
 												MH->timeSignature.denominator.value,
+												MH->tempo.value,
 												Marker_Text);
 
 					if (Marker_Text->Length > 0) {
@@ -614,6 +641,8 @@ namespace MIDILightDrawer
 				for (auto t = 0; t < this->_GP_Tab->getTabFile().tracks.size();t++)
 				{
 					String^ Track_Name = gcnew String(_GP_Tab->getTabFile().tracks.at(t).name.data());
+					this->_Tab_Info->Add_Track_Title(Track_Name);
+					
 					Track^ Track_Target = nullptr;
 
 					for each(Track ^ T in this->_Timeline->Tracks) {
@@ -665,8 +694,6 @@ namespace MIDILightDrawer
 				this->_Timeline->Tracks[i]->Name = Settings->Octave_Entries[i]->Name;
 			}
 		}
-
-		int a = 5;
 	}
 
 	void Form_Main::DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)

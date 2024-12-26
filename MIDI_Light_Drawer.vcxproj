@@ -149,10 +149,6 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Theme_Manager.h" />
-<<<<<<< HEAD
-=======
-    <ClInclude Include="Timeline_Enhanced_Visibility_Tracker.h" />
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
     <ClInclude Include="Timeline_Performance_Metrics.h" />
     <ClInclude Include="Timeline_Resource_Manager.h" />
     <ClInclude Include="Widget_Bucket_Options.h" />
@@ -160,10 +156,7 @@
     <ClInclude Include="Widget_Draw_Options.h" />
     <ClInclude Include="Widget_Fade_Options.h" />
     <ClInclude Include="Widget_Length_Options.h" />
-<<<<<<< HEAD
     <ClInclude Include="Widget_Strobe_Options.h" />
-=======
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
     <ClInclude Include="Widget_Tab_Info.h" />
     <ClInclude Include="Widget_Timeline.h" />
     <ClInclude Include="Widget_Timeline_Classes.h" />
@@ -198,10 +191,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Theme_Manager.cpp" />
-<<<<<<< HEAD
-=======
-    <ClCompile Include="Timeline_Enhanced_Visibility_Tracker.cpp" />
->>>>>>> 005f683fa6889f25d21c7c95edf25278c7baf8d3
     <ClCompile Include="Timeline_Performance_Metrics.cpp" />
     <ClCompile Include="Timeline_Resource_Manager.cpp" />
     <ClCompile Include="Widget_Bucket_Options.cpp" />
@@ -216,9 +205,6 @@
     <ClCompile Include="Widget_Tools_And_Control.cpp" />
     <ClCompile Include="Widget_Draw_Options.cpp" />
     <ClCompile Include="Widget_Toolbar.cpp" />
-    <ClCompile Include="xml_module.cpp">
-      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp17</LanguageStandard>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="app.ico" />

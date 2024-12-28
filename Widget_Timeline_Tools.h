@@ -12,6 +12,7 @@ namespace MIDILightDrawer
 {
 	ref class Widget_Timeline;
 	ref class Track;
+	ref class TrackMeasure;
 	ref class BarEvent;
 
 	// Base tool class
@@ -173,6 +174,7 @@ namespace MIDILightDrawer
 		BarEvent^	previewBar;
 		Color		_Current_Color;
 		int			_Draw_Tick_Length;
+		bool		_Use_Auto_Length;
 
 		bool		isPainting;
 		bool		isErasing;
@@ -212,6 +214,7 @@ namespace MIDILightDrawer
 		void UpdateResizing(Point mousePos);
 		void FinishMoving();
 		void FinishResizing();
+		int  GetBeatLength(Track^ track, int currentTick);
 
 		property Color DrawColor {
 			Color get() { return _Current_Color; }
@@ -253,6 +256,11 @@ namespace MIDILightDrawer
 
 		property Point CurrentMousePosition {
 			Point get() { return lastMousePos; }
+		}
+
+		property bool UseAutoLength{
+			bool get() { return _Use_Auto_Length; }
+			void set(bool value) { _Use_Auto_Length = value; }
 		}
 	};
 

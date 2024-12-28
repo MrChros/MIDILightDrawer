@@ -259,6 +259,11 @@ namespace MIDILightDrawer
 		}
 	}
 
+	void Widget_Timeline::SetToolSnapping(SnappingType type)
+	{
+		this->snappingType = type;
+	}
+
 	void Widget_Timeline::SetCurrentTool(TimelineToolType tool)
 	{
 		if (currentToolType != tool)
@@ -368,6 +373,108 @@ namespace MIDILightDrawer
 
 		// Calculate the grid point to the left of the given tick
 		return (tick / snapResolution) * snapResolution;
+	}
+
+	int Widget_Timeline::SnapTickBasedOnType(int tick, Point mousePos)
+	{
+		const int SNAP_THRESHOLD = 480; // Maximum distance in ticks for bar snapping
+
+		switch (snappingType)
+		{
+		case SnappingType::Snap_None:
+			return tick;
+
+		case SnappingType::Snap_Grid:
+			return SnapTickToGrid(tick);
+
+		case SnappingType::Snap_Bars:
+		{
+			// Get the track under the mouse pointer
+			Track^ currentTrack = GetTrackAtPoint(mousePos);
+			if (currentTrack == nullptr) return tick;
+
+			int closestEndTick = tick;
+			int minEndDistance = SNAP_THRESHOLD;
+
+			// Only check bars in the current track
+			for each (BarEvent ^ bar in currentTrack->Events)
+			{
+				// Only check distance to bar end
+				int endTick = bar->StartTick + bar->Duration;
+				int endDistance = Math::Abs(endTick - tick);
+				if (endDistance < minEndDistance)
+				{
+					minEndDistance = endDistance;
+					closestEndTick = endTick;
+				}
+			}
+
+			// Return the closest edge tick if within threshold
+			if (minEndDistance < SNAP_THRESHOLD)
+			{
+				return closestEndTick;
+			}
+
+			// If no close bars found, return original tick
+			return tick;
+		}
+
+		case SnappingType::Snap_Tablature:
+		{
+			// Get the track under the mouse pointer
+			Track^ currentTrack = GetTrackAtPoint(mousePos);
+			if (currentTrack == nullptr) return tick;
+
+			// Only proceed if the track has tablature visible
+			if (!currentTrack->ShowTablature) return tick;
+
+			// Find the nearest left-side beat in the current track
+			int nearestLeftBeatTick = -1;  // Initialize to invalid value
+			int smallestDistance = Int32::MaxValue;
+
+			// Get the measure containing this tick
+			Measure^ measure = GetMeasureAtTick(tick);
+			if (measure == nullptr) return tick;
+
+			// Find corresponding track measure
+			TrackMeasure^ trackMeasure = nullptr;
+			for each (TrackMeasure ^ tm in currentTrack->Measures)
+			{
+				if (tm->StartTick == measure->StartTick)
+				{
+					trackMeasure = tm;
+					break;
+				}
+			}
+
+			if (trackMeasure == nullptr) return tick;
+
+			// Look for the closest beat that's to the left of our current position
+			for each (Beat ^ beat in trackMeasure->Beats)
+			{
+				if (beat->StartTick <= tick)  // Only consider beats to the left
+				{
+					int distance = tick - beat->StartTick;
+					if (distance < smallestDistance)
+					{
+						smallestDistance = distance;
+						nearestLeftBeatTick = beat->StartTick;
+					}
+				}
+			}
+
+			// If we found a beat to the left, use it, otherwise fallback to grid
+			if (nearestLeftBeatTick != -1)
+			{
+				return nearestLeftBeatTick;
+			}
+
+			return tick;
+		}
+
+		default:
+			return tick;
+		}
 	}
 
 	void Widget_Timeline::ScrollToMeasure(int measureNumber) {
@@ -887,25 +994,31 @@ namespace MIDILightDrawer
 		else if (isOverDivider)
 		{
 			// Just hovering over a divider
-			if (resizeHoverTrack != hoverTrack) {
+			if (resizeHoverTrack != hoverTrack)
+			{
 				resizeHoverTrack = hoverTrack;
-				this->Cursor = Cursors::SizeNS;
 				Invalidate(); // Redraw to show hover state if needed
 			}
+
+			this->Cursor = Cursors::SizeNS;
 		}
 		else
 		{
 			// Not over a divider
 			if (resizeHoverTrack != nullptr) {
 				resizeHoverTrack = nullptr;
-				this->Cursor = Cursors::Default;
-				Invalidate(); // Redraw to remove hover state if needed
+				Invalidate();
 			}
 
-			// Continue with normal mouse move handling
+			// Handle normal tool behavior
 			Control::OnMouseMove(e);
-			if (currentTool != nullptr) {
+			if (currentTool != nullptr)
+			{
 				currentTool->OnMouseMove(e);
+				// Only update cursor if we're not in a special state
+				if (!isOverAnyButton && !isOverDivider && trackBeingResized == nullptr) {
+					this->Cursor = currentTool->Cursor;
+				}
 			}
 		}
 	}

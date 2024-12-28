@@ -70,6 +70,7 @@ namespace MIDILightDrawer
 		void ScrollTo	(Point newPosition);
 		void SetTrackHeight(Track^ track, int height);
 		void SetAllTracksHeight(int height);
+		void SetToolSnapping(SnappingType type);
 		
 		// Tools setter/getter
 		void SetCurrentTool(TimelineToolType tool);
@@ -87,6 +88,7 @@ namespace MIDILightDrawer
 		void UpdateBarDrag(Point newPoint);
 		void EndBarDrag();
 		int  SnapTickToGrid(int tick);
+		int SnapTickBasedOnType(int tick, Point mousePos);
 		void ScrollToMeasure(int measureNumber);
 		void GetVisibleMeasureRange(int% firstMeasure, int% lastMeasure);
 		int  GetMeasureStartTick(int measureNumber);
@@ -195,6 +197,7 @@ namespace MIDILightDrawer
 		// Tools
 		TimelineToolType	currentToolType;
 		TimelineTool^		currentTool;
+		SnappingType		snappingType;
 		Dictionary<TimelineToolType, TimelineTool^>^ tools;
 
 		// Private methods

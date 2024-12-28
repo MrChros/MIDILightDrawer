@@ -147,7 +147,8 @@ namespace MIDILightDrawer
 			for each (BarEvent ^ bar in selectedBars)
 			{
 				if(selectedBars->IndexOf(bar) == 0) {
-					bar->StartTick = timeline->SnapTickToGrid(bar->OriginalStartTick + tickDelta);
+					// Use SnapTickBasedOnType for the first bar
+					bar->StartTick = timeline->SnapTickBasedOnType(bar->OriginalStartTick + tickDelta,	Point(e->X, e->Y));
 				}
 				else {
 					int TickOffsetToFirstBar = bar->OriginalStartTick - selectedBars[0]->OriginalStartTick;
@@ -407,9 +408,8 @@ namespace MIDILightDrawer
 		}
 
 		// Calculate new position in ticks
-		int mouseTick = timeline->PixelsToTicks(
-			mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
-		int newStartTick = timeline->SnapTickToGrid(mouseTick);
+		int mouseTick		= timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
+		int newStartTick	= timeline->SnapTickBasedOnType(mouseTick, mousePos);
 
 		// Calculate the track offset
 		int targetTrackIndex = timeline->Tracks->IndexOf(newTargetTrack);
@@ -419,7 +419,8 @@ namespace MIDILightDrawer
 		pastePreviewBars->Clear();
 
 		// Create preview bars for each clipboard item
-		for each(TimelineClipboardItem ^ item in TimelineClipboardManager::Content) {
+		for each(TimelineClipboardItem ^ item in TimelineClipboardManager::Content)
+		{
 			// Calculate destination track index for this bar
 			int destTrackIndex = targetTrackIndex + (item->TrackIndex - sourceTrackIndex);
 
@@ -429,11 +430,7 @@ namespace MIDILightDrawer
 			}
 
 			// Create preview bar with track-specific information
-			BarEvent^ previewBar = gcnew BarEvent(
-				newStartTick + item->Bar->StartTick,
-				item->Bar->Duration,
-				Color::FromArgb(128, item->Bar->Color)
-			);
+			BarEvent^ previewBar = gcnew BarEvent(newStartTick + item->Bar->StartTick, item->Bar->Duration, Color::FromArgb(128, item->Bar->Color));
 
 			// Store the target track index in the bar's OriginalStartTick
 			// We'll use this for rendering the preview in the correct track
@@ -473,7 +470,8 @@ namespace MIDILightDrawer
 
 		// Create final bars
 		int i = 0;
-		for each(TimelineClipboardItem ^ item in TimelineClipboardManager::Content) {
+		for each(TimelineClipboardItem ^ item in TimelineClipboardManager::Content)
+		{
 			// Calculate destination track index
 			int destTrackIndex = targetTrackIndex + (item->TrackIndex - sourceTrackIndex);
 
@@ -485,11 +483,7 @@ namespace MIDILightDrawer
 			Track^ destTrack = timeline->Tracks[destTrackIndex];
 			BarEvent^ previewBar = pastePreviewBars[i++];
 
-			BarEvent^ newBar = gcnew BarEvent(
-				previewBar->StartTick,
-				previewBar->Duration,
-				Color::FromArgb(255, (int)previewBar->Color.R, (int)previewBar->Color.G, (int)previewBar->Color.B)
-			);
+			BarEvent^ newBar = gcnew BarEvent(previewBar->StartTick, previewBar->Duration, Color::FromArgb(255, (int)previewBar->Color.R, (int)previewBar->Color.G, (int)previewBar->Color.B));
 
 			// Add to appropriate track and selection
 			destTrack->Events->Add(newBar);
@@ -497,7 +491,8 @@ namespace MIDILightDrawer
 		}
 
 		// Sort events in all affected tracks
-		for each(Track ^ track in timeline->Tracks) {
+		for each(Track ^ track in timeline->Tracks)
+		{
 			track->Events->Sort(Track::barComparer);
 		}
 
@@ -510,9 +505,12 @@ namespace MIDILightDrawer
 		if (selectedBars == nullptr || selectedBars->Count <= 1) return false;
 
 		Track^ firstTrack = nullptr;
-		for each (Track ^ track in timeline->Tracks) {
-			for each (BarEvent ^ bar in track->Events) {
-				if (selectedBars->Contains(bar)) {
+		for each (Track ^ track in timeline->Tracks)
+		{
+			for each (BarEvent ^ bar in track->Events)
+			{
+				if (selectedBars->Contains(bar))
+				{
 					if (firstTrack == nullptr) {
 						firstTrack = track;
 					}
@@ -579,6 +577,7 @@ namespace MIDILightDrawer
 		previewBar		= nullptr;
 		_Current_Color	= Color::FromArgb(200, 100, 100, 255);
 		_Draw_Tick_Length	= 960;
+		_Use_Auto_Length	= false;
 
 		isPainting		= false;
 		isErasing		= false;
@@ -593,9 +592,8 @@ namespace MIDILightDrawer
 
 	void DrawTool::OnMouseDown(MouseEventArgs^ e)
 	{
-		if (e->Button == Windows::Forms::MouseButtons::Left &&
-			e->X > Widget_Timeline::TRACK_HEADER_WIDTH) {
-
+		if (e->Button == Windows::Forms::MouseButtons::Left && e->X > Widget_Timeline::TRACK_HEADER_WIDTH)
+		{
 			Point mousePos(e->X, e->Y);
 			targetTrack = timeline->GetTrackAtPoint(mousePos);
 
@@ -698,32 +696,40 @@ namespace MIDILightDrawer
 	{
 		Track^ track = timeline->GetTrackAtPoint(mousePos);
 
-		if (track != nullptr) {
-			int snapTick = timeline->SnapTickToGrid(
-				timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH -
-					timeline->ScrollPosition->X));
+		if (track != nullptr && mousePos.X > Widget_Timeline::TRACK_HEADER_WIDTH)
+		{
+			int Raw_Tick		= timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
+			int Start_Tick		= timeline->SnapTickBasedOnType(Raw_Tick, mousePos);
+			int Length_In_Ticks = _Draw_Tick_Length;
 
-			switch (currentMode) {
-			case DrawMode::Draw:
-				if (!HasOverlappingBars(track, snapTick, _Draw_Tick_Length)) {
-					if (previewBar == nullptr) {
-						previewBar = gcnew BarEvent(snapTick, _Draw_Tick_Length,
-							Color::FromArgb(100, (int)_Current_Color.R, (int)_Current_Color.G, (int)_Current_Color.B));
+			if (_Use_Auto_Length) {
+				Length_In_Ticks = GetBeatLength(track, Raw_Tick);
+			}
+
+			switch (currentMode)
+			{
+				case DrawMode::Draw:
+					if (!HasOverlappingBars(track, Start_Tick, Length_In_Ticks))
+					{
+						if (previewBar == nullptr)
+						{
+							previewBar = gcnew BarEvent(Start_Tick, Length_In_Ticks, Color::FromArgb(100, (int)_Current_Color.R, (int)_Current_Color.G, (int)_Current_Color.B));
+						}
+						else {
+							previewBar->StartTick	= Start_Tick;
+							previewBar->Duration	= Length_In_Ticks;
+						}
 					}
 					else {
-						previewBar->StartTick = snapTick;
+						previewBar = nullptr;
 					}
-				}
-				else {
-					previewBar = nullptr;
-				}
-				break;
+					break;
 
-			case DrawMode::Move:
-			case DrawMode::Erase:
-			case DrawMode::Resize:
-				previewBar = nullptr;
-				break;
+				case DrawMode::Move:
+				case DrawMode::Erase:
+				case DrawMode::Resize:
+					previewBar = nullptr;
+					break;
 			}
 
 			timeline->Invalidate();
@@ -820,8 +826,7 @@ namespace MIDILightDrawer
 		Rectangle bounds = timeline->GetTrackContentBounds(track);
 
 		// Calculate bar end position in pixels
-		int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Duration) +
-			timeline->ScrollPosition->X + Widget_Timeline::TRACK_HEADER_WIDTH;
+		int barEndX = timeline->TicksToPixels(bar->StartTick + bar->Duration) + timeline->ScrollPosition->X + Widget_Timeline::TRACK_HEADER_WIDTH;
 
 		// Define handle region - make it a bit larger for easier interaction
 		const int HANDLE_WIDTH = 5;
@@ -829,42 +834,59 @@ namespace MIDILightDrawer
 		// Check if mouse is within handle area
 		bool isInXRange = mousePos.X >= barEndX - HANDLE_WIDTH && mousePos.X <= barEndX + HANDLE_WIDTH;
 
-		bool isInYRange = mousePos.Y >= bounds.Y + Widget_Timeline::TRACK_PADDING &&
-			mousePos.Y <= bounds.Bottom - Widget_Timeline::TRACK_PADDING;
+		bool isInYRange = mousePos.Y >= bounds.Y + Widget_Timeline::TRACK_PADDING && mousePos.Y <= bounds.Bottom - Widget_Timeline::TRACK_PADDING;
 
 		return isInXRange && isInYRange;
 	}
 
 	void DrawTool::StartPainting(Point mousePos)
 	{
+		if (targetTrack == nullptr) {
+			return;
+		}
+		
 		isPainting = true;
 		currentMode = DrawMode::Draw;
 		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
 
-		lastPaintedTick = timeline->SnapTickToGrid(
-			timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH -
-				timeline->ScrollPosition->X));
+		int Raw_Tick		= timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
+		int Start_Tick		= timeline->SnapTickBasedOnType(Raw_Tick, mousePos);
+		int Length_In_Ticks = _Draw_Tick_Length;
+
+		if (_Use_Auto_Length) {
+			Length_In_Ticks = GetBeatLength(targetTrack, Raw_Tick);
+		}
+
+		lastPaintedTick = Start_Tick;
 
 		// Create initial bar
-		if (!HasOverlappingBars(targetTrack, lastPaintedTick, _Draw_Tick_Length)) {
-			timeline->AddBarToTrack(targetTrack, lastPaintedTick, _Draw_Tick_Length, _Current_Color);
+		if (!HasOverlappingBars(targetTrack, Start_Tick, Length_In_Ticks)) {
+			timeline->AddBarToTrack(targetTrack, Start_Tick, Length_In_Ticks, _Current_Color);
 			timeline->Invalidate();
 		}
 	}
 
 	void DrawTool::UpdatePainting(Point mousePos)
 	{
-		if (!isPainting) return;
+		if (!isPainting || targetTrack == nullptr) {
+			return;
+		}
 
-		int currentTick = timeline->SnapTickToGrid(
-			timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH -
-				timeline->ScrollPosition->X));
+		int Raw_Tick		= timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
+		int Start_Tick		= timeline->SnapTickBasedOnType(Raw_Tick, mousePos);
+		int Length_In_Ticks = _Draw_Tick_Length;
 
-		// Only create new bar if we've moved enough and there's no overlap
-		if (currentTick >= lastPaintedTick + _Draw_Tick_Length) {
-			if (!HasOverlappingBars(targetTrack, currentTick, _Draw_Tick_Length)) {
-				timeline->AddBarToTrack(targetTrack, currentTick, _Draw_Tick_Length, _Current_Color);
-				lastPaintedTick = currentTick;
+		if (_Use_Auto_Length) {
+			Length_In_Ticks = GetBeatLength(targetTrack, Raw_Tick);
+		}
+
+		// Only create new bar if we've moved to a new position and there's no overlap
+		if (Start_Tick > lastPaintedTick)
+		{
+			if (!HasOverlappingBars(targetTrack, Start_Tick, Length_In_Ticks))
+			{
+				timeline->AddBarToTrack(targetTrack, Start_Tick, Length_In_Ticks, _Current_Color);
+				lastPaintedTick = Start_Tick;
 				timeline->Invalidate();
 			}
 		}
@@ -1058,6 +1080,64 @@ namespace MIDILightDrawer
 		isResizing = false;
 		hoverBar = nullptr;
 		targetTrack = nullptr;
+	}
+
+	int DrawTool::GetBeatLength(Track^ track, int currentTick)
+	{
+		// Set default length
+		int length = _Draw_Tick_Length;
+
+		// If track doesn't have tablature or measures, return default
+		if (!track->ShowTablature || track->Measures == nullptr || track->Measures->Count == 0) {
+			return length;
+		}
+
+		// Find the current measure
+		Measure^ currentMeasure = timeline->GetMeasureAtTick(currentTick);
+		if (currentMeasure == nullptr) {
+			return length;
+		}
+
+		// Find the corresponding track measure
+		TrackMeasure^ trackMeasure = nullptr;
+		for each(TrackMeasure ^ measure in track->Measures)
+		{
+			if (measure->StartTick == currentMeasure->StartTick)
+			{
+				trackMeasure = measure;
+				break;
+			}
+		}
+
+		if (trackMeasure == nullptr || trackMeasure->Beats == nullptr || trackMeasure->Beats->Count == 0) {
+			return length;
+		}
+
+		// Find the last beat before current tick in this measure
+		Beat^ lastBeat = nullptr;
+		for each(Beat ^ beat in trackMeasure->Beats)
+		{
+			// Skip beats without notes
+			if (beat->Notes == nullptr || beat->Notes->Count == 0) {
+				continue;
+			}
+
+			// Skip beats after our cursor position
+			if (beat->StartTick > currentTick) {
+				break;
+			}
+
+			// Found a valid beat before our position
+			lastBeat = beat;
+		}
+
+		// If we found a valid beat before our position, use its duration
+		if (lastBeat != nullptr)
+		{
+			length = lastBeat->Duration;
+		}
+
+		return length;
 	}
 
 	void DrawTool::DrawColor::set(Color value)

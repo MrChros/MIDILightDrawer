@@ -59,7 +59,7 @@ namespace MIDILightDrawer
 		}
 
 		int total_rows = Get_Row_Count();
-		_Drop_Down_Panel->Size = System::Drawing::Size(_Tile_Width * _Columns, _Tile_Height * total_rows);
+		_Drop_Down_Panel->Size = System::Drawing::Size(_Tile_Width * _Columns + 3, _Tile_Height * total_rows + 3);
 
 		Update_Panel_Position();
 
@@ -279,13 +279,13 @@ namespace MIDILightDrawer
 
 		if (_Open_Above) {
 			int total_rows = Get_Row_Count();
-			int panel_height = _Tile_Height * total_rows;
+			int panel_height = _Tile_Height * total_rows + 3 + 1;
 			// Position above the control
 			location = this->Parent->PointToScreen(Point(x_position, this->Top - panel_height));
 		}
 		else {
 			// Position below the control
-			location = this->Parent->PointToScreen(Point(x_position, this->Bottom));
+			location = this->Parent->PointToScreen(Point(x_position, this->Bottom + 1));
 		}
 
 		location = this->FindForm()->PointToClient(location);
@@ -324,8 +324,13 @@ namespace MIDILightDrawer
 
 	Rectangle Control_DropDown::Get_Tile_Bounds(int index)
 	{
+		//const int panel_padding = 10;
+		
 		int row = index / _Columns;
 		int col = index % _Columns;
+
+		//int effective_tile_width = (_Drop_Down_Panel->Width - (2 * panel_padding)) / _Columns;
+
 		return Rectangle(col * _Tile_Width, row * _Tile_Height, _Tile_Width, _Tile_Height);
 	}
 
@@ -486,7 +491,8 @@ namespace MIDILightDrawer
 		_Columns = Math::Max(1, columns);  // Ensure at least 1 column
 
 		// If dropdown is currently shown, update its size and position
-		if (_Is_Dropped && _Drop_Down_Panel != nullptr && _Drop_Down_Panel->Visible) {
+		if (_Is_Dropped && _Drop_Down_Panel != nullptr && _Drop_Down_Panel->Visible)
+		{
 			int total_rows = Get_Row_Count();
 			_Drop_Down_Panel->Size = System::Drawing::Size(_Tile_Width * _Columns, _Tile_Height * total_rows);
 			Point location = this->Parent->PointToScreen(Point(this->Left, this->Bottom));

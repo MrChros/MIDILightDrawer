@@ -132,6 +132,16 @@ namespace MIDILightDrawer {
 			void set(int value);
 		}
 
+		property int Selected_Value {
+			int get() {
+				if(_Selected_Index >= 0 && _Selected_Index < _Values->Length) {
+					return _Values[_Selected_Index];
+				}
+
+				return -1;
+			}
+		}
+
 		property String^ Title_Text {
 			String^ get() { return _Title_Text; }
 			void set(String^ value) {

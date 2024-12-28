@@ -38,8 +38,16 @@ namespace MIDILightDrawer {
 			_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Select Color " + i, (i % 10).ToString(), "Colors"));
 		}
 
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Draw/Length Quantization Up", "R", "Editing"));
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Draw/Length Quantization Down", "", "Editing"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Length Up"					, "R", "Editing"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Length Down"					, "", "Editing"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Draw Tool - Toggle Length Tab", "", "Editing"));
+
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Snapping Next"				, "", "Editing"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Snapping Previous"			, "", "Editing"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Snap To None"					, "", "Editing"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Snap To Grid"					, "", "Editing"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Snap To Bars"					, "", "Editing"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Snap To Tablature"			, "", "Editing"));
 
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Zoom In", "", "View"));
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Zoom Out", "", "View"));

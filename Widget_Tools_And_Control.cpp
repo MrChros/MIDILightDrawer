@@ -41,6 +41,9 @@ namespace MIDILightDrawer
 		Table_Layout_Main->Controls->Add(this->_Options_Container, 0, 1);
 
 
+		this->_Pointer_Options = gcnew Widget_Pointer_Options();
+		this->_Pointer_Options->Dock = DockStyle::Fill;
+		this->_Options_Container->Controls->Add(this->_Pointer_Options, 0, 0);
 
 		this->_Draw_Options = gcnew Widget_Draw_Options(this->_Color_Picker);
 		this->_Draw_Options->Dock = DockStyle::Fill;
@@ -86,37 +89,49 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Widget_Tools_And_Control::Quantization_Up(void)
+	void Widget_Tools_And_Control::Snapping_Up(void)
 	{
-		switch (_Toolbar->CurrentTool)
-		{
-		case TimelineToolType::Draw:		_Draw_Options->Select_Next_Draw_Value();		break;
-		case TimelineToolType::Duration:	_Length_Options->Select_Next_Length_Value();	break;
-		case TimelineToolType::Fade:		_Fade_Options->Select_Next_Fade_Value();		break;
-		case TimelineToolType::Strobe:		_Strobe_Options->Select_Next_Strobe_Value();	break;
-
-		default:
-			break;
-		}
+		_Pointer_Options->Select_Pointer_Snapping_Next();
+		_Draw_Options->Select_Draw_Snapping_Next();
 	}
 
-	void Widget_Tools_And_Control::Quantization_Down(void)
+	void Widget_Tools_And_Control::Snapping_Down(void)
 	{
-		switch (_Toolbar->CurrentTool)
-		{
-		case TimelineToolType::Draw:		_Draw_Options->Select_Previous_Draw_Value();		break;
-		case TimelineToolType::Duration:	_Length_Options->Select_Previous_Length_Value();	break;
-		case TimelineToolType::Fade:		_Fade_Options->Select_Previous_Fade_Value();		break;
-		case TimelineToolType::Strobe:		_Strobe_Options->Select_Previous_Strobe_Value();	break;
-		
-		default:
-			break;
-		}
+		_Pointer_Options->Select_Pointer_Snapping_Previous();
+		_Draw_Options->Select_Draw_Snapping_Previous();
+	}
+
+	void Widget_Tools_And_Control::Snap_To(int index)
+	{
+		_Pointer_Options->PointerSnapping = index;
+		_Draw_Options->DrawSnapping = index;
+	}
+
+	void Widget_Tools_And_Control::Length_Up(void)
+	{
+		_Draw_Options->Select_Draw_Length_Next();
+		_Length_Options->Select_Next_Length_Value();
+		_Fade_Options->Select_Next_Fade_Value();
+		_Strobe_Options->Select_Next_Strobe_Value();
+	}
+
+	void Widget_Tools_And_Control::Length_Down(void)
+	{
+		_Draw_Options->Select_Draw_Length_Previous();
+		_Length_Options->Select_Previous_Length_Value();
+		_Fade_Options->Select_Previous_Fade_Value();
+		_Strobe_Options->Select_Previous_Strobe_Value();
+
 	}
 
 	Widget_Toolbar^ Widget_Tools_And_Control::Get_Widget_Toolbar(void)
 	{
 		return this->_Toolbar;
+	}
+
+	Widget_Pointer_Options^	Widget_Tools_And_Control::Get_Widget_Pointer_Options(void)
+	{
+		return this->_Pointer_Options;
 	}
 
 	Widget_Draw_Options^ Widget_Tools_And_Control::Get_Widget_Draw_Options(void)
@@ -157,6 +172,7 @@ namespace MIDILightDrawer
 	void Widget_Tools_And_Control::UpdateOptionsVisibility(TimelineToolType tool)
 	{
 		// Hide all option panels first
+		this->_Pointer_Options->Visible	= false;
 		this->_Draw_Options->Visible	= false;
 		this->_Length_Options->Visible	= false;
 		this->_Color_Options->Visible	= false;
@@ -173,6 +189,10 @@ namespace MIDILightDrawer
 			break;
 
 		case TimelineToolType::Pointer:
+			this->_Pointer_Options->Visible = true;
+			this->_Color_Picker->Enabled = false;
+			break;
+
 		case TimelineToolType::Erase:
 			// No options to show for these tools
 			this->_Color_Picker->Enabled = false;

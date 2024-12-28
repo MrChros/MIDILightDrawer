@@ -10,6 +10,7 @@ using namespace System::Drawing;
 #include "Control_ColorPicker.h"
 
 #include "Widget_Toolbar.h"
+#include "Widget_Pointer_Options.h"
 #include "Widget_Draw_Options.h"
 #include "Widget_Length_Options.h"
 #include "Widget_Color_Options.h"
@@ -25,10 +26,14 @@ namespace MIDILightDrawer {
 		Widget_Tools_And_Control(void);
 
 		void Select_Color_From_Preset(int color_index);
-		void Quantization_Up(void);
-		void Quantization_Down(void);
+		void Snapping_Up(void);
+		void Snapping_Down(void);
+		void Snap_To(int index);
+		void Length_Up(void);
+		void Length_Down(void);
 
 		Widget_Toolbar^			Get_Widget_Toolbar(void);
+		Widget_Pointer_Options^	Get_Widget_Pointer_Options(void);
 		Widget_Draw_Options^	Get_Widget_Draw_Options(void);
 		Widget_Length_Options^	Get_Widget_Length_Options(void);
 		Widget_Color_Options^	Get_Widget_Color_Options(void);
@@ -45,6 +50,7 @@ namespace MIDILightDrawer {
 		Control_ColorPicker^		_Color_Picker;
 		TableLayoutPanel^			_Options_Container;
 
+		Widget_Pointer_Options^		_Pointer_Options;
 		Widget_Draw_Options^		_Draw_Options;
 		Widget_Length_Options^		_Length_Options;
 		Widget_Color_Options^		_Color_Options;

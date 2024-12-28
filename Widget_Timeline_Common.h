@@ -51,4 +51,12 @@ namespace MIDILightDrawer
 		Movement,    // Existing bar being moved
 		Duration     // Duration change preview
 	};
+
+	public enum class SnappingType
+	{
+		Snap_None,
+		Snap_Grid,
+		Snap_Bars,
+		Snap_Tablature
+	};
 }

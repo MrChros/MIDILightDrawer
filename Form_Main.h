@@ -55,6 +55,7 @@ namespace MIDILightDrawer
 
 			Widget_Timeline^					_Timeline;
 			Widget_Toolbar^						_Toolbar;
+			Widget_Pointer_Options^				_Pointer_Options;
 			Widget_Draw_Options^				_Draw_Options;
 			Widget_Length_Options^				_Length_Options;
 			Widget_Color_Options^				_Color_Options;
@@ -95,14 +96,17 @@ namespace MIDILightDrawer
 			void Register_Hotkey_Handlers();
 			void Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e);
 
-			void Draw_Options_OnQuantizationChanged(int value);
+			void Pointer_Options_OnSnappingChanged(int value);
+			void Draw_Options_OnSnappingChanged(int value);
+			void Draw_Options_OnLengthChanged(int value);
 			void Draw_Options_OnColorChanged(System::Drawing::Color color);
-			void Length_Options_OnQuantizationChanged(int value);
+			void Draw_Options_OnConsiderTabChanged(bool value);
+			void Length_Options_OnLengthChanged(int value);
 			void Color_Options_OnColorChanged(System::Drawing::Color color);
-			void Fade_Options_OnQuantizationChanged(int value);
+			void Fade_Options_OnLengthChanged(int value);
 			void Fade_Options_OnColorStartChanged(System::Drawing::Color color);
 			void Fade_Options_OnColorEndChanged(System::Drawing::Color color);
-			void Strobe_Options_OnQuantizationChanged(int value);
+			void Strobe_Options_OnLengthChanged(int value);
 			void Strobe_Options_OnColorChanged(System::Drawing::Color color);
 			void Bucket_Options_OnColorChanged(System::Drawing::Color color);
 
@@ -111,5 +115,6 @@ namespace MIDILightDrawer
 			// Debug Members
 			void Button_1_Click(System::Object^ sender, System::EventArgs^ e);
 			void Button_2_Click(System::Object^ sender, System::EventArgs^ e);
+			
 	};
 }

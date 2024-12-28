@@ -158,7 +158,7 @@ namespace MIDILightDrawer
 
 		this->_DropDown_Track_Height = gcnew Control_DropDown();
 		this->_DropDown_Track_Height->Dock = DockStyle::Fill;
-		this->_DropDown_Track_Height->Set_Tile_Layout(164, 35, 1);
+		this->_DropDown_Track_Height->Set_Tile_Layout(161, 30, 1);
 		this->_DropDown_Track_Height->Title_Text = "Set Track Height";
 		this->_DropDown_Track_Height->Set_Title_Color(Theme_Manager::Get_Instance()->ForegroundText);
 		this->_DropDown_Track_Height->Set_Open_Direction(true);
@@ -169,7 +169,7 @@ namespace MIDILightDrawer
 		// Style the marker dropdown
 		this->_DropDown_Marker = gcnew Control_DropDown();
 		this->_DropDown_Marker->Dock = DockStyle::Fill;
-		this->_DropDown_Marker->Set_Tile_Layout(264, 35, 1);
+		this->_DropDown_Marker->Set_Tile_Layout(261, 30, 1);
 		this->_DropDown_Marker->Title_Text = "Jump to Marker";
 		this->_DropDown_Marker->Set_Title_Color(Theme_Manager::Get_Instance()->ForegroundText);
 		this->_DropDown_Marker->Set_Open_Direction(true);
@@ -202,14 +202,20 @@ namespace MIDILightDrawer
 
 	void Form_Main::InitializeToolOptions()
 	{
+		// Pointer Options
+		this->_Pointer_Options = this->_Tools_And_Control->Get_Widget_Pointer_Options();
+		this->_Pointer_Options->SnappingChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Pointer_Options_OnSnappingChanged);
+		
 		// Draw Options
 		this->_Draw_Options = this->_Tools_And_Control->Get_Widget_Draw_Options();
-		this->_Draw_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Draw_Options_OnQuantizationChanged);
-		this->_Draw_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Draw_Options_OnColorChanged);
+		this->_Draw_Options->SnappingChanged	+= gcnew QuantizationChangedHandler	(this, &Form_Main::Draw_Options_OnSnappingChanged);
+		this->_Draw_Options->LengthChanged		+= gcnew QuantizationChangedHandler	(this, &Form_Main::Draw_Options_OnLengthChanged);
+		this->_Draw_Options->ConsiderTabChanged += gcnew ConsiderTabChangedHandler	(this, &Form_Main::Draw_Options_OnConsiderTabChanged);
+		this->_Draw_Options->ColorChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Draw_Options_OnColorChanged);
 
 		// Length Options
 		this->_Length_Options = this->_Tools_And_Control->Get_Widget_Length_Options();
-		this->_Length_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Length_Options_OnQuantizationChanged);
+		this->_Length_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Length_Options_OnLengthChanged);
 
 		// Color Options
 		this->_Color_Options = this->_Tools_And_Control->Get_Widget_Color_Options();
@@ -217,13 +223,13 @@ namespace MIDILightDrawer
 
 		// Fade Options
 		this->_Fade_Options = this->_Tools_And_Control->Get_Widget_Fade_Options();
-		this->_Fade_Options->QuantizationChanged	+= gcnew QuantizationChangedHandler	(this, &Form_Main::Fade_Options_OnQuantizationChanged);
+		this->_Fade_Options->QuantizationChanged	+= gcnew QuantizationChangedHandler	(this, &Form_Main::Fade_Options_OnLengthChanged);
 		this->_Fade_Options->ColorStartChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Fade_Options_OnColorStartChanged);
 		this->_Fade_Options->ColorEndChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Fade_Options_OnColorEndChanged);
 
 		// Strobe Options
 		this->_Strobe_Options = this->_Tools_And_Control->Get_Widget_Strobe_Options();
-		this->_Strobe_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Strobe_Options_OnQuantizationChanged);
+		this->_Strobe_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Strobe_Options_OnLengthChanged);
 		this->_Strobe_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Strobe_Options_OnColorChanged);
 
 		// Bucket Options
@@ -541,13 +547,16 @@ namespace MIDILightDrawer
 		{
 		case TimelineToolType::Pointer:
 			this->_Timeline->SetCurrentTool(TimelineToolType::Pointer);
+			this->_Timeline->SetToolSnapping((SnappingType)_Pointer_Options->PointerSnapping);
 			break;
 
 		case TimelineToolType::Draw:
 			this->_Timeline->SetCurrentTool(TimelineToolType::Draw);
+			this->_Timeline->SetToolSnapping((SnappingType)_Draw_Options->DrawSnapping);
 
-			Draw_Tool->DrawTickLength = _Draw_Options->Value;
-			Draw_Tool->DrawColor = _Draw_Options->SelectedColor;
+			Draw_Tool->DrawTickLength	= _Draw_Options->DrawLength;
+			Draw_Tool->UseAutoLength	= _Draw_Options->LengthByTablature;
+			Draw_Tool->DrawColor		= _Draw_Options->SelectedColor;
 
 			break;
 
@@ -780,16 +789,24 @@ namespace MIDILightDrawer
 					return true;
 				}
 
-				else if (hotkey.Key == "Draw/Length Quantization Up"	) { this->_Tools_And_Control->Quantization_Up();			return true; }
-				else if (hotkey.Key == "Draw/Length Quantization Down"	) { this->_Tools_And_Control->Quantization_Down();			return true; }
+				else if (hotkey.Key == "Length Up"						) { this->_Tools_And_Control->Length_Up();				return true; }
+				else if (hotkey.Key == "Length Down"					) { this->_Tools_And_Control->Length_Down();			return true; }
+				else if (hotkey.Key == "Draw Tool - Toggle Length Tab"	) { this->_Draw_Options->Toggle_LengthByTablature();	return true; }
 
-				else if (hotkey.Key == "Zoom In"						) { this->_TrackBar_Zoom->Move_To_Next_Value();				return true; }
-				else if (hotkey.Key == "Zoom Out"						) { this->_TrackBar_Zoom->Move_To_Previous_Value();			return true; }
-				else if (hotkey.Key == "Zoom Reset"						) { this->_TrackBar_Zoom->Value = 1;						return true; }
+				else if (hotkey.Key == "Snapping Next"					) { this->_Tools_And_Control->Snapping_Up();			return true; }
+				else if (hotkey.Key == "Snapping Previous"				) { this->_Tools_And_Control->Snapping_Down();			return true; }
+				else if (hotkey.Key == "Snap To None"					) { this->_Tools_And_Control->Snap_To((int)SnappingType::Snap_None);		return true; }
+				else if (hotkey.Key == "Snap To Grid"					) { this->_Tools_And_Control->Snap_To((int)SnappingType::Snap_Grid);		return true; }
+				else if (hotkey.Key == "Snap To Bars"					) { this->_Tools_And_Control->Snap_To((int)SnappingType::Snap_Bars);		return true; }
+				else if (hotkey.Key == "Snap To Tablature"				) { this->_Tools_And_Control->Snap_To((int)SnappingType::Snap_Tablature);	return true; }
 
-				else if (hotkey.Key == "Track Height Increase"			) { this->_DropDown_Track_Height->Select_Next();			return true; }
-				else if (hotkey.Key == "Track Height Decrease"			) { this->_DropDown_Track_Height->Select_Previous();		return true; }
-				else if (hotkey.Key == "Track Height Reset"				) { this->_DropDown_Track_Height->Selected_Index = 1;		return true; }
+				else if (hotkey.Key == "Zoom In"						) { this->_TrackBar_Zoom->Move_To_Next_Value();			return true; }
+				else if (hotkey.Key == "Zoom Out"						) { this->_TrackBar_Zoom->Move_To_Previous_Value();		return true; }
+				else if (hotkey.Key == "Zoom Reset"						) { this->_TrackBar_Zoom->Value = 1;					return true; }
+
+				else if (hotkey.Key == "Track Height Increase"			) { this->_DropDown_Track_Height->Select_Next();		return true; }
+				else if (hotkey.Key == "Track Height Decrease"			) { this->_DropDown_Track_Height->Select_Previous();	return true; }
+				else if (hotkey.Key == "Track Height Reset"				) { this->_DropDown_Track_Height->Selected_Index = 1;	return true; }
 			}
 		}
 		return false;
@@ -809,10 +826,26 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Form_Main::Draw_Options_OnQuantizationChanged(int value)
+	void Form_Main::Pointer_Options_OnSnappingChanged(int value)
+	{
+		this->_Timeline->SetToolSnapping((SnappingType)value);
+	}
+
+	void Form_Main::Draw_Options_OnSnappingChanged(int value)
+	{
+		this->_Timeline->SetToolSnapping((SnappingType)value);
+	}
+
+	void Form_Main::Draw_Options_OnLengthChanged(int value)
 	{
 		DrawTool^ Draw_Tool = this->_Timeline->GetDrawTool();
 		Draw_Tool->DrawTickLength = value;
+	}
+
+	void Form_Main::Draw_Options_OnConsiderTabChanged(bool value)
+	{
+		DrawTool^ Draw_Tool = this->_Timeline->GetDrawTool();
+		Draw_Tool->UseAutoLength = value;
 	}
 
 	void Form_Main::Draw_Options_OnColorChanged(System::Drawing::Color color)
@@ -821,7 +854,7 @@ namespace MIDILightDrawer
 		Draw_Tool->DrawColor = color;
 	}
 
-	void Form_Main::Length_Options_OnQuantizationChanged(int value)
+	void Form_Main::Length_Options_OnLengthChanged(int value)
 	{
 		DurationTool^ Duration_Tool = this->_Timeline->GetDurationTool();
 		Duration_Tool->ChangeTickLength = value;
@@ -833,7 +866,7 @@ namespace MIDILightDrawer
 		Color_Tool->CurrentColor = color;
 	}
 
-	void Form_Main::Fade_Options_OnQuantizationChanged(int value)
+	void Form_Main::Fade_Options_OnLengthChanged(int value)
 	{
 		FadeTool^ Fade_Tool = this->_Timeline->GetFadeTool();
 		Fade_Tool->TickLength = value;
@@ -851,7 +884,7 @@ namespace MIDILightDrawer
 		Fade_Tool->ColorEnd = color;
 	}
 
-	void Form_Main::Strobe_Options_OnQuantizationChanged(int value)
+	void Form_Main::Strobe_Options_OnLengthChanged(int value)
 	{
 		StrobeTool^ Strobe_Tool = this->_Timeline->GetStrobeTool();
 		Strobe_Tool->TickLength = value;
@@ -895,6 +928,3 @@ namespace MIDILightDrawer
 		Console::WriteLine("Button 2 Clicked");
 	}
 }
-
-
-

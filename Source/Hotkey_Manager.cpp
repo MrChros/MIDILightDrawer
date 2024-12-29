@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "Hotkey_Manager.h"
 
 namespace MIDILightDrawer {

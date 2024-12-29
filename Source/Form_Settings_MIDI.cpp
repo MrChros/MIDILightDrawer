@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "Form_Settings_MIDI.h"
 #include "Settings.h"
 

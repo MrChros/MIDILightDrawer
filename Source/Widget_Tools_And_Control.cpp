@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "Widget_Tools_And_Control.h"
 
 namespace MIDILightDrawer

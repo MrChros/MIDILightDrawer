@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "Form_Main.h"
 
 using namespace System;

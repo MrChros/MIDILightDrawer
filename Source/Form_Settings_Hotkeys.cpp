@@ -1,5 +1,4 @@
-﻿#include "pch.h"
-#include "Form_Settings_Hotkeys.h"
+﻿#include "Form_Settings_Hotkeys.h"
 #include "Settings.h"
 
 namespace MIDILightDrawer

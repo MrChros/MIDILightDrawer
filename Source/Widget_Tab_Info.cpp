@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "Widget_Tab_Info.h"
 
 namespace MIDILightDrawer

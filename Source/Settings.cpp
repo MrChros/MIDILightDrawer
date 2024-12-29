@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "Settings.h"
 
 using namespace System::IO;

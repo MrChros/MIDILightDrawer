@@ -5,7 +5,6 @@ namespace MIDILightDrawer
 	Widget_Strobe_Options::Widget_Strobe_Options(Control_ColorPicker^ color_picker)
 	{
 		this->_Color_Picker = color_picker;
-		this->_Strobe_Quantization_Ticks = 960 * 4;
 		Initialize_Component();
 	}
 
@@ -21,10 +20,9 @@ namespace MIDILightDrawer
 		this->_Components = gcnew System::ComponentModel::Container();
 
 		// Create main GroupBox
-		this->_GroupBox = gcnew GroupBox();
+		this->_GroupBox = gcnew Control_GroupBox();
 		this->_GroupBox->Text = "Strobe Options";
 		this->_GroupBox->Dock = DockStyle::Fill;
-		this->_GroupBox->Paint += gcnew PaintEventHandler(this, &Widget_Strobe_Options::GroupBox_Paint);
 		this->_GroupBox->Padding = System::Windows::Forms::Padding(10, 15, 10, 10);
 
 		// Create layout for GroupBox contents
@@ -57,6 +55,7 @@ namespace MIDILightDrawer
 		this->_DropDown_Strobe_Quantization->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
 		this->_DropDown_Strobe_Quantization->Margin = System::Windows::Forms::Padding(1, 2, 2, 2);
 		this->_DropDown_Strobe_Quantization->Set_Items(Lines_First_Quantization, Lines_Second_Quantization, Values_Quantization);
+		this->_DropDown_Strobe_Quantization->Selected_Index = 0;
 		this->_DropDown_Strobe_Quantization->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Widget_Strobe_Options::DropDown_Strobe_Quantization_OnItem_Selected);
 
 		this->_Color_Picker->ColorChanged += gcnew EventHandler(this, &Widget_Strobe_Options::Color_Picker_OnColorChanged);
@@ -83,9 +82,7 @@ namespace MIDILightDrawer
 
 	void Widget_Strobe_Options::DropDown_Strobe_Quantization_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
 	{
-		_Strobe_Quantization_Ticks = e->Value;
-
-		QuantizationChanged(_Strobe_Quantization_Ticks);
+		QuantizationChanged(e->Value);
 	}
 
 	void Widget_Strobe_Options::PresetPanel_SelectedColorChanged(System::Object^ sender, System::EventArgs^ e)
@@ -102,48 +99,6 @@ namespace MIDILightDrawer
 		ColorChanged(this->_Color_Picker->SelectedColor);
 	}
 
-	void Widget_Strobe_Options::GroupBox_Paint(Object^ sender, PaintEventArgs^ e)
-	{
-		GroupBox^ box = safe_cast<GroupBox^>(sender);
-		Theme_Manager^ theme = Theme_Manager::Get_Instance();
-
-		Graphics^ g = e->Graphics;
-		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
-
-		// Calculate text size and positions
-		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
-		SizeF textSize = g->MeasureString(box->Text, titleFont);
-
-		// Define header rect
-		Rectangle headerRect = Rectangle(0, 0, box->Width, 28);
-
-		// Draw header background with gradient
-		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
-			headerRect,
-			theme->BackgroundAlt,
-			theme->Background,
-			Drawing2D::LinearGradientMode::Vertical);
-
-		g->FillRectangle(headerBrush, headerRect);
-
-		// Draw title
-		g->DrawString(box->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
-
-		// Draw border
-		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
-		g->DrawRectangle(borderPen, 0, 0, box->Width - 1, box->Height - 1);
-
-		// Draw header bottom line with accent
-		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
-		g->DrawLine(accentPen, 0, headerRect.Bottom, box->Width, headerRect.Bottom);
-
-		// Clean up
-		delete headerBrush;
-		delete borderPen;
-		delete accentPen;
-		delete titleFont;
-	}
-
 	void Widget_Strobe_Options::Select_Next_Strobe_Value(void)
 	{
 		this->_DropDown_Strobe_Quantization->Select_Next();
@@ -155,7 +110,7 @@ namespace MIDILightDrawer
 	}
 
 	int Widget_Strobe_Options::TickLength::get() {
-		return this->_Strobe_Quantization_Ticks;
+		return this->_DropDown_Strobe_Quantization->Selected_Value;
 	}
 
 	void Widget_Strobe_Options::TickLength::set(int value) {

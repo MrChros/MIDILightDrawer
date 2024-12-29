@@ -4,14 +4,17 @@ using namespace System;
 using namespace System::Drawing;
 using namespace System::Windows::Forms;
 
-public ref class Control_DataGrid : public DataGridView
+namespace MIDILightDrawer
 {
-public:
-	Control_DataGrid()
+	public ref class Control_DataGrid : public DataGridView
 	{
-		this->DoubleBuffered = true;
-		this->SetStyle(ControlStyles::OptimizedDoubleBuffer |
-			ControlStyles::AllPaintingInWmPaint |
-			ControlStyles::UserPaint, true);
-	}
-};
+	public:
+		Control_DataGrid()
+		{
+			this->DoubleBuffered = true;
+			this->SetStyle(ControlStyles::OptimizedDoubleBuffer |
+				ControlStyles::AllPaintingInWmPaint |
+				ControlStyles::UserPaint, true);
+		}
+	};
+}

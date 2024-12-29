@@ -7,6 +7,7 @@ using namespace System::Drawing;
 
 #include "Widget_Draw_Options.h"
 
+#include "Control_GroupBox.h"
 #include "Control_ColorPreset.h"
 #include "Control_ColorPicker.h"
 
@@ -20,14 +21,13 @@ namespace MIDILightDrawer
 
 	private:
 		System::ComponentModel::Container^ _Components;
-		GroupBox^ _GroupBox;
-		Control_ColorPicker^ _Color_Picker;
-		Control_ColorPreset^ _Color_Presets;
+		Control_GroupBox^		_GroupBox;
+		Control_ColorPicker^	_Color_Picker;
+		Control_ColorPreset^	_Color_Presets;
 
 		void Initialize_Component(void);
 		void PresetPanel_SelectedColorChanged(System::Object^ sender, System::EventArgs^ e);
 		void Color_Picker_OnColorChanged(Object^ sender, EventArgs^ e);
-		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	public:
 		property Color SelectedColor {

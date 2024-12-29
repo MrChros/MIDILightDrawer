@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "Version.h"
 #include "Form_Main.h"
 #include "Theme_Manager.h"
 
@@ -305,9 +305,19 @@ namespace MIDILightDrawer
 		Menu_Settings->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_Settings->DropDownItems->Add(Menu_Settings_Midi);
 
+		ToolStripLabel^ Label_Version = gcnew ToolStripLabel();
+		Label_Version->Text = "v" + VERSION_BUILD_STRING;
+		#ifdef _DEBUG
+			Label_Version->Text = "Debug Version";
+		#endif
+		Label_Version->Alignment = ToolStripItemAlignment::Right;
+		Label_Version->Padding = System::Windows::Forms::Padding(0, 0, 10, 0); // Add some right padding
+		
+
 		// Add menus to strip
 		this->_Menu_Strip->Items->Add(Menu_File);
 		this->_Menu_Strip->Items->Add(Menu_Settings);
+		this->_Menu_Strip->Items->Add(Label_Version);
 
 		#ifdef _DEBUG
 			InitializeDebugButtons();

@@ -13,6 +13,9 @@ namespace MIDILightDrawer
 {
 	public ref class Form_Settings_Hotkeys : public Form
 	{
+	public:
+		Form_Settings_Hotkeys();
+
 	private:
 		System::Resources::ResourceManager^ _Resources;
 		
@@ -48,10 +51,5 @@ namespace MIDILightDrawer
 		String^ GetDisplayKeyName(Keys key);
 
 		static int CompareHotkeyDefinitions(Hotkey_Definition^ a, Hotkey_Definition^ b);
-
-		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
-
-	public:
-		Form_Settings_Hotkeys();
 	};
 }

@@ -8,6 +8,7 @@ using namespace System::Collections::Generic;
 
 #include "Settings.h"
 #include "Control_DropDown.h"
+#include "Control_GroupBox.h"
 #include "Control_ColorPreset.h"
 #include "Control_ColorPicker.h"
 #include "Widget_Timeline_Common.h"
@@ -25,7 +26,7 @@ namespace MIDILightDrawer
 
 	private:
 		System::ComponentModel::Container^ _Components;
-		GroupBox^				_GroupBox;
+		Control_GroupBox^		_GroupBox;
 		Control_DropDown^		_DropDown_Draw_Snapping;
 		Control_DropDown^		_DropDown_Draw_Length;
 		CheckBox^				_CheckBox_Consider_Tab;
@@ -38,7 +39,6 @@ namespace MIDILightDrawer
 		void CheckBox_Consider_Tab_OnCheckStateChanged(System::Object^ sender, System::EventArgs^ e);
 		void PresetPanel_SelectedColorChanged(System::Object^ sender, System::EventArgs^ e);
 		void Color_Picker_OnColorChanged(Object^ sender, EventArgs^ e);
-		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	protected:
 		~Widget_Draw_Options();

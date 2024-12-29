@@ -6,7 +6,6 @@ namespace MIDILightDrawer
 	Widget_Fade_Options::Widget_Fade_Options(Control_ColorPicker^ color_picker)
 	{
 		this->_Color_Picker = color_picker;
-		this->_Fade_Quantization_Ticks = 960 * 4;
 
 		Initialize_Component(); 
 	}
@@ -35,10 +34,9 @@ namespace MIDILightDrawer
 		this->_Components = gcnew System::ComponentModel::Container();
 
 		// Create main GroupBox
-		this->_GroupBox = gcnew GroupBox();
+		this->_GroupBox = gcnew Control_GroupBox();
 		this->_GroupBox->Text = "Fade Options";
 		this->_GroupBox->Dock = DockStyle::Fill;
-		this->_GroupBox->Paint += gcnew PaintEventHandler(this, &Widget_Fade_Options::GroupBox_Paint);
 		this->_GroupBox->Padding = System::Windows::Forms::Padding(10, 15, 10, 10);
 
 		// Create layout for GroupBox contents
@@ -110,9 +108,7 @@ namespace MIDILightDrawer
 
 	void Widget_Fade_Options::DropDown_Fade_Quantization_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
 	{
-		_Fade_Quantization_Ticks = e->Value;
-
-		QuantizationChanged(_Fade_Quantization_Ticks);
+		QuantizationChanged(e->Value);
 	}
 
 	void Widget_Fade_Options::Color_Picker_OnColorChanged(Object^ sender, EventArgs^ e)
@@ -125,48 +121,6 @@ namespace MIDILightDrawer
 		else if (this->_Fade_Preview->End_Is_Selected()) {
 			ColorEndChanged(this->_Color_Picker->SelectedColor);
 		}
-	}
-
-	void Widget_Fade_Options::GroupBox_Paint(Object^ sender, PaintEventArgs^ e)
-	{
-		GroupBox^ box = safe_cast<GroupBox^>(sender);
-		Theme_Manager^ theme = Theme_Manager::Get_Instance();
-
-		Graphics^ g = e->Graphics;
-		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
-
-		// Calculate text size and positions
-		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
-		SizeF textSize = g->MeasureString(box->Text, titleFont);
-
-		// Define header rect
-		Rectangle headerRect = Rectangle(0, 0, box->Width, 28);
-
-		// Draw header background with gradient
-		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
-			headerRect,
-			theme->BackgroundAlt,
-			theme->Background,
-			Drawing2D::LinearGradientMode::Vertical);
-
-		g->FillRectangle(headerBrush, headerRect);
-
-		// Draw title
-		g->DrawString(box->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
-
-		// Draw border
-		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
-		g->DrawRectangle(borderPen, 0, 0, box->Width - 1, box->Height - 1);
-
-		// Draw header bottom line with accent
-		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
-		g->DrawLine(accentPen, 0, headerRect.Bottom, box->Width, headerRect.Bottom);
-
-		// Clean up
-		delete headerBrush;
-		delete borderPen;
-		delete accentPen;
-		delete titleFont;
 	}
 
 	void Widget_Fade_Options::Fade_Preview_OnPreviewSideSelected(System::Drawing::Color color)
@@ -185,7 +139,7 @@ namespace MIDILightDrawer
 	}
 
 	int Widget_Fade_Options::TickLength::get() {
-		return this->_Fade_Quantization_Ticks;
+		return this->_DropDown_Fade_Quantization->Selected_Value;
 	}
 
 	void Widget_Fade_Options::TickLength::set(int value) {

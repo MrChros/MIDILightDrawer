@@ -15,10 +15,9 @@ namespace MIDILightDrawer
 		this->_Components = gcnew System::ComponentModel::Container();
 
 		// Create main GroupBox
-		this->_GroupBox = gcnew GroupBox();
+		this->_GroupBox = gcnew Control_GroupBox();
 		this->_GroupBox->Text = "Color Options";
 		this->_GroupBox->Dock = DockStyle::Fill;
-		this->_GroupBox->Paint += gcnew PaintEventHandler(this, &Widget_Color_Options::GroupBox_Paint);
 		this->_GroupBox->Padding = System::Windows::Forms::Padding(10, 15, 10, 10);
 
 		// Create layout for GroupBox contents
@@ -68,48 +67,6 @@ namespace MIDILightDrawer
 		this->_Color_Presets->SelectedColor = _Color_Picker->SelectedColor;
 
 		ColorChanged(this->_Color_Picker->SelectedColor);
-	}
-
-	void Widget_Color_Options::GroupBox_Paint(Object^ sender, PaintEventArgs^ e)
-	{
-		GroupBox^ box = safe_cast<GroupBox^>(sender);
-		Theme_Manager^ theme = Theme_Manager::Get_Instance();
-
-		Graphics^ g = e->Graphics;
-		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
-
-		// Calculate text size and positions
-		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
-		SizeF textSize = g->MeasureString(box->Text, titleFont);
-
-		// Define header rect
-		Rectangle headerRect = Rectangle(0, 0, box->Width, 28);
-
-		// Draw header background with gradient
-		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
-			headerRect,
-			theme->BackgroundAlt,
-			theme->Background,
-			Drawing2D::LinearGradientMode::Vertical);
-
-		g->FillRectangle(headerBrush, headerRect);
-
-		// Draw title
-		g->DrawString(box->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
-
-		// Draw border
-		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
-		g->DrawRectangle(borderPen, 0, 0, box->Width - 1, box->Height - 1);
-
-		// Draw header bottom line with accent
-		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
-		g->DrawLine(accentPen, 0, headerRect.Bottom, box->Width, headerRect.Bottom);
-
-		// Clean up
-		delete headerBrush;
-		delete borderPen;
-		delete accentPen;
-		delete titleFont;
 	}
 
 	Color Widget_Color_Options::SelectedColor::get() {

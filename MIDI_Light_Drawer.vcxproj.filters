@@ -120,6 +120,12 @@
     <ClInclude Include="Widget_Strobe_Options.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Widget_Pointer_Options.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Control_GroupBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIDI_Light_Drawer.cpp">
@@ -216,6 +222,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Widget_Strobe_Options.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Widget_Pointer_Options.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Control_GroupBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

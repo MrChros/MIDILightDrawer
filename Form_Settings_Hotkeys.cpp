@@ -142,12 +142,11 @@ namespace MIDILightDrawer
 
 	void Form_Settings_Hotkeys::Initialize_Filter_Controls()
 	{
-		GroupBox^ Filter_Group = gcnew GroupBox();
+		Control_GroupBox^ Filter_Group = gcnew Control_GroupBox();
 		Filter_Group->Text = "Filters";
 		Filter_Group->Dock = DockStyle::Fill;
 		Filter_Group->FlatStyle = FlatStyle::Standard;
 		Filter_Group->Padding = System::Windows::Forms::Padding(10, 25, 10, 10);
-		Filter_Group->Paint += gcnew PaintEventHandler(this, &Form_Settings_Hotkeys::GroupBox_Paint);
 
 		TableLayoutPanel^ Filter_Panel = gcnew TableLayoutPanel();
 		Filter_Panel->Dock = DockStyle::Fill;
@@ -415,47 +414,5 @@ namespace MIDILightDrawer
 
 		if (a->Action == nullptr || b->Action == nullptr) return 0;
 		return String::Compare(a->Action, b->Action);
-	}
-
-	void Form_Settings_Hotkeys::GroupBox_Paint(Object^ sender, PaintEventArgs^ e)
-	{
-		GroupBox^ box = safe_cast<GroupBox^>(sender);
-		Theme_Manager^ theme = Theme_Manager::Get_Instance();
-
-		Graphics^ g = e->Graphics;
-		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
-
-		// Calculate text size and positions
-		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
-		SizeF textSize = g->MeasureString(box->Text, titleFont);
-
-		// Define header rect
-		Rectangle headerRect = Rectangle(0, 0, box->Width, 28);
-
-		// Draw header background with gradient
-		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
-			headerRect,
-			theme->BackgroundAlt,
-			theme->Background,
-			Drawing2D::LinearGradientMode::Vertical);
-
-		g->FillRectangle(headerBrush, headerRect);
-
-		// Draw title
-		g->DrawString(box->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
-
-		// Draw border
-		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
-		g->DrawRectangle(borderPen, 0, 0, box->Width - 1, box->Height - 1);
-
-		// Draw header bottom line with accent
-		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
-		g->DrawLine(accentPen, 0, headerRect.Bottom, box->Width, headerRect.Bottom);
-
-		// Clean up
-		delete headerBrush;
-		delete borderPen;
-		delete accentPen;
-		delete titleFont;
 	}
 }

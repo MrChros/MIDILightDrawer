@@ -8,6 +8,7 @@ using namespace System::Drawing;
 #include "Widget_Draw_Options.h"
 
 #include "Control_DropDown.h"
+#include "Control_GroupBox.h"
 
 namespace MIDILightDrawer
 {
@@ -18,14 +19,11 @@ namespace MIDILightDrawer
 
 	private:
 		System::ComponentModel::Container^ _Components;
-		GroupBox^			_GroupBox;
+		Control_GroupBox^	_GroupBox;
 		Control_DropDown^	_DropDown_Length_Quantization;
-
-		int					_Length_Quantization_Ticks;
 
 		void Initialize_Component(void);
 		void DropDown_Length_Quantization_OnItem_Selected(System::Object^ sender, MIDILightDrawer::Control_DropDown_Item_Selected_Event_Args^ e);
-		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	public:
 		void Select_Next_Length_Value(void);

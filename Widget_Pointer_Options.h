@@ -8,6 +8,7 @@ using namespace System::Collections::Generic;
 
 #include "Settings.h"
 #include "Control_DropDown.h"
+#include "Control_GroupBox.h"
 #include "Widget_Draw_Options.h"
 #include "Widget_Timeline_Common.h"
 
@@ -20,12 +21,11 @@ namespace MIDILightDrawer
 
 	private:
 		System::ComponentModel::Container^ _Components;
-		GroupBox^ _GroupBox;
+		Control_GroupBox^ _GroupBox;
 		Control_DropDown^ _DropDown_Draw_Snapping;
 
 		void Initialize_Component(void);
 		void DropDown_Draw_Snapping_OnItem_Selected(System::Object^ sender, MIDILightDrawer::Control_DropDown_Item_Selected_Event_Args^ e);
-		void GroupBox_Paint(Object^ sender, PaintEventArgs^ e);
 
 	protected:
 		~Widget_Pointer_Options();

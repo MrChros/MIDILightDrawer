@@ -16,15 +16,24 @@ namespace MIDILightDrawer {
 
 	void Settings::Load_Defaults() {
 		// Add default note assignments
-		_MIDI_Note_Red = 0;     // C
-		_MIDI_Note_Green = 4;   // E
-		_MIDI_Note_Blue = 7;    // G
+		_MIDI_Note_Red		= 0;	// C
+		_MIDI_Note_Green	= 2;	// D
+		_MIDI_Note_Blue		= 4;	// E
 
 		_ColorPresets = gcnew List<String^>();
 
 		for (int i = 0; i < 10; i++) {
 			_ColorPresets->Add("255,255,255"); // Default white color
 		}
+		_ColorPresets[0] = "255,0,0";		// Red
+		_ColorPresets[1] = "0,127,0";		// Green
+		_ColorPresets[2] = "0,0,255";		// Blue
+		_ColorPresets[3] = "255,255,0";		// Yellow
+		_ColorPresets[4] = "127,0,127";		// Purple
+		_ColorPresets[5] = "255,0,255";		// Fuchsia
+		_ColorPresets[6] = "0,255,255";		// Aqua
+		_ColorPresets[7] = "127,127,127";	// Gray
+		_ColorPresets[8] = "0,0,0";			// Black
 	}
 
 	void Settings::Initialize(String^ settingsFilePath) {
@@ -101,8 +110,6 @@ namespace MIDILightDrawer {
 
 		// Close JSON object
 		sb->AppendLine("}");
-		return sb->ToString();
-
 		return sb->ToString();
 	}
 

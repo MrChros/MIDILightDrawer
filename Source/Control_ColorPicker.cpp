@@ -25,6 +25,7 @@ namespace MIDILightDrawer
 
 		// Create wheel bitmap last
 		Create_Wheel_Bitmap();
+		Update_Text_Boxes();
 	}
 
 	void Control_ColorPicker::Initialize_Sliders()
@@ -65,21 +66,31 @@ namespace MIDILightDrawer
 		_Label_Blue->AutoSize = true;
 		_Label_Blue->ForeColor = Theme_Manager::Get_Instance()->ForegroundText;
 
+		//_Label_Hex = gcnew Label();
+		//_Label_Hex->Text = "Hex:";
+		//_Label_Hex->AutoSize = true;
+		//_Label_Hex->ForeColor = Theme_Manager::Get_Instance()->ForegroundText;
+
 		// Create textboxes
 		_TextBox_Red = gcnew TextBox();
 		_TextBox_Red->Width = TEXT_BOX_WIDTH;
 		_TextBox_Red->Height = TEXT_BOX_HEIGHT;
-		_TextBox_Red->TextChanged += gcnew EventHandler(this, &Control_ColorPicker::OnTextBoxValueChanged);
+		_TextBox_Red->TextChanged += gcnew EventHandler(this, &Control_ColorPicker::OnRGBTextBoxValueChanged);
 
 		_TextBox_Green = gcnew TextBox();
 		_TextBox_Green->Width = TEXT_BOX_WIDTH;
 		_TextBox_Green->Height = TEXT_BOX_HEIGHT;
-		_TextBox_Green->TextChanged += gcnew EventHandler(this, &Control_ColorPicker::OnTextBoxValueChanged);
+		_TextBox_Green->TextChanged += gcnew EventHandler(this, &Control_ColorPicker::OnRGBTextBoxValueChanged);
 
 		_TextBox_Blue = gcnew TextBox();
 		_TextBox_Blue->Width = TEXT_BOX_WIDTH;
 		_TextBox_Blue->Height = TEXT_BOX_HEIGHT;
-		_TextBox_Blue->TextChanged += gcnew EventHandler(this, &Control_ColorPicker::OnTextBoxValueChanged);
+		_TextBox_Blue->TextChanged += gcnew EventHandler(this, &Control_ColorPicker::OnRGBTextBoxValueChanged);
+
+		_TextBox_Hex = gcnew TextBox();
+		_TextBox_Hex->Width = TEXT_BOX_WIDTH * 1.25;
+		_TextBox_Hex->Height = TEXT_BOX_HEIGHT;
+		_TextBox_Hex->TextChanged += gcnew EventHandler(this, &Control_ColorPicker::OnHexTextBoxValueChanged);
 
 		// Add controls in a specific order
 		this->Controls->Add(_Label_Red);
@@ -88,21 +99,8 @@ namespace MIDILightDrawer
 		this->Controls->Add(_TextBox_Green);
 		this->Controls->Add(_Label_Blue);
 		this->Controls->Add(_TextBox_Blue);
-
-		// Set initial positions after all controls are created
-		int textStartX = Width - TEXT_BOX_WIDTH - SPACING * 2;
-		int textStartY = SPACING;
-
-		_Label_Red->Location = Point(textStartX, textStartY);
-		_TextBox_Red->Location = Point(textStartX + 25, textStartY);
-
-		_Label_Green->Location = Point(textStartX, textStartY + TEXT_BOX_HEIGHT + SPACING);
-		_TextBox_Green->Location = Point(textStartX + 25, textStartY + TEXT_BOX_HEIGHT + SPACING);
-
-		_Label_Blue->Location = Point(textStartX, textStartY + 2 * (TEXT_BOX_HEIGHT + SPACING));
-		_TextBox_Blue->Location = Point(textStartX + 25, textStartY + 2 * (TEXT_BOX_HEIGHT + SPACING));
-
-		Update_TextBox_Positions();
+		//this->Controls->Add(_Label_Hex);
+		this->Controls->Add(_TextBox_Hex);
 	}
 
 	void Control_ColorPicker::Create_Wheel_Bitmap()
@@ -160,7 +158,7 @@ namespace MIDILightDrawer
 		Update_TextBox_Positions();
 	}
 
-	void Control_ColorPicker::Validate_TextBox_Input(TextBox^ textBox)
+	void Control_ColorPicker::Validate_RGBTextBox_Input(TextBox^ textBox)
 	{
 		String^ text = textBox->Text;
 		if (String::IsNullOrEmpty(text)) return;
@@ -173,6 +171,41 @@ namespace MIDILightDrawer
 		else {
 			textBox->Text = "0";
 		}
+	}
+
+	void Control_ColorPicker::Validate_HexTextBox_Input(TextBox^ textBox)
+	{
+		String^ text = textBox->Text;
+		if (String::IsNullOrEmpty(text)) {
+			textBox->Text = "#000000";
+			return;
+		}
+
+		// Ensure the text starts with #
+		if (!text->StartsWith("#")) {
+			text = "#" + text;
+		}
+
+		// Remove any whitespace
+		text = text->Replace(" ", "");
+
+		// Ensure exactly 6 characters after #
+		if (text->Length > 7) {
+			text = text->Substring(0, 7);
+		}
+		else while (text->Length < 7) {
+			text += "0";
+		}
+
+		// Validate each character is a valid hex digit
+		bool isValid = text[0] == '#';
+
+		for (int i = 1; i < 7 && isValid; i++)
+		{
+			isValid = Char::IsDigit(text[i]) || (text[i] >= 'A' && text[i] <= 'F') || (text[i] >= 'a' && text[i] <= 'f');
+		}
+
+		textBox->Text = isValid ? text->ToUpper() : "#000000";
 	}
 
 	void Control_ColorPicker::Update_Color_From_Mouse(int x, int y)
@@ -219,6 +252,9 @@ namespace MIDILightDrawer
 
 		_Label_Blue->Location = Point(leftMargin, startY + 2 * (TEXT_BOX_HEIGHT + SPACING) + (TEXT_BOX_HEIGHT - _Label_Blue->Height) / 2);
 		_TextBox_Blue->Location = Point(textBoxX, startY + 2 * (TEXT_BOX_HEIGHT + SPACING));
+
+		//_Label_Hex->Location	= Point(leftMargin, + 3.5 * (TEXT_BOX_HEIGHT + SPACING) + (TEXT_BOX_HEIGHT - _Label_Blue->Height) / 2);
+		_TextBox_Hex->Location = Point(textBoxX, startY + 3.5 * (TEXT_BOX_HEIGHT + SPACING));
 	}
 	
 	void Control_ColorPicker::Update_Slider_Positions()
@@ -244,16 +280,10 @@ namespace MIDILightDrawer
 
 		// Position sliders in the center of the wheel with proper spacing
 		_Saturation_Slider->Width = sliderWidth;
-		_Saturation_Slider->Location = Point(
-			centerX - sliderWidth / 2,
-			centerY - SLIDER_HEIGHT - SPACING / 2
-		);
+		_Saturation_Slider->Location = Point(centerX - sliderWidth / 2, centerY - SLIDER_HEIGHT - SPACING / 2);
 
 		_Value_Slider->Width = sliderWidth;
-		_Value_Slider->Location = Point(
-			centerX - sliderWidth / 2,
-			centerY + SPACING / 2
-		);
+		_Value_Slider->Location = Point(centerX - sliderWidth / 2, centerY + SPACING / 2);
 	}
 
 	void Control_ColorPicker::Update_Text_Boxes()
@@ -267,6 +297,8 @@ namespace MIDILightDrawer
 			_TextBox_Red->Text		= currentColor.R.ToString();
 			_TextBox_Green->Text	= currentColor.G.ToString();
 			_TextBox_Blue->Text		= currentColor.B.ToString();
+			_TextBox_Hex->Text		= "#" + currentColor.R.ToString("X2") + currentColor.G.ToString("X2") + currentColor.B.ToString("X2");
+
 			_Updating_Text_Boxes	= false;
 		}
 	}
@@ -442,16 +474,41 @@ namespace MIDILightDrawer
 		OnColorChanged();
 	}
 
-	void Control_ColorPicker::OnTextBoxValueChanged(Object^ sender, EventArgs^ e) {
+	void Control_ColorPicker::OnRGBTextBoxValueChanged(Object^ sender, EventArgs^ e)
+	{
 		if (_Updating_Text_Boxes) return;
 
 		TextBox^ textBox = safe_cast<TextBox^>(sender);
-		Validate_TextBox_Input(textBox);
+		Validate_RGBTextBox_Input(textBox);
 
 		try {
 			int r = Int32::Parse(_TextBox_Red->Text);
 			int g = Int32::Parse(_TextBox_Green->Text);
 			int b = Int32::Parse(_TextBox_Blue->Text);
+
+			if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+				Update_From_RGB(r, g, b);
+			}
+		}
+		catch (FormatException^) {
+			// Invalid input - ignore
+		}
+		catch (OverflowException^) {
+			// Invalid input - ignore
+		}
+	}
+
+	void Control_ColorPicker::OnHexTextBoxValueChanged(Object^ sender, EventArgs^ e)
+	{
+		if (_Updating_Text_Boxes) return;
+
+		TextBox^ textBox = safe_cast<TextBox^>(sender);
+		Validate_HexTextBox_Input(textBox);
+
+		try {
+			int r = Int32::Parse(_TextBox_Hex->Text->Substring(1, 2), System::Globalization::NumberStyles::HexNumber);
+			int g = Int32::Parse(_TextBox_Hex->Text->Substring(3, 2), System::Globalization::NumberStyles::HexNumber);
+			int b = Int32::Parse(_TextBox_Hex->Text->Substring(5, 2), System::Globalization::NumberStyles::HexNumber);
 
 			if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
 				Update_From_RGB(r, g, b);

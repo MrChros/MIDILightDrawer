@@ -236,9 +236,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="settings.json">
-      <Filter>Other Files</Filter>
-    </None>
     <None Include="app.config" />
     <None Include="MIDI_Light_Drawer.targets" />
   </ItemGroup>

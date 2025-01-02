@@ -26,7 +26,7 @@ namespace MIDILightDrawer
 		Label^	_Label_Red;
 		Label^	_Label_Green;
 		Label^	_Label_Blue;
-		//Label^	_Label_Hex;
+		Label^	_Label_Hex;
 		float	_Radius_Wheel;
 		float	_Current_Hue;
 		float	_Current_Saturation;
@@ -46,6 +46,7 @@ namespace MIDILightDrawer
 		void Create_Wheel_Bitmap();
 		void Validate_RGBTextBox_Input(TextBox^ textBox);
 		void Validate_HexTextBox_Input(TextBox^ textBox);
+		String^ Get_Valid_Hex_Color(String^ input);
 
 		void Update_Color_From_Mouse(int x, int y);
 		void Update_TextBox_Positions();

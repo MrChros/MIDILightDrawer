@@ -74,7 +74,6 @@ namespace MIDILightDrawer {
 			TimelineToolType::Fade
 		};
 
-		//for (int i = 0; i < tools->Length; i++)
 		for each (KeyValuePair<TimelineToolType, String^> toolEntry in _Tool_Icons)
 		{
 			Button^ btn = gcnew Button();

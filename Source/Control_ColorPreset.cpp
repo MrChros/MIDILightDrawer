@@ -164,6 +164,10 @@ namespace MIDILightDrawer {
 
 		// Center the icon in the button
 		button->ImageAlign = ContentAlignment::MiddleCenter;
+
+		// Create and assign tooltip
+		ToolTip^ tip = gcnew ToolTip();
+		tip->SetToolTip(button, "#" + color.R.ToString("X2") + color.G.ToString("X2") + color.B.ToString("X2"));
 	}
 
 	void Control_ColorPreset::Color_Preset_Button_Click(System::Object^ sender, System::EventArgs^ e)

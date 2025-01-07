@@ -106,6 +106,8 @@ namespace MIDILightDrawer
 			void Fade_Options_OnLengthChanged(int value);
 			void Fade_Options_OnColorStartChanged(System::Drawing::Color color);
 			void Fade_Options_OnColorEndChanged(System::Drawing::Color color);
+			void Fade_Options_OnColorCenterChanged(System::Drawing::Color color);
+			void Fade_Options_OnFadeModeChanged(Fade_Mode mode);
 			void Strobe_Options_OnLengthChanged(int value);
 			void Strobe_Options_OnColorChanged(System::Drawing::Color color);
 			void Bucket_Options_OnColorChanged(System::Drawing::Color color);
@@ -115,6 +117,7 @@ namespace MIDILightDrawer
 			// Debug Members
 			void Button_1_Click(System::Object^ sender, System::EventArgs^ e);
 			void Button_2_Click(System::Object^ sender, System::EventArgs^ e);
+			
 			
 	};
 }

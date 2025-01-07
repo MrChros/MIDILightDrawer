@@ -2121,8 +2121,7 @@ namespace MIDILightDrawer
 		}
 
 		// Calculate total distance in ticks
-		int currentTick = timeline->PixelsToTicks(
-			currentPos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
+		int currentTick = timeline->PixelsToTicks(currentPos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
 		int totalTicks = currentTick - startTick;
 
 		if (totalTicks <= 0) return;
@@ -2137,7 +2136,23 @@ namespace MIDILightDrawer
 			float ratio = (float)i / (numBars - 1);
 			if (numBars == 1) ratio = 0; // Single bar case
 
-			Color barColor = InterpolateColor(ColorStart, ColorEnd, ratio);
+			Color barColor;
+
+			if (Type == FadeType::Two_Colors) {
+				// Simple linear interpolation between start and end colors
+				barColor = InterpolateColor(ColorStart, ColorEnd, ratio);
+			}
+			else { // Three_Colors
+				// For three colors, we'll split the interpolation into two phases
+				if (ratio <= 0.5f) {
+					// First half: interpolate between start and center colors
+					barColor = InterpolateColor(ColorStart, ColorCenter, ratio * 2.0f);
+				}
+				else {
+					// Second half: interpolate between center and end colors
+					barColor = InterpolateColor(ColorCenter, ColorEnd, (ratio - 0.5f) * 2.0f);
+				}
+			}
 
 			int barStartTick = startTick + (i * TickLength);
 			int barLength = TickLength;

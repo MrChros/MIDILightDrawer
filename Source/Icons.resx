@@ -208,6 +208,12 @@
   <data name="Note_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Pictures\Note_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="Number_2_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Pictures\Number_2_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Number_3_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Pictures\Number_3_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="Pointer_White" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Pictures\Pointer_White.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>

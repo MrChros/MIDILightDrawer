@@ -226,6 +226,8 @@ namespace MIDILightDrawer
 		this->_Fade_Options->QuantizationChanged	+= gcnew QuantizationChangedHandler	(this, &Form_Main::Fade_Options_OnLengthChanged);
 		this->_Fade_Options->ColorStartChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Fade_Options_OnColorStartChanged);
 		this->_Fade_Options->ColorEndChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Fade_Options_OnColorEndChanged);
+		this->_Fade_Options->ColorCenterChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Fade_Options_OnColorCenterChanged);
+		this->_Fade_Options->FadeModeChanged		+= gcnew FadeModeChangedHandler		(this, &Form_Main::Fade_Options_OnFadeModeChanged);
 
 		// Strobe Options
 		this->_Strobe_Options = this->_Tools_And_Control->Get_Widget_Strobe_Options();
@@ -592,6 +594,8 @@ namespace MIDILightDrawer
 			Fade_Tool->TickLength	= _Fade_Options->TickLength;
 			Fade_Tool->ColorStart	= _Fade_Options->StartColor;
 			Fade_Tool->ColorEnd		= _Fade_Options->EndColor;
+			Fade_Tool->ColorCenter	= _Fade_Options->CenterColor;
+			Fade_Tool->Type			= (FadeType)_Fade_Options->FadeMode;
 			break;
 
 		case TimelineToolType::Strobe:
@@ -892,6 +896,18 @@ namespace MIDILightDrawer
 	{
 		FadeTool^ Fade_Tool = this->_Timeline->GetFadeTool();
 		Fade_Tool->ColorEnd = color;
+	}
+
+	void Form_Main::Fade_Options_OnColorCenterChanged(System::Drawing::Color color)
+	{
+		FadeTool^ Fade_Tool = this->_Timeline->GetFadeTool();
+		Fade_Tool->ColorCenter = _Fade_Options->CenterColor;
+	}
+
+	void Form_Main::Fade_Options_OnFadeModeChanged(Fade_Mode mode)
+	{
+		FadeTool^ Fade_Tool = this->_Timeline->GetFadeTool();
+		Fade_Tool->Type = (FadeType)_Fade_Options->FadeMode;
 	}
 
 	void Form_Main::Strobe_Options_OnLengthChanged(int value)

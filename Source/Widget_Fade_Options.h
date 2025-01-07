@@ -14,6 +14,8 @@ using namespace System::Drawing;
 
 namespace MIDILightDrawer
 { 
+	public delegate void FadeModeChangedHandler(Fade_Mode mode);
+	
 	public ref class Widget_Fade_Options : public System::Windows::Forms::UserControl
 	{
 	public:
@@ -31,6 +33,7 @@ namespace MIDILightDrawer
 		void Color_Picker_OnColorChanged(Object^ sender, EventArgs^ e);
 		void Fade_Preview_OnPreviewSideSelected(System::Drawing::Color color);
 		void Button_Switch_Colors_OnClick(System::Object^ sender, System::EventArgs^ e);
+		void Button_Fade_Mode_OnClick(System::Object^ sender, System::EventArgs^ e);
 
 	protected:
 		~Widget_Fade_Options();
@@ -54,8 +57,18 @@ namespace MIDILightDrawer
 			Color get();
 		}
 
+		property Color CenterColor {
+			Color get();
+		}
+
+		property Fade_Mode FadeMode {
+			Fade_Mode get();
+		}
+
 		event QuantizationChangedHandler^ QuantizationChanged;
 		event ColorChangedHandler^ ColorStartChanged;
 		event ColorChangedHandler^ ColorEndChanged;
+		event ColorChangedHandler^ ColorCenterChanged;
+		event FadeModeChangedHandler^ FadeModeChanged;
 	};
 }

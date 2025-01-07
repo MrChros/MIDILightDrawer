@@ -42,7 +42,7 @@ namespace MIDILightDrawer
 		// Create layout for GroupBox contents
 		TableLayoutPanel^ Table_Layout_Main = gcnew TableLayoutPanel();
 		Table_Layout_Main->RowCount = 2;
-		Table_Layout_Main->ColumnCount = 3;
+		Table_Layout_Main->ColumnCount = 4;
 		Table_Layout_Main->Dock = DockStyle::Fill;
 		Table_Layout_Main->Padding = System::Windows::Forms::Padding(5);
 
@@ -52,7 +52,8 @@ namespace MIDILightDrawer
 
 		// Configure column styles
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 250));	// Combo Box Column
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 50));	// Button Column
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 50));	// Button Switch Column
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 50));	// Button Mode Column
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));	// Padding Column
 
 
@@ -87,16 +88,23 @@ namespace MIDILightDrawer
 		Button^ Button_Switch_Colors = gcnew Button();
 		Button_Switch_Colors->Dock = DockStyle::Fill;
 		Button_Switch_Colors->Margin = System::Windows::Forms::Padding(10, 25, 0, 15);
-		//Button_Switch_Colors->Text = "Switch Colors";
 		Button_Switch_Colors->Click += gcnew System::EventHandler(this, &Widget_Fade_Options::Button_Switch_Colors_OnClick);
 		Theme_Manager::Get_Instance()->ApplyThemeToButton(Button_Switch_Colors);
 		Button_Switch_Colors->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Switch_White")));
+
+		Button^ Button_Fade_Mode = gcnew Button();
+		Button_Fade_Mode->Dock = DockStyle::Fill;
+		Button_Fade_Mode->Margin = System::Windows::Forms::Padding(10, 25, 0, 15);
+		Button_Fade_Mode->Click += gcnew System::EventHandler(this, &Widget_Fade_Options::Button_Fade_Mode_OnClick);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(Button_Fade_Mode);
+		Button_Fade_Mode->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Number_2_White")));
 		
 
 		// Add controls to main layout
 		Table_Layout_Main->Controls->Add(this->_DropDown_Fade_Quantization, 0, 0);
 		Table_Layout_Main->Controls->Add(this->_Fade_Preview, 0, 1);
 		Table_Layout_Main->Controls->Add(Button_Switch_Colors, 1, 1);
+		Table_Layout_Main->Controls->Add(Button_Fade_Mode, 2, 1);
 		//Table_Layout_Main->SetColumnSpan(this->_Color_Presets, Table_Layout_Main->ColumnCount);
 
 		// Add main layout to GroupBox
@@ -120,6 +128,9 @@ namespace MIDILightDrawer
 		}
 		else if (this->_Fade_Preview->End_Is_Selected()) {
 			ColorEndChanged(this->_Color_Picker->SelectedColor);
+		}
+		else if (this->_Fade_Preview->Center_Is_Selected()) {
+			ColorCenterChanged(this->_Color_Picker->SelectedColor);
 		}
 	}
 
@@ -154,11 +165,37 @@ namespace MIDILightDrawer
 		return this->_Fade_Preview->EndColor;
 	}
 
+	Color Widget_Fade_Options::CenterColor::get() {
+		return this->_Fade_Preview->CenterColor;
+	}
+
+	Fade_Mode Widget_Fade_Options::FadeMode::get() {
+		return this->_Fade_Preview->Mode;
+	}
+
 	void Widget_Fade_Options::Button_Switch_Colors_OnClick(System::Object^ sender, System::EventArgs^ e)
 	{
 		this->_Fade_Preview->Switch_Colors();
 
 		ColorStartChanged(this->_Fade_Preview->StartColor);
 		ColorEndChanged(this->_Fade_Preview->EndColor);
+	}
+
+	void Widget_Fade_Options::Button_Fade_Mode_OnClick(System::Object^ sender, System::EventArgs^ e)
+	{
+		this->_Fade_Preview->Toggle_Mode();
+
+		Button^ Toggle_Button = (cli::safe_cast<Button^>(sender));
+
+		System::Resources::ResourceManager^ Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
+
+		if (this->_Fade_Preview->Mode == Fade_Mode::Three_Colors) {
+			Toggle_Button->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Number_3_White")));
+		}
+		else {
+			Toggle_Button->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Number_2_White")));
+		}
+
+		FadeModeChanged(this->_Fade_Preview->Mode);
 	}
 }

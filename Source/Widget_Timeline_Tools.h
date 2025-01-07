@@ -496,6 +496,8 @@ namespace MIDILightDrawer
 		property int TickLength;
 		property Color ColorStart;
 		property Color ColorEnd;
+		property Color ColorCenter;
+		property FadeType Type;
 
 		property List<BarEvent^>^ PreviewBars {
 			List<BarEvent^>^ get() { return previewBars; }

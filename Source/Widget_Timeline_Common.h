@@ -59,4 +59,10 @@ namespace MIDILightDrawer
 		Snap_Bars,
 		Snap_Tablature
 	};
+
+	public enum class FadeType
+	{
+		Two_Colors,
+		Three_Colors
+	};
 }

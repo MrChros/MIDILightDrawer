@@ -98,6 +98,7 @@ namespace MIDILightDrawer
 		void UpdateGroupPosition(int tickDelta, bool allowTrackChange);
 		void MoveSelectedBarsToTrack(Track^ targetTrack);
 		void UpdateCursor(Point mousePos);
+		void EraseSelectedBars();
 
 	public:
 		PointerTool(Widget_Timeline^ timeline);

@@ -229,7 +229,8 @@ namespace MIDILightDrawer
 
 	void PointerTool::OnKeyDown(KeyEventArgs^ e)
 	{
-		if (e->Control) {
+		if (e->Control)
+		{
 			if (e->KeyCode == Keys::C) {
 				HandleCopy();
 			}
@@ -239,6 +240,9 @@ namespace MIDILightDrawer
 		}
 		else if (e->KeyCode == Keys::Escape && isPasting) {
 			CancelPaste();
+		}
+		else if (e->KeyCode == Keys::Delete) {
+			EraseSelectedBars();
 		}
 	}
 
@@ -564,6 +568,35 @@ namespace MIDILightDrawer
 			Cursor = (hoverBar != nullptr) ? TimelineCursorHelper::GetCursor(TimelineCursor::Hand) : TimelineCursorHelper::GetCursor(TimelineCursor::Default);
 		}
 	}
+
+	void PointerTool::EraseSelectedBars()
+	{
+		if (selectedBars == nullptr || selectedBars->Count == 0) {
+			return;
+		}
+
+		for each(BarEvent ^ bar in selectedBars)
+		{
+			Track^ track = nullptr;
+			// Find the track containing this bar
+			for each(Track ^ t in timeline->Tracks)
+			{
+				if (t->Events->Contains(bar)) {
+					track = t;
+					break;
+				}
+			}
+			if (track != nullptr) {
+				track->RemoveBar(bar);
+			}
+		}
+
+		selectedBars->Clear();
+
+		timeline->Invalidate();
+		this->UpdateCursor(lastMousePos);
+	}
+
 
 	/////////////////////////////
 	// DrawTool Implementation //
@@ -1275,20 +1308,22 @@ namespace MIDILightDrawer
 
 	void EraseTool::OnMouseDown(MouseEventArgs^ e)
 	{
-		if (e->Button == Windows::Forms::MouseButtons::Left &&
-			e->X > Widget_Timeline::TRACK_HEADER_WIDTH) {
-
+		if (e->Button == Windows::Forms::MouseButtons::Left && e->X > Widget_Timeline::TRACK_HEADER_WIDTH)
+		{
 			Point clickPoint(e->X, e->Y);
 			BarEvent^ clickedBar = timeline->GetBarAtPoint(clickPoint);
 
 			// If clicking on a selected bar, delete all selected bars
-			if (clickedBar != nullptr && selectedBars->Contains(clickedBar)) {
+			if (clickedBar != nullptr && selectedBars->Contains(clickedBar))
+			{
 				StartErasing();
 				// Erase all selected bars
-				for each(BarEvent ^ bar in selectedBars) {
+				for each(BarEvent ^ bar in selectedBars)
+				{
 					Track^ track = nullptr;
 					// Find the track containing this bar
-					for each(Track ^ t in timeline->Tracks) {
+					for each(Track ^ t in timeline->Tracks)
+					{
 						if (t->Events->Contains(bar)) {
 							track = t;
 							break;
@@ -1339,8 +1374,8 @@ namespace MIDILightDrawer
 		UpdateHoverPreview(Point(e->X, e->Y));
 	}
 
-	void EraseTool::OnKeyDown(KeyEventArgs^ e) {}
-	void EraseTool::OnKeyUp(KeyEventArgs^ e) {}
+	void EraseTool::OnKeyDown(KeyEventArgs^ e) { }
+	void EraseTool::OnKeyUp(KeyEventArgs^ e) { }
 
 	void EraseTool::StartSelection(Point start)
 	{

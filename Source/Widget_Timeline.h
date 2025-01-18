@@ -9,8 +9,12 @@ using namespace System::Collections::Generic;
 #include "Theme_Manager.h"
 #include "Widget_Timeline_Common.h"
 #include "Widget_Timeline_Classes.h"
+#include "Timeline_Tool_Interface.h"
 #include "Timeline_Resource_Manager.h"
+#include "Timeline_Direct2DRenderer.h"
 #include "Timeline_Performance_Metrics.h"
+
+#define USE_DIRECT_X	true
 
 namespace MIDILightDrawer 
 {
@@ -26,14 +30,14 @@ namespace MIDILightDrawer
 	ref class StrobeTool;
 	enum class TimelineToolType;
 
-	public ref class Widget_Timeline : public UserControl {
+	public ref class Widget_Timeline : public UserControl, public ITimelineAccess {
 	public:
 		// Constants
 		static const int TICKS_PER_QUARTER				= 960;
 		static const int INITIAL_TICK_OFFSET			= TICKS_PER_QUARTER;
 		static const int DEFAULT_TRACK_HEIGHT			= 140;	// 100
 		static const int HEADER_HEIGHT					= 60;
-		static const int MIN_PIXELS_BETWEEN_GRIDLINES	= 20;
+		//static const int MIN_PIXELS_BETWEEN_GRIDLINES	= 20;
 		static const int TRACK_HEADER_WIDTH				= 150;
 		static const int TRACK_PADDING					= 4;
 		static const int MINIMUM_TRACK_HEIGHT			= 30;
@@ -82,6 +86,14 @@ namespace MIDILightDrawer
 		ColorTool^		GetColorTool()		{ return (ColorTool^)	(tools[TimelineToolType::Color]);		}
 		FadeTool^		GetFadeTool()		{ return (FadeTool^)	(tools[TimelineToolType::Fade]);		}
 		StrobeTool^		GetStrobeTool()		{ return (StrobeTool^)	(tools[TimelineToolType::Strobe]);		}
+
+		virtual TimelineToolType GetCurrentToolType() {
+			return currentToolType;
+		}
+
+		virtual ITimelineToolAccess^ GetToolAccess() {
+			return safe_cast<ITimelineToolAccess^>(tools[currentToolType]);
+		}
 
 		// Other interface metohds for the tools		
 		void StartBarDrag(BarEvent^ bar, Track^ track, Point startPoint);
@@ -135,9 +147,31 @@ namespace MIDILightDrawer
 			return true;  // Tell Windows Forms that all keys are input keys
 		}
 
+		/*
+		virtual System::Windows::Forms::CreateParams^ CreateParams override
+		{
+			System::Windows::Forms::CreateParams ^ cp = UserControl::CreateParams;
+			cp->ExStyle |= 0x20;  // WS_EX_TRANSPARENT
+			return cp;
+		}
+
+			// Add this to handle the WM_ERASEBKGND message
+		virtual System::IntPtr WndProc(Message% m) override
+		{
+			// Check for WM_ERASEBKGND
+			if (m.Msg == 0x0014 && USE_DIRECT_X)  // 0x0014 is WM_ERASEBKGND
+			{
+				m.Result = System::IntPtr(1);  // Indicate that we handled it
+				return System::IntPtr(1);
+			}
+			return UserControl::WndProc(m);
+		}
+		*/
+
 	private:
 		System::Resources::ResourceManager^ _Resources;
 		
+		Timeline_Direct2DRenderer^	D2DRenderer;
 		TimelineResourceManager^	resourceManager;
 		PerformanceMetrics^			performanceMetrics;
 
@@ -168,9 +202,6 @@ namespace MIDILightDrawer
 		Pen^		cachedStringPen;
 		Pen^		cachedDurationPen;
 		SolidBrush^ cachedTextBrush;
-
-		// State for track management
-		Dictionary<Track^, int>^ trackHeights;
 
 		Track^ selectedTrack;
 		Track^ hoveredTrack;
@@ -258,7 +289,6 @@ namespace MIDILightDrawer
 		int		GetTicksPerBeat		();
 		float	GetSubdivisionLevel	();
 		int		GetTrackTop			(Track^ track);
-		int		GetTrackHeight		(Track^ track);
 		int		GetTotalTracksHeight();
 
 		// Bar Drawing Supporting Methods

@@ -45,15 +45,14 @@ namespace MIDILightDrawer
 		gdiObjectsReused	= 0;
 	}
 
-	String^ PerformanceMetrics::GetReport()
+	System::String^ PerformanceMetrics::GetReport()
 	{
 		System::Text::StringBuilder^ report = gcnew System::Text::StringBuilder();
 		report->AppendLine("Performance Report:");
 		report->AppendFormat("Average Frame Time: {0:F2}ms\n", GetAverageFrameTime());
-		report->AppendFormat("Elements Drawn: Measures={0}, Tracks={1}, Notes={2}, Bars={3}\n",
-			measuresDrawn, tracksDrawn, notesDrawn, barsDrawn);
-		report->AppendFormat("GDI+ Objects: Created={0}, Reused={1}\n",
-			gdiObjectsCreated, gdiObjectsReused);
+		report->AppendFormat("Zoom Level: {0:F2}\n", zoomLevel);
+		// report->AppendFormat("Elements Drawn: Measures={0}, Tracks={1}, Notes={2}, Bars={3}\n", measuresDrawn, tracksDrawn, notesDrawn, barsDrawn);
+		// report->AppendFormat("GDI+ Objects: Created={0}, Reused={1}\n", gdiObjectsCreated, gdiObjectsReused);
 		return report->ToString();
 	}
 }

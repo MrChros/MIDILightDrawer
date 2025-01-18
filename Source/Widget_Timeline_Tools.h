@@ -1,11 +1,11 @@
 #pragma once
 
 using namespace System;
-using namespace System::Windows::Forms;
 using namespace System::Drawing;
+using namespace System::Windows::Forms;
 using namespace System::Collections::Generic;
 
-
+#include "Timeline_Tool_Interface.h"
 #include "Widget_Timeline_Common.h"
 
 namespace MIDILightDrawer
@@ -16,7 +16,7 @@ namespace MIDILightDrawer
 	ref class BarEvent;
 
 	// Base tool class
-	public ref class TimelineTool abstract {
+	public ref class TimelineTool abstract : public ITimelineToolAccess {
 	protected:
 		Widget_Timeline^ timeline;
 		bool	isActive;
@@ -40,6 +40,37 @@ namespace MIDILightDrawer
 		property System::Windows::Forms::Cursor^ Cursor {
 			virtual System::Windows::Forms::Cursor^ get() { return currentCursor; }
 			virtual void set(System::Windows::Forms::Cursor^ value);
+		}
+
+		virtual property List<BarEvent^>^ SelectedBars {
+			List<BarEvent^>^ get() { return nullptr; }
+		}
+		virtual property Rectangle SelectionRect {
+			Rectangle get() { return Rectangle(); }
+		}
+
+		virtual property bool IsDragging {
+			bool get() { return false; }
+		}
+
+		virtual property Track^ DragSourceTrack {
+			Track^ get() { return nullptr; }
+		}
+		
+		virtual property Track^ DragTargetTrack {
+			Track^ get() { return nullptr; }
+		}
+
+		virtual property System::Drawing::Point CurrentMousePosition {
+			Point get() { return Point(); }
+		}
+
+		virtual property bool IsPasting {
+			bool get() { return false; }
+		}
+		
+		virtual property List<BarEvent^>^ PastePreviewBars {
+			List<BarEvent^>^ get() { return nullptr; }
 		}
 	};
 
@@ -120,23 +151,23 @@ namespace MIDILightDrawer
 		void FinalizePaste();
 
 		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() { return selectedBars; }
+			List<BarEvent^>^ get() override { return selectedBars; }
 		}
 
 		property Rectangle SelectionRect {
-			Rectangle get() { return selectionRect; }
+			Rectangle get() override { return selectionRect; }
 		}
 
 		property bool IsDragging {
-			bool get() { return isDragging; }
+			bool get() override { return isDragging; }
 		}
 
 		property Track^ DragSourceTrack {
-			Track^ get() { return dragSourceTrack; }
+			Track^ get() override { return dragSourceTrack; }
 		}
 
 		property Track^ DragTargetTrack {
-			Track^ get() { return dragTargetTrack; }
+			Track^ get() override { return dragTargetTrack; }
 		}
 
 		property bool IsMultiTrackSelection {
@@ -144,15 +175,15 @@ namespace MIDILightDrawer
 		}
 
 		property Point CurrentMousePosition {
-			Point get() { return lastMousePos; }
+			Point get() override { return lastMousePos; }
 		}
 
 		property bool IsPasting {
-			bool get() { return isPasting; }
+			bool get() override { return isPasting; }
 		}
 
 		property List<BarEvent^>^ PastePreviewBars {
-			List<BarEvent^>^ get() { return pastePreviewBars; }
+			List<BarEvent^>^ get() override { return pastePreviewBars; }
 		}
 	};
 
@@ -256,7 +287,7 @@ namespace MIDILightDrawer
 		}
 
 		property Point CurrentMousePosition {
-			Point get() { return lastMousePos; }
+			Point get() override { return lastMousePos; }
 		}
 
 		property bool UseAutoLength{
@@ -327,11 +358,11 @@ namespace MIDILightDrawer
 		}
 
 		property Rectangle SelectionRect {
-			Rectangle get() { return selectionRect; }
+			Rectangle get() override { return selectionRect; }
 		}
 
 		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^> ^ get() { return selectedBars; }
+			List<BarEvent^> ^ get() override { return selectedBars; }
 		}
 
 		property BarEvent^ HoverBar {
@@ -394,11 +425,11 @@ namespace MIDILightDrawer
 		}
 
 		property Rectangle SelectionRect {
-			Rectangle get() { return selectionRect; }
+			Rectangle get() override { return selectionRect; }
 		}
 
 		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() { return selectedBars; }
+			List<BarEvent^>^ get() override { return selectedBars; }
 		}
 
 		property int ChangeTickLength {
@@ -450,11 +481,11 @@ namespace MIDILightDrawer
 		}
 
 		property Rectangle SelectionRect {
-			Rectangle get() { return selectionRect; }
+			Rectangle get() override  { return selectionRect; }
 		}
 
 		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() { return selectedBars; }
+			List<BarEvent^>^ get() override { return selectedBars; }
 		}
 
 		property BarEvent^ HoverBar {
@@ -513,7 +544,7 @@ namespace MIDILightDrawer
 		}
 
 		property Point CurrentMousePosition {
-			Point get() { return lastMousePos; }
+			Point get() override  { return lastMousePos; }
 		}
 
 	private:
@@ -566,7 +597,7 @@ namespace MIDILightDrawer
 		}
 
 		property Point CurrentMousePosition {
-			Point get() { return lastMousePos; }
+			Point get() override { return lastMousePos; }
 		}
 
 	private:

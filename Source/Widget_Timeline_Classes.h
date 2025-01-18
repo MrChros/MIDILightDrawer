@@ -174,6 +174,7 @@ namespace MIDILightDrawer
 
 		property List<TrackMeasure^>^ Measures;
 
+		property int Height;
 		property bool ShowTablature;
 		property bool IsDrumTrack;
 		property bool ShowAsStandardNotation;

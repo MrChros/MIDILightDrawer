@@ -13,12 +13,33 @@ namespace MIDILightDrawer
 		this->SetStyle(ControlStyles::Selectable, true);
 		this->TabStop = true;
 		this->Focus();
+		this->BackColor = currentTheme.TrackBackground;
 
-		// Set up double buffering
-		this->DoubleBuffered = true;
-		this->SetStyle(ControlStyles::AllPaintingInWmPaint |
-			ControlStyles::UserPaint |
-			ControlStyles::OptimizedDoubleBuffer, true);
+		if (USE_DIRECT_X)
+		{
+			// Optimize for Direct2D
+			this->SetStyle(
+				ControlStyles::AllPaintingInWmPaint |
+				ControlStyles::UserPaint |
+				ControlStyles::Opaque, true);  // Add Opaque style
+
+			// Explicitly disable styles that can cause flickering
+			this->SetStyle(
+				ControlStyles::DoubleBuffer |
+				ControlStyles::OptimizedDoubleBuffer |
+				ControlStyles::SupportsTransparentBackColor, false);
+
+			this->DoubleBuffered = false;
+		}
+		else
+		{
+			// Original GDI+ settings
+			this->DoubleBuffered = true;
+			this->SetStyle(
+				ControlStyles::AllPaintingInWmPaint |
+				ControlStyles::UserPaint |
+				ControlStyles::OptimizedDoubleBuffer, true);
+		}
 
 		// Initialize state
 		currentTheme = Theme_Manager::Get_Instance()->GetTimelineTheme();
@@ -26,7 +47,6 @@ namespace MIDILightDrawer
 		scrollPosition = gcnew Point(0, 0);
 		tracks = gcnew List<Track^>();
 		measures = gcnew List<Measure^>();
-		trackHeights = gcnew Dictionary<Track^, int>();
 
 		InitializeToolSystem();
 		InitializeTablatureResources();
@@ -39,12 +59,16 @@ namespace MIDILightDrawer
 		measureFont = gcnew Drawing::Font("Arial", 10);
 		markerFont = gcnew Drawing::Font("Arial", 9);
 
-		// Set background color
-		this->BackColor = currentTheme.Background;
-
 		// Buffer will be initialized in OnHandleCreated
 		bufferContext = nullptr;
 		graphicsBuffer = nullptr;
+
+		D2DRenderer	= gcnew Timeline_Direct2DRenderer(tracks, measures, zoomLevel, scrollPosition);
+		if (D2DRenderer->Initialize(this)) {
+			D2DRenderer->Resize(this->Width, this->Height);
+			D2DRenderer->SetThemeColors(currentTheme.Background, currentTheme.HeaderBackground, currentTheme.Text, currentTheme.MeasureLine, currentTheme.BeatLine, currentTheme.SubdivisionLine, currentTheme.SelectionHighlight, currentTheme.TrackBackground, currentTheme.TrackBackground);
+			D2DRenderer->SetTimelineAccess(this);
+		}
 
 		resourceManager		= gcnew TimelineResourceManager();
 		performanceMetrics	= gcnew PerformanceMetrics();
@@ -62,8 +86,8 @@ namespace MIDILightDrawer
 	void Widget_Timeline::AddTrack(String^ name, int octave)
 	{
 		Track^ track = gcnew Track(name, octave);
+		track->Height = Widget_Timeline::DEFAULT_TRACK_HEIGHT;
 		tracks->Add(track);
-		trackHeights[track] = DEFAULT_TRACK_HEIGHT;
 
 		UpdateVerticalScrollBarRange();
 		Invalidate();
@@ -138,7 +162,6 @@ namespace MIDILightDrawer
 		// Clear all collections
 		tracks->Clear();
 		measures->Clear();
-		trackHeights->Clear();
 
 		// Reset selection state
 		selectedTrack = nullptr;
@@ -148,6 +171,11 @@ namespace MIDILightDrawer
 		// Reset scroll and zoom
 		scrollPosition = gcnew Point(0, 0);
 		zoomLevel = 1.0;
+
+		if (D2DRenderer != nullptr) {
+			D2DRenderer->SetZoomLevel(zoomLevel);
+			D2DRenderer->SetScrollPositionReference(scrollPosition);
+		}
 
 		// Reset time signature to default 4/4
 		currentTimeSignatureNumerator = 4;
@@ -201,6 +229,10 @@ namespace MIDILightDrawer
 		double oldZoom = zoomLevel;
 		zoomLevel = newZoom;
 
+		if (D2DRenderer != nullptr) {
+			D2DRenderer->SetZoomLevel(zoomLevel);
+		}
+
 		// Recalculate scroll position to maintain center
 		int newCenterPixel = TicksToPixels(centerTick);
 		scrollPosition->X = -(newCenterPixel - (visibleWidth / 2));
@@ -225,30 +257,26 @@ namespace MIDILightDrawer
 		// Ensure height is within acceptable bounds
 		height = Math::Max(minHeight, height);
 
-		// Update height in dictionary if track exists
-		if (tracks->Contains(track)) {
-			trackHeights[track] = height;
+		track->Height = height;
 
-			// Recalculate total height
-			int totalHeight = HEADER_HEIGHT;
-			for each (Track ^ t in tracks) {
-				totalHeight += GetTrackHeight(t);
-			}
-
-			// Update scrollbars and bounds
-			UpdateVerticalScrollBarRange();
-			UpdateScrollBounds();
-
-			// Ensure current scroll position is still valid
-			int viewportHeight = Height - HEADER_HEIGHT - hScrollBar->Height;
-			if (-scrollPosition->Y + viewportHeight > totalHeight)
-			{
-				scrollPosition->Y = Math::Min(0, -(totalHeight - viewportHeight));
-				vScrollBar->Value = -scrollPosition->Y;
-			}
-
-			Invalidate();
+		int totalHeight = HEADER_HEIGHT;
+		for each (Track ^ t in tracks) {
+			totalHeight += t->Height;
 		}
+
+		// Update scrollbars and bounds
+		UpdateVerticalScrollBarRange();
+		UpdateScrollBounds();
+
+		// Ensure current scroll position is still valid
+		int viewportHeight = Height - HEADER_HEIGHT - hScrollBar->Height;
+		if (-scrollPosition->Y + viewportHeight > totalHeight)
+		{
+			scrollPosition->Y = Math::Min(0, -(totalHeight - viewportHeight));
+			vScrollBar->Value = -scrollPosition->Y;
+		}
+
+		Invalidate();
 	}
 
 	void Widget_Timeline::SetAllTracksHeight(int height)
@@ -590,35 +618,26 @@ namespace MIDILightDrawer
 
 	int Widget_Timeline::TicksToPixels(int ticks)
 	{
-		// Handle edge cases
-		if (ticks == 0) {
+		if (this->D2DRenderer == nullptr) {
 			return 0;
 		}
 
-		// Use double for intermediate calculations to maintain precision
-		// Split calculation to avoid overflow
-		double baseScale = 16.0 / TICKS_PER_QUARTER;
-		double scaledTicks = (double)ticks * baseScale;
-		double result = scaledTicks * zoomLevel;
-
+		float Pixels = this->D2DRenderer->TicksToPixels(ticks);
+		
 		// Protect against overflow
-		if (result > Int32::MaxValue) return Int32::MaxValue;
-		if (result < Int32::MinValue) return Int32::MinValue;
+		if (Pixels > Int32::MaxValue) return Int32::MaxValue;
+		if (Pixels < Int32::MinValue) return Int32::MinValue;
 
-		return (int)Math::Round(result);
+		return (int)Math::Round(Pixels);
 	}
 
-	int Widget_Timeline::PixelsToTicks(int pixels) {
-		// Handle edge cases
-		if (pixels == 0) return 0;
+	int Widget_Timeline::PixelsToTicks(int pixels)
+	{
+		if (this->D2DRenderer == nullptr) {
+			return 0;
+		}
 
-		// Use double for intermediate calculations to maintain precision
-		double baseScale = TICKS_PER_QUARTER / 16.0;
-		double scaledPixels = (double)pixels * baseScale;
-		double result = scaledPixels / zoomLevel;
-
-		// Round to nearest integer
-		return (int)Math::Round(result);
+		return (int)Math::Round(this->D2DRenderer->PixelsToTicks(pixels));
 	}
 
 	Track^ Widget_Timeline::GetTrackAtPoint(Point p)
@@ -628,7 +647,7 @@ namespace MIDILightDrawer
 		int y = HEADER_HEIGHT + ScrollPosition->Y;
 		for each (Track ^ track in tracks)
 		{
-			int height = GetTrackHeight(track);
+			int height = track->Height;
 
 			if (p.Y >= y && p.Y < y + height)
 			{
@@ -642,7 +661,7 @@ namespace MIDILightDrawer
 	Rectangle Widget_Timeline::GetTrackBounds(Track^ track)
 	{
 		int top = GetTrackTop(track);
-		int height = GetTrackHeight(track);
+		int height = track->Height;
 
 		// Create full width bounds at the scrolled position
 		return Rectangle(0, top, Width, height);
@@ -878,36 +897,64 @@ namespace MIDILightDrawer
 	{
 		performanceMetrics->StartFrame();
 
-		if (graphicsBuffer != nullptr)
+		if (USE_DIRECT_X)
 		{
-			// Clear the background first
-			graphicsBuffer->Graphics->Clear(currentTheme.Background);
+			// Direct2D rendering path
+			if (D2DRenderer->BeginDraw())
+			{
+				// Clear the background
+				if(this->Measures->Count == 0) {
+					D2DRenderer->DrawWidgetBackground();
+				}
+				
+				D2DRenderer->DrawTrackBackground();
+				D2DRenderer->DrawMeasureNumbers();
+				D2DRenderer->DrawTrackContent(resizeHoverTrack);
 
-			// Draw components in correct order
-			DrawTrackBackground(graphicsBuffer->Graphics);	// Draw track backgrounds first
-			DrawMeasureNumbers(graphicsBuffer->Graphics);
-			DrawTrackContent(graphicsBuffer->Graphics);	// Draw track content and headers
-			DrawToolPreview(graphicsBuffer->Graphics);	// Draw tool preview last
+				// Add other Direct2D drawing calls here as they get migrated
+				// DrawToolPreview(nullptr);
 
-			// Render the buffer
-			graphicsBuffer->Render(e->Graphics);
+				D2DRenderer->EndDraw();
+			}
 		}
 		else
 		{
-			e->Graphics->Clear(currentTheme.Background);
-			DrawTrackBackground(e->Graphics);
-			DrawMeasureNumbers(e->Graphics);
-			DrawTrackContent(e->Graphics);
-			DrawToolPreview(e->Graphics);
+			// Original GDI+ rendering path
+			if (graphicsBuffer != nullptr)
+			{
+				// Clear the background first
+				graphicsBuffer->Graphics->Clear(currentTheme.Background);
+
+				// Draw components in correct order
+				DrawTrackBackground(graphicsBuffer->Graphics);
+				DrawMeasureNumbers(graphicsBuffer->Graphics);
+				DrawTrackContent(graphicsBuffer->Graphics);
+				DrawToolPreview(graphicsBuffer->Graphics);
+
+				// Render the buffer
+				graphicsBuffer->Render(e->Graphics);
+			}
+			else
+			{
+				e->Graphics->Clear(currentTheme.Background);
+				DrawTrackBackground(e->Graphics);
+				DrawMeasureNumbers(e->Graphics);
+				DrawTrackContent(e->Graphics);
+				DrawToolPreview(e->Graphics);
+			}
 		}
 
 		performanceMetrics->EndFrame();
-		//LogPerformanceMetrics();
 	}
 
 	void Widget_Timeline::OnResize(EventArgs^ e)
 	{
 		UserControl::OnResize(e);
+
+		if (USE_DIRECT_X && D2DRenderer != nullptr) {
+			D2DRenderer->Resize(Width, Height);
+		}
+
 		UpdateBuffer();
 		UpdateScrollBarRange();
 		UpdateVerticalScrollBarRange();
@@ -1099,6 +1146,16 @@ namespace MIDILightDrawer
 	void Widget_Timeline::OnHandleCreated(EventArgs^ e)
 	{
 		UserControl::OnHandleCreated(e);
+
+		if (USE_DIRECT_X && D2DRenderer != nullptr)
+		{
+			System::Diagnostics::Debug::WriteLine("OnHandleCreated: Initializing D2D");
+			if (D2DRenderer->Initialize(this))
+			{
+				D2DRenderer->Resize(Width, Height);
+			}
+		}
+
 		UpdateBuffer();
 	}
 
@@ -1168,6 +1225,10 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::UpdateBuffer()
 	{
+		if (USE_DIRECT_X) {
+			return;
+		}
+		
 		// Check if we already have a context, if not create one
 		if (bufferContext == nullptr) {
 			bufferContext = BufferedGraphicsManager::Current;
@@ -1369,7 +1430,7 @@ namespace MIDILightDrawer
 		// Set up graphics for better quality
 		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 		g->TextRenderingHint = System::Drawing::Text::TextRenderingHint::ClearTypeGridFit;
-		
+
 		SolidBrush^ textBrush = gcnew SolidBrush(currentTheme.Text);
 
 		// Create font for quarter note numbers (smaller than measure numbers)
@@ -1380,12 +1441,12 @@ namespace MIDILightDrawer
 
 		// Constants for vertical positioning
 		const int markerTextY = 2;												// Marker text at the top
-		const int timeSignatureY = markerTextY		+ markerFont->Height  + 2;	// Time signature below marker
-		const int measureNumberY = timeSignatureY	+ measureFont->Height + 4;	// Measure number at the bottom
+		const int timeSignatureY = markerTextY + markerFont->Height + 2;	// Time signature below marker
+		const int measureNumberY = timeSignatureY + measureFont->Height + 4;	// Measure number at the bottom
 
 		// Calculate visible range in ticks
-		int startTick	= PixelsToTicks(-scrollPosition->X);
-		int endTick		= PixelsToTicks(-scrollPosition->X + headerRect.Width - TRACK_HEADER_WIDTH);
+		int startTick = PixelsToTicks(-scrollPosition->X);
+		int endTick = PixelsToTicks(-scrollPosition->X + headerRect.Width - TRACK_HEADER_WIDTH);
 
 		// Draw measure numbers and time signatures
 		int accumulated = 0;
@@ -2219,7 +2280,7 @@ namespace MIDILightDrawer
 		for each (Track ^ track in tracks)
 		{
 			int trackTop	= GetTrackTop(track) + scrollPosition->Y;
-			int trackHeight = GetTrackHeight(track);
+			int trackHeight = track->Height;
 			int trackBottom = trackTop + trackHeight;
 
 			if (trackBottom < HEADER_HEIGHT || trackTop > Height) continue;
@@ -2250,14 +2311,10 @@ namespace MIDILightDrawer
 	{
 		if (tracks->Count == 0 || measures->Count == 0) return;
 
-		// Set up the graphics context
 		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 		g->TextRenderingHint = System::Drawing::Text::TextRenderingHint::ClearTypeGridFit;
 
-		// Calculate the total available area for tracks
 		Rectangle tracksArea(0, HEADER_HEIGHT, Width, Height - HEADER_HEIGHT);
-
-		// Draw background for tracks area
 		g->FillRectangle(gcnew SolidBrush(currentTheme.TrackBackground), tracksArea);
 	}
 
@@ -2284,12 +2341,12 @@ namespace MIDILightDrawer
 			}
 
 			// Draw vertical divider between header and content
-			int headerBottom = y + GetTrackHeight(track);
+			int headerBottom = y + track->Height;
 			if (headerBottom >= scrollPosition->Y && y <= scrollPosition->Y + this->Height) {
 				g->DrawLine(dividerPen, TRACK_HEADER_WIDTH, y, TRACK_HEADER_WIDTH, headerBottom);
 			}
 
-			y += GetTrackHeight(track);
+			y += track->Height;
 		}
 
 		delete dividerPen;
@@ -3257,42 +3314,20 @@ namespace MIDILightDrawer
 
 	float Widget_Timeline::GetSubdivisionLevel()
 	{
-		// Calculate how many subdivisions we can fit based on zoom level
-		int pixelsPerBeat = TicksToPixels(GetTicksPerBeat());
-		float subdivLevel = pixelsPerBeat / (float)MIN_PIXELS_BETWEEN_GRIDLINES;
-
-		// Extended subdivision levels for higher zoom
-		if (subdivLevel >= 64) return 64;
-		if (subdivLevel >= 32) return 32;
-		if (subdivLevel >= 16) return 16;
-		if (subdivLevel >= 8) return 8;
-		if (subdivLevel >= 4) return 4;
-		if (subdivLevel >= 2) return 2;
-		return 1;
+		if (D2DRenderer == nullptr) {
+			return 1;
+		}
+		
+		return D2DRenderer->GetSubdivisionLevel(TicksToPixels(GetTicksPerBeat()));
 	}
 
 	int Widget_Timeline::GetTrackTop(Track^ track)
 	{
-		int top = HEADER_HEIGHT;
-		for each (Track ^ t in tracks) {
-			if (t == track) break;
-			top += GetTrackHeight(t);
+		if (this->D2DRenderer == nullptr) {
+			return 0;
 		}
-
-		return top;
-	}
-
-	int Widget_Timeline::GetTrackHeight(Track^ track)
-	{
-		// Get track height from parent's dictionary or use default
-		int height;
-
-		if (trackHeights->TryGetValue(track, height))
-		{
-			return height;
-		}
-
-		return Widget_Timeline::DEFAULT_TRACK_HEIGHT;
+		
+		return this->D2DRenderer->GetTrackTop(track);
 	}
 
 	int Widget_Timeline::GetTotalTracksHeight()
@@ -3300,7 +3335,7 @@ namespace MIDILightDrawer
 		int totalHeight = 0;
 		for each (Track ^ track in tracks)
 		{
-			totalHeight += GetTrackHeight(track);
+			totalHeight += track->Height;
 		}
 		return totalHeight;
 	}
@@ -3335,7 +3370,7 @@ namespace MIDILightDrawer
 	{
 		trackBeingResized	= track;
 		resizeStartY		= mouseY;
-		initialTrackHeight	= GetTrackHeight(track);
+		initialTrackHeight	= track->Height;
 
 		// Change cursor to resize cursor
 		this->Cursor = Cursors::SizeNS;
@@ -3403,7 +3438,7 @@ namespace MIDILightDrawer
 		// Check each track except the last one (no divider after last track)
 		for (int i = 0; i < tracks->Count; i++) {
 			Track^ track = tracks[i];
-			int height = GetTrackHeight(track);
+			int height = track->Height;
 			int dividerY = y + height;
 
 			// Check if mouse is within the divider area (using adjusted Y position)
@@ -3497,6 +3532,10 @@ namespace MIDILightDrawer
 
 		// Store old zoom level and apply new zoom
 		zoomLevel = newZoom;
+
+		if (D2DRenderer != nullptr) {
+			D2DRenderer->SetZoomLevel(zoomLevel);
+		}
 
 		// Maintain position of reference point
 		int newPixelPosition = TicksToPixels(tickAtPosition);

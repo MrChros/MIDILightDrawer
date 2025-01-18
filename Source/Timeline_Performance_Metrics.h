@@ -1,8 +1,6 @@
 #pragma once
 
-using namespace System;
 using namespace System::ComponentModel;
-using namespace System::Windows::Forms;
 using namespace System::Drawing;
 using namespace System::Collections::Generic;
 
@@ -22,6 +20,8 @@ namespace MIDILightDrawer
 		int notesDrawn;
 		int barsDrawn;
 
+		float zoomLevel;
+
 		// Resource usage
 		int gdiObjectsCreated;
 		int gdiObjectsReused;
@@ -34,6 +34,6 @@ namespace MIDILightDrawer
 		void EndFrame();
 		double GetAverageFrameTime();
 		void Reset();
-		String^ GetReport();
+		System::String^ GetReport();
 	};
 }

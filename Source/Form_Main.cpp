@@ -947,6 +947,8 @@ namespace MIDILightDrawer
 	void Form_Main::Button_1_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		Console::WriteLine("Button 1 Clicked");
+
+		this->_Timeline->LogPerformanceMetrics();
 	}
 
 	void Form_Main::Button_2_Click(System::Object^ sender, System::EventArgs^ e)

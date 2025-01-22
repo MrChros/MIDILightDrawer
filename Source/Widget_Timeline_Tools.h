@@ -14,6 +14,7 @@ namespace MIDILightDrawer
 	ref class Track;
 	ref class TrackMeasure;
 	ref class BarEvent;
+	enum class DrawToolMode;
 
 	// Base tool class
 	public ref class TimelineTool abstract : public ITimelineToolAccess {
@@ -61,6 +62,10 @@ namespace MIDILightDrawer
 			Track^ get() { return nullptr; }
 		}
 
+		virtual property bool IsMultiTrackSelection {
+			bool get() { return false; }
+		}
+
 		virtual property System::Drawing::Point CurrentMousePosition {
 			Point get() { return Point(); }
 		}
@@ -70,6 +75,66 @@ namespace MIDILightDrawer
 		}
 		
 		virtual property List<BarEvent^>^ PastePreviewBars {
+			List<BarEvent^>^ get() { return nullptr; }
+		}
+
+		virtual property Color DrawColor {
+			Color get() { return Color(); }
+		}
+
+		virtual property int DrawTickLength {
+			int get() { return 0; }
+		}
+
+		virtual property BarEvent^ PreviewBar {
+			BarEvent^ get() { return nullptr; }
+		}
+
+		virtual property Track^ TargetTrack {
+			Track^ get() { return nullptr; }
+		}
+
+		virtual property Track^ SourceTrack{
+			Track ^ get() { return nullptr; }
+		}
+
+		virtual property DrawToolMode CurrentMode {
+			DrawToolMode get() { return DrawToolMode::Draw; }
+		}
+
+		virtual property bool IsMoving {
+			bool get() { return false; }
+		}
+
+		virtual property bool IsResizing {
+			bool get() { return false; }
+		}
+
+		virtual property BarEvent^ HoverBar {
+			BarEvent^ get() { return nullptr; }
+		}
+
+		virtual property Rectangle ErasePreviewRect {
+			Rectangle get() { return Rectangle(); }
+		}
+
+		virtual property bool IsPreviewVisible {
+				bool get() { return false; }
+		}
+
+		virtual property int PreviewLength {
+			int get() { return 0; }
+		}
+
+		virtual property Rectangle PreviewRect {
+			Rectangle get() { return Rectangle(); }
+		}
+
+		virtual property Color CurrentColor {
+			Color get() { return Color(); }
+		}
+
+		virtual property List<BarEvent^>^ PreviewBars {
 			List<BarEvent^>^ get() { return nullptr; }
 		}
 	};
@@ -171,7 +236,7 @@ namespace MIDILightDrawer
 		}
 
 		property bool IsMultiTrackSelection {
-			bool get() { return Is_Multi_Track_Selection(); }
+			bool get() override { return Is_Multi_Track_Selection(); }
 		}
 
 		property Point CurrentMousePosition {
@@ -191,15 +256,8 @@ namespace MIDILightDrawer
 	/////////////////////////////
 	// DrawTool Implementation //
 	/////////////////////////////
-	public ref class DrawTool : public TimelineTool {
-	public:
-		enum class DrawMode {
-			Draw,
-			Erase,
-			Move,
-			Resize
-		};
-
+	public ref class DrawTool : public TimelineTool
+	{
 	private:
 		Track^		targetTrack;
 		Track^		sourceTrack;
@@ -219,7 +277,7 @@ namespace MIDILightDrawer
 
 		static const int RESIZE_HANDLE_WIDTH = 5;
 
-		DrawMode currentMode;
+		DrawToolMode currentMode;
 
 	public:
 		DrawTool(Widget_Timeline^ timeline);
@@ -249,41 +307,41 @@ namespace MIDILightDrawer
 		int  GetBeatLength(Track^ track, int currentTick);
 
 		property Color DrawColor {
-			Color get() { return _Current_Color; }
+			Color get() override { return _Current_Color; }
 			void set(Color value);
 		}
 
 		property int DrawTickLength {
-			int get() { return _Draw_Tick_Length; }
+			int get() override { return _Draw_Tick_Length; }
 			void set(int value);
 		}
 
 		property BarEvent^ PreviewBar {
-			BarEvent^ get() { return previewBar; }
+			BarEvent^ get() override { return previewBar; }
 		}
 
 		property Track^ TargetTrack {
-			Track^ get() { return targetTrack; }
+			Track^ get() override { return targetTrack; }
 		}
 
 		property Track^ SourceTrack{
-			Track ^ get() { return sourceTrack; }
+			Track ^ get() override { return sourceTrack; }
 		}
 
-		property DrawMode CurrentMode {
-			DrawMode get() { return currentMode; }
+		property DrawToolMode CurrentMode {
+			DrawToolMode get() override { return currentMode; }
 		}
 
 		property bool IsMoving {
-			bool get() { return isMoving; }
+			bool get() override { return isMoving; }
 		}
 
 		property bool IsResizing {
-			bool get() { return isResizing; }
+			bool get() override { return isResizing; }
 		}
 
 		property BarEvent^ HoverBar {
-			BarEvent^ get() { return hoverBar; }
+			BarEvent^ get() override { return hoverBar; }
 		}
 
 		property Point CurrentMousePosition {
@@ -354,7 +412,7 @@ namespace MIDILightDrawer
 		void Activate() override;
 
 		property Rectangle ErasePreviewRect {
-		Rectangle get() { return erasePreviewRect; }
+			Rectangle get() override { return erasePreviewRect; }
 		}
 
 		property Rectangle SelectionRect {
@@ -366,7 +424,7 @@ namespace MIDILightDrawer
 		}
 
 		property BarEvent^ HoverBar {
-			BarEvent ^ get() { return hoverBar; }
+			BarEvent ^ get() override { return hoverBar; }
 		}
 	};
 
@@ -413,15 +471,15 @@ namespace MIDILightDrawer
 		void StoreOriginalLengths();
 
 		property BarEvent^ PreviewBar {
-			BarEvent ^ get() { return targetBar; }
+			BarEvent^ get() override { return targetBar; }
 		}
 
 		property bool IsPreviewVisible {
-			bool get() { return isShowingPreview; }
+			bool get() override { return isShowingPreview; }
 		}
 
 		property int PreviewLength {
-			int get() { return previewLength; }
+			int get() override { return previewLength; }
 		}
 
 		property Rectangle SelectionRect {
@@ -477,7 +535,7 @@ namespace MIDILightDrawer
 		void ApplyColorToSelection();
 
 		property Rectangle PreviewRect {
-			Rectangle get() { return previewRect; }
+			Rectangle get() override { return previewRect; }
 		}
 
 		property Rectangle SelectionRect {
@@ -489,11 +547,11 @@ namespace MIDILightDrawer
 		}
 
 		property BarEvent^ HoverBar {
-			BarEvent^ get() { return hoverBar; }
+			BarEvent^ get() override { return hoverBar; }
 		}
 
 		property Color CurrentColor {
-			Color get() { return currentColor; }
+			Color get() override { return currentColor; }
 			void set(Color value);
 		}
 	};
@@ -532,19 +590,19 @@ namespace MIDILightDrawer
 		property FadeType Type;
 
 		property List<BarEvent^>^ PreviewBars {
-			List<BarEvent^>^ get() { return previewBars; }
+			List<BarEvent^>^ get() override { return previewBars; }
 		}
 
 		property Track^ TargetTrack {
-			Track^ get() { return targetTrack; }
+			Track^ get() override { return targetTrack; }
 		}
 
 		property BarEvent^ PreviewBar {
-			BarEvent^ get() { return previewBar; }
+			BarEvent^ get() override { return previewBar; }
 		}
 
 		property Point CurrentMousePosition {
-			Point get() override  { return lastMousePos; }
+			Point get() override { return lastMousePos; }
 		}
 
 	private:
@@ -585,15 +643,15 @@ namespace MIDILightDrawer
 		property Color StrobeColor;
 
 		property List<BarEvent^>^ PreviewBars {
-			List<BarEvent^>^ get() { return previewBars; }
+			List<BarEvent^>^ get() override { return previewBars; }
 		}
 
 		property Track^ TargetTrack {
-			Track^ get() { return targetTrack; }
+			Track^ get() override { return targetTrack; }
 		}
 
 		property BarEvent^ PreviewBar{
-			BarEvent ^ get() { return previewBar; }
+			BarEvent ^ get() override { return previewBar; }
 		}
 
 		property Point CurrentMousePosition {

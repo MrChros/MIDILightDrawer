@@ -1,4 +1,5 @@
-#include "Timeline_Direct2DRenderer_Native.h"
+﻿#include "Timeline_Direct2DRenderer_Native.h"
+
 #include <algorithm>
 
 Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
@@ -11,6 +12,9 @@ Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
     m_pMeasureNumberFormat(nullptr),
     m_pMarkerTextFormat(nullptr),
     m_pTimeSignatureFormat(nullptr),
+    m_pQuarterNoteFormat(nullptr),
+    m_pTrackHeaderFormat(nullptr),
+    m_pTablatureFormat(nullptr),
     m_resourcesValid(false)
 {
 }
@@ -85,6 +89,24 @@ void Timeline_Direct2DRenderer_Native::Cleanup()
         m_pTimeSignatureFormat = nullptr;
     }
 
+    if (m_pQuarterNoteFormat)
+    {
+        m_pQuarterNoteFormat->Release();
+        m_pQuarterNoteFormat = nullptr;
+    }
+
+    if (m_pTrackHeaderFormat)
+    {
+        m_pTrackHeaderFormat->Release();
+        m_pTrackHeaderFormat = nullptr;
+    }
+
+    if (m_pTablatureFormat)
+    {
+        m_pTablatureFormat->Release();
+        m_pTablatureFormat = nullptr;
+    }
+
     // Release DirectWrite factory
     if (m_pDWriteFactory)
     {
@@ -155,8 +177,13 @@ bool Timeline_Direct2DRenderer_Native::CreateDeviceResources()
         &m_pRenderTarget
     );
 
-    if (FAILED(hr))
+    if (FAILED(hr)) {
         return false;
+    }
+
+    // Enable more conservative rendering options
+    //m_pRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+    //m_pRenderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
 
     m_resourcesValid = true;
     return true;
@@ -180,6 +207,41 @@ void Timeline_Direct2DRenderer_Native::ReleaseDeviceResources()
     }
 
     m_resourcesValid = false;
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::UpdateTablatureFormat(float fontsize)
+{
+    if (!m_pDWriteFactory)
+        return nullptr;
+
+    // Release previous dynamic text format if it exists
+    if (m_pTablatureFormat)
+    {
+        m_pTablatureFormat->Release();
+        m_pTablatureFormat = nullptr;
+    }
+
+    // Create new text format with specified size
+    HRESULT hr = m_pDWriteFactory->CreateTextFormat(
+        L"Arial",               // Font family name
+        NULL,                   // Font collection (NULL sets it to use system font collection)
+        DWRITE_FONT_WEIGHT_NORMAL,
+        DWRITE_FONT_STYLE_NORMAL,
+        DWRITE_FONT_STRETCH_NORMAL,
+        fontsize,              // Font size
+        L"en-us",              // Locale
+        &m_pTablatureFormat
+    );
+
+    if (FAILED(hr)) {
+        return nullptr;
+    }
+
+    // Set text alignment
+    m_pTablatureFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+    m_pTablatureFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+    return m_pTablatureFormat;
 }
 
 bool Timeline_Direct2DRenderer_Native::ResizeRenderTarget(UINT width, UINT height)
@@ -366,6 +428,18 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
     m_pTrackHeaderFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
     m_pTrackHeaderFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 
+
+
+    // Create quarter note format
+    hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14.0f, L"en-us", &m_pTablatureFormat);
+
+    if (FAILED(hr))
+        return false;
+
+    // Set text alignment
+    m_pTablatureFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+    m_pTablatureFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
     return true;
 }
 
@@ -399,6 +473,24 @@ bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, fl
     D2D1_COLOR_F color = D2D1::ColorF(r, g, b, a);
 
     return DrawLine(x1, y1, x2, y2, color, strokeWidth);
+}
+
+bool Timeline_Direct2DRenderer_Native::DrawLines(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color, float strokeWidth)
+{
+    if (!m_pRenderTarget || !points || pointCount < 2) {
+        return false;
+    }
+
+    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
+    if (!brush) {
+        return false;
+    }
+
+    for (UINT32 i = 0; i < pointCount - 1; i++) {
+        m_pRenderTarget->DrawLine(points[i], points[i + 1], brush, strokeWidth);
+    }
+
+    return true;
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawLineDashed(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth, const float* dashes, UINT32 dashCount)
@@ -564,6 +656,173 @@ bool Timeline_Direct2DRenderer_Native::FillEllipse(const D2D1_ELLIPSE& ellipse, 
     return true;
 }
 
+bool Timeline_Direct2DRenderer_Native::DrawPolygon(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color, float strokeWidth)
+{
+    if (!m_pRenderTarget || !points || pointCount < 3) {
+        return false;
+    }
+
+    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
+    if (!brush) {
+        return false;
+    }
+
+    // Draw lines connecting each point, including closing the polygon
+    for (UINT32 i = 0; i < pointCount; i++)
+    {
+        const D2D1_POINT_2F& p1 = points[i];
+        const D2D1_POINT_2F& p2 = points[(i + 1) % pointCount]; // Wrap around to first point
+        m_pRenderTarget->DrawLine(p1, p2, brush, strokeWidth);
+    }
+
+    return true;
+}
+
+bool Timeline_Direct2DRenderer_Native::FillDiamond(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color)
+{
+    if (!m_pRenderTarget || !points || pointCount != 4) {  // For diamonds only
+        return false;
+    }
+
+    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
+    if (!brush) {
+        return false;
+    }
+
+    // For a diamond, points typically are:
+    // points[0] = top
+    // points[1] = right
+    // points[2] = bottom
+    // points[3] = left
+
+    // Calculate the center point
+    D2D1_POINT_2F center = {
+        (points[0].x + points[2].x) / 2,  // Center X
+        (points[0].y + points[2].y) / 2   // Center Y
+    };
+
+    // Calculate size (assuming uniform diamond)
+    float width = points[1].x - points[3].x;
+    float height = points[2].y - points[0].y;
+
+    // Save current transform
+    D2D1_MATRIX_3X2_F oldTransform;
+    m_pRenderTarget->GetTransform(&oldTransform);
+
+    // Create transform matrix for 45-degree rotation around center
+    D2D1_MATRIX_3X2_F rotationMatrix = D2D1::Matrix3x2F::Rotation(45.0f, center);
+    m_pRenderTarget->SetTransform(rotationMatrix);
+
+    // Draw rotated rectangle
+    D2D1_RECT_F rect = D2D1::RectF(
+        center.x - width / 2.8284f,  // Adjust for 45-degree rotation (1/√2 ≈ 1/1.4142)
+        center.y - height / 2.8284f,
+        center.x + width / 2.8284f,
+        center.y + height / 2.8284f
+    );
+
+    m_pRenderTarget->FillRectangle(rect, brush);
+
+    // Restore original transform
+    m_pRenderTarget->SetTransform(oldTransform);
+
+    return true;
+}
+
+bool Timeline_Direct2DRenderer_Native::DrawTieLine(const D2D1_POINT_2F& point1, const D2D1_POINT_2F& point2, const D2D1_POINT_2F& point3, const D2D1_POINT_2F& point4, const D2D1_COLOR_F& color, float strokeWidth)
+{
+    if (!m_pRenderTarget || !m_pD2DFactory) {
+        return false;
+    }
+
+    // Get brush for the color
+    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
+    if (!brush) {
+        return false;
+    }
+
+    // Use a fixed number of segments for reliability
+    const int numSegments = 10;
+    D2D1_POINT_2F prevPoint = point1;
+
+    for (int i = 1; i <= numSegments; i++)
+    {
+        // Calculate t for this segment (0 to 1)
+        float t = i / (float)numSegments;
+        float u = 1.0f - t;
+
+        // Calculate powers once
+        float u2 = u * u;
+        float u3 = u2 * u;
+        float t2 = t * t;
+        float t3 = t2 * t;
+
+        // Cubic Bezier formula
+        D2D1_POINT_2F currentPoint;
+        currentPoint.x = u3 * point1.x + 3.0f * u2 * t * point2.x + 3.0f * u * t2 * point3.x + t3 * point4.x;
+        currentPoint.y = u3 * point1.y + 3.0f * u2 * t * point2.y + 3.0f * u * t2 * point3.y + t3 * point4.y;
+
+        m_pRenderTarget->DrawLine(prevPoint, currentPoint, brush, strokeWidth);
+        prevPoint = currentPoint;
+    }
+
+    return true;
+
+    // The main bezier draw geometry function does not work for some reason. I have no clue why. May investiagte at a later point.
+    /*
+    // Create path geometry for the bezier curve
+    ID2D1PathGeometry* pathGeometry = nullptr;
+    HRESULT hr = m_pD2DFactory->CreatePathGeometry(&pathGeometry);
+
+    if (FAILED(hr) || !pathGeometry) {
+        return false;
+    }
+
+    // Create geometry sink
+    ID2D1GeometrySink* sink = nullptr;
+    hr = pathGeometry->Open(&sink);
+
+    if (FAILED(hr) || !sink) {
+        pathGeometry->Release();
+        return false;
+    }
+
+    // Basic geometry construction - absolute minimal steps
+    sink->BeginFigure(point1, D2D1_FIGURE_BEGIN_FILLED);
+
+    // Try just a single bezier segment
+    sink->AddBezier(
+        D2D1::BezierSegment(
+            point2,
+            point3,
+            point4
+        )
+    );
+
+    sink->EndFigure(D2D1_FIGURE_END_OPEN);
+
+    // Must close the sink before drawing
+    hr = sink->Close();
+    sink->Release();
+
+    // Try to stream the geometry for debug
+    if (SUCCEEDED(hr)) {
+        // Draw with a much thicker stroke for testing
+        const float testStrokeWidth = 5.0f;  // Make it very visible
+
+        // Try both filled and stroked
+        //m_pRenderTarget->FillGeometry(pathGeometry, brush);
+        m_pRenderTarget->DrawGeometry(pathGeometry, brush, testStrokeWidth);
+        m_pRenderTarget->Flush();
+    }
+
+    pathGeometry->Release();
+    pathGeometry = nullptr;
+    
+    return SUCCEEDED(hr);
+    */
+}
+
 bool Timeline_Direct2DRenderer_Native::DrawPath(ID2D1Geometry* geometry, const D2D1_COLOR_F& color, float strokeWidth)
 {
     if (!m_pRenderTarget) {
@@ -608,6 +867,41 @@ bool Timeline_Direct2DRenderer_Native::DrawText(const std::wstring& text, const 
     m_pRenderTarget->DrawText(text.c_str(), static_cast<UINT32>(text.length()), textFormat, layoutRect, brush, options);
 
     return true;
+}
+
+float Timeline_Direct2DRenderer_Native::MeasureTextWidth(const std::wstring& text, IDWriteTextFormat* textFormat)
+{
+    if (!m_pDWriteFactory || !textFormat || text.empty()) {
+        return 0.0f;
+    }
+
+    // Create a text layout
+    IDWriteTextLayout* pTextLayout = nullptr;
+    HRESULT hr = m_pDWriteFactory->CreateTextLayout(
+        text.c_str(),
+        static_cast<UINT32>(text.length()),
+        textFormat,
+        10000.0f, // Set a large max width to get full text width
+        100.0f,   // Height doesn't matter for width measurement
+        &pTextLayout
+    );
+
+    if (FAILED(hr) || !pTextLayout) {
+        return 0.0f;
+    }
+
+    // Get the metrics
+    DWRITE_TEXT_METRICS metrics = {};
+    hr = pTextLayout->GetMetrics(&metrics);
+
+    // Release the text layout
+    pTextLayout->Release();
+
+    if (FAILED(hr)) {
+        return 0.0f;
+    }
+
+    return metrics.widthIncludingTrailingWhitespace;
 }
 
 bool Timeline_Direct2DRenderer_Native::PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer)

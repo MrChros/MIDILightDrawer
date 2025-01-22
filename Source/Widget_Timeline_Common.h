@@ -14,6 +14,13 @@ namespace MIDILightDrawer
 		Strobe		// Create Strobe Sequences
 	};
 
+	public enum class DrawToolMode {
+		Draw,
+		Erase,
+		Move,
+		Resize
+	};
+
 	public enum class TimelineCursor {
 		Default,    // Standard arrow cursor
 		Cross,      // Crosshair cursor for drawing/selection

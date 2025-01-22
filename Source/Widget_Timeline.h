@@ -96,36 +96,31 @@ namespace MIDILightDrawer
 		}
 
 		// Other interface metohds for the tools		
-		void StartBarDrag(BarEvent^ bar, Track^ track, Point startPoint);
-		void UpdateBarDrag(Point newPoint);
-		void EndBarDrag();
 		int  SnapTickToGrid(int tick);
-		int SnapTickBasedOnType(int tick, Point mousePos);
+		int  SnapTickBasedOnType(int tick, Point mousePos);
 		void ScrollToMeasure(int measureNumber);
-		void GetVisibleMeasureRange(int% firstMeasure, int% lastMeasure);
 		int  GetMeasureStartTick(int measureNumber);
 		int  GetMeasureLength(int measureNumber);
-		bool IsMeasureVisible(int measureNumber);
 		void UpdateCursor(System::Windows::Forms::Cursor^ cursor);
 		bool IsBarSelected(BarEvent^ bar);
 
-		int  TicksToPixels(int ticks);
-		int  PixelsToTicks(int pixels);
+		int  TicksToPixels(int ticks);						// Transferred
+		int  PixelsToTicks(int pixels);						// Transferred
 		
-		Track^		GetTrackAtPoint(Point p);
-		Rectangle	GetTrackBounds(Track^ track);
-		Rectangle	GetTrackHeaderBounds(Track^ track);
-		Rectangle	GetTrackContentBounds(Track^ track);
-		Measure^	GetMeasureAtTick(int tick);
-		BarEvent^	GetBarAtPoint(Point p);
+		Track^		GetTrackAtPoint(Point p);				// Transferred
+		Rectangle	GetTrackBounds(Track^ track);			// Transferred
+		Rectangle	GetTrackHeaderBounds(Track^ track);		// Transferred
+		Rectangle	GetTrackContentBounds(Track^ track);	// Transferred
+		Measure^	GetMeasureAtTick(int tick);				// Transferred
+		BarEvent^	GetBarAtPoint(Point p);					// Transferred
 
 		
 		List<BarEvent^>^ GetSelectedBars();
 
-		String^ SaveBarEventsToFile(String^ filePath);
-		String^ LoadBarEventsFromFile(String^ filePath);
+		String^ SaveBarEventsToFile(String^ filePath);		// No Need
+		String^ LoadBarEventsFromFile(String^ filePath);	// No Need
 
-		void LogPerformanceMetrics();
+		void LogPerformanceMetrics();						// No Need
 
 	protected:
 		virtual void OnPaint(PaintEventArgs^ e) override;
@@ -188,10 +183,6 @@ namespace MIDILightDrawer
 		// Scroll Bars
 		System::Windows::Forms::HScrollBar^ hScrollBar;
 		System::Windows::Forms::VScrollBar^ vScrollBar;
-
-		// Musical state
-		int currentTimeSignatureNumerator;
-		int currentTimeSignatureDenominator;
 
 		// Font for measure numbers
 		System::Drawing::Font^ measureFont;
@@ -285,24 +276,17 @@ namespace MIDILightDrawer
 		void DrawDrumSymbol				(Graphics^ g, DrumNotationType symbolType, float x, float y, float size);
 		TabStringInfo DrawTablatureStrings(Graphics^ g, Rectangle bounds, float availableHeight, float logScale, int numStrings);
 
-		int		GetTicksPerMeasure	();
-		int		GetTicksPerBeat		();
 		float	GetSubdivisionLevel	();
-		int		GetTrackTop			(Track^ track);
-		int		GetTotalTracksHeight();
+		int		GetTrackTop			(Track^ track);	// Transferred
+		int		GetTotalTracksHeight();				// Transferred
 
-		// Bar Drawing Supporting Methods
-		void	CalculateBarBounds(BarEvent^ bar, Rectangle bounds, int% x, int% width, Rectangle% barBounds);
-		bool	IsBarVisible(BarEvent^ bar, int startTick, int endTick);
-		bool	IsBarSelected(BarEvent^ bar, TimelineToolType toolType);
-		
-				
 		void	BeginTrackResize(Track^ track, int mouseY);
 		void	UpdateTrackResize(int mouseY);
 		void	EndTrackResize();
 		bool	IsOverTrackDivider(Point mousePoint, Track^% track);
 		bool	IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint);
 		Rectangle GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex);
+		Rectangle CalculateBarBounds(BarEvent^ bar, Rectangle bounds);				// Transferred
 
 		// Helper methods for measure management
 		void	RecalculateMeasurePositions();

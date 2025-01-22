@@ -9,6 +9,12 @@ using namespace System::Collections::Generic;
 namespace MIDILightDrawer
 {
 	//////////////////////////////
+	// General Type Definitions //
+	//////////////////////////////
+	//typedef System::Drawing::Rectangle BarEventBounds;
+	
+	
+	//////////////////////////////
 	// Drum Track Visualization //
 	//////////////////////////////
 	public enum class DrumNotationType {
@@ -47,7 +53,7 @@ namespace MIDILightDrawer
 	//////////////////////
 	// Tablature String //
 	//////////////////////
-	value struct TabStringInfo
+	public value struct TabStringInfo
 	{
 		array<float>^ StringYPositions;
 		float TotalHeight;
@@ -204,7 +210,6 @@ namespace MIDILightDrawer
 
 	private:
 		int _Start_Tick;
-		int _End_Tick;
 		int _Duration_In_Ticks;
 		System::Drawing::Color _Color;
 
@@ -212,6 +217,10 @@ namespace MIDILightDrawer
 		property int StartTick {
 			int get() { return _Start_Tick; }
 			void set(int value) { _Start_Tick = value; }
+		}
+
+		property int EndTick {
+			int get() { return _Start_Tick + _Duration_In_Ticks; }
 		}
 
 		property int Duration {

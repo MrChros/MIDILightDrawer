@@ -12,13 +12,21 @@ namespace MIDILightDrawer
 {
     ref class Track;
     ref class Measure;
+    ref class Beat;
     ref class BarEvent;
-    enum class TimelineToolType;
+    
     ref class TimelineTool;
     ref class PointerTool;
     ref class DrawTool;
     ref class ColorTool;
     ref class DurationTool;
+    
+    enum class TimelineToolType;
+    enum class DrumNotationType;
+    enum class BarPreviewType;
+
+    value struct TabStringInfo;
+
 
     // Managed wrapper for TimelineD2DRenderer
     public ref class Timeline_Direct2DRenderer
@@ -29,6 +37,7 @@ namespace MIDILightDrawer
         static const int MIN_PIXELS_BETWEEN_GRIDLINES   = 20;
         static const int TRACK_HEADER_WIDTH				= 150;
         static const int TRACK_PADDING					= 4;
+        static const float FIXED_STRING_SPACING			= 12.0f;
 
         value struct CachedThemeColors {
             System::Drawing::Color Background;
@@ -59,36 +68,69 @@ namespace MIDILightDrawer
         bool BeginDraw();
         bool EndDraw();
 
+
         // Widget Timeline Drawing 
         bool DrawWidgetBackground();
         bool DrawTrackBackground();
         bool DrawMeasureNumbers();
         bool DrawTrackContent(Track^ hoverTrack);
+        bool DrawToolPreview();
 
-        // Widget Timeline Drawing Sub-Methods
+
+        // Sub-Methods for DrawMeasureNumbers
         bool DrawBeatNumbers(Measure^ measure, float x, float measureNumberY, float subdivLevel, int measureNumber, int ticksPerBeat);
 
+
+        // Sub-Methods for DrawTrackContent
         bool DrawGridLines(float totalHeight);
         bool DrawSubdivisionLines(float totalHeight, int startTick, int endTick);
         bool DrawBeatLines(float totalHeight, int startTick, int endTick);
         bool DrawMeasureLines(float totalHeight, int startTick, int endTick);
 
-        bool DrawTrackEvents(Track^ track, System::Drawing::Rectangle contentBounds, TimelineToolType currentToolType);
-        bool DrawTrackTablature(Track^ track, System::Drawing::Rectangle contentBounds, System::Drawing::Color stringColor);
+        // Sub-Methods for DrawTrackContent - DrawTrackEvents and DrawTrackTablature
+        bool DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType);
+        bool DrawTrackTablature(Track^ track, System::Drawing::Rectangle trackContentBounds);
+        bool DrawTrackTablatureDrum(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
+        bool DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
+        void DrawBeatDuration(Beat^ beat, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions);
+        void DrawTieLines(Track^ track, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, float scaledFontSize);
+        void DrawDrumSymbol(DrumNotationType symbolType, float x, float y, float size);
+        TabStringInfo DrawTablatureStrings(System::Drawing::Rectangle bounds, float availableHeight, float logScale, int numStrings);
+        
         bool DrawTrackHeaders();
-
         bool DrawTrackButtons(Track^ track, System::Drawing::RectangleF headerBounds);
         void DrawRoundedButtonBackground(System::Drawing::RectangleF bounds, bool isPressed, bool isHovered, System::Drawing::Color baseColor);
-
         bool DrawTrackDividers(Track^ hoverTrack);
+
+
+        // Sub-Methods for DrawToolPreview
+        bool DrawToolPreviewDrawTool();
+        bool DrawToolPreviewDrawToolDraw();
+        bool DrawToolPreviewDrawToolErase();
+        bool DrawToolPreviewDrawToolMove();
+        bool DrawToolPreviewDrawToolResize();
+        bool DrawToolPreviewEraseTool();
+        bool DrawToolPreviewDurationTool();
+        bool DrawToolPreviewColorTool();
+        bool DrawToolPreviewFadeTool();
+        bool DrawToolPreviewStrobeTool();
+
 
         // Smaller Supporting Drawing Methods
         bool DrawNormalBar(BarEvent^ bar, System::Drawing::Rectangle bounds);
+        bool DrawPreviewBar(BarEvent^ bar, Track^ track, System::Drawing::Point mousePos, BarPreviewType previewType);
+        bool DrawPreviewBarList(List<BarEvent^>^ bars, Track^ track);
+        bool DrawCreationMovementPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds);
+        bool DrawDurationPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds);
+
         bool DrawGhostBar(BarEvent^ bar, System::Drawing::Rectangle bounds);
         bool DrawSelectedBar(BarEvent^ bar, System::Drawing::Rectangle bounds);
         bool DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle bounds);
         bool DrawDropTargetIndicator(System::Drawing::Rectangle bounds);
+        void DrawMoveHandles(System::Drawing::Rectangle barBounds); // ToDo here...
         void DrawBarGlowEffect(System::Drawing::Rectangle barBounds, System::Drawing::Color glowColor, int glowLevels);
+        void DrawResizeHandle(System::Drawing::Rectangle barBounds, System::Drawing::Color handleColor, bool isTargeted);
+        void DrawSelectionRectangle(System::Drawing::Rectangle selectionRectangle);
 
         // Drawing Support Methods
         float TicksToPixels(int ticks);
@@ -96,21 +138,13 @@ namespace MIDILightDrawer
         float GetSubdivisionLevel(float pixelsPerBeat);
         int GetTrackTop(Track^ track);
         float GetTotalTrackHeight();
-
-
-        // Original Drawing Operations (keeping these for backward compatibility)
-        bool DrawLine(float x1, float y1, float x2, float y2, System::Drawing::Color color, float strokeWidth);
-        bool DrawRectangle(System::Drawing::RectangleF rect, System::Drawing::Color color, float strokeWidth);
-        bool FillRectangle(System::Drawing::RectangleF rect, System::Drawing::Color color);
-        bool DrawGridLine(float x1, float y1, float x2, float y2, System::Drawing::Color color, bool isDashed);
-        bool DrawMeasureLine(float x, float y1, float y2, System::Drawing::Color color);
-
-        // New Drawing Operations (more explicit parameter passing)
-        bool DrawLine(float x1, float y1, float x2, float y2, float r, float g, float b, float a, float strokeWidth);
-        bool DrawRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a, float strokeWidth);
-        bool FillRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a);
-        bool DrawGridLine(float x1, float y1, float x2, float y2, float r, float g, float b, float a, bool isDashed);
-        bool DrawMeasureLine(float x, float y1, float y2, float r, float g, float b, float a);
+        Track^ GetTrackAtPoint(System::Drawing::Point point);
+        Measure^ GetMeasureAtTick(int tick);
+        BarEvent^ GetBarAtPoint(System::Drawing::Point point);
+        System::Drawing::Rectangle GetTrackBounds(Track^ track);
+        System::Drawing::Rectangle GetTrackHeaderBounds(Track^ track);
+        System::Drawing::Rectangle GetTrackContentBounds(Track^ track);
+        System::Drawing::Rectangle GetBarBounds(BarEvent^ bar, System::Drawing::Rectangle bounds);
 
     private:
         bool m_disposed;

@@ -46,6 +46,7 @@ public:
     IDWriteTextFormat* GetTimeSignatureFormat() const { return m_pTimeSignatureFormat; }
     IDWriteTextFormat* GetQuarterNoteFormat()   const { return m_pQuarterNoteFormat; }
     IDWriteTextFormat* GetTrackHeaderFormat()   const { return m_pTrackHeaderFormat; }
+    IDWriteTextFormat* UpdateTablatureFormat(float fontsize);
 
     // Render Target Management
     bool ResizeRenderTarget(UINT width, UINT height);
@@ -57,6 +58,7 @@ public:
     // Original methods with D2D1 types
     bool DrawLine(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth);
     bool DrawLine(float x1, float y1, float x2, float y2, float r, float g, float b, float a, float strokeWidth);
+    bool DrawLines(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color, float strokeWidth);
     bool DrawLineDashed(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth, const float* dashes, UINT32 dashCount);
     bool DrawRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float strokeWidth);
     bool DrawRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a, float strokeWidth);
@@ -68,13 +70,17 @@ public:
     bool FillRoundedRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a);
     bool DrawEllipse(const D2D1_ELLIPSE& ellipse, const D2D1_COLOR_F& color, float strokeWidth);
     bool FillEllipse(const D2D1_ELLIPSE& ellipse, const D2D1_COLOR_F& color);
-   
+    bool DrawPolygon(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color, float strokeWidth);
+    bool FillDiamond(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color);
+    bool DrawTieLine(const D2D1_POINT_2F& point1, const D2D1_POINT_2F& point2, const D2D1_POINT_2F& point3, const D2D1_POINT_2F& point4, const D2D1_COLOR_F& color, float strokeWidth);
+
     // Path Drawing
     bool DrawPath(ID2D1Geometry* geometry, const D2D1_COLOR_F& color, float strokeWidth);
     bool FillPath(ID2D1Geometry* geometry, const D2D1_COLOR_F& color);
 
     // Text Drawing
     bool DrawText(const std::wstring& text, const D2D1_RECT_F& layoutRect, const D2D1_COLOR_F& color, IDWriteTextFormat* textFormat, D2D1_DRAW_TEXT_OPTIONS options = D2D1_DRAW_TEXT_OPTIONS_NONE);
+    float MeasureTextWidth(const std::wstring& text, IDWriteTextFormat* textFormat);
 
     // Layer Support
     bool PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer);
@@ -111,6 +117,7 @@ private:
     IDWriteTextFormat* m_pTimeSignatureFormat;  // For time signatures
     IDWriteTextFormat* m_pQuarterNoteFormat;    // For sub time-divisions
     IDWriteTextFormat* m_pTrackHeaderFormat;    // For Track Header Text
+    IDWriteTextFormat* m_pTablatureFormat;      // For Tablature Text
 
     // Cached Resources
     struct CachedBrush {

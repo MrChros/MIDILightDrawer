@@ -618,7 +618,7 @@ namespace MIDILightDrawer
 		isResizing		= false;
 		lastPaintedTick = 0;
 		hoverBar		= nullptr;
-		currentMode		= DrawMode::Draw;
+		currentMode		= DrawToolMode::Draw;
 
 		timeline->UpdateCursor(currentCursor);
 	}
@@ -632,22 +632,22 @@ namespace MIDILightDrawer
 
 			if (targetTrack != nullptr) {
 				switch (currentMode) {
-				case DrawMode::Draw:
+				case DrawToolMode::Draw:
 					this->Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
 					StartPainting(mousePos);
 					break;
 
-				case DrawMode::Erase:
+				case DrawToolMode::Erase:
 					this->Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::No);
 					StartErasing(mousePos);
 					break;
 
-				case DrawMode::Move:
+				case DrawToolMode::Move:
 					this->Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Hand);
 					StartMoving(mousePos);
 					break;
 
-				case DrawMode::Resize:
+				case DrawToolMode::Resize:
 					this->Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE);
 					StartResizing(mousePos);
 					break;
@@ -673,21 +673,21 @@ namespace MIDILightDrawer
 			// Handle active operations
 			if (e->Button == Windows::Forms::MouseButtons::Left) {
 				if (isResizing) {
-					currentMode = DrawMode::Resize;
+					currentMode = DrawToolMode::Resize;
 					Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE);
 					UpdateResizing(mousePos);
 				}
 				else if (isMoving) {
-					currentMode = DrawMode::Move;
+					currentMode = DrawToolMode::Move;
 					Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Hand);
 					UpdateMoving(mousePos);
 				}
 				else {
 					switch (currentMode) {
-					case DrawMode::Draw:
+					case DrawToolMode::Draw:
 						UpdatePainting(mousePos);
 						break;
-					case DrawMode::Erase:
+					case DrawToolMode::Erase:
 						UpdateErasing(mousePos);
 						break;
 					}
@@ -705,11 +705,11 @@ namespace MIDILightDrawer
 	{
 		switch (currentMode)
 		{
-		case DrawMode::Move:
+		case DrawToolMode::Move:
 			FinishMoving();
 			break;
 
-		case DrawMode::Resize:
+		case DrawToolMode::Resize:
 			FinishResizing();
 			break;
 		}
@@ -741,7 +741,7 @@ namespace MIDILightDrawer
 
 			switch (currentMode)
 			{
-				case DrawMode::Draw:
+				case DrawToolMode::Draw:
 					if (!HasOverlappingBars(track, Start_Tick, Length_In_Ticks))
 					{
 						if (previewBar == nullptr)
@@ -758,9 +758,9 @@ namespace MIDILightDrawer
 					}
 					break;
 
-				case DrawMode::Move:
-				case DrawMode::Erase:
-				case DrawMode::Resize:
+				case DrawToolMode::Move:
+				case DrawToolMode::Erase:
+				case DrawToolMode::Resize:
 					previewBar = nullptr;
 					break;
 			}
@@ -795,26 +795,26 @@ namespace MIDILightDrawer
 		hoverBar = bar;
 
 		// Determine new mode based on context
-		DrawMode newMode;
+		DrawToolMode newMode;
 		System::Windows::Forms::Cursor^ newCursor;
 
 		if (bar != nullptr) {
 			// Check resize handle first - this should take priority
 			if (IsOverResizeHandle(mousePos, bar, track)) {
-				newMode = DrawMode::Resize;
+				newMode = DrawToolMode::Resize;
 				newCursor = TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE);
 			}
 			else if (Control::ModifierKeys == Keys::Control) {
-				newMode = DrawMode::Move;
+				newMode = DrawToolMode::Move;
 				newCursor = TimelineCursorHelper::GetCursor(TimelineCursor::Hand);
 			}
 			else {
-				newMode = DrawMode::Erase;
+				newMode = DrawToolMode::Erase;
 				newCursor = TimelineCursorHelper::GetCursor(TimelineCursor::No);
 			}
 		}
 		else {
-			newMode = DrawMode::Draw;
+			newMode = DrawToolMode::Draw;
 			if (!HasOverlappingBars(track,
 				timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X),
 				_Draw_Tick_Length)) {
@@ -837,16 +837,16 @@ namespace MIDILightDrawer
 	{
 		switch (currentMode)
 		{
-		case DrawMode::Draw:
+		case DrawToolMode::Draw:
 			this->Cursor = isPainting ? TimelineCursorHelper::GetCursor(TimelineCursor::Cross) : TimelineCursorHelper::GetCursor(TimelineCursor::Default);
 			break;
-		case DrawMode::Move:
+		case DrawToolMode::Move:
 			this->Cursor = isMoving ? TimelineCursorHelper::GetCursor(TimelineCursor::Hand) : TimelineCursorHelper::GetCursor(TimelineCursor::Default);
 			break;
-		case DrawMode::Resize:
+		case DrawToolMode::Resize:
 			this->Cursor = isResizing ? TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE) : TimelineCursorHelper::GetCursor(TimelineCursor::Default);
 			break;
-		case DrawMode::Erase:
+		case DrawToolMode::Erase:
 			this->Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::No);
 			break;
 		}
@@ -879,7 +879,7 @@ namespace MIDILightDrawer
 		}
 		
 		isPainting = true;
-		currentMode = DrawMode::Draw;
+		currentMode = DrawToolMode::Draw;
 		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
 
 		int Raw_Tick		= timeline->PixelsToTicks(mousePos.X - Widget_Timeline::TRACK_HEADER_WIDTH - timeline->ScrollPosition->X);
@@ -976,7 +976,7 @@ namespace MIDILightDrawer
 	{
 		if (hoverBar != nullptr) {
 			isMoving = true;
-			currentMode = DrawMode::Move;
+			currentMode = DrawToolMode::Move;
 			Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Hand);
 			dragStartPoint = mousePos;
 			dragStartTick = hoverBar->StartTick;
@@ -1045,7 +1045,7 @@ namespace MIDILightDrawer
 	{
 		if (hoverBar != nullptr) {
 			isResizing = true;
-			currentMode = DrawMode::Resize;
+			currentMode = DrawToolMode::Resize;
 			Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE);
 			dragStartPoint = mousePos;
 			dragStartTick = hoverBar->Duration;

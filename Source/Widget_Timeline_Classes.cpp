@@ -164,7 +164,6 @@ namespace MIDILightDrawer
 	BarEvent::BarEvent(int start_tick, int duration_in_ticks, System::Drawing::Color color)
 	{
 		_Start_Tick			= start_tick;
-		_End_Tick			= start_tick + duration_in_ticks;
 		_Duration_In_Ticks	= duration_in_ticks;
 		_Color				= color;
 

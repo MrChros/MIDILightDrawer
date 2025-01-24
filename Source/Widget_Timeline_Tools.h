@@ -19,18 +19,21 @@ namespace MIDILightDrawer
 	// Base tool class
 	public ref class TimelineTool abstract : public ITimelineToolAccess {
 	protected:
-		Widget_Timeline^ timeline;
-		bool	isActive;
-		Point	lastMousePos;
-		Keys	modifierKeys;
-		System::Windows::Forms::Cursor^ currentCursor;
+		Widget_Timeline^ _Timeline;
+		bool	_IsActive;
+		Point	_LastMousePos;
+		Keys	_ModifierKeys;
+		System::Windows::Forms::Cursor^ _CurrentCursor;
 
 	public:
 		TimelineTool(Widget_Timeline^ timeline);
 
-		virtual void Activate() { isActive = true; }
-		virtual void Deactivate() { isActive = false; }
-		property bool IsActive { bool get() { return isActive; } }
+		virtual void Activate() { _IsActive = true; }
+		virtual void Deactivate() { _IsActive = false; }
+
+		property bool IsActive {
+			bool get() { return _IsActive; }
+		}
 
 		virtual void OnMouseDown(MouseEventArgs^ e) = 0;
 		virtual void OnMouseMove(MouseEventArgs^ e) = 0;
@@ -39,7 +42,7 @@ namespace MIDILightDrawer
 		virtual void OnKeyUp(KeyEventArgs^ e) = 0;
 
 		property System::Windows::Forms::Cursor^ Cursor {
-			virtual System::Windows::Forms::Cursor^ get() { return currentCursor; }
+			virtual System::Windows::Forms::Cursor^ get() { return _CurrentCursor; }
 			virtual void set(System::Windows::Forms::Cursor^ value);
 		}
 
@@ -156,38 +159,38 @@ namespace MIDILightDrawer
 
 	public ref class TimelineClipboardManager abstract sealed {
 	private:
-		static List<TimelineClipboardItem^>^ clipboardContent;
+		static List<TimelineClipboardItem^>^ _ClipboardContent;
 
 	public:
 		static property List<TimelineClipboardItem^>^ Content {
 			List<TimelineClipboardItem^> ^ get() {
-				if (clipboardContent == nullptr) {
-					clipboardContent = gcnew List<TimelineClipboardItem^>();
+				if (_ClipboardContent == nullptr) {
+					_ClipboardContent = gcnew List<TimelineClipboardItem^>();
 				}
-				return clipboardContent;
+				return _ClipboardContent;
 			}
 		}
 
 		static void Clear() {
-			if (clipboardContent != nullptr) {
-				clipboardContent->Clear();
+			if (_ClipboardContent != nullptr) {
+				_ClipboardContent->Clear();
 			}
 		}
 	};
 
 	public ref class PointerTool : public TimelineTool {
 	private:
-		int					pasteStartTick;
-		bool				isDragging;
-		bool				isSelecting;
-		bool				isPasting;
-		Point^				dragStart;
-		Track^				dragSourceTrack;
-		Track^				dragTargetTrack;
-		Track^				pasteTargetTrack;
-		Rectangle			selectionRect;
-		List<BarEvent^>^	selectedBars;
-		List<BarEvent^>^	pastePreviewBars;
+		int					_PasteStartTick;
+		bool				_IsDragging;
+		bool				_IsSelecting;
+		bool				_IsPasting;
+		Point^				_DragStart;
+		Track^				_DragSourceTrack;
+		Track^				_DragTargetTrack;
+		Track^				_PasteTargetTrack;
+		Rectangle			_SelectionRect;
+		List<BarEvent^>^	_SelectedBars;
+		List<BarEvent^>^	_PastePreviewBars;
 		
 		bool Is_Multi_Track_Selection();
 		void StoreOriginalPositions();
@@ -204,6 +207,11 @@ namespace MIDILightDrawer
 		virtual void OnKeyDown(KeyEventArgs^ e) override;
 		virtual void OnKeyUp(KeyEventArgs^ e) override;
 
+		void StartMoving(Point mousePos);
+		void UpdateMoving(Point mousePos);
+		void FinishMoving(Point mousePos);
+		void CancelMoving();
+
 		void StartSelection(Point start);
 		void UpdateSelection(Point current);
 		void EndSelection();
@@ -216,23 +224,23 @@ namespace MIDILightDrawer
 		void FinalizePaste();
 
 		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() override { return selectedBars; }
+			List<BarEvent^>^ get() override { return _SelectedBars; }
 		}
 
 		property Rectangle SelectionRect {
-			Rectangle get() override { return selectionRect; }
+			Rectangle get() override { return _SelectionRect; }
 		}
 
 		property bool IsDragging {
-			bool get() override { return isDragging; }
+			bool get() override { return _IsDragging; }
 		}
 
 		property Track^ DragSourceTrack {
-			Track^ get() override { return dragSourceTrack; }
+			Track^ get() override { return _DragSourceTrack; }
 		}
 
 		property Track^ DragTargetTrack {
-			Track^ get() override { return dragTargetTrack; }
+			Track^ get() override { return _DragTargetTrack; }
 		}
 
 		property bool IsMultiTrackSelection {
@@ -240,15 +248,15 @@ namespace MIDILightDrawer
 		}
 
 		property Point CurrentMousePosition {
-			Point get() override { return lastMousePos; }
+			Point get() override { return _LastMousePos; }
 		}
 
 		property bool IsPasting {
-			bool get() override { return isPasting; }
+			bool get() override { return _IsPasting; }
 		}
 
 		property List<BarEvent^>^ PastePreviewBars {
-			List<BarEvent^>^ get() override { return pastePreviewBars; }
+			List<BarEvent^>^ get() override { return _PastePreviewBars; }
 		}
 	};
 
@@ -259,25 +267,25 @@ namespace MIDILightDrawer
 	public ref class DrawTool : public TimelineTool
 	{
 	private:
-		Track^		targetTrack;
-		Track^		sourceTrack;
-		BarEvent^	previewBar;
-		Color		_Current_Color;
-		int			_Draw_Tick_Length;
-		bool		_Use_Auto_Length;
+		Track^		_TargetTrack;
+		Track^		_SourceTrack;
+		BarEvent^	_PreviewBar;
+		Color		_CurrentColor;
+		int			_DrawTickLength;
+		bool		_UseAutoLength;
 
-		bool		isPainting;
-		bool		isErasing;
-		bool		isMoving;
-		bool		isResizing;
-		int			lastPaintedTick;
-		BarEvent^	hoverBar;
-		Point		dragStartPoint;
-		int			dragStartTick;
+		bool		_IsPainting;
+		bool		_IsErasing;
+		bool		_IsMoving;
+		bool		_IsResizing;
+		int			_LastPaintedTick;
+		BarEvent^	_HoverBar;
+		Point		_DragStartPoint;
+		int			_DragStartTick;
 
 		static const int RESIZE_HANDLE_WIDTH = 5;
 
-		DrawToolMode currentMode;
+		DrawToolMode _CurrentMode;
 
 	public:
 		DrawTool(Widget_Timeline^ timeline);
@@ -300,57 +308,63 @@ namespace MIDILightDrawer
 		void UpdateErasing(Point mousePos);
 		void StartMoving(Point mousePos);
 		void UpdateMoving(Point mousePos);
+		void FinishMoving(Point mousePos);
+		void CancelMoving();
 		void StartResizing(Point mousePos);
 		void UpdateResizing(Point mousePos);
-		void FinishMoving();
 		void FinishResizing();
+		void CancelResizing();
 		int  GetBeatLength(Track^ track, int currentTick);
 
 		property Color DrawColor {
-			Color get() override { return _Current_Color; }
+			Color get() override { return _CurrentColor; }
 			void set(Color value);
 		}
 
 		property int DrawTickLength {
-			int get() override { return _Draw_Tick_Length; }
+			int get() override { return _DrawTickLength; }
 			void set(int value);
 		}
 
 		property BarEvent^ PreviewBar {
-			BarEvent^ get() override { return previewBar; }
+			BarEvent^ get() override { return _PreviewBar; }
 		}
 
 		property Track^ TargetTrack {
-			Track^ get() override { return targetTrack; }
+			Track^ get() override { return _TargetTrack; }
 		}
 
-		property Track^ SourceTrack{
-			Track ^ get() override { return sourceTrack; }
+		property Track^ SourceTrack {
+			Track ^ get() override { return _SourceTrack; }
+		}
+
+		property Track^ DragSourceTrack{
+			Track ^ get() override { return _SourceTrack; }
 		}
 
 		property DrawToolMode CurrentMode {
-			DrawToolMode get() override { return currentMode; }
+			DrawToolMode get() override { return _CurrentMode; }
 		}
 
 		property bool IsMoving {
-			bool get() override { return isMoving; }
+			bool get() override { return _IsMoving; }
 		}
 
 		property bool IsResizing {
-			bool get() override { return isResizing; }
+			bool get() override { return _IsResizing; }
 		}
 
 		property BarEvent^ HoverBar {
-			BarEvent^ get() override { return hoverBar; }
+			BarEvent^ get() override { return _HoverBar; }
 		}
 
 		property Point CurrentMousePosition {
-			Point get() override { return lastMousePos; }
+			Point get() override { return _LastMousePos; }
 		}
 
 		property bool UseAutoLength{
-			bool get() { return _Use_Auto_Length; }
-			void set(bool value) { _Use_Auto_Length = value; }
+			bool get() { return _UseAutoLength; }
+			void set(bool value) { _UseAutoLength = value; }
 		}
 	};
 
@@ -496,7 +510,7 @@ namespace MIDILightDrawer
 				changeTickLength = Math::Max((int)MIN_LENGTH_TICKS, value);
 				// Update preview if active
 				if (isShowingPreview && targetBar != nullptr) {
-					UpdateLengthPreview(lastMousePos);
+					UpdateLengthPreview(_LastMousePos);
 				}
 			}
 		}
@@ -602,7 +616,7 @@ namespace MIDILightDrawer
 		}
 
 		property Point CurrentMousePosition {
-			Point get() override { return lastMousePos; }
+			Point get() override { return _LastMousePos; }
 		}
 
 	private:
@@ -655,7 +669,7 @@ namespace MIDILightDrawer
 		}
 
 		property Point CurrentMousePosition {
-			Point get() override { return lastMousePos; }
+			Point get() override { return _LastMousePos; }
 		}
 
 	private:

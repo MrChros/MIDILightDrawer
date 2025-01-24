@@ -126,10 +126,10 @@ namespace MIDILightDrawer
 	///////////	
 	Track::Track(String^ trackName, int octave)
 	{
-		this->name						= trackName;
-		this->octave					= octave;
-		this->events					= gcnew List<BarEvent^>();
-		this->isSelected				= false;
+		this->_Name						= trackName;
+		this->_Octave					= octave;
+		this->_Events					= gcnew List<BarEvent^>();
+		this->_IsSelected				= false;
 		this->Measures					= gcnew List<TrackMeasure^>();
 		this->ShowTablature				= true;
 		this->IsDrumTrack				= false;
@@ -138,17 +138,25 @@ namespace MIDILightDrawer
 
 	void Track::AddBar(int startTick, int length, Color color)
 	{
-		BarEvent^ newBar = gcnew BarEvent(startTick, length, color);
-		events->Add(newBar);
+		BarEvent^ newBar = gcnew BarEvent(this, startTick, length, color);
+		_Events->Add(newBar);
 
 		// Sort using the static comparison delegate
-		events->Sort(barComparer);
+		_Events->Sort(barComparer);
+	}
+
+	void Track::AddBar(BarEvent^ bar)
+	{
+		bar->ContainingTrack = this;
+
+		_Events->Add(bar);
+		_Events->Sort(barComparer);
 	}
 
 	void Track::RemoveBar(BarEvent^ bar)
 	{
-		if (events->Contains(bar)) {
-			events->Remove(bar);
+		if (_Events->Contains(bar)) {
+			_Events->Remove(bar);
 		}
 	}
 
@@ -161,12 +169,14 @@ namespace MIDILightDrawer
 	//////////////
 	// BarEvent //
 	//////////////
-	BarEvent::BarEvent(int start_tick, int duration_in_ticks, System::Drawing::Color color)
+	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, System::Drawing::Color color)
 	{
-		_Start_Tick			= start_tick;
-		_Duration_In_Ticks	= duration_in_ticks;
-		_Color				= color;
-
-		OriginalStartTick	= start_tick;
+		_Track						= track;
+		_Track_Original				= track;
+		_Start_Tick					= start_tick;
+		_Start_Tick_Original		= start_tick;
+		_Duration_In_Ticks			= duration_in_ticks;
+		_Duration_In_Ticks_Original	= duration_in_ticks;
+		_Color						= color;
 	}
 }

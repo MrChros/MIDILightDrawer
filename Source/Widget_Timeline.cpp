@@ -159,11 +159,6 @@ namespace MIDILightDrawer
 		tracks->Clear();
 		measures->Clear();
 
-		// Reset selection state
-		selectedTrack = nullptr;
-		hoveredTrack = nullptr;
-		selectedBar = nullptr;
-
 		// Reset scroll and zoom
 		scrollPosition = gcnew Point(0, 0);
 		zoomLevel = 1.0;
@@ -482,12 +477,6 @@ namespace MIDILightDrawer
 		}
 	}
 
-	bool Widget_Timeline::IsBarSelected(BarEvent^ bar)
-	{
-		List<BarEvent^>^ selectedBars = GetSelectedBars();
-		return selectedBars != nullptr && selectedBars->Contains(bar);
-	}
-
 	int Widget_Timeline::TicksToPixels(int ticks)
 	{
 		if (this->D2DRenderer == nullptr) {
@@ -564,12 +553,6 @@ namespace MIDILightDrawer
 		}
 
 		return D2DRenderer->GetBarAtPoint(p);
-	}
-
-	List<BarEvent^>^ Widget_Timeline::GetSelectedBars()
-	{
-		PointerTool^ pointerTool = (PointerTool^)tools[TimelineToolType::Pointer];
-		return pointerTool->SelectedBars;
 	}
 
 	String^ Widget_Timeline::SaveBarEventsToFile(String^ filePath)
@@ -671,14 +654,16 @@ namespace MIDILightDrawer
 			}
 
 			// Clear existing bars from all tracks
-			for each (Track ^ track in tracks) {
+			for each (Track^ track in tracks) {
 				track->Events->Clear();
 			}
 
 			int barsStartLine = 2 + measures->Count;
 			int barCount;
-			if (!Int32::TryParse(lines[barsStartLine], barCount))
+
+			if (!Int32::TryParse(lines[barsStartLine], barCount)) {
 				return "Invalid bar count";
+			}
 
 			// Load each bar
 			for (int i = 0; i < barCount; i++)
@@ -692,7 +677,7 @@ namespace MIDILightDrawer
 				if (!trackMap->ContainsKey(trackName))
 					continue; // Skip if track doesn't exist
 
-				Track^ targetTrack = trackMap[trackName];
+				Track^ TargetTrack = trackMap[trackName];
 
 				int startTick, length, r, g, b;
 				if (!Int32::TryParse(parts[0], startTick) ||
@@ -702,13 +687,7 @@ namespace MIDILightDrawer
 					!Int32::TryParse(parts[5], b))
 					continue;
 
-				BarEvent^ bar = gcnew BarEvent(
-					startTick,
-					length,
-					Color::FromArgb(r, g, b)
-				);
-
-				targetTrack->Events->Add(bar);
+				TargetTrack->AddBar(startTick, length, Color::FromArgb(r, g, b));
 			}
 
 			// Sort events in each track
@@ -863,8 +842,7 @@ namespace MIDILightDrawer
 		}
 
 		// Update hover states
-		if (newHoveredButton.Track != hoveredButton.Track ||
-			newHoveredButton.ButtonIndex != hoveredButton.ButtonIndex) {
+		if (newHoveredButton.Track != hoveredButton.Track || newHoveredButton.ButtonIndex != hoveredButton.ButtonIndex) {
 			hoveredButton = newHoveredButton;
 			Invalidate();
 		}
@@ -1056,12 +1034,6 @@ namespace MIDILightDrawer
 		cachedDurationPen = gcnew Pen(Color::FromArgb(150, currentTheme.Text), 1.0f);
 		array<float>^ dashPattern = { 2.0f, 2.0f };
 		cachedDurationPen->DashPattern = dashPattern;
-	}
-
-	Rectangle Widget_Timeline::SelectionRectangle::get()
-	{
-		PointerTool^ pointerTool = (PointerTool^)tools[TimelineToolType::Pointer];
-		return pointerTool->SelectionRect;
 	}
 
 	void Widget_Timeline::UpdateBuffer()

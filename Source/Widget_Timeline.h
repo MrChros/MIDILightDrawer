@@ -102,7 +102,6 @@ namespace MIDILightDrawer
 		int  GetMeasureStartTick(int measureNumber);
 		int  GetMeasureLength(int measureNumber);
 		void UpdateCursor(System::Windows::Forms::Cursor^ cursor);
-		bool IsBarSelected(BarEvent^ bar);
 
 		int  TicksToPixels(int ticks);						// Transferred
 		int  PixelsToTicks(int pixels);						// Transferred
@@ -113,9 +112,6 @@ namespace MIDILightDrawer
 		Rectangle	GetTrackContentBounds(Track^ track);	// Transferred
 		Measure^	GetMeasureAtTick(int tick);				// Transferred
 		BarEvent^	GetBarAtPoint(Point p);					// Transferred
-
-		
-		List<BarEvent^>^ GetSelectedBars();
 
 		String^ SaveBarEventsToFile(String^ filePath);		// No Need
 		String^ LoadBarEventsFromFile(String^ filePath);	// No Need
@@ -141,27 +137,6 @@ namespace MIDILightDrawer
 		virtual bool IsInputKey(Keys keyData) override {
 			return true;  // Tell Windows Forms that all keys are input keys
 		}
-
-		/*
-		virtual System::Windows::Forms::CreateParams^ CreateParams override
-		{
-			System::Windows::Forms::CreateParams ^ cp = UserControl::CreateParams;
-			cp->ExStyle |= 0x20;  // WS_EX_TRANSPARENT
-			return cp;
-		}
-
-			// Add this to handle the WM_ERASEBKGND message
-		virtual System::IntPtr WndProc(Message% m) override
-		{
-			// Check for WM_ERASEBKGND
-			if (m.Msg == 0x0014 && USE_DIRECT_X)  // 0x0014 is WM_ERASEBKGND
-			{
-				m.Result = System::IntPtr(1);  // Indicate that we handled it
-				return System::IntPtr(1);
-			}
-			return UserControl::WndProc(m);
-		}
-		*/
 
 	private:
 		System::Resources::ResourceManager^ _Resources;
@@ -194,26 +169,16 @@ namespace MIDILightDrawer
 		Pen^		cachedDurationPen;
 		SolidBrush^ cachedTextBrush;
 
-		Track^ selectedTrack;
-		Track^ hoveredTrack;
-		Track^ dragSourceTrack;
-		Track^ dragTargetTrack;
 		Track^ trackBeingResized;
 		Track^ resizeHoverTrack;
 		
-		BarEvent^ selectedBar;
-		BarEvent^ draggedBar;
-
 		Point^ scrollPosition;
 		Point^ dragStartPoint;
 		Point^ currentMousePoint;
 
 		int	resizeStartY;
 		int	initialTrackHeight;
-		int	dragStartTick;
 
-		bool isDraggingBar;
-		bool isOverTrackButton;
 		double zoomLevel;
 
 		// Tools
@@ -335,20 +300,6 @@ namespace MIDILightDrawer
 
 		property Point^ ScrollPosition {
 			Point^ get() { return scrollPosition; }
-		}
-
-		property Track^ SelectedTrack {
-			Track^ get() { return selectedTrack; }
-			void set(Track^ value) { selectedTrack = value; }
-		}
-
-		property BarEvent^ SelectedBar {
-			BarEvent^ get() { return selectedBar; }
-			void set(BarEvent^ value) { selectedBar = value; }
-		}
-
-		property Rectangle SelectionRectangle {
-			Rectangle get();
 		}
 	};
 }

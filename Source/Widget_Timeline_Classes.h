@@ -160,22 +160,29 @@ namespace MIDILightDrawer
 	public:
 		Track(String^ trackName, int octave);
 
+	private:
+		String^ _Name;
+		int _Octave;
+		List<BarEvent^>^ _Events;
+		bool _IsSelected;
+
+	public:
 		property String^ Name {
-			String^ get() { return name; }
-			void set(String^ value) { name = value; }
+			String^ get() { return _Name; }
+			void set(String^ value) { _Name = value; }
 		}
 
 		property List<BarEvent^>^ Events {
-			List<BarEvent^>^ get() { return events; }
+			List<BarEvent^>^ get() { return _Events; }
 		}
 
 		property bool IsSelected {
-			bool get() { return isSelected; }
-			void set(bool value) { isSelected = value; }
+			bool get() { return _IsSelected; }
+			void set(bool value) { _IsSelected = value; }
 		}
 
 		property int Octave {
-			int get() { return octave; }
+			int get() { return _Octave; }
 		}
 
 		property List<TrackMeasure^>^ Measures;
@@ -187,16 +194,13 @@ namespace MIDILightDrawer
 
 		// Add methods for bar management
 		void AddBar(int startTick, int length, Color color);
+		void AddBar(BarEvent^ bar);
 		void RemoveBar(BarEvent^ bar);
 
 		static int CompareBarEvents(BarEvent^ a, BarEvent^ b);
 		static Comparison<BarEvent^>^ barComparer = gcnew Comparison<BarEvent^>(&Track::CompareBarEvents);
 
-	private:
-		String^ name;
-		int octave;
-		List<BarEvent^>^ events;
-		bool isSelected;
+	
 	};
 
 
@@ -206,14 +210,23 @@ namespace MIDILightDrawer
 	public ref class BarEvent
 	{
 	public:
-		BarEvent(int start_tick, int duration_in_ticks, Color color);
+		BarEvent(Track^ track, int start_tick, int duration_in_ticks, Color color);
 
 	private:
+		Track^ _Track;
+		Track^ _Track_Original;
 		int _Start_Tick;
+		int _Start_Tick_Original;
 		int _Duration_In_Ticks;
-		System::Drawing::Color _Color;
+		int _Duration_In_Ticks_Original;
+		Color _Color;
 
 	public:
+		property Track^ ContainingTrack {
+			Track^ get() { return _Track; }
+			void set(Track^ track) { _Track = track; }
+		}
+
 		property int StartTick {
 			int get() { return _Start_Tick; }
 			void set(int value) { _Start_Tick = value; }
@@ -228,11 +241,24 @@ namespace MIDILightDrawer
 			void set(int value) { _Duration_In_Ticks = value; }
 		}
 
-		property Color Color {
+		property System::Drawing::Color Color {
 			System::Drawing::Color get() { return _Color; }
-			void set(System::Drawing::Color value) { _Color = value; }
+			void set(System::Drawing::Color color) { _Color = color; }
 		}
 
-		property int OriginalStartTick;
+		property Track^ OriginalContainingTrack {
+			Track^ get() { return _Track_Original; }
+			void set(Track^ track) { _Track_Original = track; }
+		}
+
+		property int OriginalStartTick {
+			int get() { return _Start_Tick_Original; }
+			void set(int value) { _Start_Tick_Original = value; }
+		}
+
+		property int OriginalDuration {
+			int get() { return _Duration_In_Ticks_Original; }
+			void set(int value) { _Duration_In_Ticks_Original = value; }
+		}
 	};
 }

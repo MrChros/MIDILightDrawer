@@ -104,6 +104,9 @@ namespace MIDILightDrawer
 
 
         // Sub-Methods for DrawToolPreview
+        bool DrawToolPreviewPointerTool();
+        bool DrawToolPreviewPointerToolMoving();
+        bool DrawToolPreviewPointerToolPasting();
         bool DrawToolPreviewDrawTool();
         bool DrawToolPreviewDrawToolDraw();
         bool DrawToolPreviewDrawToolErase();
@@ -123,13 +126,13 @@ namespace MIDILightDrawer
         bool DrawCreationMovementPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         bool DrawDurationPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds);
 
-        bool DrawGhostBar(BarEvent^ bar, System::Drawing::Rectangle bounds);
-        bool DrawSelectedBar(BarEvent^ bar, System::Drawing::Rectangle bounds);
-        bool DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle bounds);
+        bool DrawGhostBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds);
+        bool DrawSelectedBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds);
+        bool DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds);
         bool DrawDropTargetIndicator(System::Drawing::Rectangle bounds);
         void DrawMoveHandles(System::Drawing::Rectangle barBounds); // ToDo here...
         void DrawBarGlowEffect(System::Drawing::Rectangle barBounds, System::Drawing::Color glowColor, int glowLevels);
-        void DrawResizeHandle(System::Drawing::Rectangle barBounds, System::Drawing::Color handleColor, bool isTargeted);
+        void DrawResizeHandle(System::Drawing::Rectangle barBounds, bool isTargeted);
         void DrawSelectionRectangle(System::Drawing::Rectangle selectionRectangle);
 
         // Drawing Support Methods
@@ -145,6 +148,7 @@ namespace MIDILightDrawer
         System::Drawing::Rectangle GetTrackHeaderBounds(Track^ track);
         System::Drawing::Rectangle GetTrackContentBounds(Track^ track);
         System::Drawing::Rectangle GetBarBounds(BarEvent^ bar, System::Drawing::Rectangle bounds);
+        System::Drawing::Rectangle GetGhostBarBounds(BarEvent^ bar, System::Drawing::Rectangle bounds);
 
     private:
         bool m_disposed;

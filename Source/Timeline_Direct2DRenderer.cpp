@@ -14,10 +14,12 @@
 
 namespace MIDILightDrawer
 {
-    Timeline_Direct2DRenderer::Timeline_Direct2DRenderer(List<Track^>^ tracks, List<Measure^>^ measures, double zoomlevel, System::Drawing::Point^ scrollposition) : m_pNativeRenderer(nullptr), m_disposed(false), m_controlHandle(System::IntPtr::Zero), m_themeColorsCached(false)
+    Timeline_Direct2DRenderer::Timeline_Direct2DRenderer(List<Track^>^ tracks, List<Measure^>^ measures, double zoomlevel, System::Drawing::Point^ scrollposition) : _NativeRenderer(nullptr), m_disposed(false), _ControlHandle(System::IntPtr::Zero), m_themeColorsCached(false)
     {
+        this->_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
+        
         // Create the native renderer
-        m_pNativeRenderer = new Timeline_Direct2DRenderer_Native();
+        this->_NativeRenderer = new Timeline_Direct2DRenderer_Native();
 
         this->_Control              = nullptr;
         this->_Tracks               = tracks;
@@ -47,19 +49,19 @@ namespace MIDILightDrawer
         this->_Control = control;
 
         // Store control handle
-        m_controlHandle = control->Handle;
+        _ControlHandle = control->Handle;
 
         // Initialize the native renderer
-        return m_pNativeRenderer->Initialize((HWND)m_controlHandle.ToPointer());
+        return _NativeRenderer->Initialize((HWND)_ControlHandle.ToPointer());
     }
 
     void Timeline_Direct2DRenderer::Resize(int width, int height)
     {
-        if (m_disposed || !m_pNativeRenderer) {
+        if (m_disposed || !_NativeRenderer) {
             return;
         }
 
-        m_pNativeRenderer->ResizeRenderTarget(width, height);
+        _NativeRenderer->ResizeRenderTarget(width, height);
     }
 
     void Timeline_Direct2DRenderer::SetThemeColors(System::Drawing::Color background, System::Drawing::Color headerbackground, System::Drawing::Color text, System::Drawing::Color measureline, System::Drawing::Color beatline, System::Drawing::Color subdivisionline, System::Drawing::Color selectionhighlight, System::Drawing::Color trackbackground, System::Drawing::Color trackborder)
@@ -92,25 +94,59 @@ namespace MIDILightDrawer
         this->_ToolAccessDelegate = access;
     }
 
+    void Timeline_Direct2DRenderer::PreloadImages()
+    {
+        // Draw the image with color transformation if needed
+
+        System::Drawing::Imaging::ColorMatrix^ ColorMatrix = gcnew System::Drawing::Imaging::ColorMatrix(
+            gcnew array<array<float>^> {
+            gcnew array<float>{m_ColorTheme.Text.R / 255.0f, 0, 0, 0, 0},
+                gcnew array<float>{0, m_ColorTheme.Text.G / 255.0f, 0, 0, 0},
+                gcnew array<float>{0, 0, m_ColorTheme.Text.B / 255.0f, 0, 0},
+                gcnew array<float>{0, 0, 0, m_ColorTheme.Text.A / 255.0f, 0},
+                gcnew array<float>{0, 0, 0, 0, 1.0f}
+        }
+        );
+        
+        System::Drawing::Imaging::ImageAttributes^ Attributes = gcnew System::Drawing::Imaging::ImageAttributes();
+        Attributes->SetColorMatrix(ColorMatrix);
+
+        // Preload icons
+        System::Drawing::Image^ NoteIcon = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Note_White")));
+        System::Drawing::Bitmap^ TransformedIcon = gcnew System::Drawing::Bitmap(NoteIcon->Width, NoteIcon->Height);
+
+        {
+            System::Drawing::Graphics ^ g = System::Drawing::Graphics::FromImage(TransformedIcon);
+            g->DrawImage(NoteIcon,
+                System::Drawing::Rectangle(0, 0, NoteIcon->Width, NoteIcon->Height),  // dest rectangle
+                0, 0, NoteIcon->Width, NoteIcon->Height,                             // source rectangle
+                System::Drawing::GraphicsUnit::Pixel,
+                Attributes);
+            delete g;
+        }
+        
+        this->_NativeRenderer->PreloadBitmap(L"Note_White", TransformedIcon);
+    }
+
     bool Timeline_Direct2DRenderer::BeginDraw()
     {
-        if (m_disposed || !m_pNativeRenderer)
+        if (m_disposed || !_NativeRenderer)
             return false;
 
-        return m_pNativeRenderer->BeginDraw();
+        return _NativeRenderer->BeginDraw();
     }
 
     bool Timeline_Direct2DRenderer::EndDraw()
     {
-        if (m_disposed || !m_pNativeRenderer)
+        if (m_disposed || !_NativeRenderer)
             return false;
 
-        return m_pNativeRenderer->EndDraw();
+        return _NativeRenderer->EndDraw();
     }
 
     bool Timeline_Direct2DRenderer::DrawWidgetBackground()
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
@@ -123,12 +159,12 @@ namespace MIDILightDrawer
         );
 
         // Fill the rectangle using the native renderer
-        return m_pNativeRenderer->FillRectangle(widgetArea, COLOR_TO_COLOR_F(m_ColorTheme.Background));
+        return _NativeRenderer->FillRectangle(widgetArea, COLOR_TO_COLOR_F(m_ColorTheme.Background));
     }
 
     bool Timeline_Direct2DRenderer::DrawTrackBackground()
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
@@ -141,18 +177,18 @@ namespace MIDILightDrawer
         );
 
         // Fill the rectangle using the native renderer
-        return m_pNativeRenderer->FillRectangle(tracksArea, COLOR_TO_COLOR_F(m_ColorTheme.TrackBackground));
+        return _NativeRenderer->FillRectangle(tracksArea, COLOR_TO_COLOR_F(m_ColorTheme.TrackBackground));
     }
 
     bool Timeline_Direct2DRenderer::DrawMeasureNumbers()
     {
-        if (!m_pNativeRenderer || this->_Measures == nullptr || this->_Measures->Count == 0) {
+        if (!_NativeRenderer || this->_Measures == nullptr || this->_Measures->Count == 0) {
             return false;
         }
 
         // Fill the header background
         D2D1_RECT_F headerRect = D2D1::RectF(0, 0, (float)this->_Control->Width, HEADER_HEIGHT);
-        m_pNativeRenderer->FillRectangle(headerRect, COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground));
+        _NativeRenderer->FillRectangle(headerRect, COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground));
 
         // Constants for vertical positioning within header
         const float markerTextY = 2;
@@ -173,7 +209,7 @@ namespace MIDILightDrawer
             if (x >= TRACK_HEADER_WIDTH && x <= (float)this->_Control->Width)
             {
                 // Draw vertical tick mark for measure start
-                m_pNativeRenderer->DrawLine(
+                _NativeRenderer->DrawLine(
                     x, HEADER_HEIGHT - 5,
                     x, HEADER_HEIGHT - 0,
                     d2dTextColor,
@@ -186,21 +222,21 @@ namespace MIDILightDrawer
                     D2D1_RECT_F markerRect = D2D1::RectF(x - 50, markerTextY, x + 50, markerTextY + 14);
 
                     std::wstring markerText = ConvertString(measure->Marker_Text);
-                    m_pNativeRenderer->DrawText(markerText, markerRect, d2dTextColor, m_pNativeRenderer->GetMarkerTextFormat());
+                    _NativeRenderer->DrawText(markerText, markerRect, d2dTextColor, _NativeRenderer->GetMarkerTextFormat());
                 }
 
                 // Draw measure number
                 D2D1_RECT_F numberRect = D2D1::RectF(x - 25, measureNumberY, x + 25, measureNumberY + 14);
 
                 std::wstring numText = std::to_wstring(measureNumber);
-                m_pNativeRenderer->DrawText(numText, numberRect, d2dTextColor, m_pNativeRenderer->GetMeasureNumberFormat());
+                _NativeRenderer->DrawText(numText, numberRect, d2dTextColor, _NativeRenderer->GetMeasureNumberFormat());
 
                 // Draw time signature
                 D2D1_RECT_F sigRect = D2D1::RectF(x - 25, timeSignatureY, x + 25, timeSignatureY + 14);
 
                 std::wstring timeSignature = std::to_wstring(measure->Numerator) + L"/" + std::to_wstring(measure->Denominator);
 
-                m_pNativeRenderer->DrawText(timeSignature, sigRect, d2dTextColor, m_pNativeRenderer->GetTimeSignatureFormat());
+                _NativeRenderer->DrawText(timeSignature, sigRect, d2dTextColor, _NativeRenderer->GetTimeSignatureFormat());
             }
 
             // Calculate subdivision level based on time signature
@@ -230,7 +266,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackContent(Track^ hoverTrack)
     {
-        if (!m_pNativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0 || this->_Measures == nullptr || this->_Measures->Count == 0 || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0 || this->_Measures == nullptr || this->_Measures->Count == 0 || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -242,7 +278,7 @@ namespace MIDILightDrawer
             (float)this->_Control->Height
         );
 
-        m_pNativeRenderer->PushAxisAlignedClip(contentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        _NativeRenderer->PushAxisAlignedClip(contentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 
         try {
             // 1. Draw grid lines first (these should be visible through track content)
@@ -277,7 +313,7 @@ namespace MIDILightDrawer
         }
         finally {
             // Restore clipping region
-            m_pNativeRenderer->PopAxisAlignedClip();
+            _NativeRenderer->PopAxisAlignedClip();
         }
 
         return true;
@@ -285,7 +321,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreview()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -297,7 +333,7 @@ namespace MIDILightDrawer
             (float)this->_Control->Height
         );
 
-        m_pNativeRenderer->PushAxisAlignedClip(ContentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        _NativeRenderer->PushAxisAlignedClip(ContentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 
         try {
             TimelineToolType currentTool = this->_ToolAccessDelegate->GetCurrentToolType();
@@ -315,7 +351,7 @@ namespace MIDILightDrawer
             }
         }
         finally {
-            m_pNativeRenderer->PopAxisAlignedClip();
+            _NativeRenderer->PopAxisAlignedClip();
         }
 
         return true;
@@ -324,7 +360,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawBeatNumbers(Measure^ measure, float x, float measureNumberY, float subdivLevel, int measureNumber, int ticksPerBeat)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
@@ -352,11 +388,11 @@ namespace MIDILightDrawer
                 );
 
                 // Draw with smaller font size
-                IDWriteTextFormat* quarterNoteFormat = m_pNativeRenderer->GetQuarterNoteFormat();
-                m_pNativeRenderer->DrawText(beatText, beatRect, beatColor, quarterNoteFormat);
+                IDWriteTextFormat* quarterNoteFormat = _NativeRenderer->GetQuarterNoteFormat();
+                _NativeRenderer->DrawText(beatText, beatRect, beatColor, quarterNoteFormat);
 
                 // Draw tick mark
-                m_pNativeRenderer->DrawLine(beatX, HEADER_HEIGHT - 2, beatX, HEADER_HEIGHT, beatColor, 1.0f);
+                _NativeRenderer->DrawLine(beatX, HEADER_HEIGHT - 2, beatX, HEADER_HEIGHT, beatColor, 1.0f);
             }
         }
 
@@ -406,7 +442,7 @@ namespace MIDILightDrawer
                 if (subdivTick >= startTick && subdivTick <= endTick)
                 {
                     float x = TicksToPixels(subdivTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
-                    m_pNativeRenderer->DrawLine(
+                    _NativeRenderer->DrawLine(
                         x, HEADER_HEIGHT,
                         x, HEADER_HEIGHT + totalHeight,
                         COLOR_TO_RGBA(m_ColorTheme.SubdivisionLine),
@@ -437,7 +473,7 @@ namespace MIDILightDrawer
                 if (beatTick >= startTick && beatTick <= endTick)
                 {
                     float x = TicksToPixels(beatTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
-                    m_pNativeRenderer->DrawLine(
+                    _NativeRenderer->DrawLine(
                         x, HEADER_HEIGHT,
                         x, HEADER_HEIGHT + totalHeight,
                         COLOR_TO_RGBA(m_ColorTheme.BeatLine),
@@ -466,7 +502,7 @@ namespace MIDILightDrawer
 
                 if (x >= TRACK_HEADER_WIDTH && x <= (float)this->_Control->Width)
                 {
-                    m_pNativeRenderer->DrawLine(x, HEADER_HEIGHT, x, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.MeasureLine), 1.0f);
+                    _NativeRenderer->DrawLine(x, HEADER_HEIGHT, x, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.MeasureLine), 1.0f);
                 }
             }
 
@@ -478,7 +514,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType)
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -572,7 +608,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackTablatureDrum(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
@@ -661,12 +697,12 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
         // Calculate zoom-based scaling factors
-        const float BASE_FONT_SIZE = 6.0f;
+        const float BASE_FONT_SIZE = 9.0f;
         const float FONT_SCALE_FACTOR = 2.0f;
         float scaledFontSize = BASE_FONT_SIZE + (logScale * FONT_SCALE_FACTOR);
 
@@ -681,7 +717,7 @@ namespace MIDILightDrawer
             return true;
         }
 
-        IDWriteTextFormat* TablatureTextFormat = m_pNativeRenderer->UpdateTablatureFormat(scaledFontSize);
+        IDWriteTextFormat* TablatureTextFormat = _NativeRenderer->UpdateTablatureFormat(scaledFontSize);
 
         if (TablatureTextFormat == nullptr) {
             return false;
@@ -749,7 +785,7 @@ namespace MIDILightDrawer
 
                         std::wstring fretText = std::to_wstring(note->Value);
 
-                        float textWidth = m_pNativeRenderer->MeasureTextWidth(fretText, TablatureTextFormat);
+                        float textWidth = _NativeRenderer->MeasureTextWidth(fretText, TablatureTextFormat);
 
                         D2D1_RECT_F textRect;
                         textRect.left = beatX - (textWidth / 2.0f);
@@ -762,11 +798,11 @@ namespace MIDILightDrawer
 
                         D2D1_COLOR_F bgColor = COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBackground, 0.86f);
 
-                        m_pNativeRenderer->FillRectangle(bgRect, bgColor);
+                        _NativeRenderer->FillRectangle(bgRect, bgColor);
 
                         // Draw the fret number
                         D2D1_COLOR_F textColor = COLOR_TO_COLOR_F(m_ColorTheme.Text);
-                        m_pNativeRenderer->DrawText(fretText, textRect, textColor, TablatureTextFormat);
+                        _NativeRenderer->DrawText(fretText, textRect, textColor, TablatureTextFormat);
                     }
                 }
 
@@ -784,7 +820,7 @@ namespace MIDILightDrawer
 
     void Timeline_Direct2DRenderer::DrawBeatDuration(Beat^ beat, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions)
     {
-        if (!m_pNativeRenderer || beat->Notes == nullptr || beat->Notes->Count == 0 || beat->Duration <= 0) {
+        if (!_NativeRenderer || beat->Notes == nullptr || beat->Notes->Count == 0 || beat->Duration <= 0) {
             return;
         }
 
@@ -827,12 +863,12 @@ namespace MIDILightDrawer
         {
             // Draw only bottom half of stem
             float halfStemLength = scaledStemLength / 2;
-            m_pNativeRenderer->DrawLine(stemX, stemY + halfStemLength, stemX, stemEndY, stemColor, scaledLineThickness);
+            _NativeRenderer->DrawLine(stemX, stemY + halfStemLength, stemX, stemEndY, stemColor, scaledLineThickness);
         }
         else if (duration < TICKS_PER_QUARTER * 2) // Quarter note or shorter
         {
             // Draw full stem
-            m_pNativeRenderer->DrawLine(stemX, stemY, stemX, stemEndY, stemColor, scaledLineThickness);
+            _NativeRenderer->DrawLine(stemX, stemY, stemX, stemEndY, stemColor, scaledLineThickness);
 
             if (duration <= TICKS_PER_QUARTER / 8)           numLines = 3; // 32nd note
             else if (duration <= TICKS_PER_QUARTER / 4)      numLines = 2; // 16th note
@@ -848,7 +884,7 @@ namespace MIDILightDrawer
                     float lineStartX = stemX;
                     float lineEndX = stemX + scaledLineLength;
 
-                    m_pNativeRenderer->DrawLine(lineStartX, lineY, lineEndX, lineY, stemColor, scaledLineThickness);
+                    _NativeRenderer->DrawLine(lineStartX, lineY, lineEndX, lineY, stemColor, scaledLineThickness);
                 }
             }
         }
@@ -860,7 +896,7 @@ namespace MIDILightDrawer
             float dotY = stemEndY - (numLines * scaledLineSpacing);
 
             D2D1_ELLIPSE dotEllipse = D2D1::Ellipse(D2D1::Point2F(dotX, dotY), dotSize, dotSize);
-            m_pNativeRenderer->FillEllipse(dotEllipse, stemColor);
+            _NativeRenderer->FillEllipse(dotEllipse, stemColor);
         }
         // Draw triplet indicator (small "3")
         else if (duration * 3 / 2 == TICKS_PER_QUARTER ||    // Triplet quarter
@@ -874,13 +910,13 @@ namespace MIDILightDrawer
             // Draw the "3"
             D2D1_RECT_F textRect = D2D1::RectF(textX, textY, textX + 10, textY + 14);
             std::wstring tripletText = L"3";
-            m_pNativeRenderer->DrawText(tripletText, textRect, stemColor, m_pNativeRenderer->GetMeasureNumberFormat());
+            _NativeRenderer->DrawText(tripletText, textRect, stemColor, _NativeRenderer->GetMeasureNumberFormat());
         }
     }
 
     void Timeline_Direct2DRenderer::DrawTieLines(Track^ track, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, float scaledFontSize)
     {
-        if (!m_pNativeRenderer || !track->ShowTablature || track->Measures == nullptr || track->Measures->Count == 0) {
+        if (!_NativeRenderer || !track->ShowTablature || track->Measures == nullptr || track->Measures->Count == 0) {
             return;
         }
 
@@ -975,13 +1011,13 @@ namespace MIDILightDrawer
                             std::wstring currentNoteText = std::to_wstring(currentNote->Value);
 
                             // Get text format with appropriate size
-                            IDWriteTextFormat* textFormat = m_pNativeRenderer->UpdateTablatureFormat(scaledFontSize);
+                            IDWriteTextFormat* textFormat = _NativeRenderer->UpdateTablatureFormat(scaledFontSize);
                             if (!textFormat) {
                                 continue;
                             }
 
-                            float prevNoteWidth = m_pNativeRenderer->MeasureTextWidth(prevNoteText, textFormat);
-                            float currentNoteWidth = m_pNativeRenderer->MeasureTextWidth(currentNoteText, textFormat);
+                            float prevNoteWidth = _NativeRenderer->MeasureTextWidth(prevNoteText, textFormat);
+                            float currentNoteWidth = _NativeRenderer->MeasureTextWidth(currentNoteText, textFormat);
 
                             // Calculate x positions for both notes
                             float prevNoteX = (float)(TicksToPixels(previousBeat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
@@ -1000,7 +1036,7 @@ namespace MIDILightDrawer
                             float controlHeight = 8.0f * (float)Math::Min(2.0f, Math::Max(0.5f, this->_ZoomLevel));
 
                             // Draw Bezier curve using Direct2D
-                            m_pNativeRenderer->DrawTieLine(
+                            _NativeRenderer->DrawTieLine(
                                 D2D1::Point2F(startX, startY),                                          // Start point
                                 D2D1::Point2F(startX + (endX - startX) / 3, startY + controlHeight),    // First control point
                                 D2D1::Point2F(startX + (endX - startX) * 2 / 3, endY + controlHeight),  // Second control point
@@ -1023,7 +1059,7 @@ namespace MIDILightDrawer
 
     void Timeline_Direct2DRenderer::DrawDrumSymbol(DrumNotationType symbolType, float x, float y, float size)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return;
         }
 
@@ -1039,7 +1075,7 @@ namespace MIDILightDrawer
                     D2D1::Point2F(x, y + size),      // Bottom
                     D2D1::Point2F(x - size, y)       // Left
                 };
-                m_pNativeRenderer->FillDiamond(points, 4, symbolColor);
+                _NativeRenderer->FillDiamond(points, 4, symbolColor);
                 break;
             }
 
@@ -1051,19 +1087,19 @@ namespace MIDILightDrawer
                     D2D1::Point2F(x, y + size),
                     D2D1::Point2F(x - size, y)
                 };
-                m_pNativeRenderer->DrawPolygon(points, 4, symbolColor, 1.0f);
+                _NativeRenderer->DrawPolygon(points, 4, symbolColor, 1.0f);
                 break;
             }
 
             case DrumNotationType::CircledX:
             {
                 // Draw circle
-                m_pNativeRenderer->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(x, y), size, size), symbolColor, 1.0f);
+                _NativeRenderer->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(x, y), size, size), symbolColor, 1.0f);
 
                 // Draw X
                 float xSize = size * 0.7f;
-                m_pNativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 1.0f);
-                m_pNativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 1.0f);
+                _NativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 1.0f);
+                _NativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 1.0f);
                 break;
             }
 
@@ -1071,8 +1107,8 @@ namespace MIDILightDrawer
             {
                 // Draw X
                 float xSize = size * 0.8f;
-                m_pNativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 2.5f);
-                m_pNativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 2.5f);
+                _NativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 2.5f);
+                _NativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 2.5f);
 
                 // Draw accent mark (^)
                 D2D1_POINT_2F points[3] = {
@@ -1080,15 +1116,15 @@ namespace MIDILightDrawer
                     D2D1::Point2F(x, y - size * 2.0f),
                     D2D1::Point2F(x + size, y - size * 1.5f)
                 };
-                m_pNativeRenderer->DrawLines(points, 3, symbolColor, 2.5f);
+                _NativeRenderer->DrawLines(points, 3, symbolColor, 2.5f);
                 break;
             }
 
             case DrumNotationType::RegularX:
             {
                 float xSize = size * 0.8f;
-                m_pNativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 1.0f);
-                m_pNativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 1.0f);
+                _NativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 1.0f);
+                _NativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 1.0f);
                 break;
             }
 
@@ -1096,7 +1132,7 @@ namespace MIDILightDrawer
             {
                 D2D1_ELLIPSE ellipse = D2D1::Ellipse(D2D1::Point2F(x, y), size * 0.7f, size * 0.5f);
 
-                m_pNativeRenderer->FillEllipse(ellipse, symbolColor);
+                _NativeRenderer->FillEllipse(ellipse, symbolColor);
                 break;
             }
 
@@ -1105,7 +1141,7 @@ namespace MIDILightDrawer
                 D2D1_COLOR_F errorColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.7f); // Red with 70% opacity
                 D2D1_ELLIPSE ellipse = D2D1::Ellipse(D2D1::Point2F(x, y), size * 0.7f, size * 0.5f);
 
-                m_pNativeRenderer->FillEllipse(ellipse, errorColor);
+                _NativeRenderer->FillEllipse(ellipse, errorColor);
                 break;
             }
         }
@@ -1134,7 +1170,7 @@ namespace MIDILightDrawer
         {
             for (int i = 0; i < numStrings; i++) {
                 info.StringYPositions[i] = verticalOffset + (i * scaledStringSpacing);
-                m_pNativeRenderer->DrawLine((float)bounds.X, info.StringYPositions[i], (float)bounds.Right, info.StringYPositions[i], COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f), 1.0f);
+                _NativeRenderer->DrawLine((float)bounds.X, info.StringYPositions[i], (float)bounds.Right, info.StringYPositions[i], COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f), 1.0f);
             }
         }
 
@@ -1143,7 +1179,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackHeaders()
     {
-        if (!m_pNativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0) {
+        if (!_NativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0) {
             return false;
         }
 
@@ -1157,22 +1193,22 @@ namespace MIDILightDrawer
             totalHeight                     // Bottom
         );
 
-        m_pNativeRenderer->FillRectangle(headerBackground, COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground));
+        _NativeRenderer->FillRectangle(headerBackground, COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground));
 
         // Draw each track's header
-        float currentY = HEADER_HEIGHT;
+        int CurrentY = HEADER_HEIGHT;
 
-        for each(Track ^ track in this->_Tracks)
+        for each(Track^ track in this->_Tracks)
         {
             // Calculate track bounds
-            float trackHeight = static_cast<float>(track->Height);
-            float yPosition = currentY + this->_ScrollPosition->Y;
+            int TrackHeight = track->Height;
+            int yPosition = CurrentY + this->_ScrollPosition->Y;
 
-            System::Drawing::RectangleF headerBounds = System::Drawing::RectangleF(0, yPosition, TRACK_HEADER_WIDTH, trackHeight);
+            System::Drawing::Rectangle TrackHeaderBounds = System::Drawing::Rectangle(0, yPosition, TRACK_HEADER_WIDTH, TrackHeight);
 
             // Draw header background (with selection highlight if track is selected)
             Color bgColor = track->IsSelected ? m_ColorTheme.SelectionHighlight : m_ColorTheme.HeaderBackground;
-            m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(headerBounds), COLOR_TO_COLOR_F(bgColor));
+            _NativeRenderer->FillRectangle(RECT_TO_RECT_F(TrackHeaderBounds), COLOR_TO_COLOR_F(bgColor));
 
 
             // Draw track name if present
@@ -1180,71 +1216,78 @@ namespace MIDILightDrawer
             {
                 // Calculate text bounds with padding
                 float textPadding = TRACK_PADDING;
-                D2D1_RECT_F textBounds = D2D1::RectF(headerBounds.Left + textPadding, headerBounds.Top + textPadding, headerBounds.Right - textPadding, headerBounds.Bottom - textPadding);
+                D2D1_RECT_F textBounds = D2D1::RectF(TrackHeaderBounds.Left + textPadding, TrackHeaderBounds.Top + textPadding, TrackHeaderBounds.Right - textPadding, TrackHeaderBounds.Bottom - textPadding);
 
                 // Draw the track name using the measure number format (for now)
                 std::wstring trackName = ConvertString(track->Name);
-                m_pNativeRenderer->DrawText(trackName, textBounds, COLOR_TO_COLOR_F(m_ColorTheme.Text), m_pNativeRenderer->GetTrackHeaderFormat());
+                _NativeRenderer->DrawText(trackName, textBounds, COLOR_TO_COLOR_F(m_ColorTheme.Text), _NativeRenderer->GetTrackHeaderFormat());
             }
 
             // Draw track buttons
-            DrawTrackButtons(track, headerBounds);
+            DrawTrackButtons(track, TrackHeaderBounds);
 
             // Draw borders
-            m_pNativeRenderer->DrawRectangle(RECT_TO_RECT_F(headerBounds), COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
+            _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(TrackHeaderBounds), COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
             //m_pNativeRenderer->DrawLine(TRACK_HEADER_WIDTH, headerBounds.top, TRACK_HEADER_WIDTH, headerBounds.bottom, COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
 
-            currentY += trackHeight;
+            CurrentY += TrackHeight;
         }
 
         return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawTrackButtons(Track^ track, System::Drawing::RectangleF headerBounds)
+    bool Timeline_Direct2DRenderer::DrawTrackButtons(Track^ track, System::Drawing::Rectangle trackHeaderBounds)
     {
-        // Calculate button dimensions
-        const float BUTTON_SIZE = 24.0f;
-        const float BUTTON_MARGIN = 6.0f;
+        TrackButtonId HoveredButton = this->_ToolAccessDelegate->GetHoverButton();
 
-        // Draw tablature toggle button
-        System::Drawing::RectangleF buttonBounds = System::Drawing::RectangleF(
-            headerBounds.Right - (BUTTON_SIZE + BUTTON_MARGIN),
-            headerBounds.Top + BUTTON_MARGIN,
-            BUTTON_SIZE,
-            BUTTON_SIZE
-        );
+        DrawTrackButtonText(trackHeaderBounds, 0, "T", track->ShowTablature, track == HoveredButton.Track && HoveredButton.ButtonIndex == 0, m_ColorTheme.HeaderBackground, m_ColorTheme.Text);
 
-        // Draw button background with rounded corners
-        DrawRoundedButtonBackground(buttonBounds, track->ShowTablature, false, m_ColorTheme.HeaderBackground);
-
-        // Draw "T" text centered in button
-        std::wstring buttonText = L"T";
-        m_pNativeRenderer->DrawText(buttonText, RECT_TO_RECT_F(buttonBounds), COLOR_TO_COLOR_F(m_ColorTheme.Text), m_pNativeRenderer->GetMeasureNumberFormat());
-
-        // Draw notation button for drum tracks
         if (track->IsDrumTrack)
         {
-            buttonBounds = System::Drawing::RectangleF(
-                buttonBounds.X - (BUTTON_SIZE + BUTTON_MARGIN),
-                buttonBounds.Y,
-                BUTTON_SIZE,
-                BUTTON_SIZE);
-
-            DrawRoundedButtonBackground(buttonBounds, track->ShowAsStandardNotation, false, m_ColorTheme.HeaderBackground);
-
-            // Draw note icon or text here
-            std::wstring noteText = L"N";  // Placeholder - would need actual icon drawing
-            m_pNativeRenderer->DrawText(noteText, D2D1::RectF(buttonBounds.Left, buttonBounds.Top, buttonBounds.Right, buttonBounds.Bottom), COLOR_TO_COLOR_F(m_ColorTheme.Text), m_pNativeRenderer->GetMeasureNumberFormat());
+            System::Drawing::Image^ Image_Note = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Note_White")));
+            DrawTrackButtonIcon(trackHeaderBounds, 1, Image_Note, track->ShowAsStandardNotation, track == HoveredButton.Track && HoveredButton.ButtonIndex == 1, m_ColorTheme.HeaderBackground, m_ColorTheme.Text);
         }
+        return true;
+    }
+
+    bool Timeline_Direct2DRenderer::DrawTrackButtonText(System::Drawing::Rectangle trackHeaderBounds, int buttonIndex, System::String^ text, bool isPressed, bool isHovered, Color baseColor, Color textColor)
+    {
+        // Calculate button position based on index (right to left)
+        System::Drawing::Rectangle ButtonBounds = GetTrackButtonBounds(buttonIndex, trackHeaderBounds);
+        
+        DrawTrackButtonBase(ButtonBounds, isPressed, isHovered, baseColor);
+
+        std::wstring ButtonText = ConvertString(text);
+        _NativeRenderer->DrawText(ButtonText, RECT_TO_RECT_F(ButtonBounds), COLOR_TO_COLOR_F(m_ColorTheme.Text), _NativeRenderer->GetMeasureNumberFormat());
 
         return true;
     }
 
-    void Timeline_Direct2DRenderer::DrawRoundedButtonBackground(System::Drawing::RectangleF bounds, bool isPressed, bool isHovered, System::Drawing::Color baseColor)
+    bool Timeline_Direct2DRenderer::DrawTrackButtonIcon(System::Drawing::Rectangle trackHeaderBounds, int buttonIndex, System::Drawing::Image^ icon, bool isPressed, bool isHovered, Color baseColor, Color textColor)
+    {
+        // Calculate button position based on index(right to left)
+        System::Drawing::Rectangle ButtonBounds = GetTrackButtonBounds(buttonIndex, trackHeaderBounds);
+
+        DrawTrackButtonBase(ButtonBounds, isPressed, isHovered, baseColor);
+        
+        float Padding = 4.0f;
+        D2D1_RECT_F IconRect = D2D1::RectF(
+            ButtonBounds.X + Padding,
+            ButtonBounds.Y + Padding,
+            ButtonBounds.Right - Padding,
+            ButtonBounds.Bottom - Padding
+        );
+
+        _NativeRenderer->DrawCachedBitmap(L"Note_White", IconRect);
+
+        return true;
+    }
+
+    void Timeline_Direct2DRenderer::DrawTrackButtonBase(System::Drawing::Rectangle buttonBounds, bool isPressed, bool isHovered, System::Drawing::Color baseColor)
     {
         // Create rounded rectangle geometry
-        const float cornerRadius = 6.0f;
-        D2D1_ROUNDED_RECT roundedRect = D2D1::RoundedRect(RECT_TO_RECT_F(bounds), cornerRadius, cornerRadius);
+        const float CornerRadius = 6.0f;
+        D2D1_ROUNDED_RECT roundedRect = D2D1::RoundedRect(RECT_TO_RECT_F(buttonBounds), CornerRadius, CornerRadius);
 
         // Determine button color based on state
         D2D1_COLOR_F buttonColor;
@@ -1271,15 +1314,15 @@ namespace MIDILightDrawer
         }
 
         // Fill and stroke the rounded rectangle
-        m_pNativeRenderer->FillRoundedRectangle(roundedRect, buttonColor);
+        _NativeRenderer->FillRoundedRectangle(roundedRect, buttonColor);
 
         // Draw border with slight transparency
-        m_pNativeRenderer->DrawRoundedRectangle(roundedRect, COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.3f), 1.0f);
+        _NativeRenderer->DrawRoundedRectangle(roundedRect, COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.3f), 1.0f);
     }
 
     bool Timeline_Direct2DRenderer::DrawTrackDividers(Track^ hoverTrack)
     {
-        if (!m_pNativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0) {
+        if (!_NativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0) {
             return false;
         }
 
@@ -1298,7 +1341,7 @@ namespace MIDILightDrawer
                 if (track == hoverTrack)
                 {
                     // Draw a highlighted divider across the full width
-                    m_pNativeRenderer->DrawLine(
+                    _NativeRenderer->DrawLine(
                         0.0f, dividerY,
                         (float)this->_Control->Width, dividerY,
                         COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight),
@@ -1308,7 +1351,7 @@ namespace MIDILightDrawer
                 else
                 {
                     // Draw normal divider
-                    m_pNativeRenderer->DrawLine(0.0f, dividerY, (float)this->_Control->Width, dividerY, COLOR_TO_COLOR_F(m_ColorTheme.MeasureLine), 1.0f);
+                    _NativeRenderer->DrawLine(0.0f, dividerY, (float)this->_Control->Width, dividerY, COLOR_TO_COLOR_F(m_ColorTheme.MeasureLine), 1.0f);
                 }
             }
 
@@ -1316,7 +1359,7 @@ namespace MIDILightDrawer
             float headerBottom = currentY + track->Height;
             if (headerBottom >= this->_ScrollPosition->Y && currentY <= this->_ScrollPosition->Y + (float)this->_Control->Height)
             {
-                m_pNativeRenderer->DrawLine(TRACK_HEADER_WIDTH, currentY, TRACK_HEADER_WIDTH, headerBottom, COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
+                _NativeRenderer->DrawLine(TRACK_HEADER_WIDTH, currentY, TRACK_HEADER_WIDTH, headerBottom, COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
             }
 
             currentY += track->Height;
@@ -1347,7 +1390,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewPointerToolMoving()
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
@@ -1387,7 +1430,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewPointerToolPasting()
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
@@ -1400,25 +1443,21 @@ namespace MIDILightDrawer
         {
             if (ToolAccess->CurrentMousePosition.X > TRACK_HEADER_WIDTH)
             {
-                for each (BarEvent^ PreviewBar in ToolAccess->PastePreviewBars)
+                for each (BarEvent^ PasteBar in ToolAccess->PastePreviewBars)
                 {
-                    System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(PreviewBar->ContainingTrack);
+                    System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(PasteBar->ContainingTrack);
                     
-                    DrawPastePreviewBar(PreviewBar, TrackContentBounds);
+                    DrawPastePreviewBar(PasteBar, TrackContentBounds);
                 }
-
-                // Draw drop target indicator if this is the anchor track
-                //if (track == ToolAccess->DragTargetTrack)
-                //{
-                //    DrawDropTargetIndicator(TrackContentBounds);
-                //}
             }
         }
+
+        return true;
     }
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewDrawTool()
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
@@ -1449,7 +1488,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewDrawToolDraw()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1469,7 +1508,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewDrawToolErase()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1499,14 +1538,14 @@ namespace MIDILightDrawer
             D2D1_COLOR_F BorderColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.7f); // Red with 70% opacity
 
             // Fill rectangle
-            m_pNativeRenderer->FillRectangle(DeleteRect, FillColor);
+            _NativeRenderer->FillRectangle(DeleteRect, FillColor);
 
             // Draw border
-            m_pNativeRenderer->DrawRectangle(DeleteRect, BorderColor, 2.0f);
+            _NativeRenderer->DrawRectangle(DeleteRect, BorderColor, 2.0f);
 
             // Draw X
-            m_pNativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Top, (float)BarBounds.Right, (float)BarBounds.Bottom, BorderColor, 2.0f);
-            m_pNativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Bottom, (float)BarBounds.Right, (float)BarBounds.Top, BorderColor, 2.0f);
+            _NativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Top, (float)BarBounds.Right, (float)BarBounds.Bottom, BorderColor, 2.0f);
+            _NativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Bottom, (float)BarBounds.Right, (float)BarBounds.Top, BorderColor, 2.0f);
         }
 
         return true;
@@ -1514,7 +1553,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewDrawToolMove()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1524,7 +1563,7 @@ namespace MIDILightDrawer
         }
 
         BarEvent^ HoverBar = ToolAccess->HoverBar;
-        //if (HoverBar == nullptr || ToolAccess->IsMoving) {
+
         if (HoverBar == nullptr) {
             return true;
         }
@@ -1537,31 +1576,12 @@ namespace MIDILightDrawer
             DrawGhostBar(HoverBar, TrackContentBounds);
         }
 
-        /*
-        // Get track containing hover bar
-        Track^ ContainingTrack = HoverBar->ContainingTrack;
-
-        if (ContainingTrack != nullptr)
-        {
-            System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
-            TrackContentBounds.Y += this->_ScrollPosition->Y;
-
-            System::Drawing::Rectangle BarBounds = GetBarBounds(HoverBar, TrackContentBounds);
-
-            // Draw move preview
-            //m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(BarBounds), COLOR_TO_COLOR_F_A(m_ColorTheme.SelectionHighlight, 0.4f));
-            //m_pNativeRenderer->DrawRectangle(RECT_TO_RECT_F(BarBounds), COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight), 2.0f);
-
-            // Draw move handles
-            DrawMoveHandles(BarBounds);
-        }
-        */
         return true;
     }
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewDrawToolResize()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1595,7 +1615,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewEraseTool()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1642,7 +1662,7 @@ namespace MIDILightDrawer
 
                 // Fill with light red
                 D2D1_COLOR_F FillColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.4f);  // Red with 40% opacity
-                m_pNativeRenderer->FillRectangle(DeleteRect, FillColor);
+                _NativeRenderer->FillRectangle(DeleteRect, FillColor);
 
                 // If hovering over any selected bar, show delete preview for all selected bars
                 if (IsHoveringSelected)
@@ -1651,11 +1671,11 @@ namespace MIDILightDrawer
                     D2D1_COLOR_F BorderColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.7f); // Red with 70% opacity
 
                     // Draw border
-                    m_pNativeRenderer->DrawRectangle(DeleteRect, BorderColor, 2.0f);
+                    _NativeRenderer->DrawRectangle(DeleteRect, BorderColor, 2.0f);
 
                     // Draw X
-                    m_pNativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Top, (float)BarBounds.Right, (float)BarBounds.Bottom, BorderColor, 2.0f);
-                    m_pNativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Bottom, (float)BarBounds.Right, (float)BarBounds.Top, BorderColor, 2.0f);
+                    _NativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Top, (float)BarBounds.Right, (float)BarBounds.Bottom, BorderColor, 2.0f);
+                    _NativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Bottom, (float)BarBounds.Right, (float)BarBounds.Top, BorderColor, 2.0f);
                 }
             }
         }
@@ -1665,7 +1685,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewDurationTool()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1708,7 +1728,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewColorTool()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1749,8 +1769,8 @@ namespace MIDILightDrawer
                 System::Drawing::Rectangle BarBounds = GetBarBounds(bar, TrackContentBounds);
                 D2D1_RECT_F BarRect = RECT_TO_RECT_F(BarBounds);
 
-                m_pNativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(CurrentColor, 0.4f));  // Draw selection highlight
-                m_pNativeRenderer->DrawRectangle(BarRect, COLOR_TO_COLOR_F(CurrentColor), 2.0f);    // Draw preview outline
+                _NativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(CurrentColor, 0.4f));  // Draw selection highlight
+                _NativeRenderer->DrawRectangle(BarRect, COLOR_TO_COLOR_F(CurrentColor), 2.0f);    // Draw preview outline
 
                 // If this bar is being hovered over, show stronger highlight
                 if (bar == HoverBar)
@@ -1766,7 +1786,7 @@ namespace MIDILightDrawer
                         );
 
                         D2D1_COLOR_F GlowColor = COLOR_TO_COLOR_F_A(CurrentColor, 0.3f - (i * 0.1f));
-                        m_pNativeRenderer->DrawRectangle(GlowRect, GlowColor, 1.0f);
+                        _NativeRenderer->DrawRectangle(GlowRect, GlowColor, 1.0f);
                     }
                 }
             }
@@ -1775,8 +1795,8 @@ namespace MIDILightDrawer
         // Draw preview rectangle for hovered bar
         if (!PreviewRect.IsEmpty && !SelectedBars->Contains(HoverBar))
         {
-            m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(PreviewRect), COLOR_TO_COLOR_F_A(CurrentColor, 0.3f));  // Fill with semi-transparent preview color
-            m_pNativeRenderer->DrawRectangle(RECT_TO_RECT_F(PreviewRect), COLOR_TO_COLOR_F(CurrentColor), 1.0f);    // Draw border
+            _NativeRenderer->FillRectangle(RECT_TO_RECT_F(PreviewRect), COLOR_TO_COLOR_F_A(CurrentColor, 0.3f));  // Fill with semi-transparent preview color
+            _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(PreviewRect), COLOR_TO_COLOR_F(CurrentColor), 1.0f);    // Draw border
         }
 
         return true;
@@ -1784,7 +1804,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewFadeTool()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1806,7 +1826,7 @@ namespace MIDILightDrawer
             (float)this->_Control->Height
         );
 
-        m_pNativeRenderer->PushAxisAlignedClip(ContentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        _NativeRenderer->PushAxisAlignedClip(ContentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 
         try
         {
@@ -1823,7 +1843,7 @@ namespace MIDILightDrawer
         finally
         {
             // Restore clip region
-            m_pNativeRenderer->PopAxisAlignedClip();
+            _NativeRenderer->PopAxisAlignedClip();
         }
 
         return true;
@@ -1831,7 +1851,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewStrobeTool()
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1853,7 +1873,7 @@ namespace MIDILightDrawer
             (float)this->_Control->Height
         );
 
-        m_pNativeRenderer->PushAxisAlignedClip(contentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        _NativeRenderer->PushAxisAlignedClip(contentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 
         try
         {
@@ -1870,7 +1890,7 @@ namespace MIDILightDrawer
         finally
         {
             // Restore clip region
-            m_pNativeRenderer->PopAxisAlignedClip();
+            _NativeRenderer->PopAxisAlignedClip();
         }
 
         return true;
@@ -1879,7 +1899,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawNormalBar(BarEvent^ bar, System::Drawing::Rectangle bounds)
     {
-        if (!m_pNativeRenderer || !this->_ToolAccessDelegate) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
             return false;
         }
 
@@ -1888,8 +1908,8 @@ namespace MIDILightDrawer
         // Draw the bar with semi-transparency
         D2D1_RECT_F BarRect = RECT_TO_RECT_F(BarBounds);
 
-        m_pNativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(bar->Color, 0.8f));        // Normal appearance with 80% opacity
-        m_pNativeRenderer->DrawRectangle(BarRect, D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.4f), 1.0f);  // Draw border with slight transparency
+        _NativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(bar->Color, 0.8f));        // Normal appearance with 80% opacity
+        _NativeRenderer->DrawRectangle(BarRect, D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.4f), 1.0f);  // Draw border with slight transparency
 
 
         TimelineToolType CurrentTool = this->_ToolAccessDelegate->GetCurrentToolType();
@@ -1953,8 +1973,8 @@ namespace MIDILightDrawer
     bool Timeline_Direct2DRenderer::DrawCreationMovementPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds)
     {
         // Semi-transparent preview with border
-        m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F(bar->Color));
-        m_pNativeRenderer->DrawRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F_A(bar->Color, 0.7f), 1.0f);
+        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F(bar->Color));
+        _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F_A(bar->Color, 0.7f), 1.0f);
         
         // Add subtle glow effect
         DrawBarGlowEffect(barBounds, Color::FromArgb(100, bar->Color), 2);
@@ -1971,7 +1991,7 @@ namespace MIDILightDrawer
             Math::Min(255, bar->Color.B + 10)
         );
 
-        m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F(PreviewColor));
+        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F(PreviewColor));
 
         // Add glow effect for the preview
         DrawBarGlowEffect(barBounds, this->m_ColorTheme.SelectionHighlight, 3);
@@ -1981,29 +2001,29 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawGhostBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
         System::Drawing::Rectangle BarBounds = GetGhostBarBounds(bar, trackContentBounds);
 
         // Draw with high transparency (ghost effect)
-        m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(BarBounds), COLOR_TO_COLOR_F_A(bar->Color, 0.3f));
+        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(BarBounds), COLOR_TO_COLOR_F_A(bar->Color, 0.3f));
 
         return true;
     }
 
     bool Timeline_Direct2DRenderer::DrawSelectedBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
         // Calculate bar position and bounds
         System::Drawing::Rectangle BarBounds = GetBarBounds(bar, trackContentBounds);
 
-        m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(BarBounds), COLOR_TO_COLOR_F(bar->Color));          // Fill the bar
-        m_pNativeRenderer->DrawRectangle(RECT_TO_RECT_F(BarBounds), D2D1::ColorF(0, 0, 0, 0.4f), 1.0f);     // Draw border
+        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(BarBounds), COLOR_TO_COLOR_F(bar->Color));          // Fill the bar
+        _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(BarBounds), D2D1::ColorF(0, 0, 0, 0.4f), 1.0f);     // Draw border
 
         // Add glow effect
         DrawBarGlowEffect(BarBounds, m_ColorTheme.SelectionHighlight, 2);
@@ -2013,7 +2033,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return false;
         }
 
@@ -2027,80 +2047,24 @@ namespace MIDILightDrawer
             D2D1_RECT_F ShadowRect = D2D1::RectF(BarRect.left + i, BarRect.top + i, BarRect.right + i, BarRect.bottom + i);
             D2D1_COLOR_F ShadowColor = D2D1::ColorF(0, 0, 0, (0.4f - (i * 0.1f)));
             
-            m_pNativeRenderer->FillRectangle(ShadowRect, ShadowColor);
+            _NativeRenderer->FillRectangle(ShadowRect, ShadowColor);
         }
 
         // Draw semi-transparent bar
-        m_pNativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(bar->Color, 0.7f));
+        _NativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(bar->Color, 0.7f));
 
         // Draw glowing border
         DrawBarGlowEffect(BarBounds, Color::FromArgb(180, 255, 255, 255), 2);
 
         // Draw dashed outline
-        D2D1_COLOR_F DashColor = COLOR_TO_COLOR_F(Color::White);
-
-        // Create dashed stroke style
-        float dashes[] = { 4.0f, 4.0f };
-        m_pNativeRenderer->DrawLineDashed(BarRect.left, BarRect.top, BarRect.right, BarRect.top, DashColor, 1.0f, dashes, 2);
-        m_pNativeRenderer->DrawLineDashed(BarRect.right, BarRect.top, BarRect.right, BarRect.bottom, DashColor, 1.0f, dashes, 2);
-        m_pNativeRenderer->DrawLineDashed(BarRect.right, BarRect.bottom, BarRect.left, BarRect.bottom, DashColor, 1.0f, dashes, 2);
-        m_pNativeRenderer->DrawLineDashed(BarRect.left, BarRect.bottom, BarRect.left, BarRect.top, DashColor, 1.0f, dashes, 2);
-
+        _NativeRenderer->DrawRectangleDashed(BarRect, COLOR_TO_COLOR_F(Color::White), 1.0f, 4.0f, 4.0f);
+       
         return true;
-    }
-
-    bool Timeline_Direct2DRenderer::DrawDropTargetIndicator(System::Drawing::Rectangle bounds)
-    {
-        if (!m_pNativeRenderer) {
-            return false;
-        }
-
-        D2D1_RECT_F targetRect      = D2D1::RectF((float)bounds.X, (float)bounds.Y, (float)bounds.Right, (float)bounds.Bottom);
-        D2D1_COLOR_F targetColor    = COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight);
-
-        // Draw dashed border
-        float dashes[] = { 6.0f, 3.0f };
-        m_pNativeRenderer->DrawLineDashed(targetRect.left, targetRect.top, targetRect.right, targetRect.top, targetColor, 2.0f, dashes, 2);
-        m_pNativeRenderer->DrawLineDashed(targetRect.right, targetRect.top, targetRect.right, targetRect.bottom, targetColor, 2.0f, dashes, 2);
-        m_pNativeRenderer->DrawLineDashed(targetRect.right, targetRect.bottom, targetRect.left, targetRect.bottom, targetColor, 2.0f, dashes, 2);
-        m_pNativeRenderer->DrawLineDashed(targetRect.left, targetRect.bottom, targetRect.left, targetRect.top, targetColor, 2.0f, dashes, 2);
-
-        return true;
-    }
-
-    void Timeline_Direct2DRenderer::DrawMoveHandles(System::Drawing::Rectangle barBounds)
-    {
-        // Draw move arrows or handle indicators at the edges
-        const float arrowSize = 6.0f;
-        D2D1_COLOR_F HandleColor = COLOR_TO_COLOR_F(this->m_ColorTheme.SelectionHighlight);
-
-        // Draw left arrow
-        D2D1_POINT_2F leftArrow[3] = {
-            D2D1::Point2F(barBounds.Left + arrowSize, barBounds.Top + (barBounds.Bottom - barBounds.Top) / 2 - arrowSize),
-            D2D1::Point2F(barBounds.Left, barBounds.Top + (barBounds.Bottom - barBounds.Top) / 2),
-            D2D1::Point2F(barBounds.Left + arrowSize, barBounds.Top + (barBounds.Bottom - barBounds.Top) / 2 + arrowSize)
-        };
-
-        // Draw right arrow
-        D2D1_POINT_2F rightArrow[3] = {
-            D2D1::Point2F(barBounds.Right - arrowSize, barBounds.Top + (barBounds.Bottom - barBounds.Top) / 2 - arrowSize),
-            D2D1::Point2F(barBounds.Right, barBounds.Top + (barBounds.Bottom - barBounds.Top) / 2),
-            D2D1::Point2F(barBounds.Right - arrowSize, barBounds.Top + (barBounds.Bottom - barBounds.Top) / 2 + arrowSize)
-        };
-
-        // Fill the arrows
-        
-        //////////
-        // ToDo //
-        //////////
-
-        //m_pNativeRenderer->FillPolygon(leftArrow, 3, d2dHandleColor);
-        //m_pNativeRenderer->FillPolygon(rightArrow, 3, d2dHandleColor);
     }
 
     void Timeline_Direct2DRenderer::DrawBarGlowEffect(System::Drawing::Rectangle barBounds, System::Drawing::Color glowColor, int glowLevels)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return;
         }
 
@@ -2122,20 +2086,20 @@ namespace MIDILightDrawer
                 (0.3f - (i * 0.05f))  // Decreasing alpha for outer glow
             );
 
-            m_pNativeRenderer->DrawRectangle(glowRect, glowD2DColor, 1.0f);
+            _NativeRenderer->DrawRectangle(glowRect, glowD2DColor, 1.0f);
         }
     }
 
     void Timeline_Direct2DRenderer::DrawResizeHandle(System::Drawing::Rectangle barBounds, bool isTargeted)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return;
         }
 
         System::Drawing::Rectangle HandleBounds(barBounds.Right - 5, barBounds.Y + 5, 3, barBounds.Height - 10);
 
         // Fill handle rectangle
-        m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(HandleBounds), COLOR_TO_COLOR_F_A(Color::White, 0.8f));
+        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(HandleBounds), COLOR_TO_COLOR_F_A(Color::White, 0.8f));
 
         // Add glow effect for targeted handles
         if (isTargeted) {
@@ -2145,17 +2109,17 @@ namespace MIDILightDrawer
 
     void Timeline_Direct2DRenderer::DrawSelectionRectangle(System::Drawing::Rectangle selectionRectangle)
     {
-        if (!m_pNativeRenderer) {
+        if (!_NativeRenderer) {
             return;
         }
         
         if (selectionRectangle.Width > 0 && selectionRectangle.Height > 0)
         {
             // Fill with semi-transparent selection color
-            m_pNativeRenderer->FillRectangle(RECT_TO_RECT_F(selectionRectangle), COLOR_TO_COLOR_F_A(m_ColorTheme.SelectionHighlight, 0.2f));
+            _NativeRenderer->FillRectangle(RECT_TO_RECT_F(selectionRectangle), COLOR_TO_COLOR_F_A(m_ColorTheme.SelectionHighlight, 0.2f));
 
             // Draw border
-            m_pNativeRenderer->DrawRectangle(RECT_TO_RECT_F(selectionRectangle), COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight), 1.0f);
+            _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(selectionRectangle), COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight), 1.0f);
         }
     }
 
@@ -2351,6 +2315,16 @@ namespace MIDILightDrawer
         return BarBounds;
     }
 
+    System::Drawing::Rectangle Timeline_Direct2DRenderer::GetTrackButtonBounds(int buttonIndex, System::Drawing::Rectangle trackHeaderBounds)
+    {
+        return System::Drawing::Rectangle(
+            trackHeaderBounds.Right - (BUTTON_SIZE + BUTTON_MARGIN) * (buttonIndex + 1),
+            trackHeaderBounds.Y + BUTTON_MARGIN,
+            BUTTON_SIZE,
+            BUTTON_SIZE
+        );
+    }
+
     std::wstring Timeline_Direct2DRenderer::ConvertString(System::String^ str)
     {
         if (str == nullptr) {
@@ -2368,11 +2342,11 @@ namespace MIDILightDrawer
     {
         if (!m_disposed)
         {
-            if (m_pNativeRenderer)
+            if (_NativeRenderer)
             {
-                m_pNativeRenderer->Cleanup();
-                delete m_pNativeRenderer;
-                m_pNativeRenderer = nullptr;
+                _NativeRenderer->Cleanup();
+                delete _NativeRenderer;
+                _NativeRenderer = nullptr;
             }
             m_disposed = true;
         }

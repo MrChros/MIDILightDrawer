@@ -26,6 +26,7 @@ namespace MIDILightDrawer
     enum class BarPreviewType;
 
     value struct TabStringInfo;
+    value struct TrackButtonId;
 
 
     // Managed wrapper for TimelineD2DRenderer
@@ -37,6 +38,8 @@ namespace MIDILightDrawer
         static const int MIN_PIXELS_BETWEEN_GRIDLINES   = 20;
         static const int TRACK_HEADER_WIDTH				= 150;
         static const int TRACK_PADDING					= 4;
+        static const int BUTTON_SIZE					= 24;
+		static const int BUTTON_MARGIN					= 6;
         static const float FIXED_STRING_SPACING			= 12.0f;
 
         value struct CachedThemeColors {
@@ -63,6 +66,7 @@ namespace MIDILightDrawer
         void SetZoomLevel(double zoomlevel);
         void SetScrollPositionReference(System::Drawing::Point^ scrollposition);
         void SetTimelineAccess(ITimelineAccess^ access);
+        void PreloadImages();
 
         // Drawing Methods
         bool BeginDraw();
@@ -98,8 +102,10 @@ namespace MIDILightDrawer
         TabStringInfo DrawTablatureStrings(System::Drawing::Rectangle bounds, float availableHeight, float logScale, int numStrings);
         
         bool DrawTrackHeaders();
-        bool DrawTrackButtons(Track^ track, System::Drawing::RectangleF headerBounds);
-        void DrawRoundedButtonBackground(System::Drawing::RectangleF bounds, bool isPressed, bool isHovered, System::Drawing::Color baseColor);
+        bool DrawTrackButtons(Track^ track, System::Drawing::Rectangle trackHeaderBounds);
+        bool DrawTrackButtonText(System::Drawing::Rectangle trackHeaderBounds, int buttonIndex, System::String^ text, bool isPressed, bool isHovered, System::Drawing::Color baseColor, System::Drawing::Color textColor);
+        bool DrawTrackButtonIcon(System::Drawing::Rectangle trackHeaderBounds, int buttonIndex, System::Drawing::Image^ icon, bool isPressed, bool isHovered, System::Drawing::Color baseColor, System::Drawing::Color textColor);
+        void DrawTrackButtonBase(System::Drawing::Rectangle buttonBounds, bool isPressed, bool isHovered, System::Drawing::Color baseColor);
         bool DrawTrackDividers(Track^ hoverTrack);
 
 
@@ -129,8 +135,6 @@ namespace MIDILightDrawer
         bool DrawGhostBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds);
         bool DrawSelectedBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds);
         bool DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds);
-        bool DrawDropTargetIndicator(System::Drawing::Rectangle bounds);
-        void DrawMoveHandles(System::Drawing::Rectangle barBounds); // ToDo here...
         void DrawBarGlowEffect(System::Drawing::Rectangle barBounds, System::Drawing::Color glowColor, int glowLevels);
         void DrawResizeHandle(System::Drawing::Rectangle barBounds, bool isTargeted);
         void DrawSelectionRectangle(System::Drawing::Rectangle selectionRectangle);
@@ -149,14 +153,16 @@ namespace MIDILightDrawer
         System::Drawing::Rectangle GetTrackContentBounds(Track^ track);
         System::Drawing::Rectangle GetBarBounds(BarEvent^ bar, System::Drawing::Rectangle bounds);
         System::Drawing::Rectangle GetGhostBarBounds(BarEvent^ bar, System::Drawing::Rectangle bounds);
+        System::Drawing::Rectangle GetTrackButtonBounds(int buttonIndex, System::Drawing::Rectangle trackHeaderBounds);
 
     private:
+        System::Resources::ResourceManager^ _Resources;
+        Timeline_Direct2DRenderer_Native* _NativeRenderer;  // Pointer to native renderer
+        System::IntPtr _ControlHandle;                      // Handle to the managed control
+        
         bool m_disposed;
         bool m_themeColorsCached;
         CachedThemeColors m_ColorTheme;
-
-        Timeline_Direct2DRenderer_Native* m_pNativeRenderer;    // Pointer to native renderer
-        System::IntPtr m_controlHandle;                         // Handle to the managed control
 
         System::Windows::Forms::Control^ _Control;
         List<Track^>^           _Tracks;

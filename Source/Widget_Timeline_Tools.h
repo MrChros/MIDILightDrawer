@@ -146,26 +146,15 @@ namespace MIDILightDrawer
 	////////////////////////////////
 	// PointerTool Implementation //
 	////////////////////////////////
-	public ref class TimelineClipboardItem {
-	public:
-		BarEvent^ Bar;
-		int TrackIndex;  // Store track index instead of Track^ to avoid reference issues
-
-		TimelineClipboardItem(BarEvent^ bar, int trackIdx) {
-			Bar = bar;
-			TrackIndex = trackIdx;
-		}
-	};
-
 	public ref class TimelineClipboardManager abstract sealed {
 	private:
-		static List<TimelineClipboardItem^>^ _ClipboardContent;
+		static List<BarEvent^>^ _ClipboardContent;
 
 	public:
-		static property List<TimelineClipboardItem^>^ Content {
-			List<TimelineClipboardItem^> ^ get() {
+		static property List<BarEvent^>^ Content {
+			List<BarEvent^> ^ get() {
 				if (_ClipboardContent == nullptr) {
-					_ClipboardContent = gcnew List<TimelineClipboardItem^>();
+					_ClipboardContent = gcnew List<BarEvent^>();
 				}
 				return _ClipboardContent;
 			}
@@ -191,13 +180,15 @@ namespace MIDILightDrawer
 		Rectangle			_SelectionRect;
 		List<BarEvent^>^	_SelectedBars;
 		List<BarEvent^>^	_PastePreviewBars;
+		List<int>^			_OriginalBarStartTicks;
 		
-		bool Is_Multi_Track_Selection();
+		bool IsMultiTrackList(List<BarEvent^>^ list);
 		void StoreOriginalPositions();
 		void UpdateGroupPosition(int tickDelta, bool allowTrackChange);
 		void MoveSelectedBarsToTrack(Track^ targetTrack);
 		void UpdateCursor(Point mousePos);
 		void EraseSelectedBars();
+		bool HasOverlappingBars(List<BarEvent^>^ barList);
 
 	public:
 		PointerTool(Widget_Timeline^ timeline);
@@ -218,10 +209,11 @@ namespace MIDILightDrawer
 		void SelectBarsInRegion(Rectangle region);
 
 		void HandleCopy();
-		void HandlePaste();
-		void UpdatePastePreview(Point mousePos);
+		void StartPaste();
+		void UpdatePaste(Point mousePos);
+		void FinishPaste();
 		void CancelPaste();
-		void FinalizePaste();
+		
 
 		property List<BarEvent^>^ SelectedBars {
 			List<BarEvent^>^ get() override { return _SelectedBars; }
@@ -244,7 +236,7 @@ namespace MIDILightDrawer
 		}
 
 		property bool IsMultiTrackSelection {
-			bool get() override { return Is_Multi_Track_Selection(); }
+			bool get() override { return IsMultiTrackList(_SelectedBars); }
 		}
 
 		property Point CurrentMousePosition {

@@ -151,7 +151,7 @@ namespace MIDILightDrawer
 	///////////
 	// Track //
 	///////////
-	value struct TrackButtonId {
+	public value struct TrackButtonId {
 		Track^ Track;
 		int ButtonIndex;
 	};
@@ -229,7 +229,7 @@ namespace MIDILightDrawer
 
 		property int StartTick {
 			int get() { return _Start_Tick; }
-			void set(int value) { _Start_Tick = value; }
+			void set(int value);
 		}
 
 		property int EndTick {
@@ -238,7 +238,7 @@ namespace MIDILightDrawer
 
 		property int Duration {
 			int get() { return _Duration_In_Ticks; }
-			void set(int value) { _Duration_In_Ticks = value; }
+			void set(int value);
 		}
 
 		property System::Drawing::Color Color {

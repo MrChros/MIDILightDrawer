@@ -10,6 +10,8 @@ namespace MIDILightDrawer
     enum class DrawToolMode;
     enum class TimelineToolType;
 
+    value struct TrackButtonId;
+
     // Interface for tool state access
     public interface class ITimelineToolAccess
     {
@@ -59,5 +61,6 @@ namespace MIDILightDrawer
     {
         TimelineToolType GetCurrentToolType();
         ITimelineToolAccess^ GetToolAccess();
+        TrackButtonId GetHoverButton();
     };
 }

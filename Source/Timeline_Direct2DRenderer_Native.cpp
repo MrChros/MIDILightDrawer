@@ -6,7 +6,6 @@ Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
     m_hwnd(nullptr),
     m_pD2DFactory(nullptr),
     m_pRenderTarget(nullptr),
-    m_pDashedStroke(nullptr),
     m_pSolidStroke(nullptr),
     m_pDWriteFactory(nullptr),
     m_pMeasureNumberFormat(nullptr),
@@ -70,6 +69,14 @@ void Timeline_Direct2DRenderer_Native::Cleanup()
     }
     m_brushCache.clear();
 
+    // Release bitmap cache
+    for (auto& cached : m_bitmapCache) {
+        if (cached.bitmap) {
+            cached.bitmap->Release();
+        }
+    }
+    m_bitmapCache.clear();
+
     // Release text formats
     if (m_pMeasureNumberFormat)
     {
@@ -112,13 +119,6 @@ void Timeline_Direct2DRenderer_Native::Cleanup()
     {
         m_pDWriteFactory->Release();
         m_pDWriteFactory = nullptr;
-    }
-
-    // Release stroke styles
-    if (m_pDashedStroke)
-    {
-        m_pDashedStroke->Release();
-        m_pDashedStroke = nullptr;
     }
 
     if (m_pSolidStroke)
@@ -322,28 +322,6 @@ ID2D1SolidColorBrush* Timeline_Direct2DRenderer_Native::GetCachedBrush(const D2D
 
 bool Timeline_Direct2DRenderer_Native::CreateStrokeStyles()
 {
-    // Create dashed stroke style
-    float dashes[] = { 5.0f, 3.0f };
-    D2D1_STROKE_STYLE_PROPERTIES dashedProps = D2D1::StrokeStyleProperties(
-        D2D1_CAP_STYLE_FLAT,
-        D2D1_CAP_STYLE_FLAT,
-        D2D1_CAP_STYLE_FLAT,
-        D2D1_LINE_JOIN_MITER,
-        10.0f,
-        D2D1_DASH_STYLE_CUSTOM,
-        0.0f
-    );
-
-    HRESULT hr = m_pD2DFactory->CreateStrokeStyle(
-        dashedProps,
-        dashes,
-        ARRAYSIZE(dashes),
-        &m_pDashedStroke
-    );
-
-    if (FAILED(hr))
-        return false;
-
     // Create solid stroke style
     D2D1_STROKE_STYLE_PROPERTIES solidProps = D2D1::StrokeStyleProperties(
         D2D1_CAP_STYLE_FLAT,
@@ -355,7 +333,7 @@ bool Timeline_Direct2DRenderer_Native::CreateStrokeStyles()
         0.0f
     );
 
-    hr = m_pD2DFactory->CreateStrokeStyle(
+    HRESULT hr = m_pD2DFactory->CreateStrokeStyle(
         solidProps,
         nullptr,
         0,
@@ -443,6 +421,70 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
     return true;
 }
 
+bool Timeline_Direct2DRenderer_Native::CreateBitmapFromImage(System::Drawing::Image^ image, ID2D1Bitmap** ppBitmap)
+{
+    if (!m_pRenderTarget || !image || !ppBitmap) {
+        return false;
+    }
+
+    // Create temporary GDI+ bitmap to access pixels
+    System::Drawing::Bitmap^ gdiBitmap = gcnew System::Drawing::Bitmap(image);
+    System::Drawing::Rectangle rect(0, 0, gdiBitmap->Width, gdiBitmap->Height);
+    System::Drawing::Imaging::BitmapData^ bitmapData = gdiBitmap->LockBits(rect, System::Drawing::Imaging::ImageLockMode::ReadOnly, System::Drawing::Imaging::PixelFormat::Format32bppPArgb);
+
+    // Create D2D bitmap properties
+    D2D1_BITMAP_PROPERTIES props = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
+
+    // Create the bitmap
+    HRESULT hr = m_pRenderTarget->CreateBitmap(
+        D2D1::SizeU(gdiBitmap->Width, gdiBitmap->Height),
+        bitmapData->Scan0.ToPointer(),
+        bitmapData->Stride,
+        props,
+        ppBitmap
+    );
+
+    gdiBitmap->UnlockBits(bitmapData);
+    delete gdiBitmap;
+
+    return SUCCEEDED(hr);
+}
+
+bool Timeline_Direct2DRenderer_Native::DrawBitmap(ID2D1Bitmap* bitmap, const D2D1_RECT_F& destRect, float opacity)
+{
+    if (!m_pRenderTarget || !bitmap) {
+        return false;
+    }
+
+    m_pRenderTarget->DrawBitmap(
+        bitmap,
+        destRect,
+        opacity,
+        D2D1_BITMAP_INTERPOLATION_MODE_LINEAR
+    );
+
+    return true;
+}
+
+bool Timeline_Direct2DRenderer_Native::CreateAndCacheBitmap(const std::wstring& key, System::Drawing::Image^ image)
+{
+    ID2D1Bitmap* Bitmap = nullptr;
+    if (!CreateBitmapFromImage(image, &Bitmap)) {
+        return false;
+    }
+
+    m_bitmapCache.push_back({ key, Bitmap });
+
+    return true;
+}
+
+ID2D1Bitmap* Timeline_Direct2DRenderer_Native::GetCachedBitmap(const std::wstring& key)
+{
+    auto it = std::find_if(m_bitmapCache.begin(), m_bitmapCache.end(),
+        [&key](const CachedBitmap& cached) { return cached.key == key; });
+    return it != m_bitmapCache.end() ? it->bitmap : nullptr;
+}
+
 bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth)
 {
     if (!m_pRenderTarget)
@@ -493,45 +535,6 @@ bool Timeline_Direct2DRenderer_Native::DrawLines(const D2D1_POINT_2F* points, UI
     return true;
 }
 
-bool Timeline_Direct2DRenderer_Native::DrawLineDashed(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth, const float* dashes, UINT32 dashCount)
-{
-    if (!m_pRenderTarget || !m_pD2DFactory)
-        return false;
-
-    // Create a custom stroke style for these dashes
-    ID2D1StrokeStyle* customDashedStroke = nullptr;
-    D2D1_STROKE_STYLE_PROPERTIES dashedProps = D2D1::StrokeStyleProperties(
-        D2D1_CAP_STYLE_FLAT,
-        D2D1_CAP_STYLE_FLAT,
-        D2D1_CAP_STYLE_FLAT,
-        D2D1_LINE_JOIN_MITER,
-        10.0f,
-        D2D1_DASH_STYLE_CUSTOM,
-        0.0f
-    );
-
-    HRESULT hr = m_pD2DFactory->CreateStrokeStyle(
-        dashedProps,
-        dashes,
-        dashCount,
-        &customDashedStroke
-    );
-
-    if (FAILED(hr))
-        return false;
-
-    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
-    if (!brush) {
-        customDashedStroke->Release();
-        return false;
-    }
-
-    m_pRenderTarget->DrawLine(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), brush, strokeWidth, customDashedStroke);
-
-    customDashedStroke->Release();
-    return true;
-}
-
 bool Timeline_Direct2DRenderer_Native::DrawRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float strokeWidth)
 {
     if (!m_pRenderTarget) {
@@ -555,6 +558,61 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangle(float left, float top, floa
     D2D1_RECT_F rect = D2D1::RectF(left, top, right, bottom);
 
     return DrawRectangle(rect, color, strokeWidth);
+}
+
+bool Timeline_Direct2DRenderer_Native::DrawRectangleDashed(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float strokeWidth, float dashLength, float gapLength)
+{
+    if (!m_pRenderTarget) {
+        return false;
+    }
+
+    // Get brush
+    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
+    if (!brush) {
+        return false;
+    }
+
+    // Top line
+    float x = rect.left;
+    while (x < rect.right) {
+        float segmentEnd = min(x + dashLength, rect.right);
+        m_pRenderTarget->DrawLine(D2D1::Point2F(x, rect.top),
+            D2D1::Point2F(segmentEnd, rect.top),
+            brush, strokeWidth);
+        x += dashLength + gapLength;
+    }
+
+    // Right line
+    float y = rect.top;
+    while (y < rect.bottom) {
+        float segmentEnd = min(y + dashLength, rect.bottom);
+        m_pRenderTarget->DrawLine(D2D1::Point2F(rect.right, y),
+            D2D1::Point2F(rect.right, segmentEnd),
+            brush, strokeWidth);
+        y += dashLength + gapLength;
+    }
+
+    // Bottom line
+    x = rect.left;
+    while (x < rect.right) {
+        float segmentEnd = min(x + dashLength, rect.right);
+        m_pRenderTarget->DrawLine(D2D1::Point2F(x, rect.bottom),
+            D2D1::Point2F(segmentEnd, rect.bottom),
+            brush, strokeWidth);
+        x += dashLength + gapLength;
+    }
+
+    // Left line
+    y = rect.top;
+    while (y < rect.bottom) {
+        float segmentEnd = min(y + dashLength, rect.bottom);
+        m_pRenderTarget->DrawLine(D2D1::Point2F(rect.left, y),
+            D2D1::Point2F(rect.left, segmentEnd),
+            brush, strokeWidth);
+        y += dashLength + gapLength;
+    }
+
+    return true;
 }
 
 bool Timeline_Direct2DRenderer_Native::FillRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color)
@@ -859,6 +917,8 @@ bool Timeline_Direct2DRenderer_Native::DrawText(const std::wstring& text, const 
         return false;
     }
 
+    textFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+
     ID2D1SolidColorBrush* brush = GetCachedBrush(color);
     if (!brush) {
         return false;
@@ -902,6 +962,17 @@ float Timeline_Direct2DRenderer_Native::MeasureTextWidth(const std::wstring& tex
     }
 
     return metrics.widthIncludingTrailingWhitespace;
+}
+
+bool Timeline_Direct2DRenderer_Native::PreloadBitmap(const std::wstring& key, System::Drawing::Image^ image)
+{
+    return CreateAndCacheBitmap(key, image);
+}
+
+bool Timeline_Direct2DRenderer_Native::DrawCachedBitmap(const std::wstring& key, const D2D1_RECT_F& destRect, float opacity)
+{
+    ID2D1Bitmap* Bitmap = GetCachedBitmap(key);
+    return Bitmap ? DrawBitmap(Bitmap, destRect, opacity) : false;
 }
 
 bool Timeline_Direct2DRenderer_Native::PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer)
@@ -967,145 +1038,3 @@ bool Timeline_Direct2DRenderer_Native::CreatePathGeometry(ID2D1PathGeometry** ge
     HRESULT hr = m_pD2DFactory->CreatePathGeometry(geometry);
     return SUCCEEDED(hr);
 }
-
-/*
-bool Timeline_Direct2DRenderer_Native::DrawGridLine(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, bool isDashed)
-{
-    if (!m_pRenderTarget) {
-        return false;
-    }
-
-    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
-    if (!brush)
-        return false;
-
-    m_pRenderTarget->DrawLine(
-        D2D1::Point2F(x1, y1),
-        D2D1::Point2F(x2, y2),
-        brush,
-        1.0f,
-        isDashed ? m_pDashedStroke : m_pSolidStroke
-    );
-
-    return true;
-}
-
-bool Timeline_Direct2DRenderer_Native::DrawMeasureLine(float x, float y1, float y2, const D2D1_COLOR_F& color)
-{
-    // Measure lines are always solid and slightly thicker
-    if (!m_pRenderTarget) {
-        return false;
-    }
-
-    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
-    if (!brush)
-        return false;
-
-    m_pRenderTarget->DrawLine(
-        D2D1::Point2F(x, y1),
-        D2D1::Point2F(x, y2),
-        brush,
-        2.0f,
-        m_pSolidStroke
-    );
-
-    return true;
-}
-
-
-
-
-
-
-
-
-bool Timeline_Direct2DRenderer_Native::DrawGridLineRaw(float x1, float y1, float x2, float y2, float r, float g, float b, float a, bool isDashed)
-{
-    D2D1_COLOR_F color = D2D1::ColorF(r, g, b, a);
-
-    return DrawGridLine(x1, y1, x2, y2, color, isDashed);
-}
-
-bool Timeline_Direct2DRenderer_Native::DrawMeasureLineRaw(float x, float y1, float y2, float r, float g, float b, float a)
-{
-    D2D1_COLOR_F color = D2D1::ColorF(r, g, b, a);
-
-    return DrawMeasureLine(x, y1, y2, color);
-}
-
-bool Timeline_Direct2DRenderer_Native::DrawMeasureNumbers(float width, float headerHeight, const std::vector<MeasureInfo>& measures, const D2D1_COLOR_F& headerBackground, const D2D1_COLOR_F& textColor, float scrollX, float zoomLevel)
-{
-    if (!m_pRenderTarget) {
-        return false;
-    }
-
-    // Draw header background
-    D2D1_RECT_F headerRect = D2D1::RectF(0, 0, width, headerHeight);
-    m_pRenderTarget->FillRectangle(headerRect, GetCachedBrush(headerBackground));
-
-    // Constants for vertical positioning
-    const float markerTextY = 2;
-    const float timeSignatureY = markerTextY + 14 + 2;
-    const float measureNumberY = timeSignatureY + 14 + 4;
-
-    // Get text brush
-    ID2D1SolidColorBrush* textBrush = GetCachedBrush(textColor);
-
-    for (const auto& measure : measures)
-    {
-        // Convert tick position to pixels with zoom
-        float x = (measure.startTick * 16.0f / 960.0f) * zoomLevel + scrollX + 150; // 150 is TRACK_HEADER_WIDTH
-
-        if (x >= 150 && x <= width)
-        {
-            // Draw marker text if present
-            if (!measure.markerText.empty())
-            {
-                D2D1_RECT_F markerRect = D2D1::RectF(
-                    x - 50, markerTextY,
-                    x + 50, markerTextY + 14
-                );
-                m_pRenderTarget->DrawText(
-                    measure.markerText.c_str(),
-                    static_cast<UINT32>(measure.markerText.length()),
-                    m_pMarkerTextFormat,
-                    markerRect,
-                    textBrush
-                );
-            }
-
-            // Draw measure number
-            wchar_t numText[16];
-            swprintf_s(numText, L"%d", measure.number);
-            D2D1_RECT_F numberRect = D2D1::RectF(
-                x - 25, measureNumberY,
-                x + 25, measureNumberY + 14
-            );
-            m_pRenderTarget->DrawText(
-                numText,
-                static_cast<UINT32>(wcslen(numText)),
-                m_pMeasureNumberFormat,
-                numberRect,
-                textBrush
-            );
-
-            // Draw time signature
-            wchar_t timeSignature[16];
-            swprintf_s(timeSignature, L"%d/%d", measure.numerator, measure.denominator);
-            D2D1_RECT_F sigRect = D2D1::RectF(
-                x - 25, timeSignatureY,
-                x + 25, timeSignatureY + 14
-            );
-            m_pRenderTarget->DrawText(
-                timeSignature,
-                static_cast<UINT32>(wcslen(timeSignature)),
-                m_pTimeSignatureFormat,
-                sigRect,
-                textBrush
-            );
-        }
-    }
-
-    return true;
-}
-*/

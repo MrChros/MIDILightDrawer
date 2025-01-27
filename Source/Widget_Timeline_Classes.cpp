@@ -179,4 +179,19 @@ namespace MIDILightDrawer
 		_Duration_In_Ticks_Original	= duration_in_ticks;
 		_Color						= color;
 	}
+
+	void BarEvent::StartTick::set(int value)
+	{
+		if(value < 0) {
+			value = 0;
+		}
+		_Start_Tick = value;
+	}
+
+	void BarEvent::Duration::set(int value)
+	{
+		if(value > 0) {
+			_Duration_In_Ticks = value;
+		}
+	}
 }

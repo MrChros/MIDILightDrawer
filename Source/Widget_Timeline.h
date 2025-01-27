@@ -14,8 +14,6 @@ using namespace System::Collections::Generic;
 #include "Timeline_Direct2DRenderer.h"
 #include "Timeline_Performance_Metrics.h"
 
-#define USE_DIRECT_X	true
-
 namespace MIDILightDrawer 
 {
 	// Forward Declarations
@@ -33,24 +31,16 @@ namespace MIDILightDrawer
 	public ref class Widget_Timeline : public UserControl, public ITimelineAccess {
 	public:
 		// Constants
-		static const int TICKS_PER_QUARTER				= 960;
-		static const int INITIAL_TICK_OFFSET			= TICKS_PER_QUARTER;
+		static const int INITIAL_TICK_OFFSET			= Timeline_Direct2DRenderer::TICKS_PER_QUARTER;
 		static const int DEFAULT_TRACK_HEIGHT			= 140;	// 100
-		static const int HEADER_HEIGHT					= 60;
-		//static const int MIN_PIXELS_BETWEEN_GRIDLINES	= 20;
-		static const int TRACK_HEADER_WIDTH				= 150;
-		static const int TRACK_PADDING					= 4;
 		static const int MINIMUM_TRACK_HEIGHT			= 30;
 		static const int TRACK_RESIZE_HANDLE_HEIGHT		= 5;
 		static const int SCROLL_UNIT					= 50;	// Pixels per scroll unit
-		static const int BUTTON_SIZE					= 24;
-		static const int BUTTON_MARGIN					= 6;
 		static const double MIN_ZOOM_LEVEL				= 0.1;	// 1/10x zoom
 		static const double MAX_ZOOM_LEVEL				= 20.0;	// 20x zoom
 		static const float TAB_PADDING					= 4.0f;	// Padding for tablature elements
 		static const float MIN_VISIBLE_FONT_SIZE		= 4.0f;	// Minimum readable font size
-		static const float FIXED_STRING_SPACING			= 12.0f;
-		static const float MIN_TRACK_HEIGHT_WITH_TAB	= TRACK_PADDING * 2 + FIXED_STRING_SPACING * 5;
+		static const float MIN_TRACK_HEIGHT_WITH_TAB	= Timeline_Direct2DRenderer::TRACK_PADDING * 2 + Timeline_Direct2DRenderer::FIXED_STRING_SPACING * 5;
 
 	public:
 		Widget_Timeline();
@@ -78,21 +68,25 @@ namespace MIDILightDrawer
 		
 		// Tools setter/getter
 		void SetCurrentTool(TimelineToolType tool);
-		PointerTool^	GetPointerTool()	{ return (PointerTool^) (tools[TimelineToolType::Pointer]);		}
-		DrawTool^		GetDrawTool()		{ return (DrawTool^)	(tools[TimelineToolType::Draw]);		}
-		SplitTool^		GetSplitTool()		{ return (SplitTool^)	(tools[TimelineToolType::Split]);		}
-		EraseTool^		GetEraseTool()		{ return (EraseTool^)	(tools[TimelineToolType::Erase]);		}
-		DurationTool^	GetDurationTool()	{ return (DurationTool^)(tools[TimelineToolType::Duration]);	}
-		ColorTool^		GetColorTool()		{ return (ColorTool^)	(tools[TimelineToolType::Color]);		}
-		FadeTool^		GetFadeTool()		{ return (FadeTool^)	(tools[TimelineToolType::Fade]);		}
-		StrobeTool^		GetStrobeTool()		{ return (StrobeTool^)	(tools[TimelineToolType::Strobe]);		}
+		PointerTool^	GetPointerTool()	{ return (PointerTool^) (_Tools[TimelineToolType::Pointer]);		}
+		DrawTool^		GetDrawTool()		{ return (DrawTool^)	(_Tools[TimelineToolType::Draw]);		}
+		SplitTool^		GetSplitTool()		{ return (SplitTool^)	(_Tools[TimelineToolType::Split]);		}
+		EraseTool^		GetEraseTool()		{ return (EraseTool^)	(_Tools[TimelineToolType::Erase]);		}
+		DurationTool^	GetDurationTool()	{ return (DurationTool^)(_Tools[TimelineToolType::Duration]);	}
+		ColorTool^		GetColorTool()		{ return (ColorTool^)	(_Tools[TimelineToolType::Color]);		}
+		FadeTool^		GetFadeTool()		{ return (FadeTool^)	(_Tools[TimelineToolType::Fade]);		}
+		StrobeTool^		GetStrobeTool()		{ return (StrobeTool^)	(_Tools[TimelineToolType::Strobe]);		}
 
 		virtual TimelineToolType GetCurrentToolType() {
-			return currentToolType;
+			return _CurrentToolType;
 		}
 
 		virtual ITimelineToolAccess^ GetToolAccess() {
-			return safe_cast<ITimelineToolAccess^>(tools[currentToolType]);
+			return safe_cast<ITimelineToolAccess^>(_Tools[_CurrentToolType]);
+		}
+
+		virtual  TrackButtonId GetHoverButton() {
+			return _HoveredButton;
 		}
 
 		// Other interface metohds for the tools		
@@ -139,107 +133,39 @@ namespace MIDILightDrawer
 		}
 
 	private:
-		System::Resources::ResourceManager^ _Resources;
-		
-		Timeline_Direct2DRenderer^	D2DRenderer;
-		TimelineResourceManager^	resourceManager;
-		PerformanceMetrics^			performanceMetrics;
+		Timeline_Direct2DRenderer^	_D2DRenderer;
+		TimelineResourceManager^	_ResourceManager;
+		PerformanceMetrics^			_PerformanceMetrics;
 
-		ThemeColors		currentTheme;
-		TrackButtonId	hoveredButton;
+		ThemeColors		_CurrentTheme;
+		TrackButtonId	_HoveredButton;
 		
-		List<Track^>^	tracks;
-		List<Measure^>^ measures;
-
-		// Drawing buffers
-		BufferedGraphicsContext^	bufferContext;
-		BufferedGraphics^			graphicsBuffer;
+		List<Track^>^	_Tracks;
+		List<Measure^>^ _Measures;
 
 		// Scroll Bars
-		System::Windows::Forms::HScrollBar^ hScrollBar;
-		System::Windows::Forms::VScrollBar^ vScrollBar;
+		System::Windows::Forms::HScrollBar^ _HScrollBar;
+		System::Windows::Forms::VScrollBar^ _VScrollBar;
 
-		// Font for measure numbers
-		System::Drawing::Font^ measureFont;
-		System::Drawing::Font^ markerFont;
-		System::Drawing::Font^ cachedTabFont;
-
-		// Drawing Support for Tablature
-		Pen^		cachedStringPen;
-		Pen^		cachedDurationPen;
-		SolidBrush^ cachedTextBrush;
-
-		Track^ trackBeingResized;
-		Track^ resizeHoverTrack;
+		Track^ _TrackBeingResized;
+		Track^ _ResizeHoverTrack;
 		
-		Point^ scrollPosition;
-		Point^ dragStartPoint;
-		Point^ currentMousePoint;
+		Point^ _ScrollPosition;
 
-		int	resizeStartY;
-		int	initialTrackHeight;
+		int	_ResizeStartY;
+		int	_InitialTrackHeight;
 
-		double zoomLevel;
+		double _ZoomLevel;
 
 		// Tools
-		TimelineToolType	currentToolType;
-		TimelineTool^		currentTool;
-		SnappingType		snappingType;
-		Dictionary<TimelineToolType, TimelineTool^>^ tools;
+		TimelineToolType	_CurrentToolType;
+		TimelineTool^		_CurrentTool;
+		SnappingType		_SnappingType;
+		Dictionary<TimelineToolType, TimelineTool^>^ _Tools;
 
 		// Private methods
 		void InitializeComponent();
 		void InitializeToolSystem();
-		void InitializeTablatureResources();
-		void UpdateBuffer();
-
-		// New helper methods for timeline drawing
-		void DrawMeasureLines				(Graphics^ g, Rectangle contentRect);
-		void DrawBeatLines					(Graphics^ g, Rectangle^ clipRect);
-		void DrawSubdivisionLines			(Graphics^ g, Rectangle^ clipRect);
-		void DrawMeasureNumbers				(Graphics^ g);
-		void DrawToolPreview				(Graphics^ g);
-		void DrawToolPreviewDrawTool		(Graphics^ g);
-		void DrawToolPreviewDrawToolDraw	(Graphics^ g, DrawTool^ drawTool);
-		void DrawToolPreviewDrawToolErase	(Graphics^ g, DrawTool^ drawTool);
-		void DrawToolPreviewDrawToolMove	(Graphics^ g, DrawTool^ drawTool);
-		void DrawToolPreviewDrawToolResize	(Graphics^ g, DrawTool^ drawTool);
-		void DrawToolPreviewEraseTool		(Graphics^ g);
-		void DrawToolPreviewDurationTool	(Graphics^ g);
-		void DrawToolPreviewColorTool		(Graphics^ g);
-		void DrawToolPreviewFadeTool		(Graphics^ g);
-		void DrawToolPreviewStrobeTool		(Graphics^ g);
-		void DrawPreviewBar					(Graphics^ g, BarEvent^ bar, Track^ track, Point mousePos, BarPreviewType previewType);
-		void DrawPreviewBarList				(Graphics^ g, List<BarEvent^>^ bar_list, Track^ track);
-		void DrawCreationMovementPreview	(Graphics^ g, BarEvent^ bar, Rectangle bounds);
-		void DrawDurationPreview			(Graphics^ g, BarEvent^ bar, Rectangle bounds);
-		void DrawNormalBar					(Graphics^ g, BarEvent^ bar, Rectangle bounds);
-		void DrawGhostBar					(Graphics^ g, BarEvent^ bar, Rectangle bounds);
-		void DrawSelectedBar				(Graphics^ g, BarEvent^ bar, Rectangle bounds);
-		void DrawMoveHandles				(Graphics^ g, Rectangle barBounds);
-		void DrawBarGlowEffect				(Graphics^ g, Rectangle barBounds, Color glowColor, int glowLevels);
-		void DrawResizeHandle				(Graphics^ g, Rectangle barBounds, Color handleColor, bool isTargeted);
-
-		// Track-related methods
-		void DrawTrackHeaders			(Graphics^ g);
-		void DrawTrackContent			(Graphics^ g);
-		void DrawTrackBackground		(Graphics^ g);
-		void DrawTrackDividers			(Graphics^ g);
-		void DrawTrackName				(Graphics^ g, Track^ track, Rectangle headerBounds);
-		void DrawTrackButtons			(Graphics^ g, Track^ track, Rectangle headerBounds);
-		void DrawTrackButtonText		(Graphics^ g, Rectangle headerBounds, int buttonIndex, String^ text, bool isPressed, bool isHovered, Color baseColor, Color textColor);
-		void DrawTrackButtonIcon		(Graphics^ g, Rectangle headerBounds, int buttonIndex, Image^ icon , bool isPressed, bool isHovered, Color baseColor, Color textColor);
-		void DrawTrackBorders			(Graphics^ g, Track^ track, Rectangle bounds);
-		void DrawGridLines				(Graphics^ g);
-		void DrawSelectionAndPreviews	(Graphics^ g);
-		void DrawTrackEvents			(Graphics^ g, Track^ track, Rectangle bounds);
-		void DrawTrackTablature			(Graphics^ g, Track^ track, Rectangle bounds);
-		void DrawTrackTablatureDrum		(Graphics^ g, Track^ track, Rectangle bounds, float logScale);
-		void DrawTrackTablatureRegular	(Graphics^ g, Track^ track, Rectangle bounds, float logScale);
-		void DrawBeatDuration			(Graphics^ g, Beat^ beat  , Rectangle bounds, array<float>^ stringYPositions);
-		void DrawTieLines				(Graphics^ g, Track^ track, Rectangle bounds, array<float>^ stringYPositions, float scaledFontSize);
-		void DrawDrumSymbol				(Graphics^ g, DrumNotationType symbolType, float x, float y, float size);
-		TabStringInfo DrawTablatureStrings(Graphics^ g, Rectangle bounds, float availableHeight, float logScale, int numStrings);
 
 		float	GetSubdivisionLevel	();
 		int		GetTrackTop			(Track^ track);	// Transferred
@@ -271,22 +197,22 @@ namespace MIDILightDrawer
 	public:
 		// Theme property
 		property ThemeColors Theme {
-			ThemeColors get() { return currentTheme; }
-			void set(ThemeColors value) { currentTheme = value; }
+			ThemeColors get() { return _CurrentTheme; }
+			void set(ThemeColors value) { _CurrentTheme = value; }
 		}
 
 		property List<Track^>^ Tracks {
-			List<Track^>^ get() { return tracks; }
+			List<Track^>^ get() { return _Tracks; }
 		}
 
 		property List<Measure^>^ Measures {
-			List<Measure^>^ get() { return measures; }
+			List<Measure^>^ get() { return _Measures; }
 		}
 
 		property int TotalTicks {
 			int get() {
 				int total = 0;
-				for each (Measure ^ m in measures) {
+				for each (Measure ^ m in _Measures) {
 					total += m->Length;
 				}
 				return total;
@@ -294,12 +220,12 @@ namespace MIDILightDrawer
 		}
 
 		property TimelineToolType CurrentTool {
-			TimelineToolType get() { return currentToolType; }
+			TimelineToolType get() { return _CurrentToolType; }
 			void set(TimelineToolType value) { SetCurrentTool(value); }
 		}
 
 		property Point^ ScrollPosition {
-			Point^ get() { return scrollPosition; }
+			Point^ get() { return _ScrollPosition; }
 		}
 	};
 }

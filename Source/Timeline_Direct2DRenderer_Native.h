@@ -59,9 +59,9 @@ public:
     bool DrawLine(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth);
     bool DrawLine(float x1, float y1, float x2, float y2, float r, float g, float b, float a, float strokeWidth);
     bool DrawLines(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color, float strokeWidth);
-    bool DrawLineDashed(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth, const float* dashes, UINT32 dashCount);
     bool DrawRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float strokeWidth);
     bool DrawRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a, float strokeWidth);
+    bool DrawRectangleDashed(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float strokeWidth, float dashLength, float gapLength);
     bool FillRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color);
     bool FillRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a);
     bool DrawRoundedRectangle(const D2D1_ROUNDED_RECT& rect, const D2D1_COLOR_F& color, float strokeWidth);
@@ -82,6 +82,11 @@ public:
     bool DrawText(const std::wstring& text, const D2D1_RECT_F& layoutRect, const D2D1_COLOR_F& color, IDWriteTextFormat* textFormat, D2D1_DRAW_TEXT_OPTIONS options = D2D1_DRAW_TEXT_OPTIONS_NONE);
     float MeasureTextWidth(const std::wstring& text, IDWriteTextFormat* textFormat);
 
+    // Bitmap Drawing
+    bool PreloadBitmap(const std::wstring& key, System::Drawing::Image^ image);
+    bool DrawCachedBitmap(const std::wstring& key, const D2D1_RECT_F& destRect, float opacity = 1.0f);
+
+
     // Layer Support
     bool PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer);
     void PopLayer();
@@ -98,13 +103,6 @@ public:
     bool CreateLayer(ID2D1Layer** layer);
     bool CreatePathGeometry(ID2D1PathGeometry** geometry);
    
-    //bool DrawGridLine(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, bool isDashed);
-    //bool DrawGridLineRaw(float x1, float y1, float x2, float y2, float r, float g, float b, float a, bool isDashed);
-    //bool DrawMeasureLine(float x, float y1, float y2, const D2D1_COLOR_F& color);
-    //bool DrawMeasureLineRaw(float x, float y1, float y2, float r, float g, float b, float a);
-
-    //bool DrawMeasureNumbers(float width, float headerHeight, const std::vector<MeasureInfo>& measures, const D2D1_COLOR_F& headerBackground, const D2D1_COLOR_F& textColor, float scrollX, float zoomLevel);
-
 private:
     // Direct2D Resources
     ID2D1Factory* m_pD2DFactory;
@@ -127,14 +125,24 @@ private:
     std::vector<CachedBrush> m_brushCache;
 
     // Stroke Styles
-    ID2D1StrokeStyle* m_pDashedStroke;
     ID2D1StrokeStyle* m_pSolidStroke;
+
+    struct CachedBitmap {
+        std::wstring key;
+        ID2D1Bitmap* bitmap;
+    };
+    std::vector<CachedBitmap> m_bitmapCache;
 
     // Resource Management Helpers
     ID2D1SolidColorBrush* GetCachedBrush(const D2D1_COLOR_F& color);
     bool CreateStrokeStyles();
     bool CreateTextFormats();
 
+    bool CreateBitmapFromImage(System::Drawing::Image^ image, ID2D1Bitmap** ppBitmap);
+    bool DrawBitmap(ID2D1Bitmap* bitmap, const D2D1_RECT_F& destRect, float opacity = 1.0f);
+    bool CreateAndCacheBitmap(const std::wstring& key, System::Drawing::Image^ image);
+    ID2D1Bitmap* GetCachedBitmap(const std::wstring& key);
+    
     // Window Handle
     HWND m_hwnd;
 

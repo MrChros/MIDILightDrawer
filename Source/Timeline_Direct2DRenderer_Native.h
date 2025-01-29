@@ -64,7 +64,10 @@ public:
     bool DrawRectangleDashed(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float strokeWidth, float dashLength, float gapLength);
     bool FillRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color);
     bool FillRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a);
-    bool DrawRoundedRectangle(const D2D1_ROUNDED_RECT& rect, const D2D1_COLOR_F& color, float strokeWidth);
+	bool FillRectangleGradient2(const D2D1_RECT_F& rect, const D2D1_COLOR_F& colorLeft, const D2D1_COLOR_F& colorRight);
+	bool FillRectangleGradient3(const D2D1_RECT_F& rect, const D2D1_COLOR_F& colorLeft, const D2D1_COLOR_F& colorCenter, const D2D1_COLOR_F& colorRight);
+	bool FillRectangleGradient(const D2D1_RECT_F& rect, const D2D1_GRADIENT_STOP* gradientStops, UINT32 count);
+	bool DrawRoundedRectangle(const D2D1_ROUNDED_RECT& rect, const D2D1_COLOR_F& color, float strokeWidth);
     bool DrawRoundedRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a, float strokeWidth);
     bool FillRoundedRectangle(const D2D1_ROUNDED_RECT& rect, const D2D1_COLOR_F& color);
     bool FillRoundedRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a);
@@ -132,6 +135,8 @@ private:
         ID2D1Bitmap* bitmap;
     };
     std::vector<CachedBitmap> m_bitmapCache;
+
+	ID2D1LinearGradientBrush* m_pLinearGradientBrush;
 
     // Resource Management Helpers
     ID2D1SolidColorBrush* GetCachedBrush(const D2D1_COLOR_F& color);

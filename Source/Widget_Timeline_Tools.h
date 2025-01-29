@@ -19,10 +19,10 @@ namespace MIDILightDrawer
 	// Base tool class
 	public ref class TimelineTool abstract : public ITimelineToolAccess {
 	protected:
-		Widget_Timeline^ _Timeline;
-		bool	_IsActive;
-		Point	_LastMousePos;
-		Keys	_ModifierKeys;
+		Widget_Timeline^	_Timeline;
+		bool				_IsActive;
+		Point				_LastMousePos;
+		Keys				_ModifierKeys;
 		System::Windows::Forms::Cursor^ _CurrentCursor;
 
 	public:
@@ -140,6 +140,12 @@ namespace MIDILightDrawer
 		virtual property List<BarEvent^>^ PreviewBars {
 			List<BarEvent^>^ get() { return nullptr; }
 		}
+
+	protected:
+		bool HasOverlappingBarsOnBarTrack(BarEvent^ bar);
+		bool HasOverlappingBarsOnBarTrack(List<BarEvent^>^ barList);
+		bool HasOverlappingBarsOnSpecificTrack(Track^ track, BarEvent^ bar);
+		bool HasOverlappingBarsOnSpecificTrack(Track^ track, List<BarEvent^>^ barList);
 	};
 
 
@@ -181,14 +187,6 @@ namespace MIDILightDrawer
 		List<BarEvent^>^	_SelectedBars;
 		List<BarEvent^>^	_PastePreviewBars;
 		List<int>^			_OriginalBarStartTicks;
-		
-		bool IsMultiTrackList(List<BarEvent^>^ list);
-		void StoreOriginalPositions();
-		void UpdateGroupPosition(int tickDelta, bool allowTrackChange);
-		void MoveSelectedBarsToTrack(Track^ targetTrack);
-		void UpdateCursor(Point mousePos);
-		void EraseSelectedBars();
-		bool HasOverlappingBars(List<BarEvent^>^ barList);
 
 	public:
 		PointerTool(Widget_Timeline^ timeline);
@@ -250,6 +248,15 @@ namespace MIDILightDrawer
 		property List<BarEvent^>^ PastePreviewBars {
 			List<BarEvent^>^ get() override { return _PastePreviewBars; }
 		}
+
+	private:
+		bool IsMultiTrackList(List<BarEvent^>^ list);
+		void StoreOriginalPositions();
+		void UpdateGroupPosition(int tickDelta, bool allowTrackChange);
+		void MoveSelectedBarsToTrack(Track^ targetTrack);
+		void UpdateCursor(Point mousePos);
+		void EraseSelectedBars();
+		BarEvent^ CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview);
 	};
 
 
@@ -569,16 +576,13 @@ namespace MIDILightDrawer
 	public ref class FadeTool : public TimelineTool
 	{
 	private:
-		bool				isDrawing;
-		Point^				drawStart;
-		Track^				targetTrack;
-		List<BarEvent^>^	previewBars;
-		BarEvent^			previewBar;
-		int					startTick;
+		bool				_IsDrawing;
+		Point^				_DrawStart;
+		Track^				_TargetTrack;
+		BarEvent^			_PreviewBar;
+		int					_StartTick;
 		
-
-		static const int DEFAULT_TICK_LENGTH	= 960 / 4; // 16th Note
-		static const int MIN_DRAG_PIXELS		= 5;
+		static const int MIN_DRAG_PIXELS = 5;
 		
 	public:
 		FadeTool(Widget_Timeline^ timeline);
@@ -595,16 +599,12 @@ namespace MIDILightDrawer
 		property Color ColorCenter;
 		property FadeType Type;
 
-		property List<BarEvent^>^ PreviewBars {
-			List<BarEvent^>^ get() override { return previewBars; }
-		}
-
 		property Track^ TargetTrack {
-			Track^ get() override { return targetTrack; }
+			Track^ get() override { return _TargetTrack; }
 		}
 
 		property BarEvent^ PreviewBar {
-			BarEvent^ get() override { return previewBar; }
+			BarEvent^ get() override { return _PreviewBar; }
 		}
 
 		property Point CurrentMousePosition {
@@ -613,9 +613,8 @@ namespace MIDILightDrawer
 
 	private:
 		Color InterpolateColor(Color start, Color end, float ratio);
-		void CreatePreviewBars(Point currentPos);
-		void AddBarsToTrack();
-		void UpdateSinglePreview(Point mousePos);
+		void AddBarToTrack();
+		void UpdatePreview(Point mousePos);
 		void ClearPreviews();
 	};
 
@@ -626,14 +625,13 @@ namespace MIDILightDrawer
 	public ref class StrobeTool : public TimelineTool
 	{
 	private:
-		bool				isDrawing;
-		Point^				drawStart;
-		Track^				targetTrack;
-		List<BarEvent^>^	previewBars;
-		BarEvent^			previewBar;
-		int					startTick;
+		bool				_IsDrawing;
+		Point^				_DrawStart;
+		Track^				_TargetTrack;
+		List<BarEvent^>^	_PreviewBars;
+		BarEvent^			_PreviewBar;
+		int					_StartTick;
 
-		static const int DEFAULT_TICK_LENGTH = 960 / 4; // 16th Note
 		static const int MIN_DRAG_PIXELS = 5;
 
 	public:
@@ -649,15 +647,15 @@ namespace MIDILightDrawer
 		property Color StrobeColor;
 
 		property List<BarEvent^>^ PreviewBars {
-			List<BarEvent^>^ get() override { return previewBars; }
+			List<BarEvent^>^ get() override { return _PreviewBars; }
 		}
 
 		property Track^ TargetTrack {
-			Track^ get() override { return targetTrack; }
+			Track^ get() override { return _TargetTrack; }
 		}
 
 		property BarEvent^ PreviewBar{
-			BarEvent ^ get() override { return previewBar; }
+			BarEvent ^ get() override { return _PreviewBar; }
 		}
 
 		property Point CurrentMousePosition {

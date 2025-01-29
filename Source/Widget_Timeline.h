@@ -10,9 +10,15 @@ using namespace System::Collections::Generic;
 #include "Widget_Timeline_Common.h"
 #include "Widget_Timeline_Classes.h"
 #include "Timeline_Tool_Interface.h"
-#include "Timeline_Resource_Manager.h"
 #include "Timeline_Direct2DRenderer.h"
 #include "Timeline_Performance_Metrics.h"
+
+#ifdef _DEBUG
+	#include "Timeline_Direct2DRenderer_Performance.h"
+	typedef MIDILightDrawer::Timeline_Direct2DRenderer_Performance D2D_Renderer_t;
+#else
+	typedef MIDILightDrawer::Timeline_Direct2DRenderer D2D_Renderer_t;
+#endif
 
 namespace MIDILightDrawer 
 {
@@ -36,6 +42,7 @@ namespace MIDILightDrawer
 		static const int MINIMUM_TRACK_HEIGHT			= 30;
 		static const int TRACK_RESIZE_HANDLE_HEIGHT		= 5;
 		static const int SCROLL_UNIT					= 50;	// Pixels per scroll unit
+		static const int DEFAULT_FADE_TICK_QUANTIZATION = Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 4; // 16th Note
 		static const double MIN_ZOOM_LEVEL				= 0.1;	// 1/10x zoom
 		static const double MAX_ZOOM_LEVEL				= 20.0;	// 20x zoom
 		static const float TAB_PADDING					= 4.0f;	// Padding for tablature elements
@@ -112,6 +119,16 @@ namespace MIDILightDrawer
 
 		void LogPerformanceMetrics();						// No Need
 
+#ifdef _DEBUG
+		String^ GetRendererPerformanceReport() {
+			return _D2DRenderer->GetPerformanceReport();
+		}
+
+		void ResetRendererPerformanceMonitor() {
+			_D2DRenderer->ResetPerformanceMonitor();
+		}
+#endif
+
 	protected:
 		virtual void OnPaint(PaintEventArgs^ e) override;
 		virtual void OnResize(EventArgs^ e) override;
@@ -133,9 +150,8 @@ namespace MIDILightDrawer
 		}
 
 	private:
-		Timeline_Direct2DRenderer^	_D2DRenderer;
-		TimelineResourceManager^	_ResourceManager;
-		PerformanceMetrics^			_PerformanceMetrics;
+		D2D_Renderer_t^		_D2DRenderer;
+		PerformanceMetrics^	_PerformanceMetrics;
 
 		ThemeColors		_CurrentTheme;
 		TrackButtonId	_HoveredButton;

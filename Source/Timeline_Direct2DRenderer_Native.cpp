@@ -7,6 +7,7 @@ Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
     m_pD2DFactory(nullptr),
     m_pRenderTarget(nullptr),
     m_pSolidStroke(nullptr),
+	m_pLinearGradientBrush(nullptr),
     m_pDWriteFactory(nullptr),
     m_pMeasureNumberFormat(nullptr),
     m_pMarkerTextFormat(nullptr),
@@ -25,21 +26,20 @@ Timeline_Direct2DRenderer_Native::~Timeline_Direct2DRenderer_Native()
 
 bool Timeline_Direct2DRenderer_Native::Initialize(HWND hwnd)
 {
-    if (!hwnd)
+    if (!hwnd) {
         return false;
+	}
 
     m_hwnd = hwnd;
 
     // Create D2D factory
     D2D1_FACTORY_OPTIONS options = {};
-#ifdef _DEBUG
-    //options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
-#endif
 
     HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory), &options, reinterpret_cast<void**>(&m_pD2DFactory));
 
-    if (FAILED(hr))
+    if (FAILED(hr)) {
         return false;
+	}
 
     hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&m_pDWriteFactory));
 
@@ -47,12 +47,14 @@ bool Timeline_Direct2DRenderer_Native::Initialize(HWND hwnd)
         return false;
 
     // Create text formats
-    if (!CreateTextFormats())
+    if (!CreateTextFormats()) {
         return false;
+	}
 
     // Create stroke styles
-    if (!CreateStrokeStyles())
+    if (!CreateStrokeStyles()) {
         return false;
+	}
 
     return CreateDeviceResources();
 }
@@ -636,6 +638,67 @@ bool Timeline_Direct2DRenderer_Native::FillRectangle(float left, float top, floa
     D2D1_RECT_F rect = D2D1::RectF(left, top, right, bottom);
 
     return FillRectangle(rect, color);
+}
+
+bool Timeline_Direct2DRenderer_Native::FillRectangleGradient2(const D2D1_RECT_F& rect, const D2D1_COLOR_F& colorLeft, const D2D1_COLOR_F& colorRight)
+{
+	D2D1_GRADIENT_STOP gradientStops[2];
+	gradientStops[0].color = colorLeft;
+	gradientStops[0].position = 0.0f;
+	gradientStops[1].color = colorRight;
+	gradientStops[1].position = 1.0f;
+
+	return FillRectangleGradient(rect, gradientStops, 2);
+}
+
+bool Timeline_Direct2DRenderer_Native::FillRectangleGradient3(const D2D1_RECT_F& rect, const D2D1_COLOR_F& colorLeft, const D2D1_COLOR_F& colorCenter, const D2D1_COLOR_F& colorRight)
+{
+	D2D1_GRADIENT_STOP gradientStops[3];
+	gradientStops[0].color = colorLeft;
+	gradientStops[0].position = 0.0f;
+	gradientStops[1].color = colorCenter;
+	gradientStops[1].position = 0.5f;
+	gradientStops[2].color = colorRight;
+	gradientStops[2].position = 1.0f;
+
+	return FillRectangleGradient(rect, gradientStops, 3);
+}
+
+bool Timeline_Direct2DRenderer_Native::FillRectangleGradient(const D2D1_RECT_F& rect, const D2D1_GRADIENT_STOP* gradientStops, UINT32 count)
+{
+	if (!m_pRenderTarget || gradientStops == NULL) {
+		return false;
+	}
+	
+	ID2D1GradientStopCollection* pGradientStops = NULL;
+	
+	HRESULT hr = m_pRenderTarget->CreateGradientStopCollection(
+		gradientStops,
+		count,
+		D2D1_GAMMA_2_2,
+		D2D1_EXTEND_MODE_CLAMP,
+		&pGradientStops
+	);
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	hr = m_pRenderTarget->CreateLinearGradientBrush(
+		D2D1::LinearGradientBrushProperties(
+			D2D1::Point2F(rect.left,  (rect.bottom - rect.left) / 2),
+			D2D1::Point2F(rect.right, (rect.bottom - rect.left) / 2)),
+		pGradientStops,
+		&m_pLinearGradientBrush
+	);
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	m_pRenderTarget->FillRectangle(rect, m_pLinearGradientBrush);
+	
+	return true;
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawRoundedRectangle(const D2D1_ROUNDED_RECT& rect, const D2D1_COLOR_F& color, float strokeWidth)

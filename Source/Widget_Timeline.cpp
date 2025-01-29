@@ -36,8 +36,11 @@ namespace MIDILightDrawer
 		_Measures = gcnew List<Measure^>();
 
 		InitializeToolSystem();
-
-		_D2DRenderer	= gcnew Timeline_Direct2DRenderer(_Tracks, _Measures, _ZoomLevel, _ScrollPosition);
+#ifdef _DEBUG
+		_D2DRenderer = gcnew Timeline_Direct2DRenderer_Performance(_Tracks, _Measures, _ZoomLevel, _ScrollPosition);
+#else
+		_D2DRenderer = gcnew Timeline_Direct2DRenderer(_Tracks, _Measures, _ZoomLevel, _ScrollPosition);
+#endif
 		if (_D2DRenderer->Initialize(this)) {
 			_D2DRenderer->Resize(this->Width, this->Height);
 			_D2DRenderer->SetThemeColors(_CurrentTheme.Background, _CurrentTheme.HeaderBackground, _CurrentTheme.Text, _CurrentTheme.MeasureLine, _CurrentTheme.BeatLine, _CurrentTheme.SubdivisionLine, _CurrentTheme.SelectionHighlight, _CurrentTheme.TrackBackground, _CurrentTheme.TrackBackground);
@@ -45,7 +48,6 @@ namespace MIDILightDrawer
 			_D2DRenderer->PreloadImages();
 		}
 
-		_ResourceManager		= gcnew TimelineResourceManager();
 		_PerformanceMetrics	= gcnew PerformanceMetrics();
 	}
 

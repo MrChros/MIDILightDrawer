@@ -72,9 +72,6 @@
     <ClInclude Include="Widget_Timeline_Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Timeline_Resource_Manager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Timeline_Performance_Metrics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -130,6 +127,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Timeline_Tool_Interface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Performance_Monitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Timeline_Direct2DRenderer_Performance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -209,9 +212,6 @@
     <ClCompile Include="Widget_Timeline_Tools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Timeline_Resource_Manager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Timeline_Performance_Metrics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -237,6 +237,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Timeline_Direct2DRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Performance_Monitor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Timeline_Direct2DRenderer_Performance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

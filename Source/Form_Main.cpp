@@ -948,11 +948,20 @@ namespace MIDILightDrawer
 	{
 		Console::WriteLine("Button 1 Clicked");
 
+#ifdef _DEBUG
 		this->_Timeline->LogPerformanceMetrics();
+		String^ report = this->_Timeline->GetRendererPerformanceReport();
+		Console::WriteLine(report);
+#endif
 	}
 
 	void Form_Main::Button_2_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		Console::WriteLine("Button 2 Clicked");
+
+#ifdef _DEBUG
+		Console::WriteLine("Reset Renderer Performance Monitor");
+		this->_Timeline->ResetRendererPerformanceMonitor();
+#endif
 	}
 }

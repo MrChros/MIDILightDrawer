@@ -1,4 +1,5 @@
 #include "Widget_Timeline_Classes.h"
+#include "Widget_Timeline.h"
 
 namespace MIDILightDrawer
 {
@@ -166,18 +167,76 @@ namespace MIDILightDrawer
 	}
 
 
+	//////////////////////
+	// BarEventFadeInfo //
+	//////////////////////
+	BarEventFadeInfo::BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_end)
+	{
+		this->Type = FadeType::Two_Colors;
+		
+		this->QuantizationTicks = quantization_ticks;
+
+		if (this->QuantizationTicks <= 0) {
+			this->QuantizationTicks = Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION;
+		}
+
+		this->ColorStart = color_start;
+		this->ColorEnd = color_end;
+	}
+
+	BarEventFadeInfo::BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_center, Color color_end)
+	{
+		this->Type = FadeType::Three_Colors;
+
+		this->QuantizationTicks = quantization_ticks;
+
+		if (this->QuantizationTicks <= 0) {
+			this->QuantizationTicks = Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION;
+		}
+
+		this->ColorStart = color_start;
+		this->ColorEnd = color_end;
+		this->ColorCenter = color_center;
+	}
+
+
 	//////////////
 	// BarEvent //
 	//////////////
 	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, System::Drawing::Color color)
 	{
-		_Track						= track;
-		_Track_Original				= track;
-		_Start_Tick					= start_tick;
-		_Start_Tick_Original		= start_tick;
-		_Duration_In_Ticks			= duration_in_ticks;
-		_Duration_In_Ticks_Original	= duration_in_ticks;
-		_Color						= color;
+		this->_Type = BarEventType::Solid;
+		
+		this->_Working.Track = track;
+		this->_Working.StartTick = start_tick;
+		this->_Working.DurationInTicks = duration_in_ticks;
+		
+		this->_Original.Track = track;
+		this->_Original.StartTick = start_tick;
+		this->_Original.DurationInTicks = duration_in_ticks;
+
+		this->_Color = color;
+		this->_FadeInfo = nullptr;
+	}
+
+	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventFadeInfo^ fade_info)
+	{
+		this->_Type = BarEventType::Fade;
+
+		this->_Working.Track = track;
+		this->_Working.StartTick = start_tick;
+		this->_Working.DurationInTicks = duration_in_ticks;
+
+		this->_Original.Track = track;
+		this->_Original.StartTick = start_tick;
+		this->_Original.DurationInTicks = duration_in_ticks;
+
+		this->_Color = System::Drawing::Color();
+		this->_FadeInfo = fade_info;
+
+		if (this->_FadeInfo == nullptr) {
+			this->_FadeInfo = gcnew BarEventFadeInfo(Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION, System::Drawing::Color::White, System::Drawing::Color::Black);
+		}
 	}
 
 	void BarEvent::StartTick::set(int value)
@@ -185,13 +244,21 @@ namespace MIDILightDrawer
 		if(value < 0) {
 			value = 0;
 		}
-		_Start_Tick = value;
+		_Working.StartTick = value;
 	}
 
 	void BarEvent::Duration::set(int value)
 	{
 		if(value > 0) {
-			_Duration_In_Ticks = value;
+			_Working.DurationInTicks = value;
+		}
+	}
+
+	void BarEvent::FadeInfo::set(BarEventFadeInfo^ fade_info)
+	{
+		if (fade_info != nullptr)
+		{
+			this->_FadeInfo = fade_info;
 		}
 	}
 }

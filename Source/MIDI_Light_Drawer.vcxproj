@@ -148,14 +148,15 @@
     <ClInclude Include="Form_Settings_MIDI.h" />
     <ClInclude Include="Hotkey_Manager.h" />
     <ClInclude Include="MIDI_Writer.h" />
+    <ClInclude Include="Performance_Monitor.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="gp_parser.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Theme_Manager.h" />
     <ClInclude Include="Timeline_Direct2DRenderer.h" />
     <ClInclude Include="Timeline_Direct2DRenderer_Native.h" />
+    <ClInclude Include="Timeline_Direct2DRenderer_Performance.h" />
     <ClInclude Include="Timeline_Performance_Metrics.h" />
-    <ClInclude Include="Timeline_Resource_Manager.h" />
     <ClInclude Include="Timeline_Tool_Interface.h" />
     <ClInclude Include="Widget_Bucket_Options.h" />
     <ClInclude Include="Widget_Color_Options.h" />
@@ -186,6 +187,7 @@
     <ClCompile Include="Form_Settings_MIDI.cpp" />
     <ClCompile Include="Hotkey_Manager.cpp" />
     <ClCompile Include="MIDI_Writer.cpp" />
+    <ClCompile Include="Performance_Monitor.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Form_Main.cpp" />
     <ClCompile Include="gp_parser.cpp">
@@ -195,8 +197,8 @@
     <ClCompile Include="Theme_Manager.cpp" />
     <ClCompile Include="Timeline_Direct2DRenderer.cpp" />
     <ClCompile Include="Timeline_Direct2DRenderer_Native.cpp" />
+    <ClCompile Include="Timeline_Direct2DRenderer_Performance.cpp" />
     <ClCompile Include="Timeline_Performance_Metrics.cpp" />
-    <ClCompile Include="Timeline_Resource_Manager.cpp" />
     <ClCompile Include="Widget_Bucket_Options.cpp" />
     <ClCompile Include="Widget_Color_Options.cpp" />
     <ClCompile Include="Widget_Fade_Options.cpp" />

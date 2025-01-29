@@ -72,4 +72,11 @@ namespace MIDILightDrawer
 		Two_Colors,
 		Three_Colors
 	};
+
+	public enum class BarEventType
+	{
+		Solid,
+		Fade,
+		Strobe
+	};
 }

@@ -543,42 +543,9 @@ namespace MIDILightDrawer
 
             bool IsSelected = HasSelectedBars && ToolAccess->SelectedBars->Contains(bar);
             if (!IsSelected && !IsResizing) {
-                DrawNormalBar(bar, trackContentBounds);
+				DrawNormalBar(bar, trackContentBounds);
             }
         }
-
-        // STEP 2: Draw ghost bars during drag operations
-        // Moved to -> DrawToolPreviewPointerTool()
-
-        // STEP 3: Draw selected/dragged bars
-        // Moved to -> DrawToolPreviewPointerTool()
-
-        // Handle paste preview if active
-        /*
-        if (ToolAccess->IsPasting && ToolAccess->PastePreviewBars != nullptr)
-        {
-            if (track != nullptr && ToolAccess->CurrentMousePosition.X > TRACK_HEADER_WIDTH)
-            {
-                int CurrentTrackIndex = this->_Tracks->IndexOf(track);
-
-                for each (BarEvent^ previewBar in ToolAccess->PastePreviewBars)
-                {
-                    // Check if this preview bar belongs to the current track
-                    // We stored the target track index in OriginalStartTick
-                    if (previewBar->OriginalStartTick == CurrentTrackIndex)
-                    {
-                        DrawPastePreviewBar(previewBar, trackContentBounds);
-                    }
-                }
-
-                // Draw drop target indicator if this is the anchor track
-                if (track == ToolAccess->DragTargetTrack)
-                {
-                    DrawDropTargetIndicator(trackContentBounds);
-                }
-            }
-        }
-        */
 
         return true;
     }
@@ -1748,32 +1715,32 @@ namespace MIDILightDrawer
         DrawSelectionRectangle(SelectionRectangle);
 
         // Draw all selected bars with a highlight
-        for each (BarEvent ^ bar in SelectedBars)
+        for each (BarEvent^ Bar in SelectedBars)
         {
-            Track^ track = nullptr;
+            Track^ TargetTrack = nullptr;
             // Find the track containing this bar
-            for each (Track ^ t in this->_Tracks)
+            for each (Track^ T in this->_Tracks)
             {
-                if (t->Events->Contains(bar))
+                if (T->Events->Contains(Bar))
                 {
-                    track = t;
+                    TargetTrack = T;
                     break;
                 }
             }
 
-            if (track != nullptr)
+            if (TargetTrack != nullptr)
             {
-                System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(track);
+                System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(TargetTrack);
                 TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-                System::Drawing::Rectangle BarBounds = GetBarBounds(bar, TrackContentBounds);
+                System::Drawing::Rectangle BarBounds = GetBarBounds(Bar, TrackContentBounds);
                 D2D1_RECT_F BarRect = RECT_TO_RECT_F(BarBounds);
 
                 _NativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(CurrentColor, 0.4f));  // Draw selection highlight
                 _NativeRenderer->DrawRectangle(BarRect, COLOR_TO_COLOR_F(CurrentColor), 2.0f);    // Draw preview outline
 
                 // If this bar is being hovered over, show stronger highlight
-                if (bar == HoverBar)
+                if (Bar == HoverBar)
                 {
                     // Draw glow effect
                     for (int i = 2; i >= 0; i--)
@@ -1795,8 +1762,10 @@ namespace MIDILightDrawer
         // Draw preview rectangle for hovered bar
         if (!PreviewRect.IsEmpty && !SelectedBars->Contains(HoverBar))
         {
-            _NativeRenderer->FillRectangle(RECT_TO_RECT_F(PreviewRect), COLOR_TO_COLOR_F_A(CurrentColor, 0.3f));  // Fill with semi-transparent preview color
-            _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(PreviewRect), COLOR_TO_COLOR_F(CurrentColor), 1.0f);    // Draw border
+            if(HoverBar->Type == BarEventType::Solid) {
+				_NativeRenderer->FillRectangle(RECT_TO_RECT_F(PreviewRect), COLOR_TO_COLOR_F_A(CurrentColor, 0.3f));  // Fill with semi-transparent preview color
+				_NativeRenderer->DrawRectangle(RECT_TO_RECT_F(PreviewRect), COLOR_TO_COLOR_F(CurrentColor), 1.0f);    // Draw border
+			}
         }
 
         return true;
@@ -1896,35 +1865,69 @@ namespace MIDILightDrawer
         return true;
     }
 
+	void Timeline_Direct2DRenderer::DrawNormalBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
+	{
+		if (!_NativeRenderer || !this->_ToolAccessDelegate) {
+			return;
+		}
+		
+		System::Drawing::Rectangle BarBounds = GetBarBounds(bar, trackContentBounds);
 
-    bool Timeline_Direct2DRenderer::DrawNormalBar(BarEvent^ bar, System::Drawing::Rectangle bounds)
+		switch (bar->Type)
+		{
+			case BarEventType::Solid:	DrawNormalBarSolid	(bar, BarBounds); break;
+			case BarEventType::Fade:	DrawNormalBarFade	(bar, BarBounds); break;
+			case BarEventType::Strobe:	DrawNormalBarStrobe	(bar, BarBounds); break;
+		}
+
+		TimelineToolType CurrentTool = this->_ToolAccessDelegate->GetCurrentToolType();
+
+		// Add tool-specific enhancements
+		// 1. Draw Resize Handles on each bar if Duration Tool is selected
+		if (CurrentTool == TimelineToolType::Duration)
+		{
+			DrawResizeHandle(BarBounds, false);
+		}
+
+	}
+
+	void Timeline_Direct2DRenderer::DrawNormalBarSolid(BarEvent^ bar, System::Drawing::Rectangle barBounds)
     {
-        if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
-        }
-
-        System::Drawing::Rectangle BarBounds = GetBarBounds(bar, bounds);
-
-        // Draw the bar with semi-transparency
-        D2D1_RECT_F BarRect = RECT_TO_RECT_F(BarBounds);
+        D2D1_RECT_F BarRect = RECT_TO_RECT_F(barBounds);
 
         _NativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(bar->Color, 0.8f));        // Normal appearance with 80% opacity
         _NativeRenderer->DrawRectangle(BarRect, D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.4f), 1.0f);  // Draw border with slight transparency
-
-
-        TimelineToolType CurrentTool = this->_ToolAccessDelegate->GetCurrentToolType();
-
-        // Add tool-specific enhancements
-        // 1. Draw Resize Handles on each bar if Duration Tool is selected
-        if (CurrentTool == TimelineToolType::Duration)
-        {
-            DrawResizeHandle(BarBounds, false);
-        }
-        
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawPreviewBar(BarEvent^ bar, Track^ track, System::Drawing::Point mousePos, BarPreviewType previewType)
+	void Timeline_Direct2DRenderer::DrawNormalBarFade(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+		D2D1_RECT_F BarRect = RECT_TO_RECT_F(barBounds);
+		
+		if (bar->FadeInfo == nullptr) {
+			return;
+		}
+
+		if(bar->FadeInfo->Type == FadeType::Two_Colors) {
+			// Normal appearance with 80% opacity
+			_NativeRenderer->FillRectangleGradient2(BarRect,
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorStart, 0.8f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorEnd, 0.8f));
+		}
+		else if (bar->FadeInfo->Type == FadeType::Three_Colors) {
+			// Normal appearance with 80% opacity
+			_NativeRenderer->FillRectangleGradient3(BarRect,
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorStart, 0.8f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorCenter, 0.8f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorEnd, 0.8f));
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawNormalBarStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+		
+	}
+
+    void Timeline_Direct2DRenderer::DrawPreviewBar(BarEvent^ bar, Track^ track, System::Drawing::Point mousePos, BarPreviewType previewType)
     {
         // For Creation/Movement previews, we need to determine the track
         Track^ TargetTrack = track == nullptr ? GetTrackAtPoint(mousePos) : track;
@@ -1942,14 +1945,12 @@ namespace MIDILightDrawer
             {
             case BarPreviewType::Creation:
             case BarPreviewType::Movement:
-                return DrawCreationMovementPreview(bar, BarBounds);
+                DrawCreationMovementPreview(bar, BarBounds);
 
             case BarPreviewType::Duration:
-                return DrawDurationPreview(bar, BarBounds);
+                DrawDurationPreview(bar, BarBounds);
             }
         }
-
-        return false;
     }
 
     bool Timeline_Direct2DRenderer::DrawPreviewBarList(List<BarEvent^>^ bars, Track^ track)
@@ -1982,64 +1983,155 @@ namespace MIDILightDrawer
         return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawDurationPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	void Timeline_Direct2DRenderer::DrawDurationPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds)
     {
-        // Draw preview with enhanced brightness
-        Color PreviewColor = Color::FromArgb(
-            Math::Min(255, bar->Color.R + 10),
-            Math::Min(255, bar->Color.G + 10),
-            Math::Min(255, bar->Color.B + 10)
-        );
-
-        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F(PreviewColor));
-
+		switch (bar->Type)
+		{
+			case BarEventType::Solid:	DrawDurationPreviewSolid(bar, barBounds); break;
+			case BarEventType::Fade:	DrawDurationPreviewFade(bar, barBounds); break;
+			case BarEventType::Strobe:	DrawDurationPreviewStrobe(bar, barBounds); break;
+		}
+		
         // Add glow effect for the preview
         DrawBarGlowEffect(barBounds, this->m_ColorTheme.SelectionHighlight, 3);
-        
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawGhostBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
+	void Timeline_Direct2DRenderer::DrawDurationPreviewSolid(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+		// Draw preview with enhanced brightness
+		Color PreviewColor = Color::FromArgb(
+			Math::Min(255, bar->Color.R + 10),
+			Math::Min(255, bar->Color.G + 10),
+			Math::Min(255, bar->Color.B + 10)
+		);
+
+		_NativeRenderer->FillRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F(PreviewColor));
+	}
+
+	void Timeline_Direct2DRenderer::DrawDurationPreviewFade(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+		D2D1_RECT_F BarRect = RECT_TO_RECT_F(barBounds);
+		
+		if (bar->FadeInfo == nullptr) {
+			return;
+		}
+
+		// Draw preview with enhanced brightness
+		Color ColorStart = Color::FromArgb(
+			Math::Min(255, bar->FadeInfo->ColorStart.R + 10),
+			Math::Min(255, bar->FadeInfo->ColorStart.G + 10),
+			Math::Min(255, bar->FadeInfo->ColorStart.B + 10)
+		);
+
+		Color ColorEnd = Color::FromArgb(
+			Math::Min(255, bar->FadeInfo->ColorEnd.R + 10),
+			Math::Min(255, bar->FadeInfo->ColorEnd.G + 10),
+			Math::Min(255, bar->FadeInfo->ColorEnd.B + 10)
+		);
+
+		if (bar->FadeInfo->Type == FadeType::Two_Colors) {
+			_NativeRenderer->FillRectangleGradient2(BarRect,
+													COLOR_TO_COLOR_F(ColorStart),
+													COLOR_TO_COLOR_F(ColorEnd));
+		}
+		else if (bar->FadeInfo->Type == FadeType::Three_Colors) {
+			Color ColorCenter = Color::FromArgb(
+				Math::Min(255, bar->FadeInfo->ColorCenter.R + 10),
+				Math::Min(255, bar->FadeInfo->ColorCenter.G + 10),
+				Math::Min(255, bar->FadeInfo->ColorCenter.B + 10)
+			);
+			
+			// Normal appearance with 80% opacity
+			_NativeRenderer->FillRectangleGradient3(BarRect,
+													COLOR_TO_COLOR_F(ColorStart),
+													COLOR_TO_COLOR_F(ColorCenter),
+													COLOR_TO_COLOR_F(ColorEnd));
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawDurationPreviewStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+
+	}
+
+	void Timeline_Direct2DRenderer::DrawGhostBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
     {
         if (!_NativeRenderer) {
-            return false;
+            return;
         }
 
-        System::Drawing::Rectangle BarBounds = GetGhostBarBounds(bar, trackContentBounds);
+		System::Drawing::Rectangle BarBounds = GetGhostBarBounds(bar, trackContentBounds);
 
-        // Draw with high transparency (ghost effect)
-        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(BarBounds), COLOR_TO_COLOR_F_A(bar->Color, 0.3f));
-
-        return true;
+		switch (bar->Type)
+		{
+		case BarEventType::Solid:	DrawGhostBarSolid(bar, BarBounds); break;
+		case BarEventType::Fade:	DrawGhostBarFade(bar, BarBounds); break;
+		case BarEventType::Strobe:	DrawGhostBarStrobe(bar, BarBounds); break;
+		}
     }
 
-    bool Timeline_Direct2DRenderer::DrawSelectedBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
+	void Timeline_Direct2DRenderer::DrawGhostBarSolid(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+		// Draw with high transparency (ghost effect)
+		_NativeRenderer->FillRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F_A(bar->Color, 0.3f));
+	}
+
+	void Timeline_Direct2DRenderer::DrawGhostBarFade(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+		D2D1_RECT_F BarRect = RECT_TO_RECT_F(barBounds);
+
+		if (bar->FadeInfo == nullptr) {
+			return;
+		}
+
+		if (bar->FadeInfo->Type == FadeType::Two_Colors) {
+			// Draw with high transparency (ghost effect)
+			_NativeRenderer->FillRectangleGradient2(BarRect,
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorStart, 0.3f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorEnd, 0.3f));
+		}
+		else if (bar->FadeInfo->Type == FadeType::Three_Colors) {
+			// Draw with high transparency (ghost effect)
+			_NativeRenderer->FillRectangleGradient3(BarRect,
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorStart, 0.3f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorCenter, 0.3f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorEnd, 0.3f));
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawGhostBarStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+
+	}
+
+    void Timeline_Direct2DRenderer::DrawSelectedBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
     {
         if (!_NativeRenderer) {
-            return false;
+            return;
         }
 
-        // Calculate bar position and bounds
-        System::Drawing::Rectangle BarBounds = GetBarBounds(bar, trackContentBounds);
+		System::Drawing::Rectangle BarBounds = GetBarBounds(bar, trackContentBounds);
 
-        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(BarBounds), COLOR_TO_COLOR_F(bar->Color));          // Fill the bar
-        _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(BarBounds), D2D1::ColorF(0, 0, 0, 0.4f), 1.0f);     // Draw border
+		switch (bar->Type)
+		{
+		case BarEventType::Solid:	DrawNormalBarSolid(bar, BarBounds); break;
+		case BarEventType::Fade:	DrawNormalBarFade(bar, BarBounds); break;
+		case BarEventType::Strobe:	DrawNormalBarStrobe(bar, BarBounds); break;
+		}
 
         // Add glow effect
         DrawBarGlowEffect(BarBounds, m_ColorTheme.SelectionHighlight, 2);
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
+	void Timeline_Direct2DRenderer::DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
     {
         if (!_NativeRenderer) {
-            return false;
+            return;
         }
 
         System::Drawing::Rectangle BarBounds = GetBarBounds(bar, trackContentBounds);
 
-        D2D1_RECT_F BarRect = RECT_TO_RECT_F(GetBarBounds(bar, trackContentBounds));
+        D2D1_RECT_F BarRect = RECT_TO_RECT_F(BarBounds);
 
         // Draw shadow effect
         for (int i = 3; i >= 0; i--)
@@ -2050,17 +2142,53 @@ namespace MIDILightDrawer
             _NativeRenderer->FillRectangle(ShadowRect, ShadowColor);
         }
 
-        // Draw semi-transparent bar
-        _NativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F_A(bar->Color, 0.7f));
+		switch (bar->Type)
+		{
+		case BarEventType::Solid:	DrawPastePreviewBarSolid(bar, BarBounds); break;
+		case BarEventType::Fade:	DrawPastePreviewBarFade(bar, BarBounds); break;
+		case BarEventType::Strobe:	DrawPastePreviewBarStrobe(bar, BarBounds); break;
+		}
 
         // Draw glowing border
         DrawBarGlowEffect(BarBounds, Color::FromArgb(180, 255, 255, 255), 2);
 
         // Draw dashed outline
         _NativeRenderer->DrawRectangleDashed(BarRect, COLOR_TO_COLOR_F(Color::White), 1.0f, 4.0f, 4.0f);
-       
-        return true;
     }
+
+	void Timeline_Direct2DRenderer::DrawPastePreviewBarSolid(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+		// Draw semi-transparent bar
+		_NativeRenderer->FillRectangle(RECT_TO_RECT_F(barBounds), COLOR_TO_COLOR_F_A(bar->Color, 0.7f));
+	}
+
+	void Timeline_Direct2DRenderer::DrawPastePreviewBarFade(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+		D2D1_RECT_F BarRect = RECT_TO_RECT_F(barBounds);
+
+		if (bar->FadeInfo == nullptr) {
+			return;
+		}
+
+		if (bar->FadeInfo->Type == FadeType::Two_Colors) {
+			// Normal appearance with 80% opacity
+			_NativeRenderer->FillRectangleGradient2(BarRect,
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorStart, 0.7f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorEnd, 0.7f));
+		}
+		else if (bar->FadeInfo->Type == FadeType::Three_Colors) {
+			// Normal appearance with 80% opacity
+			_NativeRenderer->FillRectangleGradient3(BarRect,
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorStart, 0.7f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorCenter, 0.7f),
+													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorEnd, 0.7f));
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawPastePreviewBarStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds)
+	{
+
+	}
 
     void Timeline_Direct2DRenderer::DrawBarGlowEffect(System::Drawing::Rectangle barBounds, System::Drawing::Color glowColor, int glowLevels)
     {
@@ -2192,7 +2320,9 @@ namespace MIDILightDrawer
 
     Track^ Timeline_Direct2DRenderer::GetTrackAtPoint(System::Drawing::Point point)
     {
-        if (point.Y < HEADER_HEIGHT) return nullptr;
+		if (point.Y < HEADER_HEIGHT) {
+			return nullptr;
+		}
 
         int y = HEADER_HEIGHT + this->_ScrollPosition->Y;
         for each(Track^ track in this->_Tracks)

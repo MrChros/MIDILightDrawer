@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Widget_Timeline_Common.h"
+
 using namespace System;
 using namespace System::ComponentModel;
 using namespace System::Windows::Forms;
@@ -11,8 +13,8 @@ namespace MIDILightDrawer
 	//////////////////////////////
 	// General Type Definitions //
 	//////////////////////////////
-	//typedef System::Drawing::Rectangle BarEventBounds;
-	
+	// None so far
+		
 	
 	//////////////////////////////
 	// Drum Track Visualization //
@@ -207,58 +209,90 @@ namespace MIDILightDrawer
 	//////////////
 	// BarEvent //
 	//////////////
+	public value struct BarEventBasicInfo
+	{
+		Track^ Track;
+		int StartTick;
+		int DurationInTicks;
+	};
+
+	public ref class BarEventFadeInfo
+	{
+	public:
+		BarEventFadeInfo(int qunatization_ticks, Color color_start, Color color_end);
+		BarEventFadeInfo(int qunatization_ticks, Color color_start, Color color_center, Color color_end);
+
+		property FadeType Type;
+		
+		property int QuantizationTicks;
+
+		property Color ColorStart;
+		property Color ColorEnd;
+		property Color ColorCenter;
+	};
+
 	public ref class BarEvent
 	{
 	public:
 		BarEvent(Track^ track, int start_tick, int duration_in_ticks, Color color);
+		BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventFadeInfo^ fade_info);
 
 	private:
-		Track^ _Track;
-		Track^ _Track_Original;
-		int _Start_Tick;
-		int _Start_Tick_Original;
-		int _Duration_In_Ticks;
-		int _Duration_In_Ticks_Original;
+		BarEventType _Type;
+		
+		BarEventBasicInfo _Working;
+		BarEventBasicInfo _Original;
+
 		Color _Color;
+		BarEventFadeInfo^ _FadeInfo;
 
 	public:
+		property BarEventType Type {
+			BarEventType get() { return _Type; }
+		}
+
 		property Track^ ContainingTrack {
-			Track^ get() { return _Track; }
-			void set(Track^ track) { _Track = track; }
+			Track^ get() { return _Working.Track; }
+			void set(Track^ track) { _Working.Track = track; }
 		}
 
 		property int StartTick {
-			int get() { return _Start_Tick; }
+			int get() { return _Working.StartTick; }
 			void set(int value);
 		}
 
 		property int EndTick {
-			int get() { return _Start_Tick + _Duration_In_Ticks; }
+			int get() { return _Working.StartTick + _Working.DurationInTicks; }
 		}
 
 		property int Duration {
-			int get() { return _Duration_In_Ticks; }
+			int get() { return _Working.DurationInTicks; }
 			void set(int value);
 		}
 
 		property System::Drawing::Color Color {
-			System::Drawing::Color get() { return _Color; }
-			void set(System::Drawing::Color color) { _Color = color; }
+			System::Drawing::Color get() { return this->_Color; }
+			void set(System::Drawing::Color color) { this->_Color = color; }
 		}
 
 		property Track^ OriginalContainingTrack {
-			Track^ get() { return _Track_Original; }
-			void set(Track^ track) { _Track_Original = track; }
+			Track^ get() { return this->_Original.Track; }
+			void set(Track^ track) { this->_Original.Track = track; }
 		}
 
 		property int OriginalStartTick {
-			int get() { return _Start_Tick_Original; }
-			void set(int value) { _Start_Tick_Original = value; }
+			int get() { return this->_Original.StartTick; }
+			void set(int value) { this->_Original.StartTick = value; }
 		}
 
 		property int OriginalDuration {
-			int get() { return _Duration_In_Ticks_Original; }
-			void set(int value) { _Duration_In_Ticks_Original = value; }
+			int get() { return this->_Original.DurationInTicks; }
+			void set(int value) { this->_Original.DurationInTicks = value; }
+		}
+
+		property BarEventFadeInfo^ FadeInfo {
+			BarEventFadeInfo^ get() { return this->_FadeInfo; }
+			void set(BarEventFadeInfo^ fade_info);
 		}
 	};
 }

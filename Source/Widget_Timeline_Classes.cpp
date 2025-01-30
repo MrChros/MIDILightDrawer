@@ -200,6 +200,21 @@ namespace MIDILightDrawer
 	}
 
 
+	////////////////////////
+	// BarEventStrobeInfo //
+	////////////////////////
+	BarEventStrobeInfo::BarEventStrobeInfo(int quantization_ticks, Color color_strobe)
+	{
+		this->QuantizationTicks = quantization_ticks;
+
+		if (this->QuantizationTicks <= 0) {
+			this->QuantizationTicks = Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION;
+		}
+
+		this->ColorStrobe = color_strobe;
+	}
+
+
 	//////////////
 	// BarEvent //
 	//////////////
@@ -217,6 +232,7 @@ namespace MIDILightDrawer
 
 		this->_Color = color;
 		this->_FadeInfo = nullptr;
+		this->_StrobeInfo = nullptr;
 	}
 
 	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventFadeInfo^ fade_info)
@@ -237,6 +253,21 @@ namespace MIDILightDrawer
 		if (this->_FadeInfo == nullptr) {
 			this->_FadeInfo = gcnew BarEventFadeInfo(Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION, System::Drawing::Color::White, System::Drawing::Color::Black);
 		}
+
+		this->_StrobeInfo = nullptr;
+	}
+
+	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventStrobeInfo^ strobe_info)
+	{
+		this->_Type = BarEventType::Strobe;
+
+		this->_Working.Track = track;
+		this->_Working.StartTick = start_tick;
+		this->_Working.DurationInTicks = duration_in_ticks;
+
+		this->_Original.Track = track;
+		this->_Original.StartTick = start_tick;
+		this->_Original.DurationInTicks = duration_in_ticks;
 	}
 
 	void BarEvent::StartTick::set(int value)
@@ -254,11 +285,39 @@ namespace MIDILightDrawer
 		}
 	}
 
+	System::Drawing::Color BarEvent::Color::get()
+	{
+		if (this->Type == BarEventType::Strobe && this->StrobeInfo != nullptr) {
+			return this->StrobeInfo->ColorStrobe;
+		}
+
+		return _Color;
+	}
+
+	void BarEvent::Color::set(System::Drawing::Color color)
+	{
+		if (this->Type == BarEventType::Strobe && this->StrobeInfo != nullptr) {
+			this->StrobeInfo->ColorStrobe = color;
+		}
+		else {
+			this->_Color = color;
+		}
+	}
+		
+
 	void BarEvent::FadeInfo::set(BarEventFadeInfo^ fade_info)
 	{
 		if (fade_info != nullptr)
 		{
 			this->_FadeInfo = fade_info;
+		}
+	}
+
+	void BarEvent::StrobeInfo::set(BarEventStrobeInfo^ strobe_info)
+	{
+		if (strobe_info != nullptr)
+		{
+			this->_StrobeInfo = strobe_info;
 		}
 	}
 }

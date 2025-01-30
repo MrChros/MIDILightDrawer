@@ -701,6 +701,47 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleGradient(const D2D1_RECT_F& 
 	return true;
 }
 
+bool Timeline_Direct2DRenderer_Native::FillRectangleStripes(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float stripeWidth)
+{
+	if (!m_pRenderTarget) {
+		return false;
+	}
+
+	ID2D1SolidColorBrush* brush = GetCachedBrush(color);
+	if (!brush) {
+		return false;
+	}
+	
+	// Calculate the number of stripes needed
+	float RectWidth			= rect.right - rect.left;
+	float TotalStripeWidth	= stripeWidth * 2; // Including the transparent gap
+	int	NumStripes			= static_cast<int>(ceil(RectWidth / TotalStripeWidth));
+
+	// Draw each stripe
+	for (int i = 0; i < NumStripes; i++)
+	{
+		float X = rect.left + (i * TotalStripeWidth);
+
+		D2D1_RECT_F stripeRect = D2D1::RectF(
+			X,					// Left
+			rect.top,			// Top
+			X + stripeWidth,	// Right
+			rect.bottom			// Bottom
+		);
+
+		// Only draw if the stripe is at least partially within the rectangle
+		if (stripeRect.left < rect.right) {
+			// Clip the stripe if it extends beyond the rectangle
+			if (stripeRect.right > rect.right) {
+				stripeRect.right = rect.right;
+			}
+			m_pRenderTarget->FillRectangle(stripeRect, brush);
+		}
+	}
+
+	return true;
+}
+
 bool Timeline_Direct2DRenderer_Native::DrawRoundedRectangle(const D2D1_ROUNDED_RECT& rect, const D2D1_COLOR_F& color, float strokeWidth)
 {
     if (!m_pRenderTarget) {

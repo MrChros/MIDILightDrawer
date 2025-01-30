@@ -219,8 +219,8 @@ namespace MIDILightDrawer
 	public ref class BarEventFadeInfo
 	{
 	public:
-		BarEventFadeInfo(int qunatization_ticks, Color color_start, Color color_end);
-		BarEventFadeInfo(int qunatization_ticks, Color color_start, Color color_center, Color color_end);
+		BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_end);
+		BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_center, Color color_end);
 
 		property FadeType Type;
 		
@@ -231,11 +231,22 @@ namespace MIDILightDrawer
 		property Color ColorCenter;
 	};
 
+	public ref class BarEventStrobeInfo
+	{
+	public:
+		BarEventStrobeInfo(int quantization_ticks, Color color_strobe);
+
+		property int QuantizationTicks;
+
+		property Color ColorStrobe;
+	};
+
 	public ref class BarEvent
 	{
 	public:
 		BarEvent(Track^ track, int start_tick, int duration_in_ticks, Color color);
 		BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventFadeInfo^ fade_info);
+		BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventStrobeInfo^ strobe_info);
 
 	private:
 		BarEventType _Type;
@@ -245,6 +256,7 @@ namespace MIDILightDrawer
 
 		Color _Color;
 		BarEventFadeInfo^ _FadeInfo;
+		BarEventStrobeInfo^ _StrobeInfo;
 
 	public:
 		property BarEventType Type {
@@ -271,8 +283,8 @@ namespace MIDILightDrawer
 		}
 
 		property System::Drawing::Color Color {
-			System::Drawing::Color get() { return this->_Color; }
-			void set(System::Drawing::Color color) { this->_Color = color; }
+			System::Drawing::Color get();
+			void set(System::Drawing::Color color);
 		}
 
 		property Track^ OriginalContainingTrack {
@@ -293,6 +305,11 @@ namespace MIDILightDrawer
 		property BarEventFadeInfo^ FadeInfo {
 			BarEventFadeInfo^ get() { return this->_FadeInfo; }
 			void set(BarEventFadeInfo^ fade_info);
+		}
+
+		property BarEventStrobeInfo^ StrobeInfo {
+			BarEventStrobeInfo^ get() { return this->_StrobeInfo; }
+			void set(BarEventStrobeInfo^ strobe_info);
 		}
 	};
 }

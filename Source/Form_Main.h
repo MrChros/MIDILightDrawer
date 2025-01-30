@@ -5,7 +5,7 @@
 
 #include "gp_parser.h"
 #include "Settings.h"
-#include "MIDI_Writer.h"
+#include "MIDI_Exporter.h"
 #include "Hotkey_Manager.h"
 
 #include "Control_DropDown.h"
@@ -27,6 +27,7 @@ using namespace System::Collections;
 using namespace System::Windows::Forms;
 using namespace System::Data;
 using namespace System::Drawing;
+
 
 namespace MIDILightDrawer
 {
@@ -62,6 +63,8 @@ namespace MIDILightDrawer
 			Widget_Fade_Options^				_Fade_Options;
 			Widget_Strobe_Options^				_Strobe_Options;
 			Widget_Bucket_Options^				_Bucket_Options;
+
+			MIDI_Exporter^						_MIDI_Exporter;
 
 			Dictionary<String^, Keys>^			_Active_Hotkeys;
 
@@ -111,8 +114,6 @@ namespace MIDILightDrawer
 			void Strobe_Options_OnLengthChanged(int value);
 			void Strobe_Options_OnColorChanged(System::Drawing::Color color);
 			void Bucket_Options_OnColorChanged(System::Drawing::Color color);
-
-			std::string ConvertToStdString(System::String^ input_string);
 
 			// Debug Members
 			void Button_1_Click(System::Object^ sender, System::EventArgs^ e);

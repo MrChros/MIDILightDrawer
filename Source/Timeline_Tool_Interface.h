@@ -47,6 +47,7 @@ namespace MIDILightDrawer
         // Color Tool
         property System::Drawing::Rectangle PreviewRect{ System::Drawing::Rectangle get(); }
         property System::Drawing::Color CurrentColor { System::Drawing::Color get(); }
+        property float BarXHoverRatio { float get(); }
 
         // Fade Tool
         property List<BarEvent^>^ PreviewBars { List<BarEvent^> ^ get(); }

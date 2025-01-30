@@ -87,9 +87,9 @@ namespace MIDILightDrawer
 		array<MethodStats^>^ stats = GetSortedStats();
 
 		sb->AppendLine("Performance Report (values in milliseconds):");
-		sb->AppendLine(gcnew System::String('-', 88));
+		sb->AppendLine(gcnew System::String(L'-', 88));
 		sb->AppendFormat("{0,-30} {1,10} {2,12} {3,12} {4,12} {5,12}\n", "Method", "Calls", "Total(ms)", "Avg(ms)", "Min(ms)", "Max(ms)");
-		sb->AppendLine(gcnew System::String('-', 88));
+		sb->AppendLine(gcnew System::String(L'-', 88));
 
 		System::Int64 totalTime = 0;
 		int totalCalls = 0;
@@ -123,7 +123,7 @@ namespace MIDILightDrawer
 		}
 
 		// Add total line
-		sb->AppendLine(gcnew System::String('-', 88));
+		sb->AppendLine(gcnew System::String(L'-', 88));
 		double totalTimeMs = totalTime / 1000.0;
 		double avgTimeMs = totalCalls > 0 ? totalTimeMs / totalCalls : 0;
 		double minAllMs = minAll == System::Int64::MaxValue ? 0 : minAll / 1000.0;

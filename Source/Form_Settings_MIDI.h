@@ -11,6 +11,17 @@ namespace MIDILightDrawer {
 
 	public delegate void On_Settings_Accepted_Handler();
 
+	public value struct Note_Entry {
+		String^ Name;
+		int Value;
+
+		Note_Entry(String^ name, int value) : Name(name), Value(value) {}
+
+		virtual String^ ToString() override {
+			return Name;
+		}
+	};
+
 	public ref class Form_Settings_MIDI : public System::Windows::Forms::Form
 	{
 	public:
@@ -47,7 +58,7 @@ namespace MIDILightDrawer {
 		DataGridViewTextBoxColumn^	_Column_Name;
 		DataGridViewComboBoxColumn^ _Column_Octave;
 
-		array<String^>^ _Note_Names;
+		array<Note_Entry>^ _Note_Names;
 		static array<int>^ VALID_OCTAVES = { -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
 		void Initialize_Component();
@@ -57,6 +68,8 @@ namespace MIDILightDrawer {
 		void Combo_Box_Selected_Index_Changed(System::Object^ sender, System::EventArgs^ e);
 		void Initialize_Note_Names();
 		void Update_Status_Icons();
+		int Find_Note_Index_By_Value(int value);
+		int Find_Note_Index_By_Name(String^ name);
 
 		void Initialize_Octaves_Section();
 		void Add_Octave_Entry_Click(System::Object^ sender, System::EventArgs^ e);

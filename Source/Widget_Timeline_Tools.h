@@ -137,6 +137,10 @@ namespace MIDILightDrawer
 			Color get() { return Color(); }
 		}
 
+		virtual property float BarXHoverRatio {
+			float get() { return 0.0f; }
+		}
+
 		virtual property List<BarEvent^>^ PreviewBars {
 			List<BarEvent^>^ get() { return nullptr; }
 		}
@@ -393,15 +397,15 @@ namespace MIDILightDrawer
 	//////////////////////////////
 	public ref class EraseTool : public TimelineTool {
 	private:
-		bool isErasing;
-		bool isSelecting;
-		Point^ selectionStart;
-		Rectangle selectionRect;
-		List<BarEvent^>^ selectedBars;
-		List<BarEvent^>^ erasedBars;
-		BarEvent^ hoverBar;
-		Track^ hoverTrack;
-		Rectangle erasePreviewRect;
+		bool		_IsErasing;
+		bool		_IsSelecting;
+		Point^		_SelectionStart;
+		Rectangle	_SelectionRect;
+		List<BarEvent^>^ _SelectedBars;
+		List<BarEvent^>^ _ErasedBars;
+		BarEvent^	_HoverBar;
+		Track^		_HoverTrack;
+		Rectangle	_ErasePreviewRect;
 
 	public:
 		EraseTool(Widget_Timeline^ timeline);
@@ -425,19 +429,19 @@ namespace MIDILightDrawer
 		void Activate() override;
 
 		property Rectangle ErasePreviewRect {
-			Rectangle get() override { return erasePreviewRect; }
+			Rectangle get() override { return _ErasePreviewRect; }
 		}
 
 		property Rectangle SelectionRect {
-			Rectangle get() override { return selectionRect; }
+			Rectangle get() override { return _SelectionRect; }
 		}
 
 		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^> ^ get() override { return selectedBars; }
+			List<BarEvent^> ^ get() override { return _SelectedBars; }
 		}
 
 		property BarEvent^ HoverBar {
-			BarEvent ^ get() override { return hoverBar; }
+			BarEvent ^ get() override { return _HoverBar; }
 		}
 	};
 
@@ -446,23 +450,22 @@ namespace MIDILightDrawer
 	/////////////////////////////////
 	public ref class DurationTool : public TimelineTool {
 	private:
-		bool isDragging;
-		bool isShowingPreview;
-		bool isSelecting;
-		Point^			selectionStart;
-		Rectangle		selectionRect;
-		List<BarEvent^>^ selectedBars;
-		BarEvent^		targetBar;
-		Track^			targetTrack;
-		int originalLength;
-		int dragStartX;
-		int previewLength;
-		int changeTickLength;
-		Dictionary<BarEvent^, int>^ originalLengths;
+		bool		_IsDragging;
+		bool		_IsShowingPreview;
+		bool		_IsSelecting;
+		Point^		_SelectionStart;
+		Rectangle		_SelectionRect;
+		List<BarEvent^>^ _SelectedBars;
+		BarEvent^	_TargetBar;
+		Track^		_TargetTrack;
+		int			_OriginalLength;
+		int			_DragStartX;
+		int			_PreviewLength;
+		int			_ChangeTickLength;
+		Dictionary<BarEvent^, int>^ _OriginalLengths;
 
-		static const int	HANDLE_WIDTH		= 5;
-		static const float	MIN_LENGTH_TICKS	= 120.0f;	// Minimum 1/32 note
-		static const int	DEFAULT_TICK_LENGTH = 960;
+		static const int HANDLE_WIDTH		= 5;
+		static const int MIN_LENGTH_TICKS	= 120;	// Minimum 1/32 note
 
 	public:
 		DurationTool(Widget_Timeline^ timeline);
@@ -484,31 +487,31 @@ namespace MIDILightDrawer
 		void StoreOriginalLengths();
 
 		property BarEvent^ PreviewBar {
-			BarEvent^ get() override { return targetBar; }
+			BarEvent^ get() override { return _TargetBar; }
 		}
 
 		property bool IsPreviewVisible {
-			bool get() override { return isShowingPreview; }
+			bool get() override { return _IsShowingPreview; }
 		}
 
 		property int PreviewLength {
-			int get() override { return previewLength; }
+			int get() override { return _PreviewLength; }
 		}
 
 		property Rectangle SelectionRect {
-			Rectangle get() override { return selectionRect; }
+			Rectangle get() override { return _SelectionRect; }
 		}
 
 		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() override { return selectedBars; }
+			List<BarEvent^>^ get() override { return _SelectedBars; }
 		}
 
 		property int ChangeTickLength {
-			int get() { return changeTickLength; }
+			int get() { return _ChangeTickLength; }
 			void set(int value) {
-				changeTickLength = Math::Max((int)MIN_LENGTH_TICKS, value);
+				_ChangeTickLength = Math::Max((int)MIN_LENGTH_TICKS, value);
 				// Update preview if active
-				if (isShowingPreview && targetBar != nullptr) {
+				if (_IsShowingPreview && _TargetBar != nullptr) {
 					UpdateLengthPreview(_LastMousePos);
 				}
 			}
@@ -521,14 +524,15 @@ namespace MIDILightDrawer
 	public ref class ColorTool : public TimelineTool
 	{
 	private:
-		bool isSelecting;
-		Point^ selectionStart;
-		Rectangle selectionRect;
-		List<BarEvent^>^ selectedBars;
-		BarEvent^ hoverBar;
-		Track^ hoverTrack;
-		Rectangle previewRect;
-		Color currentColor;
+		bool		_IsSelecting;
+		Point^		_SelectionStart;
+		Rectangle	_SelectionRect;
+		Rectangle	_PreviewRect;
+		List<BarEvent^>^ _SelectedBars;
+		BarEvent^	_HoverBar;
+		Track^		_HoverTrack;
+		Color		_CurrentColor;
+		float		_BarXHoverRatio;
 
 	public:
 		ColorTool(Widget_Timeline^ timeline);
@@ -548,25 +552,30 @@ namespace MIDILightDrawer
 		void ApplyColorToSelection();
 
 		property Rectangle PreviewRect {
-			Rectangle get() override { return previewRect; }
+			Rectangle get() override { return _PreviewRect; }
 		}
 
 		property Rectangle SelectionRect {
-			Rectangle get() override  { return selectionRect; }
+			Rectangle get() override  { return _SelectionRect; }
 		}
 
 		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() override { return selectedBars; }
+			List<BarEvent^>^ get() override { return _SelectedBars; }
 		}
 
 		property BarEvent^ HoverBar {
-			BarEvent^ get() override { return hoverBar; }
+			BarEvent^ get() override { return _HoverBar; }
 		}
 
 		property Color CurrentColor {
-			Color get() override { return currentColor; }
+			Color get() override { return _CurrentColor; }
 			void set(Color value);
 		}
+
+		property float BarXHoverRatio {
+			float get() override { return _BarXHoverRatio; }
+		}
+
 	};
 
 
@@ -612,7 +621,6 @@ namespace MIDILightDrawer
 		}
 
 	private:
-		Color InterpolateColor(Color start, Color end, float ratio);
 		void AddBarToTrack();
 		void UpdatePreview(Point mousePos);
 		void ClearPreviews();

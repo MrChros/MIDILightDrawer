@@ -16,6 +16,7 @@ namespace MIDILightDrawer
 		this->Size			= System::Drawing::Size(1200, 800);
 		this->MinimumSize	= System::Drawing::Size(1200, 800);
 		this->Padding		= System::Windows::Forms::Padding(1); // Border padding
+		this->_GP_Tab		= NULL;
 
 		// Register form closing event
 		this->FormClosing += gcnew System::Windows::Forms::FormClosingEventHandler(this, &Form_Main::Form_Main_FormClosing);
@@ -107,6 +108,13 @@ namespace MIDILightDrawer
 
 		mainContainer->Controls->Add(Table_Layout_Main);
 		this->Controls->Add(mainContainer);
+
+
+		///////////////////
+		// MIDI Exporter //
+		///////////////////
+		_MIDI_Exporter = gcnew MIDI_Exporter(this->_Timeline);
+
 
 		// Initialize menu
 		InitializeMainMenu();
@@ -362,7 +370,7 @@ namespace MIDILightDrawer
 				this->_GP_Tab = NULL;
 			}
 
-			this->_GP_Tab = new gp_parser::Parser(ConvertToStdString(GuiterPro5_Filename));
+			this->_GP_Tab = new gp_parser::Parser(_MIDI_Exporter->ConvertToStdString(GuiterPro5_Filename));
 
 			this->_Tab_Info->Update_Info(GuiterPro5_Filename, gcnew String(this->_GP_Tab->getTabFile().title.data()), (unsigned int)this->_GP_Tab->getTabFile().measureHeaders.size(), this->_GP_Tab->getTabFile().trackCount);
 
@@ -422,9 +430,6 @@ namespace MIDILightDrawer
 
 	void Form_Main::Menu_File_Export_MIDI_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		const int OCTAVE_OFFSET		= 2;
-		const int NOTES_PER_OCTAVE	= 12;
-
 		String^ Default_Filename = this->_Tab_Info->Get_Song_Name() + ".mid";
 
 		SaveFileDialog^ Save_Dialog_File = gcnew SaveFileDialog();
@@ -435,70 +440,14 @@ namespace MIDILightDrawer
 
 		if (Save_Dialog_File->ShowDialog() == System::Windows::Forms::DialogResult::OK)
 		{
-			try {
-				Settings^ Settings = Settings::Get_Instance();
-				List<Settings::Octave_Entry^>^ Octave_Entries = Settings->Octave_Entries;
+			String^ ErrorMessage = _MIDI_Exporter->Export(Save_Dialog_File->FileName, this->_GP_Tab);
 
-				MIDI_Writer Writer(960);  // Use 960 ticks per quarter note
-
-				if (this->_GP_Tab == NULL) {
-					throw gcnew Exception("No Guitar Pro 5 file opened");
-				}
-
-				// First, add all measures from the Guitar Pro file
-				bool has_measures = false;
-				for (auto i = 0; i < this->_GP_Tab->getTabFile().measureHeaders.size(); i++)
-				{
-					has_measures = true;
-					gp_parser::MeasureHeader* MH = &(this->_GP_Tab->getTabFile().measureHeaders.at(i));
-					Writer.Add_Measure(MH->timeSignature.numerator,
-						MH->timeSignature.denominator.value,
-						MH->tempo.value);
-				}
-
-				// Then add all the notes
-				int Count_RGB_Bars = 0;
-
-				for each(Track ^ T in this->_Timeline->Tracks)
-				{
-					String^ Track_Name	= T->Name;
-					int Octave			= T->Octave;
-
-					int Octave_Note_Offset = (Octave + OCTAVE_OFFSET) * NOTES_PER_OCTAVE;
-
-					for each(BarEvent ^ B in T->Events)
-					{
-						int Tick_Start	= B->StartTick;
-						int Tick_Length = B->Duration;
-						Color Bar_Color = B->Color;
-
-						uint8_t Value_Red	= (Bar_Color.R >> 1);
-						uint8_t Value_Green = (Bar_Color.G >> 1);
-						uint8_t Value_Blue	= (Bar_Color.B >> 1);
-
-						if (Value_Red > 0) {
-							Writer.Add_Note(Tick_Start, Tick_Length, 0, Octave_Note_Offset + Settings->MIDI_Note_Red, Value_Red);
-						}
-
-						if (Value_Green > 0) {
-							Writer.Add_Note(Tick_Start, Tick_Length, 0, Octave_Note_Offset + Settings->MIDI_Note_Green, Value_Green);
-						}
-
-						if (Value_Blue > 0) {
-							Writer.Add_Note(Tick_Start, Tick_Length, 0, Octave_Note_Offset + Settings->MIDI_Note_Blue, Value_Blue);
-						}
-					}
-				}
-				
-				if (!Writer.Save_To_File(ConvertToStdString(Save_Dialog_File->FileName))) {
-					throw gcnew Exception("Failed to write MIDI file");
-				}
-
+			if(ErrorMessage == String::Empty) {
 				// Show success message
 				MessageBox::Show(this, "MIDI file has been successfully exported.", "Export Successful", MessageBoxButtons::OK, MessageBoxIcon::Information);
 			}
-			catch (Exception^ ex) {
-				MessageBox::Show(this, "Error:\n" + ex->Message, "Failed to export MIDI file", MessageBoxButtons::OK, MessageBoxIcon::Error);
+			else {
+				MessageBox::Show(this, "Error:\n" + ErrorMessage, "Failed to export MIDI file", MessageBoxButtons::OK, MessageBoxIcon::Error);
 			}
 		}
 	}
@@ -925,23 +874,6 @@ namespace MIDILightDrawer
 	void Form_Main::Bucket_Options_OnColorChanged(System::Drawing::Color color)
 	{
 
-	}
-
-	std::string Form_Main::ConvertToStdString(System::String^ input_string)
-	{
-		if (input_string == nullptr)
-			return "";
-
-		pin_ptr<const wchar_t> wch = PtrToStringChars(input_string);
-		int len = ((input_string->Length + 1) * 2);
-		char* ch = new char[len];
-
-		size_t convertedChars = 0;
-		wcstombs_s(&convertedChars, ch, len, wch, _TRUNCATE);
-		std::string standardString(ch);
-		delete[] ch;
-
-		return standardString;
 	}
 
 	void Form_Main::Button_1_Click(System::Object^ sender, System::EventArgs^ e)

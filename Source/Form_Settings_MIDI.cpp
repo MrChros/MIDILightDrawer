@@ -16,8 +16,19 @@ namespace MIDILightDrawer
 
 	void Form_Settings_MIDI::Initialize_Note_Names()
 	{
-		_Note_Names = gcnew array<String^>{
-			"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+		_Note_Names = gcnew array<Note_Entry>{
+			Note_Entry("C" , 0),
+			Note_Entry("C#", 1),
+			Note_Entry("D" , 2),
+			Note_Entry("D#", 3),
+			Note_Entry("E" , 4),
+			Note_Entry("F" , 5),
+			Note_Entry("F#", 6),
+			Note_Entry("G" , 7),
+			Note_Entry("G#", 8),
+			Note_Entry("A" , 9),
+			Note_Entry("A#", 10),
+			Note_Entry("B" , 11)
 		};
 	}
 
@@ -72,7 +83,6 @@ namespace MIDILightDrawer
 		_Combo_Box_Red = gcnew System::Windows::Forms::ComboBox();
 		_Combo_Box_Red->Anchor = System::Windows::Forms::AnchorStyles::Left | System::Windows::Forms::AnchorStyles::Right;
 		_Combo_Box_Red->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-		_Combo_Box_Red->Items->AddRange(_Note_Names);
 		_Combo_Box_Red->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::Combo_Box_Selected_Index_Changed);
 		_Notes_Layout->Controls->Add(_Combo_Box_Red, 1, 0);
 
@@ -91,7 +101,6 @@ namespace MIDILightDrawer
 		_Combo_Box_Green = gcnew System::Windows::Forms::ComboBox();
 		_Combo_Box_Green->Anchor = System::Windows::Forms::AnchorStyles::Left | System::Windows::Forms::AnchorStyles::Right;
 		_Combo_Box_Green->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-		_Combo_Box_Green->Items->AddRange(_Note_Names);
 		_Combo_Box_Green->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::Combo_Box_Selected_Index_Changed);
 		_Notes_Layout->Controls->Add(_Combo_Box_Green, 1, 1);
 
@@ -110,7 +119,6 @@ namespace MIDILightDrawer
 		_Combo_Box_Blue = gcnew System::Windows::Forms::ComboBox();
 		_Combo_Box_Blue->Anchor = System::Windows::Forms::AnchorStyles::Left | System::Windows::Forms::AnchorStyles::Right;
 		_Combo_Box_Blue->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-		_Combo_Box_Blue->Items->AddRange(_Note_Names);
 		_Combo_Box_Blue->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::Combo_Box_Selected_Index_Changed);
 		_Notes_Layout->Controls->Add(_Combo_Box_Blue, 1, 2);
 
@@ -123,6 +131,12 @@ namespace MIDILightDrawer
 		_Group_Box_Notes->Controls->Add(_Notes_Layout);
 		_Main_Layout->Controls->Add(_Group_Box_Notes, 0, 0);
 
+		for each (Note_Entry E in _Note_Names)
+		{
+			_Combo_Box_Red->Items->Add(E.Name);
+			_Combo_Box_Green->Items->Add(E.Name);
+			_Combo_Box_Blue->Items->Add(E.Name);
+		}
 
 		///////////////////////
 		// Group Box Octaves //
@@ -170,18 +184,33 @@ namespace MIDILightDrawer
 	void Form_Settings_MIDI::Load_Current_Settings()
 	{
 		Settings^ Current_Settings = Settings::Get_Instance();
-		_Combo_Box_Red->SelectedIndex = Current_Settings->MIDI_Note_Red;
-		_Combo_Box_Green->SelectedIndex = Current_Settings->MIDI_Note_Green;
-		_Combo_Box_Blue->SelectedIndex = Current_Settings->MIDI_Note_Blue;
+	
+		// Find and select items by their values
+		for each (Note_Entry Note in _Note_Names)
+		{
+			if (Note.Value == Current_Settings->MIDI_Note_Red) {
+				_Combo_Box_Red->SelectedIndex = Array::IndexOf(_Note_Names, Note);
+			}
+
+			if (Note.Value == Current_Settings->MIDI_Note_Green) {
+				_Combo_Box_Green->SelectedIndex = Array::IndexOf(_Note_Names, Note);
+			}
+
+			if (Note.Value == Current_Settings->MIDI_Note_Blue) {
+				_Combo_Box_Blue->SelectedIndex = Array::IndexOf(_Note_Names, Note);
+			}
+		}
+
 		Update_Status_Icons();
 	}
 
 	void Form_Settings_MIDI::Save_Settings()
 	{
 		Settings^ Current_Settings = Settings::Get_Instance();
-		Current_Settings->MIDI_Note_Red = _Combo_Box_Red->SelectedIndex;
-		Current_Settings->MIDI_Note_Green = _Combo_Box_Green->SelectedIndex;
-		Current_Settings->MIDI_Note_Blue = _Combo_Box_Blue->SelectedIndex;
+
+		Current_Settings->MIDI_Note_Red		= Find_Note_Index_By_Name((String^)_Combo_Box_Red->SelectedItem);
+		Current_Settings->MIDI_Note_Green	= Find_Note_Index_By_Name((String^)_Combo_Box_Green->SelectedItem);
+		Current_Settings->MIDI_Note_Blue	= Find_Note_Index_By_Name((String^)_Combo_Box_Blue->SelectedItem);
 	}
 
 	void Form_Settings_MIDI::Update_Status_Icons()
@@ -194,22 +223,60 @@ namespace MIDILightDrawer
 		_Icon_Blue->Image = (_Combo_Box_Blue->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
 	}
 
+	int Form_Settings_MIDI::Find_Note_Index_By_Value(int value)
+	{
+		for (int i = 0; i < _Note_Names->Length; i++)
+		{
+			if (_Note_Names[i].Value == value) {
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	int Form_Settings_MIDI::Find_Note_Index_By_Name(String^ name)
+	{
+		for (int i = 0; i < _Note_Names->Length; i++)
+		{
+			if (_Note_Names[i].Name == name) {
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
 	void Form_Settings_MIDI::Combo_Box_Selected_Index_Changed(System::Object^ sender, System::EventArgs^ e)
 	{
-		System::Windows::Forms::ComboBox^ Current_Combo_Box = safe_cast<System::Windows::Forms::ComboBox^>(sender);
-		int Selected_Index = Current_Combo_Box->SelectedIndex;
+		ComboBox^ Current_Combo_Box = safe_cast<ComboBox^>(sender);
 
-		if (Selected_Index == -1) {
+		if (Current_Combo_Box->SelectedIndex == -1) {
 			Update_Status_Icons();
 			return;
 		}
 
-		array<System::Windows::Forms::ComboBox^>^ All_Combo_Boxes = {
-			_Combo_Box_Red, _Combo_Box_Green, _Combo_Box_Blue
-		};
+		int NoteArrayIndex = Find_Note_Index_By_Name((String^)Current_Combo_Box->SelectedItem);
+		
+		if (NoteArrayIndex == -1) {
+			return;
+		}
 
-		for each(System::Windows::Forms::ComboBox ^ Other_Combo_Box in All_Combo_Boxes) {
-			if (Other_Combo_Box != Current_Combo_Box && Other_Combo_Box->SelectedIndex == Selected_Index) {
+		Note_Entry SelectedEntry = _Note_Names[NoteArrayIndex];
+
+		array<ComboBox^>^ All_Combo_Boxes = { _Combo_Box_Red, _Combo_Box_Green, _Combo_Box_Blue };
+
+		for each (ComboBox^ Other_Combo_Box in All_Combo_Boxes)
+		{
+			NoteArrayIndex = Find_Note_Index_By_Name((String^)Other_Combo_Box->SelectedItem);
+			if (NoteArrayIndex == -1) {
+				continue;
+			}
+
+			int OtherValue = _Note_Names[NoteArrayIndex].Value;
+
+			if (Other_Combo_Box != Current_Combo_Box && Other_Combo_Box->SelectedIndex != -1 && OtherValue == SelectedEntry.Value)
+			{
 				Other_Combo_Box->SelectedIndex = -1;
 			}
 		}

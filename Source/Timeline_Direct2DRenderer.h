@@ -131,12 +131,13 @@ namespace MIDILightDrawer
         void DrawNormalBarFade(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawNormalBarStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawPreviewBar(BarEvent^ bar, Track^ track, System::Drawing::Point mousePos, BarPreviewType previewType);
-        bool DrawPreviewBarList(List<BarEvent^>^ bars, Track^ track);
-        bool DrawCreationMovementPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds);
+        void DrawPreviewBarList(List<BarEvent^>^ bars, Track^ track);
+        void DrawCreationMovementPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawDurationPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawDurationPreviewSolid(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawDurationPreviewFade(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawDurationPreviewStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds);
+        void DrawColorPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds, System::Drawing::Color currentColor, float opacity, float borderWidth);
 
         void DrawGhostBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds);
         void DrawGhostBarSolid(BarEvent^ bar, System::Drawing::Rectangle barBounds);

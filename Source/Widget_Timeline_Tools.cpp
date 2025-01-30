@@ -1515,15 +1515,15 @@ namespace MIDILightDrawer
 	EraseTool::EraseTool(Widget_Timeline^ timeline) : TimelineTool(timeline)
 	{
 		Cursor				= TimelineCursorHelper::GetCursor(TimelineCursor::No);
-		isErasing			= false;
-		isSelecting			= false;
-		selectionStart		= nullptr;
-		selectedBars		= gcnew List<BarEvent^>();
-		erasedBars			= gcnew List<BarEvent^>();
-		hoverBar			= nullptr;
-		hoverTrack			= nullptr;
-		selectionRect		= Rectangle(0, 0, 0, 0);
-		erasePreviewRect	= Rectangle(0, 0, 0, 0);
+		_IsErasing			= false;
+		_IsSelecting			= false;
+		_SelectionStart		= nullptr;
+		_SelectedBars		= gcnew List<BarEvent^>();
+		_ErasedBars			= gcnew List<BarEvent^>();
+		_HoverBar			= nullptr;
+		_HoverTrack			= nullptr;
+		_SelectionRect		= Rectangle(0, 0, 0, 0);
+		_ErasePreviewRect	= Rectangle(0, 0, 0, 0);
 	}
 
 	void EraseTool::OnMouseDown(MouseEventArgs^ e)
@@ -1534,11 +1534,11 @@ namespace MIDILightDrawer
 			BarEvent^ clickedBar = _Timeline->GetBarAtPoint(clickPoint);
 
 			// If clicking on a selected bar, delete all selected bars
-			if (clickedBar != nullptr && selectedBars->Contains(clickedBar))
+			if (clickedBar != nullptr && _SelectedBars->Contains(clickedBar))
 			{
 				StartErasing();
 				// Erase all selected bars
-				for each(BarEvent ^ bar in selectedBars)
+				for each(BarEvent ^ bar in _SelectedBars)
 				{
 					Track^ track = nullptr;
 					// Find the track containing this bar
@@ -1551,7 +1551,7 @@ namespace MIDILightDrawer
 					}
 					if (track != nullptr) {
 						track->RemoveBar(bar);
-						erasedBars->Add(bar);
+						_ErasedBars->Add(bar);
 					}
 				}
 				ClearSelection();
@@ -1560,7 +1560,7 @@ namespace MIDILightDrawer
 			// If clicking on an unselected bar, clear selection and select only this bar
 			else if (clickedBar != nullptr) {
 				ClearSelection();
-				selectedBars->Add(clickedBar);
+				_SelectedBars->Add(clickedBar);
 				UpdateHoverPreview(clickPoint);
 			}
 			// If clicking empty space, start selection rectangle
@@ -1576,7 +1576,7 @@ namespace MIDILightDrawer
 	void EraseTool::OnMouseMove(MouseEventArgs^ e) {
 		Point mousePos(e->X, e->Y);
 
-		if (isSelecting) {
+		if (_IsSelecting) {
 			UpdateSelection(mousePos);
 		}
 		else {
@@ -1588,7 +1588,7 @@ namespace MIDILightDrawer
 
 	void EraseTool::OnMouseUp(MouseEventArgs^ e)
 	{
-		if (isSelecting) {
+		if (_IsSelecting) {
 			EndSelection();
 		}
 		UpdateHoverPreview(Point(e->X, e->Y));
@@ -1599,38 +1599,38 @@ namespace MIDILightDrawer
 
 	void EraseTool::StartSelection(Point start)
 	{
-		isSelecting = true;
-		selectionStart = start;
-		selectionRect = Rectangle(start.X, start.Y, 0, 0);
+		_IsSelecting = true;
+		_SelectionStart = start;
+		_SelectionRect = Rectangle(start.X, start.Y, 0, 0);
 	}
 
 	void EraseTool::UpdateSelection(Point current)
 	{
-		if (!isSelecting || selectionStart == nullptr) return;
+		if (!_IsSelecting || _SelectionStart == nullptr) return;
 
 		// Calculate selection rectangle
-		int x = Math::Min(selectionStart->X, current.X);
-		int y = Math::Min(selectionStart->Y, current.Y);
-		int width = Math::Abs(current.X - selectionStart->X);
-		int height = Math::Abs(current.Y - selectionStart->Y);
+		int x = Math::Min(_SelectionStart->X, current.X);
+		int y = Math::Min(_SelectionStart->Y, current.Y);
+		int width = Math::Abs(current.X - _SelectionStart->X);
+		int height = Math::Abs(current.Y - _SelectionStart->Y);
 
-		selectionRect = Rectangle(x, y, width, height);
+		_SelectionRect = Rectangle(x, y, width, height);
 
 		// Update selected bars
-		SelectBarsInRegion(selectionRect);
+		SelectBarsInRegion(_SelectionRect);
 	}
 
 	void EraseTool::EndSelection()
 	{
-		isSelecting = false;
-		selectionStart = nullptr;
-		selectionRect = Rectangle(0, 0, 0, 0);
+		_IsSelecting = false;
+		_SelectionStart = nullptr;
+		_SelectionRect = Rectangle(0, 0, 0, 0);
 		_Timeline->Invalidate();
 	}
 
 	void EraseTool::SelectBarsInRegion(Rectangle region)
 	{
-		selectedBars->Clear();
+		_SelectedBars->Clear();
 
 		// Convert selection rectangle to tick range
 		int startTick = _Timeline->PixelsToTicks(
@@ -1646,7 +1646,7 @@ namespace MIDILightDrawer
 					// Check if bar intersects with selection
 					if (bar->StartTick + bar->Duration >= startTick &&
 						bar->StartTick <= endTick) {
-						selectedBars->Add(bar);
+						_SelectedBars->Add(bar);
 					}
 				}
 			}
@@ -1655,19 +1655,19 @@ namespace MIDILightDrawer
 
 	void EraseTool::ClearSelection()
 	{
-		selectedBars->Clear();
-		selectionRect = Rectangle(0, 0, 0, 0);
+		_SelectedBars->Clear();
+		_SelectionRect = Rectangle(0, 0, 0, 0);
 		_Timeline->Invalidate();
 	}
 
 	void EraseTool::StartErasing()
 	{
-		isErasing = true;
-		if (erasedBars == nullptr) {
-			erasedBars = gcnew List<BarEvent^>();
+		_IsErasing = true;
+		if (_ErasedBars == nullptr) {
+			_ErasedBars = gcnew List<BarEvent^>();
 		}
 		else {
-			erasedBars->Clear();
+			_ErasedBars->Clear();
 		}
 	}
 
@@ -1677,10 +1677,10 @@ namespace MIDILightDrawer
 		if (track != nullptr)
 		{
 			BarEvent^ bar = _Timeline->GetBarAtPoint(mousePos);
-			if (bar != nullptr && !erasedBars->Contains(bar))
+			if (bar != nullptr && !_ErasedBars->Contains(bar))
 			{
 				track->RemoveBar(bar);
-				erasedBars->Add(bar);
+				_ErasedBars->Add(bar);
 				_Timeline->Invalidate();
 			}
 		}
@@ -1688,8 +1688,8 @@ namespace MIDILightDrawer
 
 	void EraseTool::EndErasing()
 	{
-		isErasing = false;
-		erasedBars->Clear();
+		_IsErasing = false;
+		_ErasedBars->Clear();
 	}
 
 	void EraseTool::UpdateHoverPreview(Point mousePos)
@@ -1702,9 +1702,9 @@ namespace MIDILightDrawer
 		}
 
 		// Update hover state
-		if (bar != hoverBar || track != hoverTrack) {
-			hoverBar = bar;
-			hoverTrack = track;
+		if (bar != _HoverBar || track != _HoverTrack) {
+			_HoverBar = bar;
+			_HoverTrack = track;
 
 			if (bar != nullptr) {
 				// Calculate preview rectangle
@@ -1714,7 +1714,7 @@ namespace MIDILightDrawer
 
 				Rectangle trackBounds = _Timeline->GetTrackContentBounds(track);
 
-				erasePreviewRect = Rectangle(
+				_ErasePreviewRect = Rectangle(
 					x,
 					trackBounds.Y + Timeline_Direct2DRenderer::TRACK_PADDING,
 					_Timeline->TicksToPixels(bar->Duration),
@@ -1722,10 +1722,10 @@ namespace MIDILightDrawer
 				);
 
 				// Update cursor based on whether the bar is selected
-				Cursor = selectedBars->Contains(bar) ? TimelineCursorHelper::GetCursor(TimelineCursor::Hand) : TimelineCursorHelper::GetCursor(TimelineCursor::No);
+				Cursor = _SelectedBars->Contains(bar) ? TimelineCursorHelper::GetCursor(TimelineCursor::Hand) : TimelineCursorHelper::GetCursor(TimelineCursor::No);
 			}
 			else {
-				erasePreviewRect = Rectangle(0, 0, 0, 0);
+				_ErasePreviewRect = Rectangle(0, 0, 0, 0);
 				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross); // Use cross cursor for selection
 			}
 
@@ -1735,10 +1735,10 @@ namespace MIDILightDrawer
 
 	void EraseTool::ClearHoverPreview()
 	{
-		if (hoverBar != nullptr || !erasePreviewRect.IsEmpty) {
-			hoverBar = nullptr;
-			hoverTrack = nullptr;
-			erasePreviewRect = Rectangle(0, 0, 0, 0);
+		if (_HoverBar != nullptr || !_ErasePreviewRect.IsEmpty) {
+			_HoverBar = nullptr;
+			_HoverTrack = nullptr;
+			_ErasePreviewRect = Rectangle(0, 0, 0, 0);
 			_Timeline->Invalidate();
 		}
 	}
@@ -1755,19 +1755,19 @@ namespace MIDILightDrawer
 	DurationTool::DurationTool(Widget_Timeline^ timeline) : TimelineTool(timeline)
 	{
 		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE);
-		isDragging			= false;
-		isShowingPreview	= false;
-		isSelecting			= false;
-		targetBar			= nullptr;
-		targetTrack			= nullptr;
-		originalLength		= 0;
-		dragStartX			= 0;
-		previewLength		= 0;
-		changeTickLength	= DEFAULT_TICK_LENGTH;
-		selectedBars		= gcnew List<BarEvent^>();
-		originalLengths		= gcnew Dictionary<BarEvent^, int>();
-		selectionStart		= nullptr;
-		selectionRect		= Rectangle(0, 0, 0, 0);
+		_IsDragging			= false;
+		_IsShowingPreview	= false;
+		_IsSelecting			= false;
+		_TargetBar			= nullptr;
+		_TargetTrack			= nullptr;
+		_OriginalLength		= 0;
+		_DragStartX			= 0;
+		_PreviewLength		= 0;
+		_ChangeTickLength	= Timeline_Direct2DRenderer::TICKS_PER_QUARTER;
+		_SelectedBars		= gcnew List<BarEvent^>();
+		_OriginalLengths	= gcnew Dictionary<BarEvent^, int>();
+		_SelectionStart		= nullptr;
+		_SelectionRect		= Rectangle(0, 0, 0, 0);
 	}
 
 	void DurationTool::OnMouseDown(MouseEventArgs^ e)
@@ -1781,25 +1781,25 @@ namespace MIDILightDrawer
 			if (track != nullptr && bar != nullptr)
 			{
 				// If clicking on a handle of a selected bar
-				if (IsOverHandle(mousePos, bar, track) && selectedBars->Contains(bar))
+				if (IsOverHandle(mousePos, bar, track) && _SelectedBars->Contains(bar))
 				{
-					isDragging = true;
-					targetBar = bar;
-					targetTrack = track;
+					_IsDragging = true;
+					_TargetBar = bar;
+					_TargetTrack = track;
 					StoreOriginalLengths();
-					dragStartX = e->X;
+					_DragStartX = e->X;
 					Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE);
 				}
 				// If clicking on a handle of an unselected bar
 				else if (IsOverHandle(mousePos, bar, track))
 				{
 					ClearSelection();
-					selectedBars->Add(bar);
-					isDragging = true;
-					targetBar = bar;
-					targetTrack = track;
+					_SelectedBars->Add(bar);
+					_IsDragging = true;
+					_TargetBar = bar;
+					_TargetTrack = track;
 					StoreOriginalLengths();
-					dragStartX = e->X;
+					_DragStartX = e->X;
 					Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::SizeWE);
 				}
 				// If clicking on a bar (not handle)
@@ -1823,23 +1823,23 @@ namespace MIDILightDrawer
 	{
 		Point mousePos(e->X, e->Y);
 
-		if (isDragging && targetBar != nullptr && selectedBars->Count > 0)
+		if (_IsDragging && _TargetBar != nullptr && _SelectedBars->Count > 0)
 		{
 			// Calculate length change
-			int deltaPixels = e->X - dragStartX;
+			int deltaPixels = e->X - _DragStartX;
 			int deltaTicks = _Timeline->PixelsToTicks(deltaPixels);
 
 			// Calculate the scale factor for the length change
 			double scaleFactor = 1.0;
-			if (originalLengths[targetBar] > 0)
+			if (_OriginalLengths[_TargetBar] > 0)
 			{
-				scaleFactor = (double)(originalLengths[targetBar] + deltaTicks) / originalLengths[targetBar];
+				scaleFactor = (double)(_OriginalLengths[_TargetBar] + deltaTicks) / _OriginalLengths[_TargetBar];
 			}
 
 			// Apply length change to all selected bars
-			for each (BarEvent ^ bar in selectedBars)
+			for each (BarEvent ^ bar in _SelectedBars)
 			{
-				int originalLength = originalLengths[bar];
+				int originalLength = _OriginalLengths[bar];
 				int newLength;
 
 				if (Control::ModifierKeys == Keys::Control)
@@ -1852,16 +1852,16 @@ namespace MIDILightDrawer
 					// Proportional change
 					newLength = (int)(originalLength * scaleFactor);
 					// Round to nearest changeTickLength
-					newLength = ((newLength + changeTickLength / 2) / changeTickLength) * changeTickLength;
+					newLength = ((newLength + _ChangeTickLength / 2) / _ChangeTickLength) * _ChangeTickLength;
 				}
 
 				// Ensure minimum length
-				bar->Duration = Math::Max(newLength, (int)MIN_LENGTH_TICKS);
+				bar->Duration = Math::Max(newLength, MIN_LENGTH_TICKS);
 			}
 
 			_Timeline->Invalidate();
 		}
-		else if (isSelecting)
+		else if (_IsSelecting)
 		{
 			UpdateSelection(mousePos);
 		}
@@ -1883,19 +1883,19 @@ namespace MIDILightDrawer
 
 	void DurationTool::OnMouseUp(MouseEventArgs^ e)
 	{
-		if (isDragging)
+		if (_IsDragging)
 		{
-			for each (BarEvent ^ bar in selectedBars)
+			for each (BarEvent ^ bar in _SelectedBars)
 			{
 				bar->OriginalDuration = bar->Duration;
 			}
 			
-			isDragging = false;
-			targetBar = nullptr;
-			targetTrack = nullptr;
-			originalLengths->Clear();
+			_IsDragging = false;
+			_TargetBar = nullptr;
+			_TargetTrack = nullptr;
+			_OriginalLengths->Clear();
 		}
-		else if (isSelecting)
+		else if (_IsSelecting)
 		{
 			EndSelection();
 		}
@@ -1906,57 +1906,55 @@ namespace MIDILightDrawer
 
 	bool DurationTool::IsOverHandle(Point mousePos, BarEvent^ bar, Track^ track)
 	{
-		if (bar == nullptr || track == nullptr) return false;
+		if (bar == nullptr || track == nullptr) { 
+			return false;
+		}
 
-		Rectangle bounds = _Timeline->GetTrackContentBounds(track);
-		int barEndX = _Timeline->TicksToPixels(bar->StartTick + bar->Duration) +
-			_Timeline->ScrollPosition->X +
-			Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		Rectangle TrackContentBounds = _Timeline->GetTrackContentBounds(track);
+		int BarEndX = _Timeline->TicksToPixels(bar->StartTick + bar->Duration) + _Timeline->ScrollPosition->X + Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
 
 		// Check if mouse is within handle area at end of bar
-		return mousePos.X >= barEndX - HANDLE_WIDTH &&
-			mousePos.X <= barEndX + HANDLE_WIDTH &&
-			mousePos.Y >= bounds.Y + Timeline_Direct2DRenderer::TRACK_PADDING &&
-			mousePos.Y <= bounds.Bottom - Timeline_Direct2DRenderer::TRACK_PADDING;
+		return	mousePos.X >= BarEndX - HANDLE_WIDTH &&
+				mousePos.X <= BarEndX + HANDLE_WIDTH &&
+				mousePos.Y >= TrackContentBounds.Y		+ Timeline_Direct2DRenderer::TRACK_PADDING &&
+				mousePos.Y <= TrackContentBounds.Bottom - Timeline_Direct2DRenderer::TRACK_PADDING;
 	}
 
 	void DurationTool::UpdateLengthPreview(Point mousePos)
 	{
-		if (targetBar == nullptr || !isDragging) {
-			Track^ track = _Timeline->GetTrackAtPoint(mousePos);
-			BarEvent^ bar = _Timeline->GetBarAtPoint(mousePos);
+		if (_TargetBar == nullptr || !_IsDragging)
+		{
+			Track^ TargetTrack = _Timeline->GetTrackAtPoint(mousePos);
+			BarEvent^ Bar = _Timeline->GetBarAtPoint(mousePos);
 
-			if (track != nullptr && bar != nullptr && IsOverHandle(mousePos, bar, track)) {
+			if (TargetTrack != nullptr && Bar != nullptr && IsOverHandle(mousePos, Bar, TargetTrack))
+			{
 				if (Control::ModifierKeys == Keys::Control)
 				{
-					int barEndX = _Timeline->TicksToPixels(bar->StartTick + bar->Duration) +
-						_Timeline->ScrollPosition->X +
-						Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+					int BarEndX = _Timeline->TicksToPixels(Bar->StartTick + Bar->Duration) + _Timeline->ScrollPosition->X + Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
 
-					int deltaPixels = mousePos.X - barEndX;
-					int deltaTicks = _Timeline->PixelsToTicks(deltaPixels);
-					previewLength = _Timeline->SnapTickToGrid(bar->Duration + deltaTicks);
+					int DeltaPixels = mousePos.X - BarEndX;
+					int DeltaTicks = _Timeline->PixelsToTicks(DeltaPixels);
+					_PreviewLength = _Timeline->SnapTickToGrid(Bar->Duration + DeltaTicks);
 				}
 				else
 				{
 					// Calculate total desired length from mouse position
-					int barEndX = _Timeline->TicksToPixels(bar->StartTick + bar->Duration) +
-						_Timeline->ScrollPosition->X +
-						Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
-					int deltaPixels = mousePos.X - barEndX;
-					int deltaTicks = _Timeline->PixelsToTicks(deltaPixels);
+					int BarEndX = _Timeline->TicksToPixels(Bar->StartTick + Bar->Duration) + _Timeline->ScrollPosition->X + Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+					int DeltaPixels = mousePos.X - BarEndX;
+					int DeltaTicks = _Timeline->PixelsToTicks(DeltaPixels);
 
-					int totalDesiredLength = bar->Duration + deltaTicks;
-					int numUnits = Math::Max(1, (totalDesiredLength + (changeTickLength / 2)) / changeTickLength);
-					previewLength = numUnits * changeTickLength;
+					int TotalDesiredLength = Bar->Duration + DeltaTicks;
+					int NumUnits = Math::Max(1, (TotalDesiredLength + (_ChangeTickLength / 2)) / _ChangeTickLength);
+					_PreviewLength = NumUnits * _ChangeTickLength;
 				}
 
 				// Ensure minimum length
-				previewLength = Math::Max(previewLength, (int)MIN_LENGTH_TICKS);
+				_PreviewLength = Math::Max(_PreviewLength, MIN_LENGTH_TICKS);
 
-				isShowingPreview = true;
-				targetBar = bar;
-				targetTrack = track;
+				_IsShowingPreview = true;
+				_TargetBar = Bar;
+				_TargetTrack = TargetTrack;
 
 				_Timeline->Invalidate();
 			}
@@ -1968,12 +1966,12 @@ namespace MIDILightDrawer
 
 	void DurationTool::ClearPreview()
 	{
-		if (isShowingPreview) {
-			isShowingPreview = false;
+		if (_IsShowingPreview) {
+			_IsShowingPreview = false;
 
-			if (!isDragging) {
-				targetBar = nullptr;
-				targetTrack = nullptr;
+			if (!_IsDragging) {
+				_TargetBar = nullptr;
+				_TargetTrack = nullptr;
 			}
 
 			_Timeline->Invalidate();
@@ -1982,55 +1980,57 @@ namespace MIDILightDrawer
 
 	void DurationTool::StartSelection(Point start)
 	{
-		isSelecting = true;
-		selectionStart = start;
-		selectionRect = Rectangle(start.X, start.Y, 0, 0);
+		_IsSelecting = true;
+		_SelectionStart = start;
+		_SelectionRect = Rectangle(start.X, start.Y, 0, 0);
 	}
 
 	void DurationTool::UpdateSelection(Point current)
 	{
-		if (!isSelecting || selectionStart == nullptr) return;
+		if (!_IsSelecting || _SelectionStart == nullptr) {
+			return;
+		}
 
 		// Calculate selection rectangle
-		int x = Math::Min(selectionStart->X, current.X);
-		int y = Math::Min(selectionStart->Y, current.Y);
-		int width = Math::Abs(current.X - selectionStart->X);
-		int height = Math::Abs(current.Y - selectionStart->Y);
+		int X = Math::Min(_SelectionStart->X, current.X);
+		int Y = Math::Min(_SelectionStart->Y, current.Y);
+		int Width = Math::Abs(current.X - _SelectionStart->X);
+		int Height = Math::Abs(current.Y - _SelectionStart->Y);
 
-		selectionRect = Rectangle(x, y, width, height);
+		_SelectionRect = Rectangle(X, Y, Width, Height);
 
 		// Update selected bars
-		SelectBarsInRegion(selectionRect);
+		SelectBarsInRegion(_SelectionRect);
 		_Timeline->Invalidate();
 	}
 
 	void DurationTool::EndSelection()
 	{
-		isSelecting = false;
-		selectionStart = nullptr;
-		selectionRect = Rectangle(0, 0, 0, 0);
+		_IsSelecting = false;
+		_SelectionStart = nullptr;
+		_SelectionRect = Rectangle(0, 0, 0, 0);
 		_Timeline->Invalidate();
 	}
 
 	void DurationTool::SelectBarsInRegion(Rectangle region)
 	{
-		selectedBars->Clear();
+		_SelectedBars->Clear();
 
 		// Convert selection rectangle to tick range
 		int startTick = _Timeline->PixelsToTicks(region.Left - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
 		int endTick = _Timeline->PixelsToTicks(region.Right - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
 
 		// Find all bars that intersect with the selection rectangle
-		for each (Track ^ track in _Timeline->Tracks)
+		for each (Track^ T in _Timeline->Tracks)
 		{
-			Rectangle trackBounds = _Timeline->GetTrackContentBounds(track);
-			if (trackBounds.IntersectsWith(region))
+			Rectangle TrackContentBounds = _Timeline->GetTrackContentBounds(T);
+			if (TrackContentBounds.IntersectsWith(region))
 			{
-				for each (BarEvent ^ bar in track->Events)
+				for each (BarEvent^ Bar in T->Events)
 				{
-					if (bar->StartTick + bar->Duration >= startTick && bar->StartTick <= endTick)
+					if (Bar->StartTick + Bar->Duration >= startTick && Bar->StartTick <= endTick)
 					{
-						selectedBars->Add(bar);
+						_SelectedBars->Add(Bar);
 					}
 				}
 			}
@@ -2039,19 +2039,19 @@ namespace MIDILightDrawer
 
 	void DurationTool::ClearSelection()
 	{
-		selectedBars->Clear();
-		originalLengths->Clear();
-		selectionRect = Rectangle(0, 0, 0, 0);
+		_SelectedBars->Clear();
+		_OriginalLengths->Clear();
+		_SelectionRect = Rectangle(0, 0, 0, 0);
 		_Timeline->Invalidate();
 	}
 
 	void DurationTool::StoreOriginalLengths()
 	{
-		originalLengths->Clear();
-		for each (BarEvent^ bar in selectedBars)
+		_OriginalLengths->Clear();
+		for each (BarEvent^ Bar in _SelectedBars)
 		{
-			bar->OriginalDuration = bar->Duration;
-			originalLengths->Add(bar, bar->Duration);
+			Bar->OriginalDuration = Bar->Duration;
+			_OriginalLengths->Add(Bar, Bar->Duration);
 		}
 	}
 
@@ -2062,38 +2062,42 @@ namespace MIDILightDrawer
 	ColorTool::ColorTool(Widget_Timeline^ timeline) : TimelineTool(timeline)
 	{
 		Cursor			= TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
-		isSelecting		= false;
-		selectionStart	= nullptr;
-		selectedBars	= gcnew List<BarEvent^>();
-		hoverBar		= nullptr;
-		hoverTrack		= nullptr;
-		selectionRect	= Rectangle(0, 0, 0, 0);
-		previewRect		= Rectangle(0, 0, 0, 0);
-		currentColor	= Color::FromArgb(255, 100, 100, 255); // Default color
+		_IsSelecting	= false;
+		_SelectionStart	= nullptr;
+		_SelectedBars	= gcnew List<BarEvent^>();
+		_HoverBar		= nullptr;
+		_HoverTrack		= nullptr;
+		_SelectionRect	= Rectangle(0, 0, 0, 0);
+		_PreviewRect	= Rectangle(0, 0, 0, 0);
+		_CurrentColor	= Color::FromArgb(255, 100, 100, 255); // Default color
 	}
 
 	void ColorTool::OnMouseDown(MouseEventArgs^ e)
 	{
-		if (e->Button == Windows::Forms::MouseButtons::Left &&
-			e->X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH)
+		if (e->Button == Windows::Forms::MouseButtons::Left && e->X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH)
 		{
-			Point clickPoint(e->X, e->Y);
-			BarEvent^ clickedBar = _Timeline->GetBarAtPoint(clickPoint);
+			Point ClickPoint(e->X, e->Y);
+
+			BarEvent^ ClickedBar = _Timeline->GetBarAtPoint(ClickPoint);
 
 			// If clicking on a selected bar, apply color to all selected bars
-			if (clickedBar != nullptr && selectedBars->Contains(clickedBar)) {
+			if (ClickedBar != nullptr && _SelectedBars->Contains(ClickedBar)) {
 				ApplyColorToSelection();
+				ClearSelection();
+				ClearHoverPreview();
 			}
 			// If clicking on an unselected bar, clear selection and select only this bar
-			else if (clickedBar != nullptr) {
+			else if (ClickedBar != nullptr)
+			{
 				ClearSelection();
-				selectedBars->Add(clickedBar);
-				UpdateHoverPreview(clickPoint);
+				_SelectedBars->Add(ClickedBar);
+				UpdateHoverPreview(ClickPoint);
 			}
 			// If clicking empty space, start selection rectangle
-			else {
+			else
+			{
 				ClearSelection();
-				StartSelection(clickPoint);
+				StartSelection(ClickPoint);
 			}
 
 			_Timeline->Invalidate();
@@ -2102,13 +2106,13 @@ namespace MIDILightDrawer
 
 	void ColorTool::OnMouseMove(MouseEventArgs^ e)
 	{
-		Point mousePos(e->X, e->Y);
+		Point MousePos(e->X, e->Y);
 
-		if (isSelecting) {
-			UpdateSelection(mousePos);
+		if (_IsSelecting) {
+			UpdateSelection(MousePos);
 		}
 		else {
-			UpdateHoverPreview(mousePos);
+			UpdateHoverPreview(MousePos);
 		}
 
 		_Timeline->Invalidate();
@@ -2116,65 +2120,82 @@ namespace MIDILightDrawer
 
 	void ColorTool::OnMouseUp(MouseEventArgs^ e)
 	{
-		if (isSelecting) {
+		if (_IsSelecting) {
 			EndSelection();
 		}
+
 		UpdateHoverPreview(Point(e->X, e->Y));
 	}
 
-	void ColorTool::OnKeyDown(KeyEventArgs^ e) {}
+	void ColorTool::OnKeyDown(KeyEventArgs^ e)
+	{
+		if (e->KeyCode == Keys::Escape)
+		{
+			ClearSelection();
+			ClearHoverPreview();
+
+			// Update cursor and view
+			Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
+			_Timeline->Invalidate();
+		}
+	}
+	
 	void ColorTool::OnKeyUp(KeyEventArgs^ e) {}
 
 	void ColorTool::StartSelection(Point start)
 	{
-		isSelecting = true;
-		selectionStart = start;
-		selectionRect = Rectangle(start.X, start.Y, 0, 0);
+		_IsSelecting = true;
+		_SelectionStart = start;
+		_SelectionRect = Rectangle(start.X, start.Y, 0, 0);
 	}
 
 	void ColorTool::UpdateSelection(Point current)
 	{
-		if (!isSelecting || selectionStart == nullptr) return;
+		if (!_IsSelecting || _SelectionStart == nullptr) { 
+			return;
+		}
 
 		// Calculate selection rectangle
-		int x = Math::Min(selectionStart->X, current.X);
-		int y = Math::Min(selectionStart->Y, current.Y);
-		int width = Math::Abs(current.X - selectionStart->X);
-		int height = Math::Abs(current.Y - selectionStart->Y);
+		int X = Math::Min(_SelectionStart->X, current.X);
+		int Y = Math::Min(_SelectionStart->Y, current.Y);
+		int Width = Math::Abs(current.X - _SelectionStart->X);
+		int Height = Math::Abs(current.Y - _SelectionStart->Y);
 
-		selectionRect = Rectangle(x, y, width, height);
+		_SelectionRect = Rectangle(X, Y, Width, Height);
 
 		// Update selected bars
-		SelectBarsInRegion(selectionRect);
+		SelectBarsInRegion(_SelectionRect);
 	}
 
 	void ColorTool::EndSelection()
 	{
-		isSelecting = false;
-		selectionStart = nullptr;
-		selectionRect = Rectangle(0, 0, 0, 0);
+		_IsSelecting = false;
+		_SelectionStart = nullptr;
+		_SelectionRect = Rectangle(0, 0, 0, 0);
 		_Timeline->Invalidate();
 	}
 
 	void ColorTool::SelectBarsInRegion(Rectangle region)
 	{
-		selectedBars->Clear();
+		_SelectedBars->Clear();
 
 		// Convert selection rectangle to tick range
-		int startTick = _Timeline->PixelsToTicks(
-			region.Left - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
-		int endTick = _Timeline->PixelsToTicks(
-			region.Right - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
+		int StartTick = _Timeline->PixelsToTicks(region.Left - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
+		int EndTick = _Timeline->PixelsToTicks(region.Right - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
 
 		// Find all bars that intersect with the selection rectangle
-		for each (Track ^ track in _Timeline->Tracks) {
-			Rectangle trackBounds = _Timeline->GetTrackContentBounds(track);
-			if (trackBounds.IntersectsWith(region)) {
-				for each (BarEvent ^ bar in track->Events) {
+		for each (Track^ T in _Timeline->Tracks)
+		{
+			Rectangle TrackContentBounds = _Timeline->GetTrackContentBounds(T);
+		
+			if (TrackContentBounds.IntersectsWith(region))
+			{
+				for each (BarEvent^ Bar in T->Events)
+				{
 					// Check if bar intersects with selection
-					if (bar->StartTick + bar->Duration >= startTick &&
-						bar->StartTick <= endTick) {
-						selectedBars->Add(bar);
+					if (Bar->StartTick + Bar->Duration >= StartTick && Bar->StartTick <= EndTick)
+					{
+						_SelectedBars->Add(Bar);
 					}
 				}
 			}
@@ -2183,76 +2204,125 @@ namespace MIDILightDrawer
 
 	void ColorTool::ClearSelection()
 	{
-		selectedBars->Clear();
-		selectionRect = Rectangle(0, 0, 0, 0);
+		_SelectedBars->Clear();
+		_SelectionRect = Rectangle(0, 0, 0, 0);
 		_Timeline->Invalidate();
 	}
 
 	void ColorTool::UpdateHoverPreview(Point mousePos)
 	{
-		Track^ track = _Timeline->GetTrackAtPoint(mousePos);
-		BarEvent^ bar = nullptr;
+		Track^ TargetTrack = _Timeline->GetTrackAtPoint(mousePos);
+		BarEvent^ Bar = nullptr;
 
-		if (track != nullptr && mousePos.X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH) {
-			bar = _Timeline->GetBarAtPoint(mousePos);
+		if (TargetTrack != nullptr && mousePos.X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH) {
+			Bar = _Timeline->GetBarAtPoint(mousePos);
 		}
+
+		if (Bar == nullptr) {
+			this->_HoverBar = nullptr;
+			this->_HoverTrack = nullptr;
+			this->_PreviewRect = Rectangle(0, 0, 0, 0);
+			Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross); // Use cross cursor for selection
+
+			return;
+		}
+		
+
+		// Calculate preview rectangle
+		int XStart = _Timeline->TicksToPixels(Bar->StartTick) + _Timeline->ScrollPosition->X + Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int XEnd = _Timeline->TicksToPixels(Bar->EndTick) + _Timeline->ScrollPosition->X + Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+
+		this->_BarXHoverRatio = ((float)(mousePos.X - XStart)) / ((float)(XEnd - XStart));
+
 
 		// Update hover state
-		if (bar != hoverBar || track != hoverTrack) {
-			hoverBar = bar;
-			hoverTrack = track;
+		if (Bar != _HoverBar || TargetTrack != _HoverTrack)
+		{
+			this->_HoverBar = Bar;
+			this->_HoverTrack = TargetTrack;
 
-			if (bar != nullptr) {
-				// Calculate preview rectangle
-				int x = _Timeline->TicksToPixels(bar->StartTick) +
-					_Timeline->ScrollPosition->X +
-					Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+			Rectangle TrackContentBounds = _Timeline->GetTrackContentBounds(TargetTrack);
 
-				Rectangle trackBounds = _Timeline->GetTrackContentBounds(track);
+			this->_PreviewRect = Rectangle(
+				XStart,
+				TrackContentBounds.Y + Timeline_Direct2DRenderer::TRACK_PADDING,
+				_Timeline->TicksToPixels(Bar->Duration),
+				TrackContentBounds.Height - (Timeline_Direct2DRenderer::TRACK_PADDING * 2)
+			);
 
-				previewRect = Rectangle(
-					x,
-					trackBounds.Y + Timeline_Direct2DRenderer::TRACK_PADDING,
-					_Timeline->TicksToPixels(bar->Duration),
-					trackBounds.Height - (Timeline_Direct2DRenderer::TRACK_PADDING * 2)
-				);
-
-				// Update cursor based on whether the bar is selected
-				Cursor = selectedBars->Contains(bar) ? TimelineCursorHelper::GetCursor(TimelineCursor::Hand) : TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
-			}
-			else {
-				previewRect = Rectangle(0, 0, 0, 0);
-				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross); // Use cross cursor for selection
-			}
-
-			_Timeline->Invalidate();
+			// Update cursor based on whether the bar is selected
+			Cursor = this->_SelectedBars->Contains(Bar) ? TimelineCursorHelper::GetCursor(TimelineCursor::Hand) : TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
 		}
+
+		_Timeline->Invalidate();
 	}
 
 	void ColorTool::ClearHoverPreview()
 	{
-		if (hoverBar != nullptr || !previewRect.IsEmpty) {
-			hoverBar = nullptr;
-			hoverTrack = nullptr;
-			previewRect = Rectangle(0, 0, 0, 0);
+		if (_HoverBar != nullptr || !_PreviewRect.IsEmpty) {
+			_HoverBar		= nullptr;
+			_HoverTrack		= nullptr;
+			_PreviewRect	= Rectangle(0, 0, 0, 0);
+
 			_Timeline->Invalidate();
 		}
 	}
 
 	void ColorTool::ApplyColorToSelection()
 	{
-		for each (BarEvent ^ bar in selectedBars) {
-			bar->Color = currentColor;
+		if (_SelectedBars->Count == 1 && _SelectedBars[0]->Type == BarEventType::Fade)
+		{
+			BarEvent^ Bar = _SelectedBars[0];
+			
+			Color ColorStart	= Bar->FadeInfo->ColorStart;
+			Color ColorCenter	= Bar->FadeInfo->ColorCenter;
+			Color ColorEnd		= Bar->FadeInfo->ColorEnd;
+
+			if (Bar->FadeInfo->Type == FadeType::Two_Colors)
+			{
+				this->_BarXHoverRatio <= 0.5f ? ColorStart = CurrentColor : ColorEnd = CurrentColor;
+
+			}
+			else if (Bar->FadeInfo->Type == FadeType::Three_Colors)
+			{
+				if (this->_BarXHoverRatio <= 0.33f) {
+					ColorStart = CurrentColor;
+				}
+				else if (this->_BarXHoverRatio <= 0.66f) {
+					ColorCenter = CurrentColor;
+				}
+				else {
+					ColorEnd = CurrentColor;
+				}
+			}
+
+			Bar->FadeInfo->ColorStart	= ColorStart;
+			Bar->FadeInfo->ColorCenter	= ColorCenter;
+			Bar->FadeInfo->ColorEnd		= ColorEnd;
 		}
+		else
+		{
+			for each (BarEvent^ Bar in _SelectedBars)
+			{
+				if (Bar->Type == BarEventType::Fade) {
+					continue;
+				}
+				
+				Bar->Color = _CurrentColor;
+			}
+		}
+
 		_Timeline->Invalidate();
 	}
 
 	void ColorTool::CurrentColor::set(Color value)
 	{
-		currentColor = value;
-		if (selectedBars->Count > 0) {
+		_CurrentColor = value;
+
+		if (_SelectedBars->Count > 0) {
 			ApplyColorToSelection();
 		}
+
 		_Timeline->Invalidate();
 	}
 
@@ -2403,70 +2473,6 @@ namespace MIDILightDrawer
 	}
 
 	void FadeTool::OnKeyUp(KeyEventArgs^ e) {}
-
-	Color FadeTool::InterpolateColor(Color start, Color end, float ratio)
-	{
-		int r = start.R + (int)((end.R - start.R) * ratio);
-		int g = start.G + (int)((end.G - start.G) * ratio);
-		int b = start.B + (int)((end.B - start.B) * ratio);
-		return Color::FromArgb(255, r, g, b);
-	}
-	/*
-	void FadeTool::CreatePreviewBars(Point currentPos)
-	{
-		
-		if (_PreviewBars == nullptr) {
-			_PreviewBars = gcnew List<BarEvent^>();
-		}
-		else {
-			_PreviewBars->Clear();
-		}
-
-		// Calculate total distance in ticks
-		int CurrentTick = _Timeline->PixelsToTicks(currentPos.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
-		int TotalTicks = CurrentTick - _StartTick;
-
-		if (TotalTicks <= 0) {
-			return;
-		}
-
-		// Calculate number of bars needed
-		int numBars = (int)Math::Ceiling((double)TotalTicks / TickLength);
-		if (numBars == 0) return;
-
-		// Create bars with interpolated colors
-		for (int i = 0; i < numBars; i++)
-		{
-			float ratio = (float)i / (numBars - 1);
-			if (numBars == 1) ratio = 0; // Single bar case
-
-			Color barColor;
-
-			if (Type == FadeType::Two_Colors) {
-				// Simple linear interpolation between start and end colors
-				barColor = InterpolateColor(ColorStart, ColorEnd, ratio);
-			}
-			else { // Three_Colors
-				// For three colors, we'll split the interpolation into two phases
-				if (ratio <= 0.5f) {
-					// First half: interpolate between start and center colors
-					barColor = InterpolateColor(ColorStart, ColorCenter, ratio * 2.0f);
-				}
-				else {
-					// Second half: interpolate between center and end colors
-					barColor = InterpolateColor(ColorCenter, ColorEnd, (ratio - 0.5f) * 2.0f);
-				}
-			}
-
-			int barStartTick = _StartTick + (i * TickLength);
-			int barLength = TickLength;
-
-			BarEvent^ bar = gcnew BarEvent(nullptr, barStartTick, barLength, Color::FromArgb(180, barColor));	// Semi-transparent for preview
-			_PreviewBars->Add(bar);
-		}
-		
-	}
-	*/
 
 	void FadeTool::AddBarToTrack()
 	{

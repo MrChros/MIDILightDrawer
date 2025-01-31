@@ -83,9 +83,9 @@ namespace MIDILightDrawer
 		return standardString;
 	}
 
-	void MIDI_Exporter::WriteBarSolid(MIDI_Writer* writer, BarEvent^ Bar, int octave_note_offset)
+	void MIDI_Exporter::WriteBarSolid(MIDI_Writer* writer, BarEvent^ bar, int octave_note_offset)
 	{
-		WriteBarSolid(writer, Bar->StartTick, Bar->Duration, Bar->Color, octave_note_offset);
+		WriteBarSolid(writer, bar->StartTick, bar->Duration, bar->Color, octave_note_offset);
 	}
 
 	void MIDI_Exporter::WriteBarSolid(MIDI_Writer* writer, int start_tick, int tick_length, Color color, int octave_note_offset)
@@ -124,15 +124,15 @@ namespace MIDILightDrawer
 		_LastColor = color;
 	}
 
-	void MIDI_Exporter::WriteBarFade(MIDI_Writer* writer, BarEvent^ Bar, int octave_note_offset)
+	void MIDI_Exporter::WriteBarFade(MIDI_Writer* writer, BarEvent^ bar, int octave_note_offset)
 	{
 		Settings^ Settings = Settings::Get_Instance();
 
-		int Tick_Start = Bar->StartTick;
-		int Tick_Length = Bar->Duration;
+		int Tick_Start = bar->StartTick;
+		int Tick_Length = bar->Duration;
 
 		// Calculate number of bars needed
-		int NumBars = (int)Math::Ceiling((double)Tick_Length / Bar->FadeInfo->QuantizationTicks);
+		int NumBars = (int)Math::Ceiling((double)Tick_Length / bar->FadeInfo->QuantizationTicks);
 		
 		if (NumBars == 0) {
 			return;
@@ -148,36 +148,54 @@ namespace MIDILightDrawer
 
 			Color BarColor;
 
-			if (Bar->FadeInfo->Type == FadeType::Two_Colors) {
+			if (bar->FadeInfo->Type == FadeType::Two_Colors) {
 				// Simple linear interpolation between start and end colors
-				BarColor = InterpolateFadeColor(Bar->FadeInfo->ColorStart, Bar->FadeInfo->ColorEnd, ratio);
+				BarColor = InterpolateFadeColor(bar->FadeInfo->ColorStart, bar->FadeInfo->ColorEnd, ratio);
 			}
 			else { // Three_Colors
 				// For three colors, we'll split the interpolation into two phases
 				if (ratio <= 0.5f) {
 					// First half: interpolate between start and center colors
-					BarColor = InterpolateFadeColor(Bar->FadeInfo->ColorStart, Bar->FadeInfo->ColorCenter, ratio * 2.0f);
+					BarColor = InterpolateFadeColor(bar->FadeInfo->ColorStart, bar->FadeInfo->ColorCenter, ratio * 2.0f);
 				}
 				else {
 					// Second half: interpolate between center and end colors
-					BarColor = InterpolateFadeColor(Bar->FadeInfo->ColorCenter, Bar->FadeInfo->ColorEnd, (ratio - 0.5f) * 2.0f);
+					BarColor = InterpolateFadeColor(bar->FadeInfo->ColorCenter, bar->FadeInfo->ColorEnd, (ratio - 0.5f) * 2.0f);
 				}
 			}
 
-			int BarStartTick = Tick_Start + (i * Bar->FadeInfo->QuantizationTicks);
-			int BarLength = Bar->FadeInfo->QuantizationTicks;
+			int BarStartTick = Tick_Start + (i * bar->FadeInfo->QuantizationTicks);
+			int BarLength = bar->FadeInfo->QuantizationTicks;
 
 			if (i < NumBars - 1) {
-				_NextStartTick = BarStartTick + Bar->FadeInfo->QuantizationTicks;
+				_NextStartTick = BarStartTick + bar->FadeInfo->QuantizationTicks;
 			}
 
 			WriteBarSolid(writer, BarStartTick, BarLength, BarColor, octave_note_offset);
 		}
 	}
 
-	void MIDI_Exporter::WriteBarStrobe(MIDI_Writer* writer, BarEvent^ Bar, int octave_note_offset)
+	void MIDI_Exporter::WriteBarStrobe(MIDI_Writer* writer, BarEvent^ bar, int octave_note_offset)
 	{
+		Settings^ Settings = Settings::Get_Instance();
 
+		int Tick_Start = bar->StartTick;
+		int Tick_Length = bar->Duration;
+
+		// Calculate number of bars needed
+		int NumBars = (int)Math::Ceiling((double)Tick_Length / bar->StrobeInfo->QuantizationTicks) >> 1;
+
+		for (int i = 0; i < NumBars; i++)
+		{
+			int BarStartTick	= Tick_Start + (i * 2 * bar->StrobeInfo->QuantizationTicks);
+			int BarLength		= bar->StrobeInfo->QuantizationTicks;
+
+			if (i < NumBars - 1) {
+				_NextStartTick = BarStartTick + 2 * bar->StrobeInfo->QuantizationTicks;
+			}
+
+			WriteBarSolid(writer, BarStartTick, BarLength, bar->Color, octave_note_offset);
+		}
 	}
 
 	Color MIDI_Exporter::InterpolateFadeColor(Color start, Color end, float ratio)

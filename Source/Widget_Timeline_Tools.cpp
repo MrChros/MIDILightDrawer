@@ -712,53 +712,59 @@ namespace MIDILightDrawer
 
 	BarEvent^ PointerTool::CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview)
 	{
-		BarEvent^ CopiedBar;
+		BarEvent^ CopiedBar = nullptr;
 
 		// Create appropriate bar based on type
 		switch (sourceBar->Type)
 		{
-		case BarEventType::Solid:
-			CopiedBar = gcnew BarEvent(
-				sourceBar->ContainingTrack,
-				startTick,
-				sourceBar->Duration,
-				isPreview ? Color::FromArgb(180, sourceBar->Color) : sourceBar->Color);
+			case BarEventType::Solid:
+				CopiedBar = gcnew BarEvent(
+					sourceBar->ContainingTrack,
+					startTick,
+					sourceBar->Duration,
+					isPreview ? Color::FromArgb(180, sourceBar->Color) : sourceBar->Color);
+				break;
+
+			case BarEventType::Fade:
+			{
+				// Deep copy the Fade Info
+				BarEventFadeInfo^ OriginalFade = sourceBar->FadeInfo;
+				BarEventFadeInfo^ CopiedFade;
+
+				if (OriginalFade->Type == FadeType::Two_Colors) {
+					CopiedFade = gcnew BarEventFadeInfo(
+						OriginalFade->QuantizationTicks,
+						OriginalFade->ColorStart,
+						OriginalFade->ColorEnd);
+				}
+				else {
+					CopiedFade = gcnew BarEventFadeInfo(
+						OriginalFade->QuantizationTicks,
+						OriginalFade->ColorStart,
+						OriginalFade->ColorCenter,
+						OriginalFade->ColorEnd);
+				}
+
+				CopiedBar = gcnew BarEvent(
+					sourceBar->ContainingTrack,
+					startTick,
+					sourceBar->Duration,
+					CopiedFade);
+			}
 			break;
 
-		case BarEventType::Fade:
-		{
-			// Deep copy the fade info
-			BarEventFadeInfo^ originalFade = sourceBar->FadeInfo;
-			BarEventFadeInfo^ copiedFade;
+			case BarEventType::Strobe:
+			{
+				// Deep copy the Strobe Info
+				BarEventStrobeInfo^ OriginalStrobe = sourceBar->StrobeInfo;
+				BarEventStrobeInfo^ CopiedStrobe = gcnew BarEventStrobeInfo(OriginalStrobe->QuantizationTicks, OriginalStrobe->ColorStrobe);
 
-			if (originalFade->Type == FadeType::Two_Colors) {
-				copiedFade = gcnew BarEventFadeInfo(
-					originalFade->QuantizationTicks,
-					originalFade->ColorStart,
-					originalFade->ColorEnd);
+				CopiedBar = gcnew BarEvent(
+					sourceBar->ContainingTrack,
+					startTick,
+					sourceBar->Duration,
+					CopiedStrobe);
 			}
-			else {
-				copiedFade = gcnew BarEventFadeInfo(
-					originalFade->QuantizationTicks,
-					originalFade->ColorStart,
-					originalFade->ColorCenter,
-					originalFade->ColorEnd);
-			}
-
-			CopiedBar = gcnew BarEvent(
-				sourceBar->ContainingTrack,
-				startTick,
-				sourceBar->Duration,
-				copiedFade);
-		}
-		break;
-
-		case BarEventType::Strobe:
-			CopiedBar = gcnew BarEvent(
-				sourceBar->ContainingTrack,
-				startTick,
-				sourceBar->Duration,
-				isPreview ? Color::FromArgb(180, sourceBar->Color) : sourceBar->Color);
 			break;
 		}
 
@@ -2335,10 +2341,10 @@ namespace MIDILightDrawer
 		_IsDrawing		= false;
 		_DrawStart		= nullptr;
 		_TargetTrack	= nullptr;
-		//_PreviewBars	= nullptr;
 		_PreviewBar		= nullptr;
 
 		TickLength	= Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION;
+		Type		= FadeType::Two_Colors;
 		ColorStart	= Color::Red;
 		ColorEnd	= Color::Green;
 		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
@@ -2376,8 +2382,7 @@ namespace MIDILightDrawer
 				else
 				{
 					_PreviewBar = nullptr;
-				}
-				
+				}	
 			}
 		}
 	}
@@ -2549,14 +2554,14 @@ namespace MIDILightDrawer
 	///////////////////////////////
 	StrobeTool::StrobeTool(Widget_Timeline^ timeline) : TimelineTool(timeline)
 	{
-		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
-		_IsDrawing = false;
-		_DrawStart = nullptr;
-		_TargetTrack = nullptr;
-		_PreviewBars = nullptr;
-		_PreviewBar	= nullptr;
+		_IsDrawing		= false;
+		_DrawStart		= nullptr;
+		_TargetTrack	= nullptr;
+		_PreviewBar		= nullptr;
+
 		TickLength	= Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION;
-		StrobeColor = Color::Red;
+		ColorStrobe = Color::Red;
+		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
 	}
 
 	void StrobeTool::OnMouseDown(MouseEventArgs^ e)
@@ -2567,15 +2572,25 @@ namespace MIDILightDrawer
 			Track^ TargetTrack = _Timeline->GetTrackAtPoint(MousePos);
 
 			if (TargetTrack != nullptr) {
-				_IsDrawing = true;
-				_DrawStart = MousePos;
-				_TargetTrack = TargetTrack;
-
 				// Calculate start tick with grid snap
 				_StartTick = _Timeline->SnapTickToGrid(_Timeline->PixelsToTicks(MousePos.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X));
+				
+				// Create initial preview bar with fade info
+				BarEventStrobeInfo^ StrobeInfo = gcnew BarEventStrobeInfo(this->TickLength, this->ColorStrobe);
 
-				_PreviewBar = nullptr;
-				_Timeline->Invalidate();
+				_PreviewBar = gcnew BarEvent(nullptr, _StartTick, this->TickLength, StrobeInfo);
+
+				if (!HasOverlappingBarsOnSpecificTrack(TargetTrack, _PreviewBar))
+				{
+					_IsDrawing = true;
+					_DrawStart = MousePos;
+					_TargetTrack = TargetTrack;
+					_Timeline->Invalidate();
+				}
+				else
+				{
+					_PreviewBar = nullptr;
+				}
 			}
 		}
 	}
@@ -2585,23 +2600,31 @@ namespace MIDILightDrawer
 		Point MousePos(e->X, e->Y);
 		_LastMousePos = MousePos;
 
-		if (_IsDrawing && _TargetTrack != nullptr)
+		if (_IsDrawing && _TargetTrack != nullptr && _PreviewBar != nullptr)
 		{
-			// Calculate pixels moved
-			int DeltaX = Math::Abs(MousePos.X - _DrawStart->X);
-
-			// Only start creating bars after minimum drag distance
-			if (DeltaX >= MIN_DRAG_PIXELS)
+			// Calculate total distance in ticks
+			int CurrentTick = _Timeline->SnapTickToGrid(_Timeline->PixelsToTicks(MousePos.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X));
+			int TotalTicks = CurrentTick - _StartTick;
+			
+			if (TotalTicks > 0)
 			{
-				CreatePreviewBars(MousePos);
-				_PreviewBar = nullptr;
+				int OriginalDuration = _PreviewBar->Duration;
+
+				// Update preview bar duration
+				_PreviewBar->Duration = TotalTicks;
+
+				if (HasOverlappingBarsOnSpecificTrack(_TargetTrack, _PreviewBar)) {
+					// If there's an overlap, revert to the previous duration
+					_PreviewBar->Duration = OriginalDuration;
+				}
+
 				_Timeline->Invalidate();
 			}
 		}
 		else if (e->X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH)
 		{
-			Track^ track = _Timeline->GetTrackAtPoint(MousePos);
-			if (track != nullptr)
+			Track^ TargetTrack = _Timeline->GetTrackAtPoint(MousePos);
+			if (TargetTrack != nullptr)
 			{
 				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
 				UpdateSinglePreview(MousePos);
@@ -2620,68 +2643,62 @@ namespace MIDILightDrawer
 
 	void StrobeTool::OnMouseUp(MouseEventArgs^ e)
 	{
-		if (_IsDrawing)
+		if (_IsDrawing && _PreviewBar != nullptr)
 		{
-			Point mousePos(e->X, e->Y);
-			Track^ track = _Timeline->GetTrackAtPoint(mousePos);
+			Point MousePos(e->X, e->Y);
+			Track^ TargetTrack = _Timeline->GetTrackAtPoint(MousePos);
 
 			// Only add bars if released over the same track
-			if (track == _TargetTrack && _PreviewBars != nullptr && _PreviewBars->Count > 0) {
-				AddBarsToTrack();
+			if (TargetTrack == _TargetTrack) {
+				AddBarToTrack();
 			}
 
 			// Reset state
-			_IsDrawing	= false;
-			_DrawStart	= nullptr;
+			_IsDrawing		= false;
+			_DrawStart		= nullptr;
 			_TargetTrack	= nullptr;
+
 			ClearPreviews();
+
 			_Timeline->Invalidate();
 		}
 	}
 
-	void StrobeTool::OnKeyDown(KeyEventArgs^ e) {}
-	void StrobeTool::OnKeyUp(KeyEventArgs^ e) {}
-
-	void StrobeTool::CreatePreviewBars(Point currentPos)
+	void StrobeTool::OnKeyDown(KeyEventArgs^ e)
 	{
-		if (_PreviewBars == nullptr) {
-			_PreviewBars = gcnew List<BarEvent^>();
-		}
-		else {
-			_PreviewBars->Clear();
-		}
-
-		// Calculate total distance in ticks
-		int currentTick = _Timeline->PixelsToTicks(currentPos.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
-		int totalTicks = currentTick - _StartTick;
-
-		if (totalTicks <= 0) return;
-
-		// Calculate number of bars needed
-		int numBars = (int)Math::Ceiling((double)totalTicks / TickLength);
-		if (numBars == 0) return;
-
-		// Create bars with interpolated colors
-		for (int i = 0; i < numBars; i++)
+		if (e->KeyCode == Keys::Escape)
 		{
-			if (i % 2 == 1) continue;
+			// Cancel active drawing operation
+			if (_IsDrawing)
+			{
+				_IsDrawing = false;
+				_DrawStart = nullptr;
+				_TargetTrack = nullptr;
+			}
 
-			int barStartTick = _StartTick + (i * TickLength);
-			int barLength = TickLength;
+			// Clear any previews
+			ClearPreviews();
 
-			BarEvent^ bar = gcnew BarEvent(nullptr, barStartTick, barLength, Color::FromArgb(180, StrobeColor));	// Semi-transparent for preview
-			_PreviewBars->Add(bar);
+			// Update cursor and view
+			Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
+			_Timeline->Invalidate();
 		}
 	}
 
-	void StrobeTool::AddBarsToTrack()
-	{
-		if (_PreviewBars == nullptr || _TargetTrack == nullptr) return;
+	void StrobeTool::OnKeyUp(KeyEventArgs^ e) {}
 
-		// Create final bars with full opacity
-		for each (BarEvent ^ previewBar in _PreviewBars)
+	void StrobeTool::AddBarToTrack()
+	{
+		if (_PreviewBar == nullptr || _TargetTrack == nullptr) {
+			return;
+		}
+
+		if (!HasOverlappingBarsOnSpecificTrack(_TargetTrack, _PreviewBar))
 		{
-			_TargetTrack->AddBar(previewBar->StartTick, previewBar->Duration, Color::FromArgb(255, (int)previewBar->Color.R, (int)previewBar->Color.G, (int)previewBar->Color.B));
+			BarEventStrobeInfo^ StrobeInfo = gcnew BarEventStrobeInfo(this->TickLength, this->ColorStrobe);
+
+			BarEvent^ StrobeBar = gcnew BarEvent(_TargetTrack, _PreviewBar->StartTick, _PreviewBar->Duration, StrobeInfo);
+			_TargetTrack->AddBar(StrobeBar);
 		}
 	}
 
@@ -2693,13 +2710,27 @@ namespace MIDILightDrawer
 		{
 			int SnapTick = _Timeline->SnapTickToGrid(_Timeline->PixelsToTicks(mousePos.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X));
 
-			// Create or update single preview bar
-			if (_PreviewBar == nullptr) {
-				_PreviewBar = gcnew BarEvent(nullptr, SnapTick, TickLength, Color::FromArgb(100, (int)StrobeColor.R, (int)StrobeColor.G, (int)StrobeColor.B));
+			BarEvent^ TempBar = gcnew BarEvent(TargetTrack, SnapTick, this->TickLength, this->ColorStrobe);
+
+			if (HasOverlappingBarsOnBarTrack(TempBar))
+			{
+				// If there would be an overlap, clear any existing preview and show "no" cursor
+				if (_PreviewBar != nullptr) {
+					_PreviewBar = nullptr;
+					_Timeline->Invalidate();
+				}
+				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::No);
 			}
-			else {
-				_PreviewBar->StartTick = SnapTick;
-				_PreviewBar->Duration = TickLength;
+			else
+			{
+				if (_PreviewBar == nullptr) {
+					_PreviewBar = gcnew BarEvent(nullptr, SnapTick, this->TickLength, this->ColorStrobe);
+				}
+				else {
+					_PreviewBar->StartTick	= SnapTick;
+					_PreviewBar->Duration	= this->TickLength;
+					_PreviewBar->Color		= this->ColorStrobe;
+				}
 			}
 
 			_Timeline->Invalidate();
@@ -2712,13 +2743,9 @@ namespace MIDILightDrawer
 
 	void StrobeTool::ClearPreviews()
 	{
-		if (_PreviewBar != nullptr || (_PreviewBars != nullptr && _PreviewBars->Count > 0))
+		if (_PreviewBar != nullptr)
 		{
 			_PreviewBar = nullptr;
-			if (_PreviewBars != nullptr)
-			{
-				_PreviewBars->Clear();
-			}
 			_Timeline->Invalidate();
 		}
 	}

@@ -35,10 +35,10 @@ namespace MIDILightDrawer
 			std::string ConvertToStdString(System::String^ input_string);
 
 		private:
-			void WriteBarSolid(MIDI_Writer* writer, BarEvent^ Bar, int octave_note_offset);
+			void WriteBarSolid(MIDI_Writer* writer, BarEvent^ bar, int octave_note_offset);
 			void WriteBarSolid(MIDI_Writer* writer, int start_tick, int tick_length, Color color, int octave_note_offset);
-			void WriteBarFade(MIDI_Writer* writer, BarEvent^ Bar, int octave_note_offset);
-			void WriteBarStrobe(MIDI_Writer* writer, BarEvent^ Bar, int octave_note_offset);
+			void WriteBarFade(MIDI_Writer* writer, BarEvent^ bar, int octave_note_offset);
+			void WriteBarStrobe(MIDI_Writer* writer, BarEvent^ bar, int octave_note_offset);
 
 			Color InterpolateFadeColor(Color start, Color end, float ratio);
 

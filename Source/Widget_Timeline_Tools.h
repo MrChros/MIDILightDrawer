@@ -636,7 +636,6 @@ namespace MIDILightDrawer
 		bool				_IsDrawing;
 		Point^				_DrawStart;
 		Track^				_TargetTrack;
-		List<BarEvent^>^	_PreviewBars;
 		BarEvent^			_PreviewBar;
 		int					_StartTick;
 
@@ -652,11 +651,7 @@ namespace MIDILightDrawer
 		virtual void OnKeyUp(KeyEventArgs^ e) override;
 
 		property int TickLength;
-		property Color StrobeColor;
-
-		property List<BarEvent^>^ PreviewBars {
-			List<BarEvent^>^ get() override { return _PreviewBars; }
-		}
+		property Color ColorStrobe;
 
 		property Track^ TargetTrack {
 			Track^ get() override { return _TargetTrack; }
@@ -666,13 +661,16 @@ namespace MIDILightDrawer
 			BarEvent ^ get() override { return _PreviewBar; }
 		}
 
+		virtual property Color CurrentColor {
+			Color get() override { return ColorStrobe; }
+		}
+
 		property Point CurrentMousePosition {
 			Point get() override { return _LastMousePos; }
 		}
 
 	private:
-		void CreatePreviewBars(Point currentPos);
-		void AddBarsToTrack();
+		void AddBarToTrack();
 		void UpdateSinglePreview(Point mousePos);
 		void ClearPreviews();
 	};

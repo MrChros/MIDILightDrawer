@@ -305,29 +305,29 @@ namespace MIDILightDrawer
 		case SnappingType::Snap_Bars:
 		{
 			// Get the track under the mouse pointer
-			Track^ currentTrack = GetTrackAtPoint(mousePos);
-			if (currentTrack == nullptr) return tick;
+			Track^ CurrentTrack = GetTrackAtPoint(mousePos);
+			if (CurrentTrack == nullptr) return tick;
 
-			int closestEndTick = tick;
-			int minEndDistance = SNAP_THRESHOLD;
+			int ClosestEndTick = tick;
+			int MinEndDistance = SNAP_THRESHOLD;
 
 			// Only check bars in the current track
-			for each (BarEvent ^ bar in currentTrack->Events)
+			for each (BarEvent^ Bar in CurrentTrack->Events)
 			{
 				// Only check distance to bar end
-				int endTick = bar->StartTick + bar->Duration;
-				int endDistance = Math::Abs(endTick - tick);
-				if (endDistance < minEndDistance)
+				int EndTick = Bar->StartTick + Bar->Duration;
+				int EndDistance = Math::Abs(EndTick - tick);
+				if (EndDistance < MinEndDistance)
 				{
-					minEndDistance = endDistance;
-					closestEndTick = endTick;
+					MinEndDistance = EndDistance;
+					ClosestEndTick = EndTick;
 				}
 			}
 
 			// Return the closest edge tick if within threshold
-			if (minEndDistance < SNAP_THRESHOLD)
+			if (MinEndDistance < SNAP_THRESHOLD)
 			{
-				return closestEndTick;
+				return ClosestEndTick;
 			}
 
 			// If no close bars found, return original tick
@@ -337,51 +337,51 @@ namespace MIDILightDrawer
 		case SnappingType::Snap_Tablature:
 		{
 			// Get the track under the mouse pointer
-			Track^ currentTrack = GetTrackAtPoint(mousePos);
-			if (currentTrack == nullptr) return tick;
+			Track^ CurrentTrack = GetTrackAtPoint(mousePos);
+			if (CurrentTrack == nullptr) return tick;
 
 			// Only proceed if the track has tablature visible
-			if (!currentTrack->ShowTablature) return tick;
+			if (!CurrentTrack->ShowTablature) return tick;
 
 			// Find the nearest left-side beat in the current track
-			int nearestLeftBeatTick = -1;  // Initialize to invalid value
-			int smallestDistance = Int32::MaxValue;
+			int NearestLeftBeatTick = -1;  // Initialize to invalid value
+			int SmallestDistance = Int32::MaxValue;
 
 			// Get the measure containing this tick
-			Measure^ measure = GetMeasureAtTick(tick);
-			if (measure == nullptr) return tick;
+			Measure^ Meas = GetMeasureAtTick(tick);
+			if (Meas == nullptr) return tick;
 
 			// Find corresponding track measure
-			TrackMeasure^ trackMeasure = nullptr;
-			for each (TrackMeasure ^ tm in currentTrack->Measures)
+			TrackMeasure^ TrackMeas = nullptr;
+			for each (TrackMeasure^ TM in CurrentTrack->Measures)
 			{
-				if (tm->StartTick == measure->StartTick)
+				if (TM->StartTick == Meas->StartTick)
 				{
-					trackMeasure = tm;
+					TrackMeas = TM;
 					break;
 				}
 			}
 
-			if (trackMeasure == nullptr) return tick;
+			if (TrackMeas == nullptr) return tick;
 
 			// Look for the closest beat that's to the left of our current position
-			for each (Beat ^ beat in trackMeasure->Beats)
+			for each (Beat^ B in TrackMeas->Beats)
 			{
-				if (beat->StartTick <= tick)  // Only consider beats to the left
+				if (B->StartTick <= tick)  // Only consider beats to the left
 				{
-					int distance = tick - beat->StartTick;
-					if (distance < smallestDistance)
+					int Distance = tick - B->StartTick;
+					if (Distance < SmallestDistance)
 					{
-						smallestDistance = distance;
-						nearestLeftBeatTick = beat->StartTick;
+						SmallestDistance = Distance;
+						NearestLeftBeatTick = B->StartTick;
 					}
 				}
 			}
 
 			// If we found a beat to the left, use it, otherwise fallback to grid
-			if (nearestLeftBeatTick != -1)
+			if (NearestLeftBeatTick != -1)
 			{
-				return nearestLeftBeatTick;
+				return NearestLeftBeatTick;
 			}
 
 			return tick;
@@ -400,22 +400,22 @@ namespace MIDILightDrawer
 		}
 
 		// Get the start tick of the requested measure
-		int targetTick = GetMeasureStartTick(measureNumber);
+		int TargetTick = GetMeasureStartTick(measureNumber);
 
 		// Convert to pixels
-		int targetPixel = TicksToPixels(targetTick);
+		int TargetPixel = TicksToPixels(TargetTick);
 
 		// Calculate scroll position to center the measure
-		int viewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
-		int newScrollX = -targetPixel + (viewportWidth / 2);
+		int ViewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int NewScrollX = -TargetPixel + (ViewportWidth / 2);
 
 		// Clamp scroll position to valid range
-		double virtualWidth = GetVirtualWidth();
-		double maxScroll = -(virtualWidth - viewportWidth);
-		newScrollX = (int)Math::Round(Math::Max(maxScroll, Math::Min(0.0, (double)newScrollX)));
+		double VirtualWidth = GetVirtualWidth();
+		double MaxScroll = -(VirtualWidth - ViewportWidth);
+		NewScrollX = (int)Math::Round(Math::Max(MaxScroll, Math::Min(0.0, (double)NewScrollX)));
 
 		// Update scroll position
-		_ScrollPosition->X = newScrollX;
+		_ScrollPosition->X = NewScrollX;
 
 		// Update scrollbar
 		UpdateScrollBarRange();
@@ -430,12 +430,12 @@ namespace MIDILightDrawer
 			throw gcnew ArgumentOutOfRangeException("measureNumber", "Measure number must be between 1 and " + _Measures->Count);
 		}
 
-		int startTick = 0;
+		int StartTick = 0;
 		// Sum up lengths of previous measures
 		for (int i = 0; i < measureNumber - 1; i++) {
-			startTick += _Measures[i]->Length;
+			StartTick += _Measures[i]->Length;
 		}
-		return startTick;
+		return StartTick;
 	}
 
 	int Widget_Timeline::GetMeasureLength(int measureNumber) {
@@ -537,8 +537,8 @@ namespace MIDILightDrawer
 		{
 			List<String^>^ lines = gcnew List<String^>();
 
-			// Header with version
-			lines->Add("MIDILightDrawer_BarEvents_v1.0");
+			// Header with version - updated to v2.0 to indicate support for fade/strobe
+			lines->Add("MIDILightDrawer_BarEvents_v2.0");
 
 			// Save pattern information - number of measures
 			lines->Add(_Measures->Count.ToString());
@@ -557,19 +557,79 @@ namespace MIDILightDrawer
 			}
 			lines->Add(totalBars.ToString());
 
-			// Save each bar's data with track name
+			// Save each bar's data with track name and type-specific information
 			for each (Track ^ track in _Tracks) {
 				for each (BarEvent ^ bar in track->Events) {
-					String^ barData = String::Format("{0},{1},{2},{3},{4},{5},{6}",
+					String^ baseData = String::Format("{0},{1},{2},{3}",
 						bar->StartTick,
 						bar->Duration,
 						_Tracks->IndexOf(track),
-						bar->Color.R,
-						bar->Color.G,
-						bar->Color.B,
-						track->Name
+						static_cast<int>(bar->Type)  // Save the bar event type
 					);
-					lines->Add(barData);
+
+					// Add type-specific data
+					switch (bar->Type) {
+					case BarEventType::Solid:
+						lines->Add(String::Format("{0},{1},{2},{3},{4},{5}",
+							baseData,
+							bar->Color.R,
+							bar->Color.G,
+							bar->Color.B,
+							track->Name,
+							"SOLID"  // Type identifier for verification
+						));
+						break;
+
+					case BarEventType::Fade:
+						if (bar->FadeInfo != nullptr) {
+							if (bar->FadeInfo->Type == FadeType::Two_Colors) {
+								lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}",
+									baseData,
+									bar->FadeInfo->QuantizationTicks,
+									bar->FadeInfo->ColorStart.R,
+									bar->FadeInfo->ColorStart.G,
+									bar->FadeInfo->ColorStart.B,
+									bar->FadeInfo->ColorEnd.R,
+									bar->FadeInfo->ColorEnd.G,
+									bar->FadeInfo->ColorEnd.B,
+									track->Name,
+									"FADE2"  // Two-color fade identifier
+								));
+							}
+							else {  // Three-color fade
+								lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}",
+									baseData,
+									bar->FadeInfo->QuantizationTicks,
+									bar->FadeInfo->ColorStart.R,
+									bar->FadeInfo->ColorStart.G,
+									bar->FadeInfo->ColorStart.B,
+									bar->FadeInfo->ColorCenter.R,
+									bar->FadeInfo->ColorCenter.G,
+									bar->FadeInfo->ColorCenter.B,
+									bar->FadeInfo->ColorEnd.R,
+									bar->FadeInfo->ColorEnd.G,
+									bar->FadeInfo->ColorEnd.B,
+									track->Name,
+									"FADE3"  // Three-color fade identifier
+								));
+							}
+						}
+						break;
+
+					case BarEventType::Strobe:
+						if (bar->StrobeInfo != nullptr) {
+							lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6}",
+								baseData,
+								bar->StrobeInfo->QuantizationTicks,
+								bar->StrobeInfo->ColorStrobe.R,
+								bar->StrobeInfo->ColorStrobe.G,
+								bar->StrobeInfo->ColorStrobe.B,
+								track->Name,
+								"STROBE"  // Strobe identifier
+							));
+						}
+						break;
+					}
 				}
 			}
 
@@ -587,7 +647,13 @@ namespace MIDILightDrawer
 		try
 		{
 			array<String^>^ lines = System::IO::File::ReadAllLines(filePath);
-			if (lines->Length < 2 || !lines[0]->StartsWith("MIDILightDrawer_BarEvents_v1.0"))
+			if (lines->Length < 2) return "Invalid file format";
+
+			// Check version
+			bool isLegacyFormat = lines[0]->StartsWith("MIDILightDrawer_BarEvents_v1.0");
+			bool isCurrentFormat = lines[0]->StartsWith("MIDILightDrawer_BarEvents_v2.0");
+
+			if (!isLegacyFormat && !isCurrentFormat)
 				return "Invalid or unsupported file format version";
 
 			// Parse number of measures
@@ -630,7 +696,7 @@ namespace MIDILightDrawer
 			}
 
 			// Clear existing bars from all tracks
-			for each (Track^ track in _Tracks) {
+			for each (Track ^ track in _Tracks) {
 				track->Events->Clear();
 			}
 
@@ -646,24 +712,117 @@ namespace MIDILightDrawer
 			{
 				String^ barData = lines[barsStartLine + 1 + i];
 				array<String^>^ parts = barData->Split(',');
-				if (parts->Length != 7)
-					continue; // Skip invalid format
 
-				String^ trackName = parts[6];
-				if (!trackMap->ContainsKey(trackName))
-					continue; // Skip if track doesn't exist
+				if (isLegacyFormat) {
+					// Handle v1.0 format (solid bars only)
+					if (parts->Length != 7) continue;
 
-				Track^ TargetTrack = trackMap[trackName];
+					String^ trackName = parts[6];
+					if (!trackMap->ContainsKey(trackName)) continue;
 
-				int startTick, length, r, g, b;
-				if (!Int32::TryParse(parts[0], startTick) ||
-					!Int32::TryParse(parts[1], length) ||
-					!Int32::TryParse(parts[3], r) ||
-					!Int32::TryParse(parts[4], g) ||
-					!Int32::TryParse(parts[5], b))
-					continue;
+					Track^ targetTrack = trackMap[trackName];
+					int startTick, length, r, g, b;
 
-				TargetTrack->AddBar(startTick, length, Color::FromArgb(r, g, b));
+					if (!Int32::TryParse(parts[0], startTick) ||
+						!Int32::TryParse(parts[1], length) ||
+						!Int32::TryParse(parts[3], r) ||
+						!Int32::TryParse(parts[4], g) ||
+						!Int32::TryParse(parts[5], b))
+						continue;
+
+					targetTrack->AddBar(startTick, length, Color::FromArgb(r, g, b));
+				}
+				else {
+					// Handle v2.0 format with multiple bar types
+					if (parts->Length < 5) continue;
+
+					int startTick, length, trackIndex, eventType;
+					if (!Int32::TryParse(parts[0], startTick) ||
+						!Int32::TryParse(parts[1], length) ||
+						!Int32::TryParse(parts[2], trackIndex) ||
+						!Int32::TryParse(parts[3], eventType))
+						continue;
+
+					String^ identifier = parts[parts->Length - 1];
+					String^ trackName = parts[parts->Length - 2];
+
+					if (!trackMap->ContainsKey(trackName)) continue;
+					Track^ targetTrack = trackMap[trackName];
+
+					switch (static_cast<BarEventType>(eventType)) {
+					case BarEventType::Solid:
+						if (identifier == "SOLID" && parts->Length >= 8) {
+							int r, g, b;
+							if (!Int32::TryParse(parts[4], r) ||
+								!Int32::TryParse(parts[5], g) ||
+								!Int32::TryParse(parts[6], b))
+								continue;
+
+							targetTrack->AddBar(startTick, length, Color::FromArgb(r, g, b));
+						}
+						break;
+
+					case BarEventType::Fade:
+						if (identifier == "FADE2" && parts->Length >= 11) {
+							int quantization, r1, g1, b1, r2, g2, b2;
+							if (!Int32::TryParse(parts[4], quantization) ||
+								!Int32::TryParse(parts[5], r1) ||
+								!Int32::TryParse(parts[6], g1) ||
+								!Int32::TryParse(parts[7], b1) ||
+								!Int32::TryParse(parts[8], r2) ||
+								!Int32::TryParse(parts[9], g2) ||
+								!Int32::TryParse(parts[10], b2))
+								continue;
+
+							BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
+								quantization,
+								Color::FromArgb(r1, g1, b1),
+								Color::FromArgb(r2, g2, b2)
+							);
+							targetTrack->AddBar(gcnew BarEvent(targetTrack, startTick, length, fadeInfo));
+						}
+						else if (identifier == "FADE3" && parts->Length >= 14) {
+							int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
+							if (!Int32::TryParse(parts[4], quantization) ||
+								!Int32::TryParse(parts[5], r1) ||
+								!Int32::TryParse(parts[6], g1) ||
+								!Int32::TryParse(parts[7], b1) ||
+								!Int32::TryParse(parts[8], r2) ||
+								!Int32::TryParse(parts[9], g2) ||
+								!Int32::TryParse(parts[10], b2) ||
+								!Int32::TryParse(parts[11], r3) ||
+								!Int32::TryParse(parts[12], g3) ||
+								!Int32::TryParse(parts[13], b3))
+								continue;
+
+							BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
+								quantization,
+								Color::FromArgb(r1, g1, b1),
+								Color::FromArgb(r2, g2, b2),
+								Color::FromArgb(r3, g3, b3)
+							);
+							targetTrack->AddBar(gcnew BarEvent(targetTrack, startTick, length, fadeInfo));
+						}
+						break;
+
+					case BarEventType::Strobe:
+						if (identifier == "STROBE" && parts->Length >= 8) {
+							int quantization, r, g, b;
+							if (!Int32::TryParse(parts[4], quantization) ||
+								!Int32::TryParse(parts[5], r) ||
+								!Int32::TryParse(parts[6], g) ||
+								!Int32::TryParse(parts[7], b))
+								continue;
+
+							BarEventStrobeInfo^ strobeInfo = gcnew BarEventStrobeInfo(
+								quantization,
+								Color::FromArgb(r, g, b)
+							);
+							targetTrack->AddBar(gcnew BarEvent(targetTrack, startTick, length, strobeInfo));
+						}
+						break;
+					}
+				}
 			}
 
 			// Sort events in each track

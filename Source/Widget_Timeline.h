@@ -104,20 +104,20 @@ namespace MIDILightDrawer
 		int  GetMeasureLength(int measureNumber);
 		void UpdateCursor(System::Windows::Forms::Cursor^ cursor);
 
-		int  TicksToPixels(int ticks);						// Transferred
-		int  PixelsToTicks(int pixels);						// Transferred
+		int  TicksToPixels(int ticks);
+		int  PixelsToTicks(int pixels);
 		
-		Track^		GetTrackAtPoint(Point p);				// Transferred
-		Rectangle	GetTrackBounds(Track^ track);			// Transferred
-		Rectangle	GetTrackHeaderBounds(Track^ track);		// Transferred
-		Rectangle	GetTrackContentBounds(Track^ track);	// Transferred
-		Measure^	GetMeasureAtTick(int tick);				// Transferred
-		BarEvent^	GetBarAtPoint(Point p);					// Transferred
+		Track^		GetTrackAtPoint(Point p);
+		Rectangle	GetTrackBounds(Track^ track);
+		Rectangle	GetTrackHeaderBounds(Track^ track);
+		Rectangle	GetTrackContentBounds(Track^ track);
+		Measure^	GetMeasureAtTick(int tick);
+		BarEvent^	GetBarAtPoint(Point p);
 
-		String^ SaveBarEventsToFile(String^ filePath);		// No Need
-		String^ LoadBarEventsFromFile(String^ filePath);	// No Need
+		String^ SaveBarEventsToFile(String^ filePath);
+		String^ LoadBarEventsFromFile(String^ filePath);
 
-		void LogPerformanceMetrics();						// No Need
+		void LogPerformanceMetrics();
 
 #ifdef _DEBUG
 		String^ GetRendererPerformanceReport() {
@@ -184,8 +184,8 @@ namespace MIDILightDrawer
 		void InitializeToolSystem();
 
 		float	GetSubdivisionLevel	();
-		int		GetTrackTop			(Track^ track);	// Transferred
-		int		GetTotalTracksHeight();				// Transferred
+		int		GetTrackTop			(Track^ track);
+		int		GetTotalTracksHeight();
 
 		void	BeginTrackResize(Track^ track, int mouseY);
 		void	UpdateTrackResize(int mouseY);
@@ -193,7 +193,7 @@ namespace MIDILightDrawer
 		bool	IsOverTrackDivider(Point mousePoint, Track^% track);
 		bool	IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint);
 		Rectangle GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex);
-		Rectangle CalculateBarBounds(BarEvent^ bar, Rectangle bounds);				// Transferred
+		Rectangle CalculateBarBounds(BarEvent^ bar, Rectangle bounds);
 
 		// Helper methods for measure management
 		void	RecalculateMeasurePositions();

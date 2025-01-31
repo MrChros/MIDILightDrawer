@@ -551,7 +551,7 @@ namespace MIDILightDrawer
 			this->_Timeline->SetCurrentTool(TimelineToolType::Strobe);
 
 			Strobe_Tool->TickLength		= _Strobe_Options->TickLength;
-			Strobe_Tool->StrobeColor	= _Strobe_Options->SelectedColor;
+			Strobe_Tool->ColorStrobe	= _Strobe_Options->SelectedColor;
 			break;
 		}
 	}
@@ -868,7 +868,7 @@ namespace MIDILightDrawer
 	void Form_Main::Strobe_Options_OnColorChanged(System::Drawing::Color color)
 	{
 		StrobeTool^ Strobe_Tool = this->_Timeline->GetStrobeTool();
-		Strobe_Tool->StrobeColor = color;
+		Strobe_Tool->ColorStrobe = color;
 	}
 
 	void Form_Main::Bucket_Options_OnColorChanged(System::Drawing::Color color)

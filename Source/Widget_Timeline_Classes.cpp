@@ -268,6 +268,14 @@ namespace MIDILightDrawer
 		this->_Original.Track = track;
 		this->_Original.StartTick = start_tick;
 		this->_Original.DurationInTicks = duration_in_ticks;
+
+		this->_Color = System::Drawing::Color();
+		this->_FadeInfo = nullptr;
+		this->_StrobeInfo = strobe_info;
+
+		if (this->_StrobeInfo == nullptr) {
+			this->_StrobeInfo = gcnew BarEventStrobeInfo(Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION, System::Drawing::Color::White);
+		}
 	}
 
 	void BarEvent::StartTick::set(int value)

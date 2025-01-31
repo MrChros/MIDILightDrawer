@@ -730,9 +730,11 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleStripes(const D2D1_RECT_F& r
 		);
 
 		// Only draw if the stripe is at least partially within the rectangle
-		if (stripeRect.left < rect.right) {
+		if (stripeRect.left < rect.right)
+        {
 			// Clip the stripe if it extends beyond the rectangle
-			if (stripeRect.right > rect.right) {
+			if (stripeRect.right > rect.right)
+            {
 				stripeRect.right = rect.right;
 			}
 			m_pRenderTarget->FillRectangle(stripeRect, brush);

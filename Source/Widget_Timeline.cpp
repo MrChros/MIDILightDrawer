@@ -650,184 +650,170 @@ namespace MIDILightDrawer
 			if (lines->Length < 2) return "Invalid file format";
 
 			// Check version
-			bool isLegacyFormat = lines[0]->StartsWith("MIDILightDrawer_BarEvents_v1.0");
-			bool isCurrentFormat = lines[0]->StartsWith("MIDILightDrawer_BarEvents_v2.0");
+			bool IsLegacyFormat = lines[0]->StartsWith("MIDILightDrawer_BarEvents_v1.0");
+			bool IsCurrentFormat = lines[0]->StartsWith("MIDILightDrawer_BarEvents_v2.0");
 
-			if (!isLegacyFormat && !isCurrentFormat)
+			if (!IsLegacyFormat && !IsCurrentFormat) {
 				return "Invalid or unsupported file format version";
+			}
 
 			// Parse number of measures
-			int fileMeasureCount;
-			if (!Int32::TryParse(lines[1], fileMeasureCount))
+			int FileMeasureCount;
+			if (!Int32::TryParse(lines[1], FileMeasureCount)) {
 				return "Invalid measure count";
+			}
 
 			// Verify measure count matches
-			if (fileMeasureCount != _Measures->Count)
-				return String::Format(
-					"Pattern mismatch: File has {0} measures, but timeline has {1} measures",
-					fileMeasureCount, _Measures->Count);
+			if (FileMeasureCount != _Measures->Count)
+				return String::Format("Pattern mismatch: File has {0} measures, but timeline has {1} measures", FileMeasureCount, _Measures->Count);
 
 			// Verify time signatures for each measure
 			for (int i = 0; i < _Measures->Count; i++)
 			{
-				String^ fileMeasureInfo = lines[2 + i];
-				array<String^>^ parts = fileMeasureInfo->Split(',');
+				String^ FileMeasureInfo = lines[2 + i];
+				array<String^>^ Parts = FileMeasureInfo->Split(',');
 
-				if (parts->Length != 2)
+				if (Parts->Length != 2) {
 					return String::Format("Invalid time signature format in measure {0}", i + 1);
+				}
 
-				int fileNumerator, fileDenominator;
-				if (!Int32::TryParse(parts[0], fileNumerator) ||
-					!Int32::TryParse(parts[1], fileDenominator))
+				int FileNumerator, FileDenominator;
+				if (!Int32::TryParse(Parts[0], FileNumerator) || !Int32::TryParse(Parts[1], FileDenominator)) {
 					return String::Format("Invalid time signature numbers in measure {0}", i + 1);
+				}
 
-				if (fileNumerator != _Measures[i]->Numerator ||
-					fileDenominator != _Measures[i]->Denominator)
-					return String::Format(
-						"Time signature mismatch at measure {0}: File has {1}/{2}, but timeline has {3}/{4}",
-						i + 1, fileNumerator, fileDenominator,
-						_Measures[i]->Numerator, _Measures[i]->Denominator);
+				if (FileNumerator != _Measures[i]->Numerator || FileDenominator != _Measures[i]->Denominator) {
+					return String::Format("Time signature mismatch at measure {0}: File has {1}/{2}, but timeline has {3}/{4}", i + 1, FileNumerator, FileDenominator, _Measures[i]->Numerator, _Measures[i]->Denominator);
+				}
 			}
 
 			// Create mapping of track names to indices
-			Dictionary<String^, Track^>^ trackMap = gcnew Dictionary<String^, Track^>();
-			for each (Track ^ track in _Tracks) {
-				trackMap[track->Name] = track;
+			Dictionary<String^, Track^>^ TrackMap = gcnew Dictionary<String^, Track^>();
+			for each (Track^ Trk in _Tracks) {
+				TrackMap[Trk->Name] = Trk;
 			}
 
 			// Clear existing bars from all tracks
-			for each (Track ^ track in _Tracks) {
-				track->Events->Clear();
+			for each (Track^ Trk in _Tracks) {
+				Trk->Events->Clear();
 			}
 
-			int barsStartLine = 2 + _Measures->Count;
-			int barCount;
+			int BarsStartLine = 2 + _Measures->Count;
+			int BarCount;
 
-			if (!Int32::TryParse(lines[barsStartLine], barCount)) {
+			if (!Int32::TryParse(lines[BarsStartLine], BarCount)) {
 				return "Invalid bar count";
 			}
 
 			// Load each bar
-			for (int i = 0; i < barCount; i++)
+			for (int i = 0; i < BarCount; i++)
 			{
-				String^ barData = lines[barsStartLine + 1 + i];
-				array<String^>^ parts = barData->Split(',');
+				String^ BarData = lines[BarsStartLine + 1 + i];
+				array<String^>^ Parts = BarData->Split(',');
 
-				if (isLegacyFormat) {
+				if (IsLegacyFormat) {
 					// Handle v1.0 format (solid bars only)
-					if (parts->Length != 7) continue;
-
-					String^ trackName = parts[6];
-					if (!trackMap->ContainsKey(trackName)) continue;
-
-					Track^ targetTrack = trackMap[trackName];
-					int startTick, length, r, g, b;
-
-					if (!Int32::TryParse(parts[0], startTick) ||
-						!Int32::TryParse(parts[1], length) ||
-						!Int32::TryParse(parts[3], r) ||
-						!Int32::TryParse(parts[4], g) ||
-						!Int32::TryParse(parts[5], b))
+					if (Parts->Length != 7) {
 						continue;
+					}
 
-					targetTrack->AddBar(startTick, length, Color::FromArgb(r, g, b));
+					String^ TrackName = Parts[6];
+					if (!TrackMap->ContainsKey(TrackName)) {
+						continue;
+					}
+
+					Track^ TargetTrack = TrackMap[TrackName];
+					int StartTick, Length, R, G, B;
+
+					if (!Int32::TryParse(Parts[0], StartTick) || !Int32::TryParse(Parts[1], Length) || !Int32::TryParse(Parts[3], R) || !Int32::TryParse(Parts[4], G) || !Int32::TryParse(Parts[5], B)) {
+						continue;
+					}
+
+					TargetTrack->AddBar(StartTick, Length, Color::FromArgb(R, G, B));
 				}
 				else {
 					// Handle v2.0 format with multiple bar types
-					if (parts->Length < 5) continue;
-
-					int startTick, length, trackIndex, eventType;
-					if (!Int32::TryParse(parts[0], startTick) ||
-						!Int32::TryParse(parts[1], length) ||
-						!Int32::TryParse(parts[2], trackIndex) ||
-						!Int32::TryParse(parts[3], eventType))
+					if (Parts->Length < 5) {
 						continue;
+					}
 
-					String^ identifier = parts[parts->Length - 1];
-					String^ trackName = parts[parts->Length - 2];
+					int StartTick, Length, TrackIndex, EventType;
+					if (!Int32::TryParse(Parts[0], StartTick) || !Int32::TryParse(Parts[1], Length) || !Int32::TryParse(Parts[2], TrackIndex) || !Int32::TryParse(Parts[3], EventType)) {
+						continue;
+					}
 
-					if (!trackMap->ContainsKey(trackName)) continue;
-					Track^ targetTrack = trackMap[trackName];
+					String^ Identifier = Parts[Parts->Length - 1];
+					String^ TrackName = Parts[Parts->Length - 2];
 
-					switch (static_cast<BarEventType>(eventType)) {
-					case BarEventType::Solid:
-						if (identifier == "SOLID" && parts->Length >= 8) {
-							int r, g, b;
-							if (!Int32::TryParse(parts[4], r) ||
-								!Int32::TryParse(parts[5], g) ||
-								!Int32::TryParse(parts[6], b))
-								continue;
+					if (!TrackMap->ContainsKey(TrackName)) {
+						continue;
+					}
+					Track^ TargetTrack = TrackMap[TrackName];
 
-							targetTrack->AddBar(startTick, length, Color::FromArgb(r, g, b));
-						}
-						break;
+					switch (static_cast<BarEventType>(EventType))
+					{
+						case BarEventType::Solid:
+							if (Identifier == "SOLID" && Parts->Length >= 8) {
+								int r, g, b;
+								if (!Int32::TryParse(Parts[4], r) || !Int32::TryParse(Parts[5], g) || !Int32::TryParse(Parts[6], b)) {
+									continue;
+								}
 
-					case BarEventType::Fade:
-						if (identifier == "FADE2" && parts->Length >= 11) {
-							int quantization, r1, g1, b1, r2, g2, b2;
-							if (!Int32::TryParse(parts[4], quantization) ||
-								!Int32::TryParse(parts[5], r1) ||
-								!Int32::TryParse(parts[6], g1) ||
-								!Int32::TryParse(parts[7], b1) ||
-								!Int32::TryParse(parts[8], r2) ||
-								!Int32::TryParse(parts[9], g2) ||
-								!Int32::TryParse(parts[10], b2))
-								continue;
+								TargetTrack->AddBar(StartTick, Length, Color::FromArgb(r, g, b));
+							}
+							break;
 
-							BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
-								quantization,
-								Color::FromArgb(r1, g1, b1),
-								Color::FromArgb(r2, g2, b2)
-							);
-							targetTrack->AddBar(gcnew BarEvent(targetTrack, startTick, length, fadeInfo));
-						}
-						else if (identifier == "FADE3" && parts->Length >= 14) {
-							int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
-							if (!Int32::TryParse(parts[4], quantization) ||
-								!Int32::TryParse(parts[5], r1) ||
-								!Int32::TryParse(parts[6], g1) ||
-								!Int32::TryParse(parts[7], b1) ||
-								!Int32::TryParse(parts[8], r2) ||
-								!Int32::TryParse(parts[9], g2) ||
-								!Int32::TryParse(parts[10], b2) ||
-								!Int32::TryParse(parts[11], r3) ||
-								!Int32::TryParse(parts[12], g3) ||
-								!Int32::TryParse(parts[13], b3))
-								continue;
+						case BarEventType::Fade:
+							if (Identifier == "FADE2" && Parts->Length >= 11) {
+								int quantization, r1, g1, b1, r2, g2, b2;
+								if (!Int32::TryParse(Parts[4], quantization) || !Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) || !Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2)) {
+									continue;
+								}
 
-							BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
-								quantization,
-								Color::FromArgb(r1, g1, b1),
-								Color::FromArgb(r2, g2, b2),
-								Color::FromArgb(r3, g3, b3)
-							);
-							targetTrack->AddBar(gcnew BarEvent(targetTrack, startTick, length, fadeInfo));
-						}
-						break;
+								BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
+									quantization,
+									Color::FromArgb(r1, g1, b1),
+									Color::FromArgb(r2, g2, b2)
+								);
+								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, fadeInfo));
+							}
+							else if (Identifier == "FADE3" && Parts->Length >= 14) {
+								int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
+								if (!Int32::TryParse(Parts[4], quantization) || !Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) || !Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2) || !Int32::TryParse(Parts[11], r3) || !Int32::TryParse(Parts[12], g3) || !Int32::TryParse(Parts[13], b3)) {
+									continue;
+								}
 
-					case BarEventType::Strobe:
-						if (identifier == "STROBE" && parts->Length >= 8) {
-							int quantization, r, g, b;
-							if (!Int32::TryParse(parts[4], quantization) ||
-								!Int32::TryParse(parts[5], r) ||
-								!Int32::TryParse(parts[6], g) ||
-								!Int32::TryParse(parts[7], b))
-								continue;
+								BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
+									quantization,
+									Color::FromArgb(r1, g1, b1),
+									Color::FromArgb(r2, g2, b2),
+									Color::FromArgb(r3, g3, b3)
+								);
+								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, fadeInfo));
+							}
+							break;
 
-							BarEventStrobeInfo^ strobeInfo = gcnew BarEventStrobeInfo(
-								quantization,
-								Color::FromArgb(r, g, b)
-							);
-							targetTrack->AddBar(gcnew BarEvent(targetTrack, startTick, length, strobeInfo));
-						}
-						break;
+						case BarEventType::Strobe:
+							if (Identifier == "STROBE" && Parts->Length >= 8) {
+								int quantization, r, g, b;
+								if (!Int32::TryParse(Parts[4], quantization) || Int32::TryParse(Parts[5], r) || Int32::TryParse(Parts[6], g) || Int32::TryParse(Parts[7], b)) {
+									continue;
+								}
+
+								BarEventStrobeInfo^ strobeInfo = gcnew BarEventStrobeInfo(
+									quantization,
+									Color::FromArgb(r, g, b)
+								);
+								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, strobeInfo));
+							}
+							break;
 					}
 				}
 			}
 
 			// Sort events in each track
-			for each (Track ^ track in _Tracks) {
-				track->Events->Sort(Track::barComparer);
+			for each (Track^ Trk in _Tracks) {
+				Trk->Events->Sort(Track::barComparer);
 			}
 
 			this->Invalidate();

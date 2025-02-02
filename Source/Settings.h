@@ -35,6 +35,8 @@ namespace MIDILightDrawer
 		int _MIDI_Note_Green;
 		int _MIDI_Note_Blue;
 
+		bool _MIDI_Export_Anti_Flicker;
+
 		List<String^>^ _ColorPresets;
 
 		Settings();
@@ -84,6 +86,15 @@ namespace MIDILightDrawer
 			int get() { return _MIDI_Note_Blue; }
 			void set(int value) {
 				_MIDI_Note_Blue = value;
+				Save_To_File();
+			}
+		}
+
+		property bool MIDI_Export_Anti_Flicker
+		{
+			bool get() { return _MIDI_Export_Anti_Flicker; }
+			void set(bool value) {
+				_MIDI_Export_Anti_Flicker = value;
 				Save_To_File();
 			}
 		}

@@ -33,11 +33,15 @@ namespace MIDILightDrawer {
 		TableLayoutPanel^ _Main_Layout;
 		Button^ _Button_OK;
 		Button^ _Button_Cancel;
+		ToolTip^ _Tool_Tip;
 
 		// Controls for note selection
 		ComboBox^ _Combo_Box_Red;
 		ComboBox^ _Combo_Box_Green;
 		ComboBox^ _Combo_Box_Blue;
+
+		// Additional Check for Anti-Flicker Option
+		CheckBox^ _Checkbox_Anti_Flicker;
 
 		// Status icons
 		PictureBox^ _Icon_Red;

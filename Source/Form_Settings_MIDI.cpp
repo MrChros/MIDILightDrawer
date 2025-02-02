@@ -40,7 +40,7 @@ namespace MIDILightDrawer
 		this->MinimizeBox = false;
 		this->ShowInTaskbar = false;
 		this->StartPosition = System::Windows::Forms::FormStartPosition::CenterParent;
-		this->Size = System::Drawing::Size(400, 600);
+		this->Size = System::Drawing::Size(400, 630);
 
 		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
 
@@ -50,7 +50,7 @@ namespace MIDILightDrawer
 		_Main_Layout->RowCount = 3;
 		_Main_Layout->Padding = System::Windows::Forms::Padding(10);
 
-		_Main_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 150));
+		_Main_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 180));
 		_Main_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 350));
 		_Main_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 50));
 
@@ -65,10 +65,11 @@ namespace MIDILightDrawer
 		_Notes_Layout = gcnew System::Windows::Forms::TableLayoutPanel();
 		_Notes_Layout->Dock = System::Windows::Forms::DockStyle::Fill;
 		_Notes_Layout->ColumnCount = 3;
-		_Notes_Layout->RowCount = 3;
-		_Notes_Layout->ColumnStyles->Add(gcnew System::Windows::Forms::ColumnStyle(System::Windows::Forms::SizeType::Percent, 30));
-		_Notes_Layout->ColumnStyles->Add(gcnew System::Windows::Forms::ColumnStyle(System::Windows::Forms::SizeType::Percent, 50));
-		_Notes_Layout->ColumnStyles->Add(gcnew System::Windows::Forms::ColumnStyle(System::Windows::Forms::SizeType::Percent, 20));
+		_Notes_Layout->RowCount = 4;
+		_Notes_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 35));
+		_Notes_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 35));
+		_Notes_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 35));
+		_Notes_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 35));
 
 		_Notes_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 35));
 		_Notes_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 35));
@@ -128,6 +129,15 @@ namespace MIDILightDrawer
 		_Icon_Blue->Size = System::Drawing::Size(16, 16);
 		_Notes_Layout->Controls->Add(_Icon_Blue, 2, 2);
 
+		// Add Anti Flicker checkbox
+		_Checkbox_Anti_Flicker = gcnew CheckBox();
+		_Checkbox_Anti_Flicker->Text = "Enable Anti-Flicker mode for MIDI Export";
+		_Checkbox_Anti_Flicker->AutoSize = true;
+		_Checkbox_Anti_Flicker->Padding = System::Windows::Forms::Padding(0, 0, 20, 5);
+		_Checkbox_Anti_Flicker->Anchor = System::Windows::Forms::AnchorStyles::Bottom;
+		_Notes_Layout->Controls->Add(_Checkbox_Anti_Flicker, 0, 3);
+		_Notes_Layout->SetColumnSpan(_Checkbox_Anti_Flicker, 3);
+
 		_Group_Box_Notes->Controls->Add(_Notes_Layout);
 		_Main_Layout->Controls->Add(_Group_Box_Notes, 0, 0);
 
@@ -178,7 +188,11 @@ namespace MIDILightDrawer
 		this->AcceptButton = _Button_OK;
 		this->CancelButton = _Button_Cancel;
 
-		this->Size = System::Drawing::Size(400, 600);
+		this->_Tool_Tip = gcnew ToolTip();
+		this->_Tool_Tip->InitialDelay = 200;
+		this->_Tool_Tip->ReshowDelay = 100;
+
+		this->Size = System::Drawing::Size(400, 630);
 	}
 
 	void Form_Settings_MIDI::Load_Current_Settings()
@@ -201,6 +215,8 @@ namespace MIDILightDrawer
 			}
 		}
 
+		_Checkbox_Anti_Flicker->Checked = Current_Settings->MIDI_Export_Anti_Flicker;
+
 		Update_Status_Icons();
 	}
 
@@ -211,16 +227,71 @@ namespace MIDILightDrawer
 		Current_Settings->MIDI_Note_Red		= Find_Note_Index_By_Name((String^)_Combo_Box_Red->SelectedItem);
 		Current_Settings->MIDI_Note_Green	= Find_Note_Index_By_Name((String^)_Combo_Box_Green->SelectedItem);
 		Current_Settings->MIDI_Note_Blue	= Find_Note_Index_By_Name((String^)_Combo_Box_Blue->SelectedItem);
+
+		Current_Settings->MIDI_Export_Anti_Flicker = _Checkbox_Anti_Flicker->Checked;
 	}
 
 	void Form_Settings_MIDI::Update_Status_Icons()
 	{
 		System::Drawing::Image^ Valid_Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Tick")));
 		System::Drawing::Image^ Invalid_Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Error")));
+		System::Drawing::Image^ Warning_Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Warning")));
 
-		_Icon_Red->Image = (_Combo_Box_Red->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
-		_Icon_Green->Image = (_Combo_Box_Green->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
-		_Icon_Blue->Image = (_Combo_Box_Blue->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
+		// Clear existing tooltips
+		_Tool_Tip->SetToolTip(_Icon_Red, "");
+		_Tool_Tip->SetToolTip(_Icon_Green, "");
+		_Tool_Tip->SetToolTip(_Icon_Blue, "");
+
+		// First check if any notes are unselected
+		if (_Combo_Box_Red->SelectedIndex == -1 || _Combo_Box_Green->SelectedIndex == -1 || _Combo_Box_Blue->SelectedIndex == -1)
+		{
+			_Icon_Red->Image = (_Combo_Box_Red->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
+			_Icon_Green->Image = (_Combo_Box_Green->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
+			_Icon_Blue->Image = (_Combo_Box_Blue->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
+			
+			return;
+		}
+
+		if (!_Checkbox_Anti_Flicker->Checked) {
+			// If anti-flicker is disabled, just show valid icons
+			_Icon_Red->Image = Valid_Image;
+			_Icon_Green->Image = Valid_Image;
+			_Icon_Blue->Image = Valid_Image;
+
+			return;
+		}
+		
+		// Get note values
+		int RedValue	= _Note_Names[_Combo_Box_Red->SelectedIndex].Value;
+		int GreenValue	= _Note_Names[_Combo_Box_Green->SelectedIndex].Value;
+		int BlueValue	= _Note_Names[_Combo_Box_Blue->SelectedIndex].Value;
+
+		// Red note checks
+		if (Math::Abs(RedValue - GreenValue) == 1 || Math::Abs(RedValue - BlueValue) == 1) {
+			_Icon_Red->Image = Warning_Image;
+			_Tool_Tip->SetToolTip(_Icon_Red, "When using the Anti-Flicker option for the MIDI export,\nthe color's note should be two steps away.");
+		}
+		else {
+			_Icon_Red->Image = Valid_Image;
+		}
+
+		// Green note checks
+		if (Math::Abs(GreenValue - RedValue) == 1 || Math::Abs(GreenValue - BlueValue) == 1) {
+			_Icon_Green->Image = Warning_Image;
+			_Tool_Tip->SetToolTip(_Icon_Green, "When using the Anti-Flicker option for the MIDI export,\nthe color's note should be two steps away.");
+		}
+		else {
+			_Icon_Green->Image = Valid_Image;
+		}
+
+		// Blue note checks
+		if (Math::Abs(BlueValue - RedValue) == 1 || Math::Abs(BlueValue - GreenValue) == 1) {
+			_Icon_Blue->Image = Warning_Image;
+			_Tool_Tip->SetToolTip(_Icon_Blue, "When using the Anti-Flicker option for the MIDI export,\nthe color's note should be two steps away.");
+		}
+		else {
+			_Icon_Blue->Image = Valid_Image;
+		}
 	}
 
 	int Form_Settings_MIDI::Find_Note_Index_By_Value(int value)

@@ -20,6 +20,8 @@ namespace MIDILightDrawer {
 		_MIDI_Note_Green	= 2;	// D
 		_MIDI_Note_Blue		= 4;	// E
 
+		_MIDI_Export_Anti_Flicker = false;
+
 		_ColorPresets = gcnew List<String^>();
 
 		for (int i = 0; i < 10; i++) {
@@ -107,6 +109,8 @@ namespace MIDILightDrawer {
 				i < _ColorPresets->Count - 1 ? "," : ""));
 		}
 		sb->AppendLine("  ]");
+
+		sb->AppendLine(String::Format("  \"MidiExportAntiFlicker\": {0},", _MIDI_Export_Anti_Flicker ? "true" : "false"));
 
 		// Close JSON object
 		sb->AppendLine("}");
@@ -199,6 +203,13 @@ namespace MIDILightDrawer {
 					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
 					if (parts->Length == 2) {
 						_MIDI_Note_Blue = Int32::Parse(parts[1]->Trim(L',', L' '));
+					}
+				}
+				else if (currentLine->StartsWith("\"MidiExportAntiFlicker\"")) {
+					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
+					if (parts->Length == 2) {
+						String^ value = parts[1]->Trim(L',', L' ');
+						_MIDI_Export_Anti_Flicker = value->ToLower() == "true";
 					}
 				}
 

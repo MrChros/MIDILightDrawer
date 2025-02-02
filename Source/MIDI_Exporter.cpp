@@ -94,15 +94,18 @@ namespace MIDILightDrawer
 
 		int AppliedTickLength = tick_length;
 
-		if (this->_LastEndTick == start_tick) {
-			ToggleAdditionalOffset();
-		}
+		if(Settings->MIDI_Export_Anti_Flicker == true)
+		{
+			if (this->_LastEndTick == start_tick) {
+				ToggleAdditionalOffset();
+			}
 
-		if (_NextStartTick == start_tick + tick_length) {
-			AppliedTickLength += 1;
+			if (_NextStartTick == start_tick + tick_length) {
+				AppliedTickLength += 1;
+			}
+		
+			octave_note_offset += this->_AdditionalOffset;
 		}
-
-		octave_note_offset += this->_AdditionalOffset;
 
 		uint8_t Value_Red	= (color.R >> 1);
 		uint8_t Value_Green = (color.G >> 1);

@@ -890,10 +890,10 @@ namespace MIDILightDrawer
 			return;  // Don't process other mouse down logic
 		}
 		
-		Track^ resizeTrack;
-		if (IsOverTrackDivider(Point(e->X, e->Y), resizeTrack))
+		Track^ ResizeTrack = nullptr;
+		if (IsOverTrackDivider(Point(e->X, e->Y), ResizeTrack))
 		{
-			BeginTrackResize(resizeTrack, e->Y);
+			BeginTrackResize(ResizeTrack, e->Y);
 			return;
 		}
 
@@ -901,7 +901,7 @@ namespace MIDILightDrawer
 		this->Focus();
 		Control::OnMouseDown(e);
 
-		if (_CurrentTool != nullptr)
+		if (this->_CurrentTool != nullptr && this->_Measures->Count > 0)
 		{
 			_CurrentTool->OnMouseDown(e);
 		}
@@ -909,35 +909,35 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::OnMouseMove(MouseEventArgs^ e)
 	{
-		Track^ hoverTrack;
-		bool isOverDivider = IsOverTrackDivider(Point(e->X, e->Y), hoverTrack);
+		Track^ HoverTrack = nullptr;
+		bool IsOverDivider = IsOverTrackDivider(Point(e->X, e->Y), HoverTrack);
 
-		Track^ currentTrack = GetTrackAtPoint(Point(e->X, e->Y));
-		TrackButtonId newHoveredButton;
-		bool isOverAnyButton = false;
+		Track^ CurrentTrack = GetTrackAtPoint(Point(e->X, e->Y));
+		TrackButtonId NewHoveredButton;
+		bool IsOverAnyButton = false;
 
-		if (currentTrack != nullptr) {
+		if (CurrentTrack != nullptr) {
 			// Check each button
 			// Adjust number based on max buttons
 			for (int i = 0; i < 2; i++)	
 			{ 
-				if (IsOverTrackButton(currentTrack, i, Point(e->X, e->Y)))
+				if (IsOverTrackButton(CurrentTrack, i, Point(e->X, e->Y)))
 				{
-					newHoveredButton.Track = currentTrack;
-					newHoveredButton.ButtonIndex = i;
-					isOverAnyButton = true;
+					NewHoveredButton.Track = CurrentTrack;
+					NewHoveredButton.ButtonIndex = i;
+					IsOverAnyButton = true;
 					break;
 				}
 			}
 		}
 
 		// Update hover states
-		if (newHoveredButton.Track != _HoveredButton.Track || newHoveredButton.ButtonIndex != _HoveredButton.ButtonIndex) {
-			_HoveredButton = newHoveredButton;
+		if (NewHoveredButton.Track != _HoveredButton.Track || NewHoveredButton.ButtonIndex != _HoveredButton.ButtonIndex) {
+			_HoveredButton = NewHoveredButton;
 			Invalidate();
 		}
 
-		if (isOverAnyButton) {
+		if (IsOverAnyButton) {
 			this->Cursor = Cursors::Hand;
 			return;  // Don't process other mouse move logic
 		}
@@ -947,12 +947,12 @@ namespace MIDILightDrawer
 			// If we're actively resizing, update the track height
 			UpdateTrackResize(e->Y);
 		}
-		else if (isOverDivider)
+		else if (IsOverDivider)
 		{
 			// Just hovering over a divider
-			if (_ResizeHoverTrack != hoverTrack)
+			if (_ResizeHoverTrack != HoverTrack)
 			{
-				_ResizeHoverTrack = hoverTrack;
+				_ResizeHoverTrack = HoverTrack;
 				Invalidate(); // Redraw to show hover state if needed
 			}
 
@@ -961,18 +961,21 @@ namespace MIDILightDrawer
 		else
 		{
 			// Not over a divider
-			if (_ResizeHoverTrack != nullptr) {
+			if (_ResizeHoverTrack != nullptr)
+			{
 				_ResizeHoverTrack = nullptr;
 				Invalidate();
 			}
 
 			// Handle normal tool behavior
 			Control::OnMouseMove(e);
-			if (_CurrentTool != nullptr)
+
+			if (this->_CurrentTool != nullptr && this->_Measures->Count > 0)
 			{
 				_CurrentTool->OnMouseMove(e);
 				// Only update cursor if we're not in a special state
-				if (!isOverAnyButton && !isOverDivider && _TrackBeingResized == nullptr) {
+				if (!IsOverAnyButton && !IsOverDivider && _TrackBeingResized == nullptr)
+				{
 					this->Cursor = _CurrentTool->Cursor;
 				}
 			}
@@ -988,7 +991,8 @@ namespace MIDILightDrawer
 			return;
 		}
 
-		if (_CurrentTool != nullptr) {
+		if (this->_CurrentTool != nullptr && this->_Measures->Count > 0)
+		{
 			_CurrentTool->OnMouseUp(e);
 		}
 	}

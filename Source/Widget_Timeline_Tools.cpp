@@ -2704,9 +2704,9 @@ namespace MIDILightDrawer
 
 	void StrobeTool::UpdateSinglePreview(Point mousePos)
 	{
-		Track^ TragetTrack = _Timeline->GetTrackAtPoint(mousePos);
+		Track^ TargetTrack = _Timeline->GetTrackAtPoint(mousePos);
 
-		if (TragetTrack != nullptr && !_IsDrawing)
+		if (TargetTrack != nullptr && !_IsDrawing)
 		{
 			int SnapTick = _Timeline->SnapTickToGrid(_Timeline->PixelsToTicks(mousePos.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X));
 
@@ -2715,7 +2715,8 @@ namespace MIDILightDrawer
 			if (HasOverlappingBarsOnBarTrack(TempBar))
 			{
 				// If there would be an overlap, clear any existing preview and show "no" cursor
-				if (_PreviewBar != nullptr) {
+				if (_PreviewBar != nullptr)
+				{
 					_PreviewBar = nullptr;
 					_Timeline->Invalidate();
 				}

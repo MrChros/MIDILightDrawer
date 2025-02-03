@@ -89,7 +89,8 @@ namespace MIDILightDrawer {
 		// Add MIDI settings
 		sb->AppendLine(String::Format("  \"MidiNoteRed\": {0},", _MIDI_Note_Red));
 		sb->AppendLine(String::Format("  \"MidiNoteGreen\": {0},", _MIDI_Note_Green));
-		sb->AppendLine(String::Format("  \"MidiNoteBlue\": {0}", _MIDI_Note_Blue));
+		sb->AppendLine(String::Format("  \"MidiNoteBlue\": {0},", _MIDI_Note_Blue));
+		sb->AppendLine(String::Format("  \"MidiExportAntiFlicker\": {0}", _MIDI_Export_Anti_Flicker ? "true" : "false"));
 
 		// Add octave entries
 		sb->AppendLine("  \"OctaveEntries\": [");
@@ -110,14 +111,15 @@ namespace MIDILightDrawer {
 		}
 		sb->AppendLine("  ]");
 
-		sb->AppendLine(String::Format("  \"MidiExportAntiFlicker\": {0},", _MIDI_Export_Anti_Flicker ? "true" : "false"));
+		
 
 		// Close JSON object
 		sb->AppendLine("}");
 		return sb->ToString();
 	}
 
-	void Settings::DeserializeFromString(String^ data) {
+	void Settings::DeserializeFromString(String^ data)
+	{
 		try {
 			// Split into lines for simple parsing
 			array<String^>^ lines = data->Split(gcnew array<String^> { "\r\n", "\n" }, StringSplitOptions::None);

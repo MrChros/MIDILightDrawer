@@ -1832,37 +1832,77 @@ namespace MIDILightDrawer
 		if (_IsDragging && _TargetBar != nullptr && _SelectedBars->Count > 0)
 		{
 			// Calculate length change
-			int deltaPixels = e->X - _DragStartX;
-			int deltaTicks = _Timeline->PixelsToTicks(deltaPixels);
+			int DeltaPixels = e->X - _DragStartX;
+			int DeltaTicks = _Timeline->PixelsToTicks(DeltaPixels);
 
 			// Calculate the scale factor for the length change
-			double scaleFactor = 1.0;
+			double ScaleFactor = 1.0;
 			if (_OriginalLengths[_TargetBar] > 0)
 			{
-				scaleFactor = (double)(_OriginalLengths[_TargetBar] + deltaTicks) / _OriginalLengths[_TargetBar];
+				ScaleFactor = (double)(_OriginalLengths[_TargetBar] + DeltaTicks) / _OriginalLengths[_TargetBar];
 			}
 
 			// Apply length change to all selected bars
-			for each (BarEvent ^ bar in _SelectedBars)
+			for each (BarEvent^ Bar in _SelectedBars)
 			{
-				int originalLength = _OriginalLengths[bar];
-				int newLength;
+				int OriginalLength = _OriginalLengths[Bar];
+				int NewLength;
 
 				if (Control::ModifierKeys == Keys::Control)
 				{
 					// Snap to grid
-					newLength = _Timeline->SnapTickToGrid(originalLength + deltaTicks);
+					NewLength = _Timeline->SnapTickToGrid(OriginalLength + DeltaTicks);
 				}
 				else
 				{
 					// Proportional change
-					newLength = (int)(originalLength * scaleFactor);
+					NewLength = (int)(OriginalLength * ScaleFactor);
 					// Round to nearest changeTickLength
-					newLength = ((newLength + _ChangeTickLength / 2) / _ChangeTickLength) * _ChangeTickLength;
+					NewLength = ((NewLength + _ChangeTickLength / 2) / _ChangeTickLength) * _ChangeTickLength;
 				}
 
+				// Store original duration before changing it
+				Bar->OriginalDuration = Bar->Duration;
+
 				// Ensure minimum length
-				bar->Duration = Math::Max(newLength, MIN_LENGTH_TICKS);
+				NewLength = Math::Max(NewLength, MIN_LENGTH_TICKS);
+
+				// Find maximum possible length before next bar
+				Track^ Trk = Bar->ContainingTrack;
+
+				if (Trk != nullptr)
+				{
+					int MaxLength = NewLength;
+					for each(BarEvent^ ExistingBar in Trk->Events)
+					{
+						// Skip comparing with selected bars and itself
+						if (_SelectedBars->Contains(ExistingBar) || ExistingBar == Bar) {
+							continue;
+						}
+
+						// If bar starts after our bar, check if it limits our length
+						if (ExistingBar->StartTick > Bar->StartTick)
+						{
+							int PossibleLength = ExistingBar->StartTick - Bar->StartTick;
+							if (PossibleLength < MaxLength)
+							{
+								// Snap the length to grid if Ctrl is held
+								MaxLength = Control::ModifierKeys == Keys::Control ? _Timeline->SnapTickToGrid(PossibleLength) : ((PossibleLength + _ChangeTickLength / 2) / _ChangeTickLength) * _ChangeTickLength;
+							}
+						}
+					}
+
+					// Apply the maximum possible length
+					Bar->Duration = MaxLength;
+				}
+				else
+				{
+					Bar->Duration = NewLength;
+				}
+
+
+				// Ensure minimum length
+				//Bar->Duration = Math::Max(NewLength, MIN_LENGTH_TICKS);
 			}
 
 			_Timeline->Invalidate();

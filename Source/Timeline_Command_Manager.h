@@ -1,0 +1,174 @@
+#pragma once
+
+using namespace System;
+using namespace System::Collections::Generic;
+using namespace System::Drawing;
+
+namespace MIDILightDrawer
+{
+	// Forward Declarations
+	ref class Widget_Timeline;
+	ref class Track;
+	ref class BarEvent;
+
+	
+	// Base interface for all undoable commands
+	public interface class ITimelineCommand {
+		void Execute();
+		void Undo();
+		String^ GetDescription();
+	};
+
+	// Command manager that handles the undo/redo stacks
+	public ref class TimelineCommandManager
+	{
+	public:
+		delegate void CommandStateChangedHandler();
+		event CommandStateChangedHandler^ CommandStateChanged;
+
+	private:
+		System::Collections::Generic::Stack<ITimelineCommand^>^ _UndoStack;
+		System::Collections::Generic::Stack<ITimelineCommand^>^ _RedoStack;
+		Widget_Timeline^ _Timeline;
+		static const int MAX_UNDO_LEVELS = 100;
+
+	public:
+		TimelineCommandManager(Widget_Timeline^ timeline);
+
+		void ExecuteCommand(ITimelineCommand^ command);
+		void Undo();
+		void Redo();
+
+		property bool CanUndo {
+			bool get() { return _UndoStack->Count > 0; }
+		}
+
+		property bool CanRedo {
+			bool get() { return _RedoStack->Count > 0; }
+		}
+	};
+
+	// Compound command for operations affecting multiple bars
+	public ref class CompoundCommand : public ITimelineCommand
+	{
+	private:
+		List<ITimelineCommand^>^ _Commands;
+		String^ _Description;
+
+	public:
+		CompoundCommand(String^ description);
+
+		void AddCommand(ITimelineCommand^ command);
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Add Bar
+	public ref class AddBarCommand : public ITimelineCommand
+	{
+	private:
+		Track^ _Track;
+		BarEvent^ _Bar;
+		Widget_Timeline^ _Timeline;
+
+	public:
+		AddBarCommand(Widget_Timeline^ timeline, Track^ track, BarEvent^ bar);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Move Bar
+	public ref class MoveBarCommand : public ITimelineCommand
+	{
+	private:
+		BarEvent^ _Bar;
+		Track^ _SourceTrack;
+		Track^ _TargetTrack;
+		int _OldStartTick;
+		int _NewStartTick;
+		Widget_Timeline^ _Timeline;
+
+	public:
+		MoveBarCommand(Widget_Timeline^ timeline, BarEvent^ bar, Track^ sourceTrack, Track^ targetTrack, int oldStartTick, int newStartTick);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Resize Bar
+	public ref class ResizeBarCommand : public ITimelineCommand
+	{
+	private:
+		BarEvent^ _Bar;
+		int _OldDuration;
+		int _NewDuration;
+		Widget_Timeline^ _Timeline;
+
+	public:
+		ResizeBarCommand(Widget_Timeline^ timeline, BarEvent^ bar, int oldDuration, int newDuration);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Change Bar Color
+	public ref class ChangeBarColorCommand : public ITimelineCommand
+	{
+	private:
+		BarEvent^ _Bar;
+		Color _OldColor;
+		Color _NewColor;
+		Widget_Timeline^ _Timeline;
+
+	public:
+		ChangeBarColorCommand(Widget_Timeline^ timeline, BarEvent^ bar, Color oldColor, Color newColor);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Delete/Erase Bar
+	public ref class DeleteBarCommand : public ITimelineCommand
+	{
+	private:
+		Widget_Timeline^ _Timeline;
+		Track^ _Track;
+		BarEvent^ _Bar;
+
+	public:
+		DeleteBarCommand(Widget_Timeline^ timeline, Track^ track, BarEvent^ bar);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Paste Bars
+	public ref class PasteBarCommand : public ITimelineCommand
+	{
+	private:
+		Widget_Timeline^ _Timeline;
+		List<BarEvent^>^ _Bars;
+		List<Track^>^ _Tracks;
+		List<BarEvent^>^ _CreatedBars;
+
+	public:
+		PasteBarCommand(Widget_Timeline^ timeline, List<BarEvent^>^ bars, List<Track^>^ targetTracks);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+
+		property List<BarEvent^>^ CreatedBars {
+			List<BarEvent^>^ get() { return _CreatedBars; }
+		}
+
+		static BarEvent^ CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview);
+	};
+}

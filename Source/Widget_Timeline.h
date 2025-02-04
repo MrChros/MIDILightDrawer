@@ -10,8 +10,10 @@ using namespace System::Collections::Generic;
 #include "Widget_Timeline_Common.h"
 #include "Widget_Timeline_Classes.h"
 #include "Timeline_Tool_Interface.h"
+#include "Timeline_Command_Manager.h"
 #include "Timeline_Direct2DRenderer.h"
 #include "Timeline_Performance_Metrics.h"
+
 
 #ifdef _DEBUG
 	#include "Timeline_Direct2DRenderer_Performance.h"
@@ -19,6 +21,7 @@ using namespace System::Collections::Generic;
 #else
 	typedef MIDILightDrawer::Timeline_Direct2DRenderer D2D_Renderer_t;
 #endif
+
 
 namespace MIDILightDrawer 
 {
@@ -63,6 +66,8 @@ namespace MIDILightDrawer
 
 		// Clear method
 		void Clear();
+		void Undo();
+		void Redo();
 
 		// View methods
 		void ZoomIn		();
@@ -84,15 +89,19 @@ namespace MIDILightDrawer
 		FadeTool^		GetFadeTool()		{ return (FadeTool^)	(_Tools[TimelineToolType::Fade]);		}
 		StrobeTool^		GetStrobeTool()		{ return (StrobeTool^)	(_Tools[TimelineToolType::Strobe]);		}
 
-		virtual TimelineToolType GetCurrentToolType() {
+		virtual TimelineCommandManager^ CommandManager() {
+			return _CommandManager;
+		}
+
+		virtual TimelineToolType CurrentToolType() {
 			return _CurrentToolType;
 		}
 
-		virtual ITimelineToolAccess^ GetToolAccess() {
+		virtual ITimelineToolAccess^ ToolAccess() {
 			return safe_cast<ITimelineToolAccess^>(_Tools[_CurrentToolType]);
 		}
 
-		virtual  TrackButtonId GetHoverButton() {
+		virtual TrackButtonId HoverButton() {
 			return _HoveredButton;
 		}
 
@@ -150,9 +159,10 @@ namespace MIDILightDrawer
 		}
 
 	private:
-		D2D_Renderer_t^		_D2DRenderer;
-		PerformanceMetrics^	_PerformanceMetrics;
-
+		TimelineCommandManager^ _CommandManager;
+		D2D_Renderer_t^			_D2DRenderer;
+		PerformanceMetrics^		_PerformanceMetrics;
+		
 		ThemeColors		_CurrentTheme;
 		TrackButtonId	_HoveredButton;
 		

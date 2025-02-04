@@ -286,7 +286,7 @@ namespace MIDILightDrawer
 
             DrawGridLines(totalHeight);
 
-            TimelineToolType currentTool = this->_ToolAccessDelegate->GetCurrentToolType();
+            TimelineToolType currentTool = this->_ToolAccessDelegate->CurrentToolType();
 
             // 2. Draw track content (events and tablature)
             for each (Track ^ track in this->_Tracks)
@@ -336,7 +336,7 @@ namespace MIDILightDrawer
         _NativeRenderer->PushAxisAlignedClip(ContentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 
         try {
-            TimelineToolType currentTool = this->_ToolAccessDelegate->GetCurrentToolType();
+            TimelineToolType currentTool = this->_ToolAccessDelegate->CurrentToolType();
 
             // Get current tool
             switch (currentTool)
@@ -519,7 +519,7 @@ namespace MIDILightDrawer
         }
 
         // Get tool access interface
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1208,7 +1208,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackButtons(Track^ track, System::Drawing::Rectangle trackHeaderBounds)
     {
-        TrackButtonId HoveredButton = this->_ToolAccessDelegate->GetHoverButton();
+        TrackButtonId HoveredButton = this->_ToolAccessDelegate->HoverButton();
 
         DrawTrackButtonText(trackHeaderBounds, 0, "T", track->ShowTablature, track == HoveredButton.Track && HoveredButton.ButtonIndex == 0, m_ColorTheme.HeaderBackground, m_ColorTheme.Text);
 
@@ -1340,7 +1340,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewPointerTool()
     {
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1364,7 +1364,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1404,7 +1404,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1431,7 +1431,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1462,7 +1462,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1482,7 +1482,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1527,7 +1527,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1555,7 +1555,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1589,7 +1589,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1659,7 +1659,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1702,7 +1702,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1768,7 +1768,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1810,7 +1810,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return false;
         }
@@ -1861,7 +1861,7 @@ namespace MIDILightDrawer
 			case BarEventType::Strobe:	DrawNormalBarStrobe	(bar, BarBounds); break;
 		}
 
-		TimelineToolType CurrentTool = this->_ToolAccessDelegate->GetCurrentToolType();
+		TimelineToolType CurrentTool = this->_ToolAccessDelegate->CurrentToolType();
 
 		// Add tool-specific enhancements
 		// 1. Draw Resize Handles on each bar if Duration Tool is selected
@@ -2084,7 +2084,7 @@ namespace MIDILightDrawer
 
     void Timeline_Direct2DRenderer::DrawColorPreview(BarEvent^ bar, System::Drawing::Rectangle barBounds, System::Drawing::Color currentColor, float opacity, float borderWidth)
     {
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->GetToolAccess();
+        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
             return;
         }

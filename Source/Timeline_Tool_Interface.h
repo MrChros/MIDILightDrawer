@@ -60,8 +60,8 @@ namespace MIDILightDrawer
     // Interface for timeline access
     public interface class ITimelineAccess
     {
-        TimelineToolType GetCurrentToolType();
-        ITimelineToolAccess^ GetToolAccess();
-        TrackButtonId GetHoverButton();
+        TimelineToolType CurrentToolType();
+        ITimelineToolAccess^ ToolAccess();
+        TrackButtonId HoverButton();
     };
 }

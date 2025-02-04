@@ -45,6 +45,8 @@ namespace MIDILightDrawer
 		private:
 			System::Resources::ResourceManager^ _Resources;
 			MenuStrip^							_Menu_Strip;
+			ToolStripMenuItem^					_Menu_Edit_Undo;
+			ToolStripMenuItem^					_Menu_Edit_Redo;
 
 			gp_parser::Parser*					_GP_Tab;
 			Widget_Tab_Info^					_Tab_Info;
@@ -80,15 +82,20 @@ namespace MIDILightDrawer
 			void Menu_File_Save_Light_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Export_MIDI_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Edit_Undo_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Edit_Redo_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);
 
 			// Form Callbacks
 			void Form_Main_FormClosing(System::Object^ sender, System::Windows::Forms::FormClosingEventArgs^ e);
 
+			// Undo/Redo Handler
+			void UpdateUndoRedoState();
+
 			// Control and Widget Callbacks
 			void Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e);
-			void OnMidiSettingsAccepted();
+			void SettingsMIDI_On_Settings_Accepted();
 			void DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void DropDown_View_Marker_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void TrackBar_Zoom_OnValue_Changed(System::Object^ sender, Track_Bar_Value_Changed_Event_Args^ e);

@@ -87,6 +87,7 @@ namespace MIDILightDrawer
 		this->_Timeline->Dock = System::Windows::Forms::DockStyle::Fill;
 		this->_Timeline->Name = L"timeline";
 		this->_Timeline->Theme = Theme_Manager::Get_Instance()->GetTimelineTheme();
+		this->_Timeline->CommandManager()->CommandStateChanged += gcnew TimelineCommandManager::CommandStateChangedHandler(this, &Form_Main::UpdateUndoRedoState);
 		timelineContainer->Controls->Add(this->_Timeline);
 
 		Table_Layout_Main->Controls->Add(timelineContainer, 0, 1);
@@ -126,7 +127,7 @@ namespace MIDILightDrawer
 
 		// Initialize hotkeys and settings
 		Initialize_Hotkeys();
-		OnMidiSettingsAccepted();
+		SettingsMIDI_On_Settings_Accepted();
 
 	#ifdef _DEBUG
 
@@ -252,7 +253,9 @@ namespace MIDILightDrawer
 		this->_Menu_Strip = gcnew MenuStrip();
 		this->_Menu_Strip->Padding = System::Windows::Forms::Padding(6, 2, 0, 2);
 
-		// File Menu
+		///////////////
+		// File Menu //
+		///////////////
 		ToolStripMenuItem^ Menu_File = gcnew ToolStripMenuItem("File");
 		Menu_File->Padding = System::Windows::Forms::Padding(4, 0, 4, 0);
 
@@ -294,7 +297,33 @@ namespace MIDILightDrawer
 		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Exit);
 
-		// Settings Menu
+
+		///////////////
+		// Edit Menu //
+		///////////////
+		ToolStripMenuItem^ Menu_Edit = gcnew ToolStripMenuItem("Edit");
+		Menu_Edit->Padding = System::Windows::Forms::Padding(4, 0, 4, 0);
+
+		// Edit -> Undo
+		_Menu_Edit_Undo = gcnew ToolStripMenuItem("Undo");
+		_Menu_Edit_Undo->ShortcutKeys = Keys::Control | Keys::Z;
+		_Menu_Edit_Undo->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_Undo_Click);
+		_Menu_Edit_Undo->Enabled = false;
+
+		// Edit -> Redo
+		_Menu_Edit_Redo = gcnew ToolStripMenuItem("Redo");
+		_Menu_Edit_Redo->ShortcutKeys = Keys::Control | Keys::Y;
+		_Menu_Edit_Redo->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_Redo_Click);
+		_Menu_Edit_Redo->Enabled = false;
+
+		// Build Edit menu
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_Undo);
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_Redo);
+
+
+		///////////////////
+		// Settings Menu //
+		///////////////////
 		ToolStripMenuItem^ Menu_Settings = gcnew ToolStripMenuItem("Settings");
 		Menu_Settings->Padding = System::Windows::Forms::Padding(4, 0, 4, 0);
 
@@ -324,8 +353,11 @@ namespace MIDILightDrawer
 		Label_Version->Padding = System::Windows::Forms::Padding(0, 0, 10, 0); // Add some right padding
 		
 
-		// Add menus to strip
+		////////////////////////
+		// Add menus to strip //
+		////////////////////////
 		this->_Menu_Strip->Items->Add(Menu_File);
+		this->_Menu_Strip->Items->Add(Menu_Edit);
 		this->_Menu_Strip->Items->Add(Menu_Settings);
 		this->_Menu_Strip->Items->Add(Label_Version);
 
@@ -375,7 +407,7 @@ namespace MIDILightDrawer
 			this->_Tab_Info->Update_Info(GuiterPro5_Filename, gcnew String(this->_GP_Tab->getTabFile().title.data()), (unsigned int)this->_GP_Tab->getTabFile().measureHeaders.size(), this->_GP_Tab->getTabFile().trackCount);
 
 			this->_Timeline->Clear();
-			OnMidiSettingsAccepted();
+			SettingsMIDI_On_Settings_Accepted();
 
 
 			if (Settings::Get_Instance()->Octave_Entries->Count == 0) {
@@ -457,6 +489,22 @@ namespace MIDILightDrawer
 		this->Close();
 	}
 
+	void Form_Main::Menu_Edit_Undo_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		if (this->_Timeline != nullptr) {
+			this->_Timeline->Undo();
+			UpdateUndoRedoState();
+		}
+	}
+
+	void Form_Main::Menu_Edit_Redo_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		if (this->_Timeline != nullptr) {
+			this->_Timeline->Redo();
+			UpdateUndoRedoState();
+		}
+	}
+
 	void Form_Main::Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		Form_Settings_Hotkeys^ hotkeyForm = gcnew Form_Settings_Hotkeys();
@@ -467,7 +515,7 @@ namespace MIDILightDrawer
 	void Form_Main::Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		Form_Settings_MIDI^ midiForm = gcnew Form_Settings_MIDI();
-		midiForm->On_Settings_Accepted += gcnew On_Settings_Accepted_Handler(this, &Form_Main::OnMidiSettingsAccepted);
+		midiForm->On_Settings_Accepted += gcnew On_Settings_Accepted_Handler(this, &Form_Main::SettingsMIDI_On_Settings_Accepted);
 		midiForm->ShowDialog();
 	}
 
@@ -493,6 +541,14 @@ namespace MIDILightDrawer
 			{
 				e->Cancel = true;
 			}
+		}
+	}
+
+	void Form_Main::UpdateUndoRedoState()
+	{
+		if (this->_Timeline != nullptr) {
+			_Menu_Edit_Undo->Enabled = this->_Timeline->CommandManager()->CanUndo;
+			_Menu_Edit_Redo->Enabled = this->_Timeline->CommandManager()->CanRedo;
 		}
 	}
 
@@ -556,7 +612,7 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Form_Main::OnMidiSettingsAccepted()
+	void Form_Main::SettingsMIDI_On_Settings_Accepted()
 	{
 		Settings^ Settings = Settings::Get_Instance();
 
@@ -666,6 +722,8 @@ namespace MIDILightDrawer
 				this->_Timeline->Tracks[i]->Name = Settings->Octave_Entries[i]->Name;
 			}
 		}
+
+		UpdateUndoRedoState();
 	}
 
 	void Form_Main::DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
@@ -783,7 +841,19 @@ namespace MIDILightDrawer
 
 	void Form_Main::Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e)
 	{
-		if (Process_Hotkey(e->KeyCode))
+		if (e->Control && e->KeyCode == Keys::Z)
+		{
+			Menu_Edit_Undo_Click(sender, e);
+			e->Handled = true;
+			return;
+		}
+		else if (e->Control && e->KeyCode == Keys::Y)
+		{
+			Menu_Edit_Redo_Click(sender, e);
+			e->Handled = true;
+			return;
+		}
+		else if (Process_Hotkey(e->KeyCode)) // Avoid calling hotkey when Ctrl-Z or Ctrl-Y is pressed
 		{
 			e->Handled = true;
 		}

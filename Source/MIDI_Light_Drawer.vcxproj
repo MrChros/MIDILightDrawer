@@ -154,6 +154,7 @@
     <ClInclude Include="gp_parser.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Theme_Manager.h" />
+    <ClInclude Include="Timeline_Command_Manager.h" />
     <ClInclude Include="Timeline_Direct2DRenderer.h" />
     <ClInclude Include="Timeline_Direct2DRenderer_Native.h" />
     <ClInclude Include="Timeline_Direct2DRenderer_Performance.h" />
@@ -197,6 +198,7 @@
     </ClCompile>
     <ClCompile Include="MIDI_Light_Drawer.cpp" />
     <ClCompile Include="Theme_Manager.cpp" />
+    <ClCompile Include="Timeline_Command_Manager.cpp" />
     <ClCompile Include="Timeline_Direct2DRenderer.cpp" />
     <ClCompile Include="Timeline_Direct2DRenderer_Native.cpp" />
     <ClCompile Include="Timeline_Direct2DRenderer_Performance.cpp" />

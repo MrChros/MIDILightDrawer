@@ -260,7 +260,6 @@ namespace MIDILightDrawer
 		void MoveSelectedBarsToTrack(Track^ targetTrack);
 		void UpdateCursor(Point mousePos);
 		void EraseSelectedBars();
-		BarEvent^ CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview);
 	};
 
 
@@ -304,19 +303,24 @@ namespace MIDILightDrawer
 		void UpdateCurrentMode(Point mousePos);
 		void UpdateActiveModesCursor();
 		bool IsOverResizeHandle(Point mousePos, BarEvent^ bar, Track^ track);
+		bool HasOverlappingBars(Track^ track, int startTick, int length);
+
 		void StartPainting(Point mousePos);
 		void UpdatePainting(Point mousePos);
-		bool HasOverlappingBars(Track^ track, int startTick, int length);
+
 		void StartErasing(Point mousePos);
 		void UpdateErasing(Point mousePos);
+
 		void StartMoving(Point mousePos);
 		void UpdateMoving(Point mousePos);
 		void FinishMoving(Point mousePos);
 		void CancelMoving();
+
 		void StartResizing(Point mousePos);
 		void UpdateResizing(Point mousePos);
 		void FinishResizing();
 		void CancelResizing();
+
 		int  GetBeatLength(Track^ track, int currentTick);
 
 		property Color DrawColor {
@@ -424,6 +428,7 @@ namespace MIDILightDrawer
 		void StartErasing();
 		void UpdateErasing(Point mousePos);
 		void EndErasing();
+		void EraseSelectedBars();
 		void UpdateHoverPreview(Point mousePos);
 		void ClearHoverPreview();
 		void Activate() override;

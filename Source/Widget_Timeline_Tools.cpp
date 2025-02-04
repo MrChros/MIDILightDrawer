@@ -300,8 +300,8 @@ namespace MIDILightDrawer
 		*/
 
 		// Store original positions
-		for each (BarEvent^ bar in _SelectedBars) {
-			_OriginalBarStartTicks->Add(bar->StartTick);
+		for each (BarEvent^ Bar in _SelectedBars) {
+			_OriginalBarStartTicks->Add(Bar->StartTick);
 		}
 
 		// Update positions of selected bars
@@ -354,6 +354,50 @@ namespace MIDILightDrawer
 			return;
 		}
 
+		if (IsMultiTrackSelection)
+		{
+			// Create a compound command for multiple bar moves
+			CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Move Multiple Bars");
+
+			for each (BarEvent^ Bar in _SelectedBars) {
+				MoveBarCommand^ Cmd = gcnew MoveBarCommand( _Timeline, Bar, Bar->OriginalContainingTrack, Bar->ContainingTrack, Bar->OriginalStartTick, _Timeline->SnapTickToGrid(Bar->StartTick));
+				CompoundCmd->AddCommand(Cmd);
+			}
+
+			_Timeline->CommandManager()->ExecuteCommand(CompoundCmd);
+		}
+		else
+		{
+			// Single track or grouped bars moving to same track
+			if (TargetTrack != _DragSourceTrack)
+			{
+				CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Move Bars to Different Track");
+
+				for each (BarEvent ^ Bar in _SelectedBars)
+				{
+					MoveBarCommand^ Cmd = gcnew MoveBarCommand(_Timeline, Bar, _DragSourceTrack, TargetTrack, Bar->OriginalStartTick, Bar->StartTick);
+					CompoundCmd->AddCommand(Cmd);
+				}
+
+				_Timeline->CommandManager()->ExecuteCommand(CompoundCmd);
+			}
+			else
+			{
+				// Moving within same track
+				CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Move Bars");
+
+				for each (BarEvent ^ bar in _SelectedBars)
+				{
+					MoveBarCommand^ cmd = gcnew MoveBarCommand(_Timeline, bar, _DragSourceTrack, _DragSourceTrack, bar->OriginalStartTick, bar->StartTick);
+					CompoundCmd->AddCommand(cmd);
+				}
+
+				_Timeline->CommandManager()->ExecuteCommand(CompoundCmd);
+			}
+		}
+
+		// Implementation before the TimelineCommandManager
+		/*
 		// Don't allow track changes for multi-track selection
 		if (!IsMultiTrackSelection)
 		{
@@ -370,11 +414,11 @@ namespace MIDILightDrawer
 		else
 		{
 			// For multi-track selection, just update positions if mouse button has been release inside the track content area
-			for each (BarEvent ^ Bar in _SelectedBars) {
+			for each (BarEvent^ Bar in _SelectedBars) {
 				Bar->StartTick = _Timeline->SnapTickToGrid(Bar->StartTick);
 			}
 		}
-
+		*/
 		_IsDragging = false;
 		_DragSourceTrack = nullptr;
 		_DragTargetTrack = nullptr;
@@ -480,7 +524,7 @@ namespace MIDILightDrawer
 			{
 				if (_SelectedBars->Contains(Bar))
 				{
-					BarEvent^ CopiedBar = CreateBarCopy(Bar, Bar->StartTick - EarliestTick, false);
+					BarEvent^ CopiedBar = PasteBarCommand::CreateBarCopy(Bar, Bar->StartTick - EarliestTick, false);
 					TimelineClipboardManager::Content->Add(CopiedBar);
 				}
 			}
@@ -515,7 +559,7 @@ namespace MIDILightDrawer
 				BarTick = _PastePreviewBars[0]->StartTick + CopiedBar->OriginalStartTick;
 			}
 
-			BarEvent^ PasteBar = CreateBarCopy(CopiedBar, BarTick, true);
+			BarEvent^ PasteBar = PasteBarCommand::CreateBarCopy(CopiedBar, BarTick, true);
 			PasteBar->OriginalStartTick = CopiedBar->OriginalStartTick;
 
 			if (!CopiedBarsFroMultipleTracks && TargetTrack != nullptr) {
@@ -591,14 +635,34 @@ namespace MIDILightDrawer
 			return;
 		}
 
-		if (!HasOverlappingBarsOnBarTrack(_PastePreviewBars)) {
+		if (!HasOverlappingBarsOnBarTrack(_PastePreviewBars))
+		{
 			// Clear existing selection
 			_SelectedBars->Clear();
 
+			List<BarEvent^>^ BarsToPaste = gcnew List<BarEvent^>();
+			List<Track^>^ TargetTracks = gcnew List<Track^>();
+
+			for each (BarEvent^ PreviewBar in _PastePreviewBars)
+			{
+				BarsToPaste->Add(PreviewBar);
+				TargetTracks->Add(PreviewBar->ContainingTrack);
+			}
+
+			// Create and execute the paste command
+			PasteBarCommand^ Cmd = gcnew PasteBarCommand(_Timeline, BarsToPaste, TargetTracks);
+			_Timeline->CommandManager()->ExecuteCommand(Cmd);
+
+			// Update selection to include newly pasted bars
+			_SelectedBars->AddRange(Cmd->CreatedBars);
+
+			// Implementation before the TimelineCommandManager
+			/*
 			for each(BarEvent^ PasteBar in _PastePreviewBars)
 			{
 				PasteBar->ContainingTrack->AddBar(PasteBar);
 			}
+			*/
 
 			// Exit paste mode
 			CancelPaste();
@@ -688,6 +752,21 @@ namespace MIDILightDrawer
 			return;
 		}
 
+		CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Delete Bars");
+
+		for each (BarEvent^ Bar in _SelectedBars)
+		{
+			Track^ Trk = Bar->ContainingTrack;
+			if (Trk != nullptr) {
+				DeleteBarCommand^ Cmd = gcnew DeleteBarCommand(_Timeline, Trk, Bar);
+				CompoundCmd->AddCommand(Cmd);
+			}
+		}
+
+		_Timeline->CommandManager()->ExecuteCommand(CompoundCmd);
+
+		// Implementation before the TimelineCommandManager
+		/*
 		for each(BarEvent ^ bar in _SelectedBars)
 		{
 			Track^ track = nullptr;
@@ -703,72 +782,11 @@ namespace MIDILightDrawer
 				track->RemoveBar(bar);
 			}
 		}
-
+		*/
 		_SelectedBars->Clear();
 
 		_Timeline->Invalidate();
 		this->UpdateCursor(_LastMousePos);
-	}
-
-	BarEvent^ PointerTool::CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview)
-	{
-		BarEvent^ CopiedBar = nullptr;
-
-		// Create appropriate bar based on type
-		switch (sourceBar->Type)
-		{
-			case BarEventType::Solid:
-				CopiedBar = gcnew BarEvent(
-					sourceBar->ContainingTrack,
-					startTick,
-					sourceBar->Duration,
-					isPreview ? Color::FromArgb(180, sourceBar->Color) : sourceBar->Color);
-				break;
-
-			case BarEventType::Fade:
-			{
-				// Deep copy the Fade Info
-				BarEventFadeInfo^ OriginalFade = sourceBar->FadeInfo;
-				BarEventFadeInfo^ CopiedFade;
-
-				if (OriginalFade->Type == FadeType::Two_Colors) {
-					CopiedFade = gcnew BarEventFadeInfo(
-						OriginalFade->QuantizationTicks,
-						OriginalFade->ColorStart,
-						OriginalFade->ColorEnd);
-				}
-				else {
-					CopiedFade = gcnew BarEventFadeInfo(
-						OriginalFade->QuantizationTicks,
-						OriginalFade->ColorStart,
-						OriginalFade->ColorCenter,
-						OriginalFade->ColorEnd);
-				}
-
-				CopiedBar = gcnew BarEvent(
-					sourceBar->ContainingTrack,
-					startTick,
-					sourceBar->Duration,
-					CopiedFade);
-			}
-			break;
-
-			case BarEventType::Strobe:
-			{
-				// Deep copy the Strobe Info
-				BarEventStrobeInfo^ OriginalStrobe = sourceBar->StrobeInfo;
-				BarEventStrobeInfo^ CopiedStrobe = gcnew BarEventStrobeInfo(OriginalStrobe->QuantizationTicks, OriginalStrobe->ColorStrobe);
-
-				CopiedBar = gcnew BarEvent(
-					sourceBar->ContainingTrack,
-					startTick,
-					sourceBar->Duration,
-					CopiedStrobe);
-			}
-			break;
-		}
-
-		return CopiedBar;
 	}
 
 
@@ -898,7 +916,8 @@ namespace MIDILightDrawer
 
 	void DrawTool::OnKeyDown(KeyEventArgs^ e)
 	{
-		if (e->KeyCode == Keys::Escape) {
+		if (e->KeyCode == Keys::Escape)
+		{
 			if (_IsMoving) { 
 				CancelMoving();
 				_Timeline->Invalidate();
@@ -910,7 +929,10 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void DrawTool::OnKeyUp(KeyEventArgs^ e) {}
+	void DrawTool::OnKeyUp(KeyEventArgs^ e)
+	{
+		
+	}
 
 	void DrawTool::UpdatePreview(Point mousePos)
 	{
@@ -1002,9 +1024,7 @@ namespace MIDILightDrawer
 		}
 		else {
 			newMode = DrawToolMode::Draw;
-			if (!HasOverlappingBars(track,
-				_Timeline->PixelsToTicks(mousePos.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X),
-				_DrawTickLength)) {
+			if (!HasOverlappingBars(track, _Timeline->PixelsToTicks(mousePos.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X), _DrawTickLength)) {
 				newCursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);	// For drawing (when position is valid)
 			}
 			else {
@@ -1059,6 +1079,27 @@ namespace MIDILightDrawer
 		return isInXRange && isInYRange;
 	}
 
+	bool DrawTool::HasOverlappingBars(Track^ track, int startTick, int length)
+	{
+		if (track == nullptr) return false;
+
+		int endTick = startTick + length;
+
+		for each (BarEvent ^ existingBar in track->Events) {
+			// Skip checking against the bar we're currently moving
+			if (existingBar == _HoverBar) continue;
+
+			int existingEnd = existingBar->StartTick + existingBar->Duration;
+
+			// Check for any overlap
+			if (startTick < existingEnd && endTick > existingBar->StartTick) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	void DrawTool::StartPainting(Point mousePos)
 	{
 		if (_TargetTrack == nullptr) {
@@ -1079,10 +1120,12 @@ namespace MIDILightDrawer
 
 		_LastPaintedTick = Start_Tick;
 
-		// Create initial bar
-		if (!HasOverlappingBars(_TargetTrack, Start_Tick, Length_In_Ticks)) {
-			_Timeline->AddBarToTrack(_TargetTrack, Start_Tick, Length_In_Ticks, _CurrentColor);
-			_Timeline->Invalidate();
+		BarEvent^ NewBar = gcnew BarEvent(_TargetTrack, Start_Tick, Length_In_Ticks, _CurrentColor);
+
+		if (!HasOverlappingBarsOnBarTrack(NewBar))
+		{
+			AddBarCommand^ Cmd = gcnew AddBarCommand(_Timeline, _TargetTrack, NewBar);
+			_Timeline->CommandManager()->ExecuteCommand(Cmd);
 		}
 	}
 
@@ -1103,58 +1146,48 @@ namespace MIDILightDrawer
 		// Only create new bar if we've moved to a new position and there's no overlap
 		if (Start_Tick > _LastPaintedTick)
 		{
-			if (!HasOverlappingBars(_TargetTrack, Start_Tick, Length_In_Ticks))
+			BarEvent^ NewBar = gcnew BarEvent(_TargetTrack, Start_Tick, Length_In_Ticks, _CurrentColor);
+			
+			if (!HasOverlappingBarsOnBarTrack(NewBar))
 			{
-				_Timeline->AddBarToTrack(_TargetTrack, Start_Tick, Length_In_Ticks, _CurrentColor);
+				// Create and execute the command
+				AddBarCommand^ Cmd = gcnew AddBarCommand(_Timeline, _TargetTrack, NewBar);
+				_Timeline->CommandManager()->ExecuteCommand(Cmd);
+			
 				_LastPaintedTick = Start_Tick;
-				_Timeline->Invalidate();
 			}
 		}
 	}
-
-	bool DrawTool::HasOverlappingBars(Track^ track, int startTick, int length)
-	{
-		if (track == nullptr) return false;
-
-		int endTick = startTick + length;
-
-		for each(BarEvent ^ existingBar in track->Events) {
-			// Skip checking against the bar we're currently moving
-			if (existingBar == _HoverBar) continue;
-
-			int existingEnd = existingBar->StartTick + existingBar->Duration;
-
-			// Check for any overlap
-			if (startTick < existingEnd && endTick > existingBar->StartTick) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
+	
 	void DrawTool::StartErasing(Point mousePos)
 	{
 		_IsErasing = true; 
-		if (_HoverBar != nullptr) {
-			_TargetTrack->RemoveBar(_HoverBar);
-			_Timeline->Invalidate();
+
+		if (_HoverBar != nullptr)
+		{
+			DeleteBarCommand^ Cmd = gcnew DeleteBarCommand(_Timeline, _TargetTrack, _HoverBar);
+			_Timeline->CommandManager()->ExecuteCommand(Cmd);
 		}
 	}
 
 	void DrawTool::UpdateErasing(Point mousePos)
 	{
-		if (!_IsErasing) return;
+		if (!_IsErasing) {
+			return;
+		}
 
-		Track^ track = _Timeline->GetTrackAtPoint(mousePos);
-		if (track != nullptr) {
+		Track^ Trk = _Timeline->GetTrackAtPoint(mousePos);
+
+		if (Trk != nullptr)
+		{
 			// Get the bar under the mouse cursor
-			BarEvent^ bar = _Timeline->GetBarAtPoint(mousePos);
+			BarEvent^ Bar = _Timeline->GetBarAtPoint(mousePos);
 
 			// Only erase if we find a bar and haven't already erased it
-			if (bar != nullptr) {
-				track->RemoveBar(bar);
-				_Timeline->Invalidate();
+			if (Bar != nullptr)
+			{
+				DeleteBarCommand^ cmd = gcnew DeleteBarCommand(_Timeline, Trk, Bar);
+				_Timeline->CommandManager()->ExecuteCommand(cmd);
 			}
 		}
 	}
@@ -1195,19 +1228,21 @@ namespace MIDILightDrawer
 		_HoverBar->StartTick = NewStartTick;
 
 		// Check for overlaps with other bars
-		bool HasOverlap = HasOverlappingBars(_TargetTrack, NewStartTick, _HoverBar->Duration);
+		//bool HasOverlap = HasOverlappingBars(_TargetTrack, NewStartTick, _HoverBar->Duration);
 
-		if (HasOverlap) {
+		//if (HasOverlap) {
+		if (HasOverlappingBarsOnSpecificTrack(_TargetTrack, _HoverBar)) {
 			// If overlap detected, revert to original position
 			_HoverBar->StartTick = OriginalStart;
 		}
-		else {
+		else
+		{
 			// If no overlap, check if we're over a different track
 			Track^ TrackUnderMouse = _Timeline->GetTrackAtPoint(mousePos);
 
 			if (TrackUnderMouse != nullptr && TrackUnderMouse != _TargetTrack) {
 				// Ensure the new track doesn't have overlapping bars
-				if (!HasOverlappingBars(TrackUnderMouse, NewStartTick, _HoverBar->Duration))
+				if (!HasOverlappingBarsOnSpecificTrack(TrackUnderMouse, _HoverBar))
 				{
 					_TargetTrack->RemoveBar(_HoverBar);
 					TrackUnderMouse->AddBar(_HoverBar);
@@ -1226,6 +1261,10 @@ namespace MIDILightDrawer
 
 	void DrawTool::FinishMoving(Point mousePos)
 	{
+		if (!_IsMoving || _HoverBar == nullptr || _TargetTrack == nullptr) {
+			return;
+		}
+		
 		Track^ FinalTrack = _Timeline->GetTrackAtPoint(mousePos);
 
 		if (FinalTrack == nullptr) {
@@ -1233,19 +1272,8 @@ namespace MIDILightDrawer
 			return;
 		}
 		
-		if (_IsMoving && _HoverBar != nullptr)
-		{
-			// Ensure final position is properly snapped
-			_HoverBar->StartTick = _Timeline->SnapTickToGrid(_HoverBar->StartTick);
-			
-			_HoverBar->OriginalStartTick = _HoverBar->StartTick;
-			_HoverBar->OriginalContainingTrack = _HoverBar->ContainingTrack;
-
-			// Resort the events in the final track
-			if (_TargetTrack != nullptr) {
-				_TargetTrack->Events->Sort(Track::barComparer);
-			}
-		}
+		MoveBarCommand^ Cmd = gcnew MoveBarCommand(_Timeline, _HoverBar, _SourceTrack, FinalTrack, _HoverBar->OriginalStartTick, _Timeline->SnapTickToGrid(_HoverBar->StartTick));
+		_Timeline->CommandManager()->ExecuteCommand(Cmd);
 
 		_IsMoving = false;
 		_HoverBar = nullptr;
@@ -1321,7 +1349,8 @@ namespace MIDILightDrawer
 	{
 		if (_IsResizing && _HoverBar != nullptr)
 		{
-			_HoverBar->OriginalDuration = _HoverBar->Duration;
+			ResizeBarCommand^ cmd = gcnew ResizeBarCommand(_Timeline, _HoverBar, _HoverBar->OriginalDuration, _HoverBar->Duration);
+			_Timeline->CommandManager()->ExecuteCommand(cmd);
 		}
 		
 		_IsResizing = false;
@@ -1536,43 +1565,48 @@ namespace MIDILightDrawer
 	{
 		if (e->Button == Windows::Forms::MouseButtons::Left && e->X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH)
 		{
-			Point clickPoint(e->X, e->Y);
-			BarEvent^ clickedBar = _Timeline->GetBarAtPoint(clickPoint);
+			Point ClickPoint(e->X, e->Y);
+			BarEvent^ ClickedBar = _Timeline->GetBarAtPoint(ClickPoint);
 
 			// If clicking on a selected bar, delete all selected bars
-			if (clickedBar != nullptr && _SelectedBars->Contains(clickedBar))
+			if (ClickedBar != nullptr && _SelectedBars->Contains(ClickedBar))
 			{
+				EraseSelectedBars();
+				/*
 				StartErasing();
+				
+				CompoundCommand^ compoundCmd = gcnew CompoundCommand("Delete Multiple Bars");
+				
 				// Erase all selected bars
-				for each(BarEvent ^ bar in _SelectedBars)
+				for each(BarEvent^ Bar in _SelectedBars)
 				{
-					Track^ track = nullptr;
-					// Find the track containing this bar
-					for each(Track ^ t in _Timeline->Tracks)
-					{
-						if (t->Events->Contains(bar)) {
-							track = t;
-							break;
-						}
-					}
-					if (track != nullptr) {
-						track->RemoveBar(bar);
-						_ErasedBars->Add(bar);
+					Track^ Trk = Bar->ContainingTrack;
+					
+					if (Trk != nullptr) {
+						DeleteBarCommand^ cmd = gcnew DeleteBarCommand(_Timeline, Trk, Bar);
+						compoundCmd->AddCommand(cmd);
+						_ErasedBars->Add(Bar);
 					}
 				}
+
+				_Timeline->CommandManager()->ExecuteCommand(compoundCmd);
+
 				ClearSelection();
 				EndErasing();
+				*/
 			}
 			// If clicking on an unselected bar, clear selection and select only this bar
-			else if (clickedBar != nullptr) {
+			else if (ClickedBar != nullptr)
+			{
 				ClearSelection();
-				_SelectedBars->Add(clickedBar);
-				UpdateHoverPreview(clickPoint);
+				_SelectedBars->Add(ClickedBar);
+				UpdateHoverPreview(ClickPoint);
 			}
 			// If clicking empty space, start selection rectangle
-			else {
+			else
+			{
 				ClearSelection();
-				StartSelection(clickPoint);
+				StartSelection(ClickPoint);
 			}
 
 			_Timeline->Invalidate();
@@ -1600,7 +1634,13 @@ namespace MIDILightDrawer
 		UpdateHoverPreview(Point(e->X, e->Y));
 	}
 
-	void EraseTool::OnKeyDown(KeyEventArgs^ e) { }
+	void EraseTool::OnKeyDown(KeyEventArgs^ e)
+	{
+		if (e->KeyCode == Keys::Delete) {
+			EraseSelectedBars();
+		}
+	}
+	
 	void EraseTool::OnKeyUp(KeyEventArgs^ e) { }
 
 	void EraseTool::StartSelection(Point start)
@@ -1639,20 +1679,21 @@ namespace MIDILightDrawer
 		_SelectedBars->Clear();
 
 		// Convert selection rectangle to tick range
-		int startTick = _Timeline->PixelsToTicks(
-			region.Left - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
-		int endTick = _Timeline->PixelsToTicks(
-			region.Right - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
+		int StartTick	= _Timeline->PixelsToTicks(region.Left - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
+		int EndTick		= _Timeline->PixelsToTicks(region.Right - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
 
 		// Find all bars that intersect with the selection rectangle
-		for each(Track ^ track in _Timeline->Tracks) {
-			Rectangle trackBounds = _Timeline->GetTrackContentBounds(track);
-			if (trackBounds.IntersectsWith(region)) {
-				for each(BarEvent ^ bar in track->Events) {
+		for each(Track^ Trk in _Timeline->Tracks)
+		{
+			Rectangle TrackBounds = _Timeline->GetTrackContentBounds(Trk);
+			if (TrackBounds.IntersectsWith(region))
+			{
+				for each(BarEvent^ Bar in Trk->Events)
+				{
 					// Check if bar intersects with selection
-					if (bar->StartTick + bar->Duration >= startTick &&
-						bar->StartTick <= endTick) {
-						_SelectedBars->Add(bar);
+					if (Bar->StartTick + Bar->Duration >= StartTick && Bar->StartTick <= EndTick)
+					{
+						_SelectedBars->Add(Bar);
 					}
 				}
 			}
@@ -1669,6 +1710,7 @@ namespace MIDILightDrawer
 	void EraseTool::StartErasing()
 	{
 		_IsErasing = true;
+
 		if (_ErasedBars == nullptr) {
 			_ErasedBars = gcnew List<BarEvent^>();
 		}
@@ -1679,15 +1721,17 @@ namespace MIDILightDrawer
 
 	void EraseTool::UpdateErasing(Point mousePos)
 	{
-		Track^ track = _Timeline->GetTrackAtPoint(mousePos);
-		if (track != nullptr)
+		Track^ TargetTrack = _Timeline->GetTrackAtPoint(mousePos);
+
+		if (TargetTrack != nullptr)
 		{
-			BarEvent^ bar = _Timeline->GetBarAtPoint(mousePos);
-			if (bar != nullptr && !_ErasedBars->Contains(bar))
+			BarEvent^ Bar = _Timeline->GetBarAtPoint(mousePos);
+			if (Bar != nullptr && !_ErasedBars->Contains(Bar))
 			{
-				track->RemoveBar(bar);
-				_ErasedBars->Add(bar);
-				_Timeline->Invalidate();
+				DeleteBarCommand^ Cmd = gcnew DeleteBarCommand(_Timeline, TargetTrack, Bar);
+				_Timeline->CommandManager()->ExecuteCommand(Cmd);
+
+				_ErasedBars->Add(Bar);
 			}
 		}
 	}
@@ -1698,39 +1742,66 @@ namespace MIDILightDrawer
 		_ErasedBars->Clear();
 	}
 
+	void EraseTool::EraseSelectedBars()
+	{
+		if (_SelectedBars == nullptr || _SelectedBars->Count == 0) {
+			return;
+		}
+
+		CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Delete Selected Bars");
+
+		for each (BarEvent^ Bar in _SelectedBars)
+		{
+			Track^ Trk = Bar->ContainingTrack;
+			if (Trk != nullptr)
+			{
+				DeleteBarCommand^ cmd = gcnew DeleteBarCommand(_Timeline, Trk, Bar);
+				CompoundCmd->AddCommand(cmd);
+			}
+		}
+
+		_Timeline->CommandManager()->ExecuteCommand(CompoundCmd);
+		_SelectedBars->Clear();
+
+		_Timeline->Invalidate();
+	}
+
 	void EraseTool::UpdateHoverPreview(Point mousePos)
 	{
-		Track^ track = _Timeline->GetTrackAtPoint(mousePos);
-		BarEvent^ bar = nullptr;
+		Track^ TargetTrack = _Timeline->GetTrackAtPoint(mousePos);
+		BarEvent^ Bar = nullptr;
 
-		if (track != nullptr && mousePos.X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH) {
-			bar = _Timeline->GetBarAtPoint(mousePos);
+		if (TargetTrack != nullptr && mousePos.X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH) {
+			Bar = _Timeline->GetBarAtPoint(mousePos);
 		}
 
 		// Update hover state
-		if (bar != _HoverBar || track != _HoverTrack) {
-			_HoverBar = bar;
-			_HoverTrack = track;
+		if (Bar != _HoverBar || TargetTrack != _HoverTrack)
+		{
+			_HoverBar = Bar;
+			_HoverTrack = TargetTrack;
 
-			if (bar != nullptr) {
+			if (Bar != nullptr)
+			{
 				// Calculate preview rectangle
-				int x = _Timeline->TicksToPixels(bar->StartTick) +
+				int x = _Timeline->TicksToPixels(Bar->StartTick) +
 					_Timeline->ScrollPosition->X +
 					Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
 
-				Rectangle trackBounds = _Timeline->GetTrackContentBounds(track);
+				Rectangle trackBounds = _Timeline->GetTrackContentBounds(TargetTrack);
 
 				_ErasePreviewRect = Rectangle(
 					x,
 					trackBounds.Y + Timeline_Direct2DRenderer::TRACK_PADDING,
-					_Timeline->TicksToPixels(bar->Duration),
+					_Timeline->TicksToPixels(Bar->Duration),
 					trackBounds.Height - (Timeline_Direct2DRenderer::TRACK_PADDING * 2)
 				);
 
 				// Update cursor based on whether the bar is selected
-				Cursor = _SelectedBars->Contains(bar) ? TimelineCursorHelper::GetCursor(TimelineCursor::Hand) : TimelineCursorHelper::GetCursor(TimelineCursor::No);
+				Cursor = _SelectedBars->Contains(Bar) ? TimelineCursorHelper::GetCursor(TimelineCursor::Hand) : TimelineCursorHelper::GetCursor(TimelineCursor::No);
 			}
-			else {
+			else
+			{
 				_ErasePreviewRect = Rectangle(0, 0, 0, 0);
 				Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross); // Use cross cursor for selection
 			}
@@ -1741,7 +1812,8 @@ namespace MIDILightDrawer
 
 	void EraseTool::ClearHoverPreview()
 	{
-		if (_HoverBar != nullptr || !_ErasePreviewRect.IsEmpty) {
+		if (_HoverBar != nullptr || !_ErasePreviewRect.IsEmpty)
+		{
 			_HoverBar = nullptr;
 			_HoverTrack = nullptr;
 			_ErasePreviewRect = Rectangle(0, 0, 0, 0);
@@ -1899,10 +1971,6 @@ namespace MIDILightDrawer
 				{
 					Bar->Duration = NewLength;
 				}
-
-
-				// Ensure minimum length
-				//Bar->Duration = Math::Max(NewLength, MIN_LENGTH_TICKS);
 			}
 
 			_Timeline->Invalidate();

@@ -41,8 +41,7 @@ namespace MIDILightDrawer
         property System::Drawing::Rectangle ErasePreviewRect { System::Drawing::Rectangle get(); }
 
         // Duration Tool
-        property bool IsPreviewVisible { bool get(); }
-		property int PreviewLength { int get(); }
+		// All properties already covered by above definitions
 
         // Color Tool
         property System::Drawing::Rectangle PreviewRect{ System::Drawing::Rectangle get(); }
@@ -55,6 +54,7 @@ namespace MIDILightDrawer
         // Strobe Tool
         // All properties already covered by above definitions
   
+		void OnCommandStateChanged();
     };
 
     // Interface for timeline access

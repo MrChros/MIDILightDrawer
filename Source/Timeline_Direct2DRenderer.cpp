@@ -1665,7 +1665,7 @@ namespace MIDILightDrawer
         }
 
         // Handle preview if tool is active
-        if (ToolAccess->PreviewBar != nullptr && ToolAccess->IsPreviewVisible) {
+        if (ToolAccess->PreviewBar != nullptr) {
             // Draw duration preview overlay
             DrawPreviewBar(ToolAccess->PreviewBar, ToolAccess->PreviewBar->ContainingTrack, Point(), BarPreviewType::Duration);
         }

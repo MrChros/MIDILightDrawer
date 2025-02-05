@@ -25,6 +25,7 @@ namespace MIDILightDrawer
 			_UndoStack->Pop();
 		}
 
+		_Timeline->ToolAccess()->OnCommandStateChanged();
 		CommandStateChanged();
 	}
 
@@ -34,6 +35,9 @@ namespace MIDILightDrawer
 			ITimelineCommand^ command = _UndoStack->Pop();
 			command->Undo();
 			_RedoStack->Push(command);
+
+			// Notify current tool
+			_Timeline->ToolAccess()->OnCommandStateChanged();
 		}
 
 		CommandStateChanged();
@@ -47,6 +51,9 @@ namespace MIDILightDrawer
 			command->Execute();
 
 			_UndoStack->Push(command);
+
+			// Notify current tool
+			_Timeline->ToolAccess()->OnCommandStateChanged();
 		}
 
 		CommandStateChanged();
@@ -165,13 +172,15 @@ namespace MIDILightDrawer
 
 	void ResizeBarCommand::Execute()
 	{
-		_Bar->Duration = _NewDuration;
+		_Bar->Duration			= _NewDuration;
+		_Bar->OriginalDuration	= _NewDuration;
 		_Timeline->Invalidate();
 	}
 
 	void ResizeBarCommand::Undo()
 	{
-		_Bar->Duration = _OldDuration;
+		_Bar->Duration			= _OldDuration;
+		_Bar->OriginalDuration	= _OldDuration;
 		_Timeline->Invalidate();
 	}
 
@@ -207,6 +216,48 @@ namespace MIDILightDrawer
 	String^ ChangeBarColorCommand::GetDescription()
 	{
 		return "Change Bar Color";
+	}
+
+
+	////////////////////////////
+	// Change Fade Bar Colors //
+	////////////////////////////
+	ChangeFadeBarColorCommand::ChangeFadeBarColorCommand(Widget_Timeline^ timeline, BarEvent^ bar, ColorType colorType, Color oldColor, Color newColor)
+	{
+		_Timeline = timeline;
+		_Bar = bar;
+		_ColorType = colorType;
+		_OldColor = oldColor;
+		_NewColor = newColor;
+	}
+
+	void ChangeFadeBarColorCommand::Execute()
+	{
+		switch (_ColorType)
+		{
+		case ColorType::Start:	_Bar->FadeInfo->ColorStart	= _NewColor; break;
+		case ColorType::Center:	_Bar->FadeInfo->ColorCenter = _NewColor; break;
+		case ColorType::End:	_Bar->FadeInfo->ColorEnd	= _NewColor; break;
+		}
+
+		_Timeline->Invalidate();
+	}
+
+	void ChangeFadeBarColorCommand::Undo()
+	{
+		switch (_ColorType)
+		{
+		case ColorType::Start:	_Bar->FadeInfo->ColorStart	= _OldColor; break;
+		case ColorType::Center:	_Bar->FadeInfo->ColorCenter = _OldColor; break;
+		case ColorType::End:	_Bar->FadeInfo->ColorEnd	= _OldColor; break;
+		}
+
+		_Timeline->Invalidate();
+	}
+
+	String^ ChangeFadeBarColorCommand::GetDescription()
+	{
+		return "Change Fade Color";
 	}
 
 
@@ -317,5 +368,73 @@ namespace MIDILightDrawer
 		}
 
 		return CopiedBar;
+	}
+
+
+	///////////////////////
+	// AddFadeBarCommand //
+	///////////////////////
+	AddFadeBarCommand::AddFadeBarCommand(Widget_Timeline^ timeline, Track^ track, int startTick, int duration, BarEventFadeInfo^ fadeInfo)
+	{
+		_Timeline = timeline;
+		_Track = track;
+		_StartTick = startTick;
+		_Duration = duration;
+		_FadeInfo = fadeInfo;
+		_Bar = nullptr;
+	}
+
+	void AddFadeBarCommand::Execute()
+	{
+		if (_Bar == nullptr) {
+			_Bar = gcnew BarEvent(_Track, _StartTick, _Duration, _FadeInfo);
+		}
+		_Track->AddBar(_Bar);
+		_Timeline->Invalidate();
+	}
+
+	void AddFadeBarCommand::Undo()
+	{
+		_Track->RemoveBar(_Bar);
+		_Timeline->Invalidate();
+	}
+
+	String^ AddFadeBarCommand::GetDescription()
+	{
+		return "Add Fade Bar";
+	}
+
+
+	/////////////////////////
+	// AddStrobeBarCommand //
+	/////////////////////////
+	AddStrobeBarCommand::AddStrobeBarCommand(Widget_Timeline^ timeline, Track^ track, int startTick, int duration, BarEventStrobeInfo^ strobeInfo)
+	{
+		_Timeline = timeline;
+		_Track = track;
+		_StartTick = startTick;
+		_Duration = duration;
+		_StrobeInfo = strobeInfo;
+		_Bar = nullptr;
+	}
+
+	void AddStrobeBarCommand::Execute()
+	{
+		if (_Bar == nullptr) {
+			_Bar = gcnew BarEvent(_Track, _StartTick, _Duration, _StrobeInfo);
+		}
+		_Track->AddBar(_Bar);
+		_Timeline->Invalidate();
+	}
+
+	void AddStrobeBarCommand::Undo()
+	{
+		_Track->RemoveBar(_Bar);
+		_Timeline->Invalidate();
+	}
+
+	String^ AddStrobeBarCommand::GetDescription()
+	{
+		return "Add Strobe Bar";
 	}
 }

@@ -470,6 +470,21 @@ namespace MIDILightDrawer
 		}
 	}
 
+	bool Widget_Timeline::DoesBarExist(BarEvent^ bar)
+	{
+		if (bar == nullptr) {
+			return false;
+		}
+
+		for each (Track^ T in Tracks)
+		{
+			if (T->Events->Contains(bar)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	int Widget_Timeline::TicksToPixels(int ticks)
 	{
 		if (this->_D2DRenderer == nullptr) {

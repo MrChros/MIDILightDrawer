@@ -10,6 +10,8 @@ namespace MIDILightDrawer
 	ref class Widget_Timeline;
 	ref class Track;
 	ref class BarEvent;
+	ref class BarEventFadeInfo;
+	ref class BarEventStrobeInfo;
 
 	
 	// Base interface for all undoable commands
@@ -133,6 +135,31 @@ namespace MIDILightDrawer
 		virtual String^ GetDescription();
 	};
 
+	// Change Fade Bar Colors
+	public ref class ChangeFadeBarColorCommand : public ITimelineCommand
+	{
+	public:
+		enum class ColorType {
+			Start,
+			Center,
+			End
+		};
+
+	private:
+		BarEvent^	_Bar;
+		Color		_OldColor;
+		Color		_NewColor;
+		ColorType	_ColorType;
+		Widget_Timeline^ _Timeline;
+
+	public:
+		ChangeFadeBarColorCommand(Widget_Timeline^ timeline, BarEvent^ bar, ColorType colorType, Color oldColor, Color newColor);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
 	// Delete/Erase Bar
 	public ref class DeleteBarCommand : public ITimelineCommand
 	{
@@ -170,5 +197,43 @@ namespace MIDILightDrawer
 		}
 
 		static BarEvent^ CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview);
+	};
+
+	// Add Fade Bar
+	public ref class AddFadeBarCommand : public ITimelineCommand
+	{
+	private:
+		Widget_Timeline^ _Timeline;
+		Track^ _Track;
+		BarEvent^ _Bar;
+		BarEventFadeInfo^ _FadeInfo;
+		int _StartTick;
+		int _Duration;
+
+	public:
+		AddFadeBarCommand(Widget_Timeline^ timeline, Track^ track, int startTick, int duration, BarEventFadeInfo^ fadeInfo);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Add Strobe Bar
+	public ref class AddStrobeBarCommand : public ITimelineCommand
+	{
+	private:
+		Widget_Timeline^ _Timeline;
+		Track^ _Track;
+		BarEvent^ _Bar;
+		BarEventStrobeInfo^ _StrobeInfo;
+		int _StartTick;
+		int _Duration;
+
+	public:
+		AddStrobeBarCommand(Widget_Timeline^ timeline, Track^ track, int startTick, int duration, BarEventStrobeInfo^ strobeInfo);
+
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
 	};
 }

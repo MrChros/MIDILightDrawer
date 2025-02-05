@@ -41,6 +41,8 @@ namespace MIDILightDrawer
 		virtual void OnKeyDown(KeyEventArgs^ e) = 0;
 		virtual void OnKeyUp(KeyEventArgs^ e) = 0;
 
+		virtual void OnCommandStateChanged() {};
+
 		property System::Windows::Forms::Cursor^ Cursor {
 			virtual System::Windows::Forms::Cursor^ get() { return _CurrentCursor; }
 			virtual void set(System::Windows::Forms::Cursor^ value);
@@ -121,14 +123,6 @@ namespace MIDILightDrawer
 			Rectangle get() { return Rectangle(); }
 		}
 
-		virtual property bool IsPreviewVisible {
-				bool get() { return false; }
-		}
-
-		virtual property int PreviewLength {
-			int get() { return 0; }
-		}
-
 		virtual property Rectangle PreviewRect {
 			Rectangle get() { return Rectangle(); }
 		}
@@ -199,6 +193,8 @@ namespace MIDILightDrawer
 		virtual void OnMouseUp(MouseEventArgs^ e) override;
 		virtual void OnKeyDown(KeyEventArgs^ e) override;
 		virtual void OnKeyUp(KeyEventArgs^ e) override;
+
+		virtual void OnCommandStateChanged() override;
 
 		void StartMoving(Point mousePos);
 		void UpdateMoving(Point mousePos);
@@ -419,6 +415,8 @@ namespace MIDILightDrawer
 		virtual void OnKeyDown(KeyEventArgs^ e) override;
 		virtual void OnKeyUp(KeyEventArgs^ e) override;
 
+		virtual void OnCommandStateChanged() override;
+
 		void StartSelection(Point start);
 		void UpdateSelection(Point current);
 		void EndSelection();
@@ -456,7 +454,6 @@ namespace MIDILightDrawer
 	public ref class DurationTool : public TimelineTool {
 	private:
 		bool		_IsDragging;
-		bool		_IsShowingPreview;
 		bool		_IsSelecting;
 		Point^		_SelectionStart;
 		Rectangle		_SelectionRect;
@@ -465,7 +462,6 @@ namespace MIDILightDrawer
 		Track^		_TargetTrack;
 		int			_OriginalLength;
 		int			_DragStartX;
-		int			_PreviewLength;
 		int			_ChangeTickLength;
 		Dictionary<BarEvent^, int>^ _OriginalLengths;
 
@@ -480,27 +476,21 @@ namespace MIDILightDrawer
 		virtual void OnKeyDown(KeyEventArgs^ e) override;
 		virtual void OnKeyUp(KeyEventArgs^ e) override;
 
-		bool IsOverHandle(Point mousePos, BarEvent^ bar, Track^ track);
-		void UpdateLengthPreview(Point mousePos);
-		void ClearPreview();
+		virtual void OnCommandStateChanged() override;
 
 		void StartSelection(Point start);
 		void UpdateSelection(Point current);
 		void EndSelection();
 		void SelectBarsInRegion(Rectangle region);
 		void ClearSelection();
+
+		void CancelResizing();
+
+		bool IsOverHandle(Point mousePos, BarEvent^ bar, Track^ track);
 		void StoreOriginalLengths();
 
 		property BarEvent^ PreviewBar {
 			BarEvent^ get() override { return _TargetBar; }
-		}
-
-		property bool IsPreviewVisible {
-			bool get() override { return _IsShowingPreview; }
-		}
-
-		property int PreviewLength {
-			int get() override { return _PreviewLength; }
 		}
 
 		property Rectangle SelectionRect {
@@ -513,13 +503,7 @@ namespace MIDILightDrawer
 
 		property int ChangeTickLength {
 			int get() { return _ChangeTickLength; }
-			void set(int value) {
-				_ChangeTickLength = Math::Max((int)MIN_LENGTH_TICKS, value);
-				// Update preview if active
-				if (_IsShowingPreview && _TargetBar != nullptr) {
-					UpdateLengthPreview(_LastMousePos);
-				}
-			}
+			void set(int value) {_ChangeTickLength = Math::Max((int)MIN_LENGTH_TICKS, value); }
 		}
 	};
 
@@ -547,13 +531,17 @@ namespace MIDILightDrawer
 		virtual void OnKeyDown(KeyEventArgs^ e) override;
 		virtual void OnKeyUp(KeyEventArgs^ e) override;
 
+		virtual void OnCommandStateChanged() override;
+
 		void StartSelection(Point start);
 		void UpdateSelection(Point current);
 		void EndSelection();
 		void SelectBarsInRegion(Rectangle region);
 		void ClearSelection();
+
 		void UpdateHoverPreview(Point mousePos);
 		void ClearHoverPreview();
+
 		void ApplyColorToSelection();
 
 		property Rectangle PreviewRect {
@@ -590,11 +578,17 @@ namespace MIDILightDrawer
 	public ref class FadeTool : public TimelineTool
 	{
 	private:
-		bool				_IsDrawing;
-		Point^				_DrawStart;
-		Track^				_TargetTrack;
-		BarEvent^			_PreviewBar;
-		int					_StartTick;
+		bool		_IsDrawing;
+		Point^		_DrawStart;
+		Track^		_TargetTrack;
+		BarEvent^	_PreviewBar;
+		int			_StartTick;
+
+		int			_TickLength;
+		Color		_ColorStart;
+		Color		_ColorCenter;
+		Color		_ColorEnd;
+		FadeType	_Type;
 		
 		static const int MIN_DRAG_PIXELS = 5;
 		
@@ -607,11 +601,30 @@ namespace MIDILightDrawer
 		virtual void OnKeyDown(KeyEventArgs^ e) override;
 		virtual void OnKeyUp(KeyEventArgs^ e) override;
 
-		property int TickLength;
-		property Color ColorStart;
-		property Color ColorEnd;
-		property Color ColorCenter;
-		property FadeType Type;
+		property int TickLength {
+			int get() { return _TickLength; }
+			void set(int value);
+		}
+
+		property Color ColorStart {
+			Color get() { return _ColorStart; }
+			void set(Color color);
+		}
+
+		property Color ColorCenter {
+			Color get() { return _ColorCenter; }
+			void set(Color color);
+		}
+
+		property Color ColorEnd {
+			Color get() { return _ColorEnd; }
+			void set(Color color);
+		}
+		
+		property FadeType Type {
+			FadeType get() { return _Type; }
+			void set(FadeType type);
+		}
 
 		property Track^ TargetTrack {
 			Track^ get() override { return _TargetTrack; }
@@ -629,6 +642,7 @@ namespace MIDILightDrawer
 		void AddBarToTrack();
 		void UpdatePreview(Point mousePos);
 		void ClearPreviews();
+		void UpdatePreviewColors();
 	};
 
 
@@ -638,11 +652,14 @@ namespace MIDILightDrawer
 	public ref class StrobeTool : public TimelineTool
 	{
 	private:
-		bool				_IsDrawing;
-		Point^				_DrawStart;
-		Track^				_TargetTrack;
-		BarEvent^			_PreviewBar;
-		int					_StartTick;
+		bool		_IsDrawing;
+		Point^		_DrawStart;
+		Track^		_TargetTrack;
+		BarEvent^	_PreviewBar;
+		int			_StartTick;
+
+		int			_TickLength;
+		Color		_ColorStrobe;
 
 		static const int MIN_DRAG_PIXELS = 5;
 
@@ -655,8 +672,15 @@ namespace MIDILightDrawer
 		virtual void OnKeyDown(KeyEventArgs^ e) override;
 		virtual void OnKeyUp(KeyEventArgs^ e) override;
 
-		property int TickLength;
-		property Color ColorStrobe;
+		property int TickLength {
+			int get() { return _TickLength; }
+			void set(int value);
+		}
+
+		property Color ColorStrobe {
+			Color get() { return _ColorStrobe; }
+			void set(Color color);
+		}
 
 		property Track^ TargetTrack {
 			Track^ get() override { return _TargetTrack; }
@@ -678,5 +702,6 @@ namespace MIDILightDrawer
 		void AddBarToTrack();
 		void UpdateSinglePreview(Point mousePos);
 		void ClearPreviews();
+		void UpdatePreviewColor();
 	};
 }

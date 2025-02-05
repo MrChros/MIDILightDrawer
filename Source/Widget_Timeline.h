@@ -112,6 +112,7 @@ namespace MIDILightDrawer
 		int  GetMeasureStartTick(int measureNumber);
 		int  GetMeasureLength(int measureNumber);
 		void UpdateCursor(System::Windows::Forms::Cursor^ cursor);
+		bool DoesBarExist(BarEvent^ bar);
 
 		int  TicksToPixels(int ticks);
 		int  PixelsToTicks(int pixels);

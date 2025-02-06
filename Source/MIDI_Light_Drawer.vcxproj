@@ -126,7 +126,8 @@
       <EntryPointSymbol>main</EntryPointSymbol>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)Dependencies\*.dll" "$(TargetDir)" /Y /I</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>increment_build_number.bat</Command>

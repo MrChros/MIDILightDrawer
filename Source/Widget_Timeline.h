@@ -39,6 +39,8 @@ namespace MIDILightDrawer
 
 	public ref class Widget_Timeline : public UserControl, public ITimelineAccess {
 	public:
+		event EventHandler<TimelineToolType>^ ToolChanged;
+
 		// Constants
 		static const int INITIAL_TICK_OFFSET			= Timeline_Direct2DRenderer::TICKS_PER_QUARTER;
 		static const int DEFAULT_TRACK_HEIGHT			= 140;	// 100
@@ -80,7 +82,7 @@ namespace MIDILightDrawer
 		
 		// Tools setter/getter
 		void SetCurrentTool(TimelineToolType tool);
-		PointerTool^	GetPointerTool()	{ return (PointerTool^) (_Tools[TimelineToolType::Pointer]);		}
+		PointerTool^	GetPointerTool()	{ return (PointerTool^) (_Tools[TimelineToolType::Pointer]);	}
 		DrawTool^		GetDrawTool()		{ return (DrawTool^)	(_Tools[TimelineToolType::Draw]);		}
 		SplitTool^		GetSplitTool()		{ return (SplitTool^)	(_Tools[TimelineToolType::Split]);		}
 		EraseTool^		GetEraseTool()		{ return (EraseTool^)	(_Tools[TimelineToolType::Erase]);		}

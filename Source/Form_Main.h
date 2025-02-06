@@ -47,6 +47,9 @@ namespace MIDILightDrawer
 			MenuStrip^							_Menu_Strip;
 			ToolStripMenuItem^					_Menu_Edit_Undo;
 			ToolStripMenuItem^					_Menu_Edit_Redo;
+			ToolStripMenuItem^					_Menu_Edit_Copy;
+			ToolStripMenuItem^					_Menu_Edit_Paste;
+			ToolStripMenuItem^					_Menu_Edit_Delete;
 
 			gp_parser::Parser*					_GP_Tab;
 			Widget_Tab_Info^					_Tab_Info;
@@ -84,6 +87,9 @@ namespace MIDILightDrawer
 			void Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_Undo_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_Redo_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Edit_Copy_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Edit_Paste_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Edit_Delete_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);
 
@@ -92,6 +98,9 @@ namespace MIDILightDrawer
 
 			// Undo/Redo Handler
 			void UpdateUndoRedoState();
+			void UpdateEditMenuState(System::Object^ sender, MIDILightDrawer::TimelineToolType e);
+			void UpdateEditMenuState(System::Object^ sender, System::EventArgs^ e);
+			void UpdateEditMenuState();
 
 			// Control and Widget Callbacks
 			void Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e);
@@ -125,7 +134,5 @@ namespace MIDILightDrawer
 			// Debug Members
 			void Button_1_Click(System::Object^ sender, System::EventArgs^ e);
 			void Button_2_Click(System::Object^ sender, System::EventArgs^ e);
-			
-			
 	};
 }

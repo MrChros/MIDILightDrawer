@@ -67,7 +67,6 @@ namespace MIDILightDrawer
 		void OnRGBTextBoxValueChanged(Object^ sender, EventArgs^ e);
 		void OnHexTextBoxValueChanged(Object^ sender, EventArgs^ e);
 		
-		
 		static Color ColorFromHSV(float hue, float saturation, float value);
 		static void RGBtoHSV(int r, int g, int b, float% h, float% s, float% v);
 
@@ -75,6 +74,10 @@ namespace MIDILightDrawer
 		property Color SelectedColor {
 			Color get();
 			void set(Color color);
+		}
+
+		property bool IsTyping {
+			bool get();
 		}
 
 		event EventHandler^ ColorChanged;

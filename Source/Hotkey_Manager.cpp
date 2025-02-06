@@ -34,7 +34,7 @@ namespace MIDILightDrawer {
 
 		// Colors
 		for (int i = 1; i <= 10; i++) {
-			_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Select Color " + i, (i % 10).ToString(), "Colors"));
+			_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Select Color " + i, "D" + (i % 10).ToString(), "Colors"));
 		}
 
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Length Up"					, "R", "Editing"));

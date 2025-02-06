@@ -55,6 +55,26 @@ namespace MIDILightDrawer
 		toolsContainer->BorderStyle = BorderStyle::FixedSingle;
 
 
+		//////////////////////
+		// Timeline Section //
+		//////////////////////
+		Panel^ TimelineContainer = gcnew Panel();
+		TimelineContainer->Dock = DockStyle::Fill;
+		TimelineContainer->Padding = System::Windows::Forms::Padding(0);
+		TimelineContainer->BackColor = Theme_Manager::Get_Instance()->BackgroundLight;
+		TimelineContainer->BorderStyle = BorderStyle::FixedSingle;
+
+		this->_Timeline = gcnew Widget_Timeline();
+		this->_Timeline->Dock = System::Windows::Forms::DockStyle::Fill;
+		this->_Timeline->Name = L"timeline";
+		this->_Timeline->Theme = Theme_Manager::Get_Instance()->GetTimelineTheme();
+		this->_Timeline->CommandManager()->CommandStateChanged += gcnew TimelineCommandManager::CommandStateChangedHandler(this, &Form_Main::UpdateUndoRedoState);
+		TimelineContainer->Controls->Add(this->_Timeline);
+
+		Table_Layout_Main->Controls->Add(TimelineContainer, 0, 1);
+		Table_Layout_Main->SetColumnSpan(TimelineContainer, Table_Layout_Main->ColumnCount);
+
+
 		////////////////////////
 		// Tools and Controls //
 		////////////////////////
@@ -72,26 +92,6 @@ namespace MIDILightDrawer
 
 		// Initialize other tool options
 		InitializeToolOptions();
-
-
-		//////////////////////
-		// Timeline Section //
-		//////////////////////
-		Panel^ timelineContainer = gcnew Panel();
-		timelineContainer->Dock = DockStyle::Fill;
-		timelineContainer->Padding = System::Windows::Forms::Padding(0);
-		timelineContainer->BackColor = Theme_Manager::Get_Instance()->BackgroundLight;
-		timelineContainer->BorderStyle = BorderStyle::FixedSingle;
-
-		this->_Timeline = gcnew Widget_Timeline();
-		this->_Timeline->Dock = System::Windows::Forms::DockStyle::Fill;
-		this->_Timeline->Name = L"timeline";
-		this->_Timeline->Theme = Theme_Manager::Get_Instance()->GetTimelineTheme();
-		this->_Timeline->CommandManager()->CommandStateChanged += gcnew TimelineCommandManager::CommandStateChangedHandler(this, &Form_Main::UpdateUndoRedoState);
-		timelineContainer->Controls->Add(this->_Timeline);
-
-		Table_Layout_Main->Controls->Add(timelineContainer, 0, 1);
-		Table_Layout_Main->SetColumnSpan(timelineContainer, Table_Layout_Main->ColumnCount);
 
 
 		///////////////////////////
@@ -246,6 +246,17 @@ namespace MIDILightDrawer
 		// Bucket Options
 		this->_Bucket_Options = this->_Tools_And_Control->Get_Widget_Bucket_Options();
 		this->_Bucket_Options->ColorChanged += gcnew ColorChangedHandler(this, &Form_Main::Bucket_Options_OnColorChanged);
+
+
+		PointerTool^ PointerTool = this->_Timeline->GetPointerTool();
+		if (PointerTool != nullptr) {
+			PointerTool->SelectionChanged += gcnew System::EventHandler(this, &Form_Main::UpdateEditMenuState);
+		}
+
+		EraseTool^ EraseTool = this->_Timeline->GetEraseTool();
+		if (EraseTool != nullptr) {
+			EraseTool->SelectionChanged += gcnew EventHandler(this, &Form_Main::UpdateEditMenuState);
+		}
 	}
 
 	void Form_Main::InitializeMainMenu()
@@ -316,9 +327,35 @@ namespace MIDILightDrawer
 		_Menu_Edit_Redo->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_Redo_Click);
 		_Menu_Edit_Redo->Enabled = false;
 
+		// Edit -> Copy
+		_Menu_Edit_Copy = gcnew ToolStripMenuItem("Copy");
+		_Menu_Edit_Copy->ShortcutKeys = Keys::Control | Keys::C;
+		_Menu_Edit_Copy->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_Copy_Click);
+		_Menu_Edit_Copy->Enabled = false;
+
+		// Edit -> Paste
+		_Menu_Edit_Paste = gcnew ToolStripMenuItem("Paste");
+		_Menu_Edit_Paste->ShortcutKeys = Keys::Control | Keys::V;
+		_Menu_Edit_Paste->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_Paste_Click);
+		_Menu_Edit_Paste->Enabled = false;
+
+		// Edit -> Delete
+		_Menu_Edit_Delete = gcnew ToolStripMenuItem("Delete");
+		_Menu_Edit_Delete->ShortcutKeys = Keys::Delete;
+		_Menu_Edit_Delete->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_Delete_Click);
+		_Menu_Edit_Delete->Enabled = false;
+
 		// Build Edit menu
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Undo);
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Redo);
+		Menu_Edit->DropDownItems->Add(gcnew ToolStripSeparator());
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_Copy);
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_Paste);
+		Menu_Edit->DropDownItems->Add(gcnew ToolStripSeparator());
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_Delete);
+
+		// Register for tool change events to update menu state
+		_Timeline->ToolChanged += gcnew System::EventHandler<TimelineToolType>(this, &Form_Main::UpdateEditMenuState);
 
 
 		///////////////////
@@ -505,6 +542,54 @@ namespace MIDILightDrawer
 		}
 	}
 
+	void Form_Main::Menu_Edit_Copy_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		if (_Timeline != nullptr && _Timeline->CurrentTool == TimelineToolType::Pointer)
+		{
+			PointerTool^ PointerTool = _Timeline->GetPointerTool();
+			if (PointerTool != nullptr) {
+				PointerTool->HandleCopy();
+			}
+		}
+	}
+
+	void Form_Main::Menu_Edit_Paste_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		if (_Timeline != nullptr && _Timeline->CurrentTool == TimelineToolType::Pointer)
+		{
+			PointerTool^ PointerTool = _Timeline->GetPointerTool();
+			if (PointerTool != nullptr) {
+				PointerTool->StartPaste();
+			}
+		}
+	}
+
+	void Form_Main::Menu_Edit_Delete_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		if (_Timeline == nullptr) {
+			return;
+		}
+		
+		if (_Timeline->CurrentTool == TimelineToolType::Pointer)
+		{
+			PointerTool^ PointerTool = _Timeline->GetPointerTool();
+			if (PointerTool != nullptr && PointerTool->SelectedBars->Count > 0)
+			{
+				System::Windows::Forms::KeyEventArgs^ keyArgs = gcnew System::Windows::Forms::KeyEventArgs(Keys::Delete);
+				PointerTool->OnKeyDown(keyArgs);
+			}
+		}
+		else if (_Timeline->CurrentTool == TimelineToolType::Erase)
+		{
+			EraseTool^ EraseTool = _Timeline->GetEraseTool();
+			if (EraseTool != nullptr && EraseTool->SelectedBars->Count > 0)
+			{
+				System::Windows::Forms::KeyEventArgs^ keyArgs = gcnew System::Windows::Forms::KeyEventArgs(Keys::Delete);
+				EraseTool->OnKeyDown(keyArgs);
+			}
+		}
+	}
+
 	void Form_Main::Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		Form_Settings_Hotkeys^ hotkeyForm = gcnew Form_Settings_Hotkeys();
@@ -550,6 +635,59 @@ namespace MIDILightDrawer
 			_Menu_Edit_Undo->Enabled = this->_Timeline->CommandManager()->CanUndo;
 			_Menu_Edit_Redo->Enabled = this->_Timeline->CommandManager()->CanRedo;
 		}
+
+		UpdateEditMenuState();
+	}
+
+	void Form_Main::UpdateEditMenuState(System::Object^ sender, MIDILightDrawer::TimelineToolType e)
+	{
+		UpdateEditMenuState();
+	}
+
+	void Form_Main::UpdateEditMenuState(System::Object^ sender, System::EventArgs^ e)
+	{
+		UpdateEditMenuState();
+	}
+
+	void Form_Main::UpdateEditMenuState()
+	{
+		if (_Timeline == nullptr) {
+			_Menu_Edit_Copy->Enabled = false;
+			_Menu_Edit_Paste->Enabled = false;
+			_Menu_Edit_Delete->Enabled = false;
+			return;
+		}
+
+		bool IsPointerToolActive	= _Timeline->CurrentTool == TimelineToolType::Pointer;
+		bool IsEraseToolActive		= _Timeline->CurrentTool == TimelineToolType::Erase;
+
+		PointerTool^ PointerTool	= _Timeline->GetPointerTool();
+		EraseTool^ EraseTool		= _Timeline->GetEraseTool();
+
+		// Handle Copy and Paste (only for pointer tool)
+		if (PointerTool != nullptr && IsPointerToolActive) {
+			bool hasSelection = PointerTool->SelectedBars != nullptr && PointerTool->SelectedBars->Count > 0;
+			_Menu_Edit_Copy->Enabled = hasSelection;
+
+			bool hasClipboardContent = TimelineClipboardManager::Content != nullptr && TimelineClipboardManager::Content->Count > 0;
+			_Menu_Edit_Paste->Enabled = hasClipboardContent;
+		}
+		else {
+			_Menu_Edit_Copy->Enabled = false;
+			_Menu_Edit_Paste->Enabled = false;
+		}
+
+		// Handle Delete (for both pointer and erase tools)
+		bool HasSelectedBarsForDelete = false;
+
+		if (PointerTool != nullptr && IsPointerToolActive) {
+			HasSelectedBarsForDelete = PointerTool->SelectedBars != nullptr && PointerTool->SelectedBars->Count > 0;
+		}
+		else if (EraseTool != nullptr && IsEraseToolActive) {
+			HasSelectedBarsForDelete = EraseTool->SelectedBars != nullptr && EraseTool->SelectedBars->Count > 0;
+		}
+
+		_Menu_Edit_Delete->Enabled = HasSelectedBarsForDelete;
 	}
 
 	void Form_Main::Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e)
@@ -777,6 +915,10 @@ namespace MIDILightDrawer
 
 	bool Form_Main::Process_Hotkey(System::Windows::Forms::Keys key_code)
 	{
+		if (this->_Tools_And_Control->ColorPickerIsTyping()) {
+			return false;
+		}
+		
 		// Get current key with modifiers
 		Keys currentKey = key_code;
 		if (ModifierKeys.HasFlag(Keys::Control)) {
@@ -830,6 +972,7 @@ namespace MIDILightDrawer
 				else if (hotkey.Key == "Track Height Reset"				) { this->_DropDown_Track_Height->Selected_Index = 1;	return true; }
 			}
 		}
+
 		return false;
 	}
 
@@ -841,20 +984,60 @@ namespace MIDILightDrawer
 
 	void Form_Main::Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e)
 	{
+
 		if (e->Control && e->KeyCode == Keys::Z)
 		{
 			Menu_Edit_Undo_Click(sender, e);
 			e->Handled = true;
-			return;
 		}
 		else if (e->Control && e->KeyCode == Keys::Y)
 		{
 			Menu_Edit_Redo_Click(sender, e);
 			e->Handled = true;
-			return;
 		}
-		else if (Process_Hotkey(e->KeyCode)) // Avoid calling hotkey when Ctrl-Z or Ctrl-Y is pressed
+		else if (e->Control && e->KeyCode == Keys::C)
 		{
+			Menu_Edit_Copy_Click(sender, e);
+			e->Handled = true;
+		}
+		else if (e->Control && e->KeyCode == Keys::V)
+		{
+			Menu_Edit_Paste_Click(sender, e);
+			e->Handled = true;
+		}
+		else if (e->KeyCode == Keys::Delete)
+		{
+			Menu_Edit_Delete_Click(sender, e);
+			e->Handled = true;
+		}
+		else if (e->Control && e->KeyCode == Keys::O)
+		{
+			// Open GP Tab
+			e->Handled = true;
+		}
+		else if (e->Control && e->Shift && e->KeyCode == Keys::O)
+		{
+			// Open Light file
+			e->Handled = true;
+		}
+		else if (e->Control && e->KeyCode == Keys::S)
+		{
+			// Save Light file
+			e->Handled = true;
+		}
+		else if (e->Control && e->KeyCode == Keys::E)
+		{
+			// MIDI Export
+			e->Handled = true;
+		}
+		else if (e->Alt && e->KeyCode == Keys::F4)
+		{
+			// Exit
+			e->Handled = true;
+		}
+		else
+		{
+			Process_Hotkey(e->KeyCode);
 			e->Handled = true;
 		}
 	}

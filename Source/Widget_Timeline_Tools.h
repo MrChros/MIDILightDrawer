@@ -171,7 +171,11 @@ namespace MIDILightDrawer
 		}
 	};
 
-	public ref class PointerTool : public TimelineTool {
+	public ref class PointerTool : public TimelineTool
+	{
+	public:
+		event EventHandler^ SelectionChanged;
+
 	private:
 		int					_PasteStartTick;
 		bool				_IsDragging;
@@ -185,6 +189,10 @@ namespace MIDILightDrawer
 		List<BarEvent^>^	_SelectedBars;
 		List<BarEvent^>^	_PastePreviewBars;
 		List<int>^			_OriginalBarStartTicks;
+
+		void OnSelectionChanged() {
+			SelectionChanged(this, EventArgs::Empty);
+		}
 
 	public:
 		PointerTool(Widget_Timeline^ timeline);
@@ -205,6 +213,7 @@ namespace MIDILightDrawer
 		void UpdateSelection(Point current);
 		void EndSelection();
 		void SelectBarsInRegion(Rectangle region);
+		void ClearSelection();
 
 		void HandleCopy();
 		void StartPaste();
@@ -396,6 +405,9 @@ namespace MIDILightDrawer
 	// EraseTool Implementation //
 	//////////////////////////////
 	public ref class EraseTool : public TimelineTool {
+	public:
+		event EventHandler^ SelectionChanged;
+
 	private:
 		bool		_IsErasing;
 		bool		_IsSelecting;
@@ -406,6 +418,10 @@ namespace MIDILightDrawer
 		BarEvent^	_HoverBar;
 		Track^		_HoverTrack;
 		Rectangle	_ErasePreviewRect;
+
+		void OnSelectionChanged() {
+			SelectionChanged(this, EventArgs::Empty);
+		}
 
 	public:
 		EraseTool(Widget_Timeline^ timeline);

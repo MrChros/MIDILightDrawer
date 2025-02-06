@@ -587,6 +587,10 @@ namespace MIDILightDrawer
 		return ColorFromHSV(_Current_Hue, _Current_Saturation, _Current_Value);
 	}
 
+	bool Control_ColorPicker::IsTyping::get() {
+		return _TextBox_Red->Focused || _TextBox_Green->Focused || _TextBox_Blue->Focused || _TextBox_Hex->Focused;
+	}
+
 	void Control_ColorPicker::SelectedColor::set(Color color) {
 		float h, s, v;
 		RGBtoHSV(color.R, color.G, color.B, h, s, v);

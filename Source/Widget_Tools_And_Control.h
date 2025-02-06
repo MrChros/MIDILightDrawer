@@ -31,6 +31,7 @@ namespace MIDILightDrawer {
 		void Snap_To(int index);
 		void Length_Up(void);
 		void Length_Down(void);
+		bool ColorPickerIsTyping();
 
 		Widget_Toolbar^			Get_Widget_Toolbar(void);
 		Widget_Pointer_Options^	Get_Widget_Pointer_Options(void);

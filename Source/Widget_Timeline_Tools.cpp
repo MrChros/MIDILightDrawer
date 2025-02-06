@@ -143,8 +143,7 @@ namespace MIDILightDrawer
 		// Click in track header - select track
 		if (e->X <= Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH || e->Y <= Timeline_Direct2DRenderer::HEADER_HEIGHT)
 		{
-			_SelectedBars->Clear();
-			_Timeline->Invalidate();
+			ClearSelection();
 			return;
 		}
 
@@ -154,7 +153,7 @@ namespace MIDILightDrawer
 		if (Bar == nullptr) {
 			// Start selection rectangle if clicking empty space
 			if (!Control::ModifierKeys.HasFlag(Keys::Control)) {
-				_SelectedBars->Clear();
+				ClearSelection();
 			}
 			StartSelection(*_DragStart);
 
@@ -504,13 +503,13 @@ namespace MIDILightDrawer
 		int EndTick = _Timeline->PixelsToTicks(region.Right - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH - _Timeline->ScrollPosition->X);
 
 		// Find all bars that intersect with the selection rectangle
-		for each (Track^ track in _Timeline->Tracks)
+		for each (Track^ Trk in _Timeline->Tracks)
 		{
-			Rectangle TrackContentBounds = _Timeline->GetTrackContentBounds(track);
+			Rectangle TrackContentBounds = _Timeline->GetTrackContentBounds(Trk);
 
 			if (TrackContentBounds.IntersectsWith(region))
 			{
-				for each (BarEvent^ bar in track->Events)
+				for each (BarEvent^ bar in Trk->Events)
 				{
 					// Check if bar intersects with selection
 					if (bar->EndTick >= StartTick && bar->StartTick <= EndTick)
@@ -520,6 +519,19 @@ namespace MIDILightDrawer
 				}
 			}
 		}
+
+		OnSelectionChanged();
+	}
+
+	void PointerTool::ClearSelection()
+	{
+		if (_SelectedBars->Count > 0) {
+			_SelectedBars->Clear();
+			OnSelectionChanged();
+		}
+
+		_SelectionRect = Rectangle(0, 0, 0, 0);
+		_Timeline->Invalidate();
 	}
 
 	void PointerTool::HandleCopy()
@@ -1593,28 +1605,6 @@ namespace MIDILightDrawer
 			if (ClickedBar != nullptr && _SelectedBars->Contains(ClickedBar))
 			{
 				EraseSelectedBars();
-				/*
-				StartErasing();
-				
-				CompoundCommand^ compoundCmd = gcnew CompoundCommand("Delete Multiple Bars");
-				
-				// Erase all selected bars
-				for each(BarEvent^ Bar in _SelectedBars)
-				{
-					Track^ Trk = Bar->ContainingTrack;
-					
-					if (Trk != nullptr) {
-						DeleteBarCommand^ cmd = gcnew DeleteBarCommand(_Timeline, Trk, Bar);
-						compoundCmd->AddCommand(cmd);
-						_ErasedBars->Add(Bar);
-					}
-				}
-
-				_Timeline->CommandManager()->ExecuteCommand(compoundCmd);
-
-				ClearSelection();
-				EndErasing();
-				*/
 			}
 			// If clicking on an unselected bar, clear selection and select only this bar
 			else if (ClickedBar != nullptr)
@@ -1622,6 +1612,7 @@ namespace MIDILightDrawer
 				ClearSelection();
 				_SelectedBars->Add(ClickedBar);
 				UpdateHoverPreview(ClickPoint);
+				OnSelectionChanged();
 			}
 			// If clicking empty space, start selection rectangle
 			else
@@ -1738,11 +1729,17 @@ namespace MIDILightDrawer
 				}
 			}
 		}
+
+		OnSelectionChanged();
 	}
 
 	void EraseTool::ClearSelection()
 	{
-		_SelectedBars->Clear();
+		if (_SelectedBars->Count > 0) {
+			_SelectedBars->Clear();
+			OnSelectionChanged();
+		}
+
 		_SelectionRect = Rectangle(0, 0, 0, 0);
 		_Timeline->Invalidate();
 	}

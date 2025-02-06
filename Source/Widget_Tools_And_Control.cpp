@@ -123,6 +123,11 @@ namespace MIDILightDrawer
 
 	}
 
+	bool Widget_Tools_And_Control::ColorPickerIsTyping()
+	{
+		return _Color_Picker->IsTyping;
+	}
+
 	Widget_Toolbar^ Widget_Tools_And_Control::Get_Widget_Toolbar(void)
 	{
 		return this->_Toolbar;

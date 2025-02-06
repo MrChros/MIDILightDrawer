@@ -288,6 +288,9 @@ namespace MIDILightDrawer
 			// Activate new tool
 			_CurrentTool->Activate();
 			this->Cursor = _CurrentTool->Cursor;
+
+			ToolChanged(this, tool);
+
 			Invalidate();
 		}
 	}

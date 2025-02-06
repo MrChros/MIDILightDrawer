@@ -233,6 +233,8 @@ namespace MIDILightDrawer
 		this->_Color = color;
 		this->_FadeInfo = nullptr;
 		this->_StrobeInfo = nullptr;
+
+		this->_IgnoreForOverlap = false;
 	}
 
 	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventFadeInfo^ fade_info)
@@ -255,6 +257,8 @@ namespace MIDILightDrawer
 		}
 
 		this->_StrobeInfo = nullptr;
+
+		this->_IgnoreForOverlap = false;
 	}
 
 	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventStrobeInfo^ strobe_info)
@@ -276,6 +280,8 @@ namespace MIDILightDrawer
 		if (this->_StrobeInfo == nullptr) {
 			this->_StrobeInfo = gcnew BarEventStrobeInfo(Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION, System::Drawing::Color::White);
 		}
+
+		this->_IgnoreForOverlap = false;
 	}
 
 	void BarEvent::StartTick::set(int value)

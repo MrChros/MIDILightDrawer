@@ -258,6 +258,8 @@ namespace MIDILightDrawer
 		BarEventFadeInfo^ _FadeInfo;
 		BarEventStrobeInfo^ _StrobeInfo;
 
+		bool _IgnoreForOverlap;
+
 	public:
 		property BarEventType Type {
 			BarEventType get() { return _Type; }
@@ -310,6 +312,11 @@ namespace MIDILightDrawer
 		property BarEventStrobeInfo^ StrobeInfo {
 			BarEventStrobeInfo^ get() { return this->_StrobeInfo; }
 			void set(BarEventStrobeInfo^ strobe_info);
+		}
+
+		property bool IgnoreForOverlap {
+			bool get() { return _IgnoreForOverlap; }
+			void set(bool value) { _IgnoreForOverlap = value; }
 		}
 	};
 }

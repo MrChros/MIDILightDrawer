@@ -37,6 +37,9 @@ namespace MIDILightDrawer
 	public:
 		TimelineCommandManager(Widget_Timeline^ timeline);
 
+		List<ITimelineCommand^>^ GetCommands();
+		int GetCurrentIndex();
+
 		void ExecuteCommand(ITimelineCommand^ command);
 		void Undo();
 		void Redo();
@@ -48,6 +51,8 @@ namespace MIDILightDrawer
 		property bool CanRedo {
 			bool get() { return _RedoStack->Count > 0; }
 		}
+
+		static BarEvent^ CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview);
 	};
 
 	// Compound command for operations affecting multiple bars
@@ -195,8 +200,6 @@ namespace MIDILightDrawer
 		property List<BarEvent^>^ CreatedBars {
 			List<BarEvent^>^ get() { return _CreatedBars; }
 		}
-
-		static BarEvent^ CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview);
 	};
 
 	// Add Fade Bar

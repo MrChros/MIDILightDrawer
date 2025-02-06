@@ -531,8 +531,9 @@ namespace MIDILightDrawer
         // Track if this track has any selected bars
         bool HasSelectedBars = (ToolAccess->SelectedBars != nullptr && ToolAccess->SelectedBars->Count > 0);
         bool IsDragging     = ToolAccess->IsDragging;
+        bool IsMoving		= ToolAccess->IsMoving;
         bool IsResizing     = ToolAccess->IsResizing;
-        BarEvent^ HoverBar  = ToolAccess->HoverBar;
+        BarEvent^ SelectedBar  = ToolAccess->SelectedBar;
 
 
         // STEP 1: Draw non-selected bars
@@ -542,10 +543,10 @@ namespace MIDILightDrawer
                 continue;
             }
 
-            bool HoveredarByColorTool   = (HoverBar == Bar) && (currentToolType == TimelineToolType::Color);
+            bool HoveredarByColorTool   = (SelectedBar == Bar) && (currentToolType == TimelineToolType::Color);
             bool IsSelected             = HasSelectedBars && ToolAccess->SelectedBars->Contains(Bar);
             
-            if (!IsSelected && !IsResizing && !HoveredarByColorTool) {
+            if (!IsSelected && !IsResizing && !IsMoving && !HoveredarByColorTool) {
 				DrawNormalBar(Bar, trackContentBounds);
             }
         }
@@ -1373,27 +1374,40 @@ namespace MIDILightDrawer
         int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
         int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width);
 
-        for each (BarEvent^ Bar in ToolAccess->SelectedBars)
-        {
-            if (Bar->EndTick < VisibleStartTick || Bar->StartTick > VisibleEndTick) {
-                continue;
-            }
+		
+		for each (BarEvent^ Bar in ToolAccess->SelectedBars)
+		{
+			if (Bar->EndTick < VisibleStartTick || Bar->StartTick > VisibleEndTick) {
+				continue;
+			}
 
-            Track^ ContainingTrack = Bar->ContainingTrack;
+			if (ToolAccess->IsDragging)
+			{
+				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->OriginalContainingTrack);
+				TrackContentBounds.Y += this->_ScrollPosition->Y;
+				
+				DrawGhostBar(Bar, TrackContentBounds);
+			}
+			else
+			{
+				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->ContainingTrack);
+				TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-            if (ContainingTrack != nullptr) {
-                System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
-                TrackContentBounds.Y += this->_ScrollPosition->Y;
+				DrawSelectedBar(Bar, TrackContentBounds);
+			}
+		}
 
-                DrawSelectedBar(Bar, TrackContentBounds);
+		for each (BarEvent ^ Bar in ToolAccess->PreviewBars)
+		{
+			if (Bar->EndTick < VisibleStartTick || Bar->StartTick > VisibleEndTick) {
+				continue;
+			}
 
-                if (ToolAccess->IsDragging && (Bar->StartTick != Bar->OriginalStartTick || Bar->ContainingTrack != Bar->OriginalContainingTrack))
-                {
-                    TrackContentBounds = GetTrackContentBounds(Bar->OriginalContainingTrack);
-                    DrawGhostBar(Bar, TrackContentBounds);
-                }
-            }
-        }
+			System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->ContainingTrack);
+			TrackContentBounds.Y += this->_ScrollPosition->Y;
+
+			DrawSelectedBar(Bar, TrackContentBounds);
+		}
 
         return true;
     }
@@ -1487,7 +1501,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        BarEvent^ HoverBar = ToolAccess->HoverBar;
+        BarEvent^ HoverBar = ToolAccess->SelectedBar;
         if (HoverBar == nullptr) {
             return true;
         }
@@ -1532,19 +1546,43 @@ namespace MIDILightDrawer
             return false;
         }
 
-        BarEvent^ HoverBar = ToolAccess->HoverBar;
+        BarEvent^ SelectedBar	= ToolAccess->SelectedBar;
+        BarEvent^ PreviewBar	= ToolAccess->PreviewBar;
 
-        if (HoverBar == nullptr) {
-            return true;
+        if (SelectedBar != nullptr)
+		{
+			if (ToolAccess->IsMoving)
+			{
+				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(SelectedBar->OriginalContainingTrack);
+				TrackContentBounds.Y += this->_ScrollPosition->Y;
+
+				DrawGhostBar(SelectedBar, TrackContentBounds);
+			}
+			else
+			{
+				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(SelectedBar->ContainingTrack);
+				TrackContentBounds.Y += this->_ScrollPosition->Y;
+
+				DrawSelectedBar(SelectedBar, TrackContentBounds);
+			}
         }
 
-        if (ToolAccess->IsMoving && (HoverBar->StartTick != HoverBar->OriginalStartTick || HoverBar->ContainingTrack != HoverBar->OriginalContainingTrack))
+		if (PreviewBar != nullptr)
+		{
+			System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(PreviewBar->ContainingTrack);
+			TrackContentBounds.Y += this->_ScrollPosition->Y;
+
+			DrawSelectedBar(PreviewBar, TrackContentBounds);
+		}
+		/*
+        if (ToolAccess->IsMoving && (SelectedBar->StartTick != SelectedBar->OriginalStartTick || SelectedBar->ContainingTrack != SelectedBar->OriginalContainingTrack))
         {
-            System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(HoverBar->OriginalContainingTrack);
+            System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(SelectedBar->OriginalContainingTrack);
             TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-            DrawGhostBar(HoverBar, TrackContentBounds);
+            DrawGhostBar(SelectedBar, TrackContentBounds);
         }
+		*/
 
         return true;
     }
@@ -1560,7 +1598,7 @@ namespace MIDILightDrawer
             return false;
         }
 
-        BarEvent^ HoverBar = ToolAccess->HoverBar;
+        BarEvent^ HoverBar = ToolAccess->SelectedBar;
         if (HoverBar == nullptr || ToolAccess->IsMoving) {
             return true;
         }
@@ -1596,7 +1634,7 @@ namespace MIDILightDrawer
 
         // Get the EraseTool's data
         List<BarEvent^>^ SelectedBars = ToolAccess->SelectedBars;
-        BarEvent^ HoverBar = ToolAccess->HoverBar;
+        BarEvent^ HoverBar = ToolAccess->SelectedBar;
 
         // Draw selection rectangle if present
         System::Drawing::Rectangle SelectionRectangle = ToolAccess->SelectionRect;
@@ -1709,7 +1747,7 @@ namespace MIDILightDrawer
 
         // Get the ColorTool's specific data
         List<BarEvent^>^    SelectedBars    = ToolAccess->SelectedBars;
-        BarEvent^           HoverBar        = ToolAccess->HoverBar;
+        BarEvent^           HoverBar        = ToolAccess->SelectedBar;
         Color               CurrentColor    = ToolAccess->CurrentColor;
         System::Drawing::Rectangle PreviewRect = ToolAccess->PreviewRect;
         float BarXHoverRatio = ToolAccess->BarXHoverRatio;

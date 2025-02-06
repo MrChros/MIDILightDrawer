@@ -35,7 +35,7 @@ namespace MIDILightDrawer
 		property DrawToolMode CurrentMode { DrawToolMode  get(); }
 		property bool IsMoving  { bool get(); }
 		property bool IsResizing { bool get(); }
-		property BarEvent^ HoverBar { BarEvent^ get(); }
+		property BarEvent^ SelectedBar { BarEvent^ get(); }
 
         // Erase Tool
         property System::Drawing::Rectangle ErasePreviewRect { System::Drawing::Rectangle get(); }

@@ -29,6 +29,16 @@ namespace MIDILightDrawer
 		CommandStateChanged();
 	}
 
+	List<ITimelineCommand^>^ TimelineCommandManager::GetCommands()
+	{
+		return gcnew List<ITimelineCommand^>(_UndoStack->ToArray());
+	}
+
+	int TimelineCommandManager::GetCurrentIndex()
+	{
+		return _UndoStack->Count - 1;
+	}
+
 	void TimelineCommandManager::Undo()
 	{
 		if (_UndoStack->Count > 0) {
@@ -57,6 +67,48 @@ namespace MIDILightDrawer
 		}
 
 		CommandStateChanged();
+	}
+
+	BarEvent^ TimelineCommandManager::CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview)
+	{
+		BarEvent^ CopiedBar = nullptr;
+
+		// Create appropriate bar based on type
+		switch (sourceBar->Type)
+		{
+		case BarEventType::Solid:
+			CopiedBar = gcnew BarEvent(sourceBar->ContainingTrack, startTick, sourceBar->Duration, isPreview ? Color::FromArgb(180, sourceBar->Color) : sourceBar->Color);
+			break;
+
+		case BarEventType::Fade:
+		{
+			// Deep copy the Fade Info
+			BarEventFadeInfo^ OriginalFade = sourceBar->FadeInfo;
+			BarEventFadeInfo^ CopiedFade;
+
+			if (OriginalFade->Type == FadeType::Two_Colors) {
+				CopiedFade = gcnew BarEventFadeInfo(OriginalFade->QuantizationTicks, OriginalFade->ColorStart, OriginalFade->ColorEnd);
+			}
+			else {
+				CopiedFade = gcnew BarEventFadeInfo(OriginalFade->QuantizationTicks, OriginalFade->ColorStart, OriginalFade->ColorCenter, OriginalFade->ColorEnd);
+			}
+
+			CopiedBar = gcnew BarEvent(sourceBar->ContainingTrack, startTick, sourceBar->Duration, CopiedFade);
+		}
+		break;
+
+		case BarEventType::Strobe:
+		{
+			// Deep copy the Strobe Info
+			BarEventStrobeInfo^ OriginalStrobe = sourceBar->StrobeInfo;
+			BarEventStrobeInfo^ CopiedStrobe = gcnew BarEventStrobeInfo(OriginalStrobe->QuantizationTicks, OriginalStrobe->ColorStrobe);
+
+			CopiedBar = gcnew BarEvent(sourceBar->ContainingTrack, startTick, sourceBar->Duration, CopiedStrobe);
+		}
+		break;
+		}
+
+		return CopiedBar;
 	}
 
 
@@ -137,19 +189,27 @@ namespace MIDILightDrawer
 	}
 
 	void MoveBarCommand::Execute() {
-		if (_SourceTrack != _TargetTrack) {
+		if (_SourceTrack != _TargetTrack)
+		{
 			_SourceTrack->RemoveBar(_Bar);
 			_TargetTrack->AddBar(_Bar);
+
+			_Bar->OriginalContainingTrack = _Bar->ContainingTrack;
 		}
+
 		_Bar->StartTick = _NewStartTick;
 		_Timeline->Invalidate();
 	}
 
 	void MoveBarCommand::Undo() {
-		if (_SourceTrack != _TargetTrack) {
+		if (_SourceTrack != _TargetTrack)
+		{
 			_TargetTrack->RemoveBar(_Bar);
 			_SourceTrack->AddBar(_Bar);
+
+			_Bar->OriginalContainingTrack = _Bar->ContainingTrack;
 		}
+
 		_Bar->StartTick = _OldStartTick;
 		_Timeline->Invalidate();
 	}
@@ -309,7 +369,7 @@ namespace MIDILightDrawer
 			Track^ TargetTrack = _Tracks[i];
 
 			// Create a new bar with the same properties
-			BarEvent^ newBar = CreateBarCopy(OriginalBar, OriginalBar->StartTick, false);
+			BarEvent^ newBar = TimelineCommandManager::CreateBarCopy(OriginalBar, OriginalBar->StartTick, false);
 			TargetTrack->AddBar(newBar);
 			_CreatedBars->Add(newBar);
 		}
@@ -326,48 +386,6 @@ namespace MIDILightDrawer
 
 	String^ PasteBarCommand::GetDescription() {
 		return "Paste Bars";
-	}
-
-	BarEvent^ PasteBarCommand::CreateBarCopy(BarEvent^ sourceBar, int startTick, bool isPreview)
-	{
-		BarEvent^ CopiedBar = nullptr;
-
-		// Create appropriate bar based on type
-		switch (sourceBar->Type)
-		{
-		case BarEventType::Solid:
-			CopiedBar = gcnew BarEvent(sourceBar->ContainingTrack, startTick, sourceBar->Duration, isPreview ? Color::FromArgb(180, sourceBar->Color) : sourceBar->Color);
-			break;
-
-		case BarEventType::Fade:
-		{
-			// Deep copy the Fade Info
-			BarEventFadeInfo^ OriginalFade = sourceBar->FadeInfo;
-			BarEventFadeInfo^ CopiedFade;
-
-			if (OriginalFade->Type == FadeType::Two_Colors) {
-				CopiedFade = gcnew BarEventFadeInfo(OriginalFade->QuantizationTicks, OriginalFade->ColorStart, OriginalFade->ColorEnd);
-			}
-			else {
-				CopiedFade = gcnew BarEventFadeInfo(OriginalFade->QuantizationTicks, OriginalFade->ColorStart, OriginalFade->ColorCenter, OriginalFade->ColorEnd);
-			}
-
-			CopiedBar = gcnew BarEvent(sourceBar->ContainingTrack, startTick, sourceBar->Duration, CopiedFade);
-		}
-		break;
-
-		case BarEventType::Strobe:
-		{
-			// Deep copy the Strobe Info
-			BarEventStrobeInfo^ OriginalStrobe = sourceBar->StrobeInfo;
-			BarEventStrobeInfo^ CopiedStrobe = gcnew BarEventStrobeInfo(OriginalStrobe->QuantizationTicks, OriginalStrobe->ColorStrobe);
-
-			CopiedBar = gcnew BarEvent(sourceBar->ContainingTrack, startTick, sourceBar->Duration, CopiedStrobe);
-		}
-		break;
-		}
-
-		return CopiedBar;
 	}
 
 

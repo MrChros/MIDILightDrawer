@@ -115,7 +115,7 @@ namespace MIDILightDrawer
 			bool get() { return false; }
 		}
 
-		virtual property BarEvent^ HoverBar {
+		virtual property BarEvent^ SelectedBar {
 			BarEvent^ get() { return nullptr; }
 		}
 
@@ -187,6 +187,7 @@ namespace MIDILightDrawer
 		Track^				_PasteTargetTrack;
 		Rectangle			_SelectionRect;
 		List<BarEvent^>^	_SelectedBars;
+		List<BarEvent^>^	_PreviewBars;
 		List<BarEvent^>^	_PastePreviewBars;
 		List<int>^			_OriginalBarStartTicks;
 
@@ -254,6 +255,10 @@ namespace MIDILightDrawer
 			bool get() override { return _IsPasting; }
 		}
 
+		property List<BarEvent^>^ PreviewBars {
+			List<BarEvent^>^ get() override { return _PreviewBars; }
+		}
+
 		property List<BarEvent^>^ PastePreviewBars {
 			List<BarEvent^>^ get() override { return _PastePreviewBars; }
 		}
@@ -276,6 +281,7 @@ namespace MIDILightDrawer
 	private:
 		Track^		_TargetTrack;
 		Track^		_SourceTrack;
+		BarEvent^	_SelectedBar;
 		BarEvent^	_PreviewBar;
 		Color		_CurrentColor;
 		int			_DrawTickLength;
@@ -286,7 +292,7 @@ namespace MIDILightDrawer
 		bool		_IsMoving;
 		bool		_IsResizing;
 		int			_LastPaintedTick;
-		BarEvent^	_HoverBar;
+		
 		Point		_DragStartPoint;
 		int			_DragStartTick;
 
@@ -366,19 +372,20 @@ namespace MIDILightDrawer
 			bool get() override { return _IsResizing; }
 		}
 
-		property BarEvent^ HoverBar {
-			BarEvent^ get() override { return _HoverBar; }
+		property BarEvent^ SelectedBar {
+			BarEvent^ get() override { return _SelectedBar; }
 		}
 
 		property Point CurrentMousePosition {
 			Point get() override { return _LastMousePos; }
 		}
 
-		property bool UseAutoLength{
+		property bool UseAutoLength {
 			bool get() { return _UseAutoLength; }
 			void set(bool value) { _UseAutoLength = value; }
 		}
 	};
+
 
 	//////////////////////////////
 	// SplitTool Implementation //
@@ -459,7 +466,7 @@ namespace MIDILightDrawer
 			List<BarEvent^> ^ get() override { return _SelectedBars; }
 		}
 
-		property BarEvent^ HoverBar {
+		property BarEvent^ SelectedBar {
 			BarEvent ^ get() override { return _HoverBar; }
 		}
 	};
@@ -572,7 +579,7 @@ namespace MIDILightDrawer
 			List<BarEvent^>^ get() override { return _SelectedBars; }
 		}
 
-		property BarEvent^ HoverBar {
+		property BarEvent^ SelectedBar {
 			BarEvent^ get() override { return _HoverBar; }
 		}
 

@@ -321,6 +321,10 @@ namespace MIDILightDrawer
 		_Menu_Edit_Undo->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_Undo_Click);
 		_Menu_Edit_Undo->Enabled = false;
 
+		// Edit -> UndoSteps
+		_Menu_Edit_UndoSteps = gcnew ToolStripMenuItem("Undo Steps");
+		_Menu_Edit_UndoSteps->Enabled = false;
+
 		// Edit -> Redo
 		_Menu_Edit_Redo = gcnew ToolStripMenuItem("Redo");
 		_Menu_Edit_Redo->ShortcutKeys = Keys::Control | Keys::Y;
@@ -347,12 +351,24 @@ namespace MIDILightDrawer
 
 		// Build Edit menu
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Undo);
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_UndoSteps);
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Redo);
 		Menu_Edit->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Copy);
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Paste);
 		Menu_Edit->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Delete);
+
+		_Menu_Edit_UndoSteps_Items = gcnew List<ToolStripMenuItem^>();
+
+		for (int i = 0; i < 10; i++)
+		{
+			ToolStripMenuItem^ HistoryItem = gcnew ToolStripMenuItem();
+			HistoryItem->Visible = false;
+			HistoryItem->Click += gcnew EventHandler(this, &Form_Main::Menu_Edit_UndoHistory_Click);
+			_Menu_Edit_UndoSteps->DropDownItems->Add(HistoryItem);
+			_Menu_Edit_UndoSteps_Items->Add(HistoryItem);
+		}
 
 		// Register for tool change events to update menu state
 		_Timeline->ToolChanged += gcnew System::EventHandler<TimelineToolType>(this, &Form_Main::UpdateEditMenuState);
@@ -534,6 +550,18 @@ namespace MIDILightDrawer
 		}
 	}
 
+	void Form_Main::Menu_Edit_UndoHistory_Click(Object^ sender, EventArgs^ e)
+	{
+		ToolStripMenuItem^ item = safe_cast<ToolStripMenuItem^>(sender);
+
+		int TargetIndex = safe_cast<int>(item->Tag);
+		int CurrentIndex = _Timeline->CommandManager()->GetCurrentIndex();
+
+		for (int i = CurrentIndex; i >= TargetIndex; i--) {
+			_Timeline->Undo();
+		}
+	}
+
 	void Form_Main::Menu_Edit_Redo_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		if (this->_Timeline != nullptr) {
@@ -632,11 +660,35 @@ namespace MIDILightDrawer
 	void Form_Main::UpdateUndoRedoState()
 	{
 		if (this->_Timeline != nullptr) {
-			_Menu_Edit_Undo->Enabled = this->_Timeline->CommandManager()->CanUndo;
-			_Menu_Edit_Redo->Enabled = this->_Timeline->CommandManager()->CanRedo;
+			_Menu_Edit_Undo->Enabled		= this->_Timeline->CommandManager()->CanUndo;
+			_Menu_Edit_UndoSteps->Enabled	= this->_Timeline->CommandManager()->CanUndo;
+			_Menu_Edit_Redo->Enabled		= this->_Timeline->CommandManager()->CanRedo;
 		}
 
 		UpdateEditMenuState();
+		UpdateUndoHistoryMenu();
+	}
+
+	void Form_Main::UpdateUndoHistoryMenu()
+	{
+		if (_Timeline == nullptr) {
+			return;
+		}
+
+		auto Commands		= _Timeline->CommandManager()->GetCommands();
+		int CurrentIndex	= _Timeline->CommandManager()->GetCurrentIndex();
+
+		for (int i = 0; i < _Menu_Edit_UndoSteps_Items->Count; i++)
+		{
+			if (i <= CurrentIndex && i < Commands->Count) {
+				_Menu_Edit_UndoSteps_Items[i]->Text = Commands[CurrentIndex - i]->GetDescription();
+				_Menu_Edit_UndoSteps_Items[i]->Tag = CurrentIndex;
+				_Menu_Edit_UndoSteps_Items[i]->Visible = true;
+			}
+			else {
+				_Menu_Edit_UndoSteps_Items[i]->Visible = false;
+			}
+		}
 	}
 
 	void Form_Main::UpdateEditMenuState(System::Object^ sender, MIDILightDrawer::TimelineToolType e)

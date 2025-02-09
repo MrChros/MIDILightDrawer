@@ -92,7 +92,7 @@ namespace MIDILightDrawer
         virtual bool DrawMeasureLines(float totalHeight, int startTick, int endTick);
 
         // Sub-Methods for DrawTrackContent - DrawTrackEvents and DrawTrackTablature
-        virtual bool DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType);
+        virtual void DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType);
         virtual bool DrawTrackTablature(Track^ track, System::Drawing::Rectangle trackContentBounds);
         virtual bool DrawTrackTablatureDrum(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
         virtual bool DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
@@ -114,13 +114,14 @@ namespace MIDILightDrawer
         bool DrawToolPreviewPointerToolMoving();
         bool DrawToolPreviewPointerToolPasting();
         bool DrawToolPreviewDrawTool();
-        bool DrawToolPreviewDrawToolDraw();
-        bool DrawToolPreviewDrawToolErase();
-        bool DrawToolPreviewDrawToolMove();
-        bool DrawToolPreviewDrawToolResize();
-        bool DrawToolPreviewEraseTool();
-        bool DrawToolPreviewDurationTool();
-        bool DrawToolPreviewColorTool();
+        void DrawToolPreviewDrawToolDraw();
+		void DrawToolPreviewDrawToolErase();
+		void DrawToolPreviewDrawToolMove();
+		void DrawToolPreviewDrawToolResize();
+        void DrawToolPreviewEraseTool();
+		void DrawToolPreviewEraseToolDrawCross(System::Drawing::Rectangle barBounds, bool isHovered);
+        void DrawToolPreviewDurationTool();
+        void DrawToolPreviewColorTool();
         bool DrawToolPreviewFadeTool();
         bool DrawToolPreviewStrobeTool();
 
@@ -152,8 +153,9 @@ namespace MIDILightDrawer
         void DrawPastePreviewBarFade(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawPastePreviewBarStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawBarGlowEffect(System::Drawing::Rectangle barBounds, System::Drawing::Color glowColor, int glowLevels);
-        void DrawResizeHandle(System::Drawing::Rectangle barBounds, bool isTargeted);
         void DrawSelectionRectangle(System::Drawing::Rectangle selectionRectangle);
+		void DrawToolEnhancements(System::Drawing::Rectangle barBounds);
+		void DrawResizeHandle(System::Drawing::Rectangle barBounds, bool isTargeted);
 
         // Drawing Support Methods
         float TicksToPixels(int ticks);

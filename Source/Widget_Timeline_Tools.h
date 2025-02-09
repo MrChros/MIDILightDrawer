@@ -14,15 +14,28 @@ namespace MIDILightDrawer
 	ref class Track;
 	ref class TrackMeasure;
 	ref class BarEvent;
+	ref class ChangeBarColorCommand;
+	ref class ChangeFadeBarColorCommand;
 	enum class DrawToolMode;
 
 	// Base tool class
 	public ref class TimelineTool abstract : public ITimelineToolAccess {
+	public:
+		event EventHandler^ SelectionChanged;
+
 	protected:
 		Widget_Timeline^	_Timeline;
 		bool				_IsActive;
+		bool				_CanSelectWithRectangle;
+		bool				_IsSelecting;
 		Point				_LastMousePos;
+		Point				_SelectionStart;
 		Keys				_ModifierKeys;
+
+		Rectangle			_SelectionRect;
+		List<BarEvent^>^	_SelectedBars;
+		List<BarEvent^>^	_PreviewBars;
+
 		System::Windows::Forms::Cursor^ _CurrentCursor;
 
 	public:
@@ -30,18 +43,24 @@ namespace MIDILightDrawer
 
 		virtual void Activate() { _IsActive = true; }
 		virtual void Deactivate() { _IsActive = false; }
-
-		property bool IsActive {
-			bool get() { return _IsActive; }
-		}
-
+		
 		virtual void OnMouseDown(MouseEventArgs^ e) = 0;
 		virtual void OnMouseMove(MouseEventArgs^ e) = 0;
 		virtual void OnMouseUp(MouseEventArgs^ e) = 0;
 		virtual void OnKeyDown(KeyEventArgs^ e) = 0;
 		virtual void OnKeyUp(KeyEventArgs^ e) = 0;
 
-		virtual void OnCommandStateChanged() {};
+		virtual void OnCommandStateChanged() { };
+
+		void StartSelection(Point start);
+		void UpdateSelection(Point current);
+		void EndSelection();
+		void SelectBarsInRegion(Rectangle region);
+		void ClearSelection();
+
+		property bool IsActive{
+			bool get() { return _IsActive; }
+		}
 
 		property System::Windows::Forms::Cursor^ Cursor {
 			virtual System::Windows::Forms::Cursor^ get() { return _CurrentCursor; }
@@ -49,30 +68,31 @@ namespace MIDILightDrawer
 		}
 
 		virtual property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() { return nullptr; }
+			List<BarEvent^>^ get() { return _SelectedBars; }
 		}
+
+		virtual property List<BarEvent^>^ PreviewBars {
+			List<BarEvent^> ^ get() { return _PreviewBars; }
+		}
+
+		virtual property bool IsSelecting {
+			bool get() { return _IsSelecting && _CanSelectWithRectangle; }
+		}
+
 		virtual property Rectangle SelectionRect {
-			Rectangle get() { return Rectangle(); }
+			Rectangle get() { return _SelectionRect; }
+		}
+
+		virtual property System::Drawing::Point CurrentMousePosition {
+			Point get() { return _LastMousePos; }
 		}
 
 		virtual property bool IsDragging {
 			bool get() { return false; }
 		}
 
-		virtual property Track^ DragSourceTrack {
-			Track^ get() { return nullptr; }
-		}
-		
-		virtual property Track^ DragTargetTrack {
-			Track^ get() { return nullptr; }
-		}
-
 		virtual property bool IsMultiTrackSelection {
 			bool get() { return false; }
-		}
-
-		virtual property System::Drawing::Point CurrentMousePosition {
-			Point get() { return Point(); }
 		}
 
 		virtual property bool IsPasting {
@@ -91,40 +111,20 @@ namespace MIDILightDrawer
 			int get() { return 0; }
 		}
 
-		virtual property BarEvent^ PreviewBar {
-			BarEvent^ get() { return nullptr; }
-		}
-
 		virtual property Track^ TargetTrack {
 			Track^ get() { return nullptr; }
-		}
-
-		virtual property Track^ SourceTrack{
-			Track ^ get() { return nullptr; }
 		}
 
 		virtual property DrawToolMode CurrentMode {
 			DrawToolMode get() { return DrawToolMode::Draw; }
 		}
 
-		virtual property bool IsMoving {
-			bool get() { return false; }
-		}
-
 		virtual property bool IsResizing {
 			bool get() { return false; }
 		}
 
-		virtual property BarEvent^ SelectedBar {
+		virtual property BarEvent^ HoveredBar { 
 			BarEvent^ get() { return nullptr; }
-		}
-
-		virtual property Rectangle ErasePreviewRect {
-			Rectangle get() { return Rectangle(); }
-		}
-
-		virtual property Rectangle PreviewRect {
-			Rectangle get() { return Rectangle(); }
 		}
 
 		virtual property Color CurrentColor {
@@ -135,15 +135,12 @@ namespace MIDILightDrawer
 			float get() { return 0.0f; }
 		}
 
-		virtual property List<BarEvent^>^ PreviewBars {
-			List<BarEvent^>^ get() { return nullptr; }
-		}
-
 	protected:
 		bool HasOverlappingBarsOnBarTrack(BarEvent^ bar);
 		bool HasOverlappingBarsOnBarTrack(List<BarEvent^>^ barList);
 		bool HasOverlappingBarsOnSpecificTrack(Track^ track, BarEvent^ bar);
 		bool HasOverlappingBarsOnSpecificTrack(Track^ track, List<BarEvent^>^ barList);
+		void OnSelectionChanged();
 	};
 
 
@@ -173,27 +170,16 @@ namespace MIDILightDrawer
 
 	public ref class PointerTool : public TimelineTool
 	{
-	public:
-		event EventHandler^ SelectionChanged;
-
 	private:
 		int					_PasteStartTick;
 		bool				_IsDragging;
-		bool				_IsSelecting;
 		bool				_IsPasting;
 		Point^				_DragStart;
 		Track^				_DragSourceTrack;
 		Track^				_DragTargetTrack;
 		Track^				_PasteTargetTrack;
-		Rectangle			_SelectionRect;
-		List<BarEvent^>^	_SelectedBars;
-		List<BarEvent^>^	_PreviewBars;
 		List<BarEvent^>^	_PastePreviewBars;
 		List<int>^			_OriginalBarStartTicks;
-
-		void OnSelectionChanged() {
-			SelectionChanged(this, EventArgs::Empty);
-		}
 
 	public:
 		PointerTool(Widget_Timeline^ timeline);
@@ -209,54 +195,23 @@ namespace MIDILightDrawer
 		void UpdateMoving(Point mousePos);
 		void FinishMoving(Point mousePos);
 		void CancelMoving();
-
-		void StartSelection(Point start);
-		void UpdateSelection(Point current);
-		void EndSelection();
-		void SelectBarsInRegion(Rectangle region);
-		void ClearSelection();
-
+		
 		void HandleCopy();
 		void StartPaste();
 		void UpdatePaste(Point mousePos);
 		void FinishPaste();
 		void CancelPaste();
 		
-
-		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() override { return _SelectedBars; }
-		}
-
-		property Rectangle SelectionRect {
-			Rectangle get() override { return _SelectionRect; }
-		}
-
 		property bool IsDragging {
 			bool get() override { return _IsDragging; }
-		}
-
-		property Track^ DragSourceTrack {
-			Track^ get() override { return _DragSourceTrack; }
-		}
-
-		property Track^ DragTargetTrack {
-			Track^ get() override { return _DragTargetTrack; }
 		}
 
 		property bool IsMultiTrackSelection {
 			bool get() override { return IsMultiTrackList(_SelectedBars); }
 		}
 
-		property Point CurrentMousePosition {
-			Point get() override { return _LastMousePos; }
-		}
-
 		property bool IsPasting {
 			bool get() override { return _IsPasting; }
-		}
-
-		property List<BarEvent^>^ PreviewBars {
-			List<BarEvent^>^ get() override { return _PreviewBars; }
 		}
 
 		property List<BarEvent^>^ PastePreviewBars {
@@ -281,15 +236,13 @@ namespace MIDILightDrawer
 	private:
 		Track^		_TargetTrack;
 		Track^		_SourceTrack;
-		BarEvent^	_SelectedBar;
-		BarEvent^	_PreviewBar;
 		Color		_CurrentColor;
 		int			_DrawTickLength;
 		bool		_UseAutoLength;
 
 		bool		_IsPainting;
 		bool		_IsErasing;
-		bool		_IsMoving;
+		bool		_IsDragging;
 		bool		_IsResizing;
 		int			_LastPaintedTick;
 		
@@ -344,40 +297,20 @@ namespace MIDILightDrawer
 			void set(int value);
 		}
 
-		property BarEvent^ PreviewBar {
-			BarEvent^ get() override { return _PreviewBar; }
-		}
-
 		property Track^ TargetTrack {
 			Track^ get() override { return _TargetTrack; }
-		}
-
-		property Track^ SourceTrack {
-			Track ^ get() override { return _SourceTrack; }
-		}
-
-		property Track^ DragSourceTrack{
-			Track ^ get() override { return _SourceTrack; }
 		}
 
 		property DrawToolMode CurrentMode {
 			DrawToolMode get() override { return _CurrentMode; }
 		}
 
-		property bool IsMoving {
-			bool get() override { return _IsMoving; }
+		property bool IsDragging {
+			bool get() override { return _IsDragging; }
 		}
 
 		property bool IsResizing {
 			bool get() override { return _IsResizing; }
-		}
-
-		property BarEvent^ SelectedBar {
-			BarEvent^ get() override { return _SelectedBar; }
-		}
-
-		property Point CurrentMousePosition {
-			Point get() override { return _LastMousePos; }
 		}
 
 		property bool UseAutoLength {
@@ -412,23 +345,8 @@ namespace MIDILightDrawer
 	// EraseTool Implementation //
 	//////////////////////////////
 	public ref class EraseTool : public TimelineTool {
-	public:
-		event EventHandler^ SelectionChanged;
-
 	private:
-		bool		_IsErasing;
-		bool		_IsSelecting;
-		Point^		_SelectionStart;
-		Rectangle	_SelectionRect;
-		List<BarEvent^>^ _SelectedBars;
-		List<BarEvent^>^ _ErasedBars;
 		BarEvent^	_HoverBar;
-		Track^		_HoverTrack;
-		Rectangle	_ErasePreviewRect;
-
-		void OnSelectionChanged() {
-			SelectionChanged(this, EventArgs::Empty);
-		}
 
 	public:
 		EraseTool(Widget_Timeline^ timeline);
@@ -440,33 +358,14 @@ namespace MIDILightDrawer
 
 		virtual void OnCommandStateChanged() override;
 
-		void StartSelection(Point start);
-		void UpdateSelection(Point current);
-		void EndSelection();
-		void SelectBarsInRegion(Rectangle region);
-		void ClearSelection();
-
-		void StartErasing();
-		void UpdateErasing(Point mousePos);
-		void EndErasing();
 		void EraseSelectedBars();
+
 		void UpdateHoverPreview(Point mousePos);
 		void ClearHoverPreview();
+
 		void Activate() override;
 
-		property Rectangle ErasePreviewRect {
-			Rectangle get() override { return _ErasePreviewRect; }
-		}
-
-		property Rectangle SelectionRect {
-			Rectangle get() override { return _SelectionRect; }
-		}
-
-		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^> ^ get() override { return _SelectedBars; }
-		}
-
-		property BarEvent^ SelectedBar {
+		property BarEvent^ HoveredBar {
 			BarEvent ^ get() override { return _HoverBar; }
 		}
 	};
@@ -476,11 +375,7 @@ namespace MIDILightDrawer
 	/////////////////////////////////
 	public ref class DurationTool : public TimelineTool {
 	private:
-		bool		_IsDragging;
-		bool		_IsSelecting;
-		Point^		_SelectionStart;
-		Rectangle		_SelectionRect;
-		List<BarEvent^>^ _SelectedBars;
+		bool		_IsResizing;
 		BarEvent^	_TargetBar;
 		Track^		_TargetTrack;
 		int			_OriginalLength;
@@ -501,27 +396,20 @@ namespace MIDILightDrawer
 
 		virtual void OnCommandStateChanged() override;
 
-		void StartSelection(Point start);
-		void UpdateSelection(Point current);
-		void EndSelection();
-		void SelectBarsInRegion(Rectangle region);
-		void ClearSelection();
-
+		void StartResizing(Point mousePos);
+		void UpdateResizing(Point mousePos);
+		void FinishResizing();
 		void CancelResizing();
 
 		bool IsOverHandle(Point mousePos, BarEvent^ bar, Track^ track);
 		void StoreOriginalLengths();
-
-		property BarEvent^ PreviewBar {
-			BarEvent^ get() override { return _TargetBar; }
+		
+		virtual property bool IsResizing {
+			bool get() override { return _IsResizing; }
 		}
 
-		property Rectangle SelectionRect {
-			Rectangle get() override { return _SelectionRect; }
-		}
-
-		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() override { return _SelectedBars; }
+		virtual property BarEvent^ HoveredBar {
+			BarEvent^ get()  override { return _TargetBar; }
 		}
 
 		property int ChangeTickLength {
@@ -536,13 +424,7 @@ namespace MIDILightDrawer
 	public ref class ColorTool : public TimelineTool
 	{
 	private:
-		bool		_IsSelecting;
-		Point^		_SelectionStart;
-		Rectangle	_SelectionRect;
-		Rectangle	_PreviewRect;
-		List<BarEvent^>^ _SelectedBars;
 		BarEvent^	_HoverBar;
-		Track^		_HoverTrack;
 		Color		_CurrentColor;
 		float		_BarXHoverRatio;
 
@@ -556,30 +438,14 @@ namespace MIDILightDrawer
 
 		virtual void OnCommandStateChanged() override;
 
-		void StartSelection(Point start);
-		void UpdateSelection(Point current);
-		void EndSelection();
-		void SelectBarsInRegion(Rectangle region);
-		void ClearSelection();
+		void ApplyColorToSelectedBars();
+		ChangeBarColorCommand^ ApplyColorToSelectedBarsSolid(BarEvent^ bar);
+		ChangeFadeBarColorCommand^ ApplyColorToSelectedBarsFade(BarEvent^ bar);
 
 		void UpdateHoverPreview(Point mousePos);
 		void ClearHoverPreview();
 
-		void ApplyColorToSelection();
-
-		property Rectangle PreviewRect {
-			Rectangle get() override { return _PreviewRect; }
-		}
-
-		property Rectangle SelectionRect {
-			Rectangle get() override  { return _SelectionRect; }
-		}
-
-		property List<BarEvent^>^ SelectedBars {
-			List<BarEvent^>^ get() override { return _SelectedBars; }
-		}
-
-		property BarEvent^ SelectedBar {
+		property BarEvent^ HoveredBar {
 			BarEvent^ get() override { return _HoverBar; }
 		}
 
@@ -591,7 +457,6 @@ namespace MIDILightDrawer
 		property float BarXHoverRatio {
 			float get() override { return _BarXHoverRatio; }
 		}
-
 	};
 
 
@@ -604,7 +469,6 @@ namespace MIDILightDrawer
 		bool		_IsDrawing;
 		Point^		_DrawStart;
 		Track^		_TargetTrack;
-		BarEvent^	_PreviewBar;
 		int			_StartTick;
 
 		int			_TickLength;
@@ -653,10 +517,6 @@ namespace MIDILightDrawer
 			Track^ get() override { return _TargetTrack; }
 		}
 
-		property BarEvent^ PreviewBar {
-			BarEvent^ get() override { return _PreviewBar; }
-		}
-
 		property Point CurrentMousePosition {
 			Point get() override { return _LastMousePos; }
 		}
@@ -678,7 +538,6 @@ namespace MIDILightDrawer
 		bool		_IsDrawing;
 		Point^		_DrawStart;
 		Track^		_TargetTrack;
-		BarEvent^	_PreviewBar;
 		int			_StartTick;
 
 		int			_TickLength;
@@ -707,10 +566,6 @@ namespace MIDILightDrawer
 
 		property Track^ TargetTrack {
 			Track^ get() override { return _TargetTrack; }
-		}
-
-		property BarEvent^ PreviewBar{
-			BarEvent ^ get() override { return _PreviewBar; }
 		}
 
 		virtual property Color CurrentColor {

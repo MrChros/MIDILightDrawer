@@ -271,14 +271,14 @@ namespace MIDILightDrawer
         }
 
         // Save current clipping region
-        D2D1_RECT_F contentArea = D2D1::RectF(
+        D2D1_RECT_F ContentArea = D2D1::RectF(
             0,
             (float)HEADER_HEIGHT,
             (float)this->_Control->Width,
             (float)this->_Control->Height
         );
 
-        _NativeRenderer->PushAxisAlignedClip(contentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        _NativeRenderer->PushAxisAlignedClip(ContentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 
         try {
             // 1. Draw grid lines first (these should be visible through track content)
@@ -402,46 +402,46 @@ namespace MIDILightDrawer
     bool Timeline_Direct2DRenderer::DrawGridLines(float totalHeight)
     {
         // Calculate visible range in ticks
-        int startTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
-        int endTick = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width - TRACK_HEADER_WIDTH);
+        int StartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
+        int EndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width - TRACK_HEADER_WIDTH);
 
         // Draw grid lines in proper order (back to front)
-        DrawSubdivisionLines(totalHeight, startTick, endTick);
-        DrawBeatLines(totalHeight, startTick, endTick);
-        DrawMeasureLines(totalHeight, startTick, endTick);
+        DrawSubdivisionLines(totalHeight, StartTick, EndTick);
+        DrawBeatLines(totalHeight, StartTick, EndTick);
+        DrawMeasureLines(totalHeight, StartTick, EndTick);
 
         return true;
     }
 
     bool Timeline_Direct2DRenderer::DrawSubdivisionLines(float totalHeight, int startTick, int endTick)
     {
-        float subdivLevel = GetSubdivisionLevel(TicksToPixels(TICKS_PER_QUARTER));
-        if (subdivLevel <= 1) {
+        float SubdivLevel = GetSubdivisionLevel(TicksToPixels(TICKS_PER_QUARTER));
+        if (SubdivLevel <= 1) {
             return true;
         }
 
-        int accumulated = 0;
-        for each (MIDILightDrawer::Measure ^ measure in this->_Measures)
+        int Accumulated = 0;
+        for each (Measure^ measure in this->_Measures)
         {
-            int measureStart = accumulated;
-            int ticksPerBeat = TICKS_PER_QUARTER * 4 / measure->Denominator;
-            int ticksPerSubdiv = ticksPerBeat / (int)subdivLevel;
+            int MeasureStart = Accumulated;
+            int TicksPerBeat = TICKS_PER_QUARTER * 4 / measure->Denominator;
+            int TicksPerSubdiv = TicksPerBeat / (int)SubdivLevel;
 
             // Calculate subdivisions for this measure
-            int subdivisions = (measure->Length / ticksPerSubdiv);
+            int Subdivisions = (measure->Length / TicksPerSubdiv);
 
-            for (int subdiv = 1; subdiv < subdivisions; subdiv++)
+            for (int subdiv = 1; subdiv < Subdivisions; subdiv++)
             {
-                int subdivTick = measureStart + subdiv * ticksPerSubdiv;
+                int SubdivTick = MeasureStart + subdiv * TicksPerSubdiv;
 
                 // Skip if this is already a beat or measure line
-                if (subdivTick % ticksPerBeat == 0) {
+                if (SubdivTick % TicksPerBeat == 0) {
                     continue;
                 }
 
-                if (subdivTick >= startTick && subdivTick <= endTick)
+                if (SubdivTick >= startTick && SubdivTick <= endTick)
                 {
-                    float x = TicksToPixels(subdivTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+                    float x = TicksToPixels(SubdivTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
                     _NativeRenderer->DrawLine(
                         x, HEADER_HEIGHT,
                         x, HEADER_HEIGHT + totalHeight,
@@ -451,7 +451,7 @@ namespace MIDILightDrawer
                 }
             }
 
-            accumulated += measure->Length;
+            Accumulated += measure->Length;
         }
 
         return true;
@@ -512,16 +512,16 @@ namespace MIDILightDrawer
         return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType)
+    void Timeline_Direct2DRenderer::DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType)
     {
         if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
+            return;
         }
 
         // Get tool access interface
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
         // Calculate visible range in ticks
@@ -529,29 +529,30 @@ namespace MIDILightDrawer
         int EndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
 
         // Track if this track has any selected bars
-        bool HasSelectedBars = (ToolAccess->SelectedBars != nullptr && ToolAccess->SelectedBars->Count > 0);
-        bool IsDragging     = ToolAccess->IsDragging;
-        bool IsMoving		= ToolAccess->IsMoving;
-        bool IsResizing     = ToolAccess->IsResizing;
-        BarEvent^ SelectedBar  = ToolAccess->SelectedBar;
+        bool HasSelectedBars	= ToolAccess->SelectedBars->Count > 0;
+        bool IsDragging			= ToolAccess->IsDragging;
+        bool IsResizing			= ToolAccess->IsResizing;
 
-
-        // STEP 1: Draw non-selected bars
         for each (BarEvent^ Bar in track->Events)
         {
             if ((Bar->StartTick + Bar->Duration < StartTick) || (Bar->StartTick > EndTick)) {
                 continue;
             }
 
-            bool HoveredarByColorTool   = (SelectedBar == Bar) && (currentToolType == TimelineToolType::Color);
-            bool IsSelected             = HasSelectedBars && ToolAccess->SelectedBars->Contains(Bar);
+            bool IsSelected	= HasSelectedBars && ToolAccess->SelectedBars->Contains(Bar);
             
-            if (!IsSelected && !IsResizing && !IsMoving && !HoveredarByColorTool) {
+			if (!IsSelected) {
 				DrawNormalBar(Bar, trackContentBounds);
-            }
+			}
+			else if (IsSelected && !IsDragging && !IsResizing) {
+				DrawSelectedBar(Bar, trackContentBounds);
+			}
+			else if (IsSelected && (IsDragging || IsResizing)) {
+				DrawGhostBar(Bar, trackContentBounds);
+			}
         }
 
-        return true;
+        return;
     }
 
     bool Timeline_Direct2DRenderer::DrawTrackTablature(Track^ track, System::Drawing::Rectangle trackContentBounds)
@@ -1293,28 +1294,34 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackDividers(Track^ hoverTrack)
     {
-        if (!_NativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate || this->_Tracks == nullptr || this->_Tracks->Count == 0) {
             return false;
         }
 
-        float currentY = HEADER_HEIGHT;
+		// Get tool access interface
+		ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
+		if (!ToolAccess) {
+			return false;
+		}
+
+        float CurrentY = HEADER_HEIGHT;
 
         // Draw dividers between tracks
-        for each (Track ^ track in this->_Tracks)
+        for each (Track^ T in this->_Tracks)
         {
             // Calculate divider Y position
-            float dividerY = currentY + track->Height + this->_ScrollPosition->Y;
+            float SividerY = CurrentY + T->Height + this->_ScrollPosition->Y;
 
             // Only draw if divider is in visible range
-            if (dividerY >= 0 && dividerY <= (float)this->_Control->Height)
+            if (SividerY >= 0 && SividerY <= (float)this->_Control->Height)
             {
                 // Draw differently if this is the hover track
-                if (track == hoverTrack)
+                if (T == hoverTrack && !ToolAccess->IsDragging && !ToolAccess->IsSelecting)
                 {
                     // Draw a highlighted divider across the full width
                     _NativeRenderer->DrawLine(
-                        0.0f, dividerY,
-                        (float)this->_Control->Width, dividerY,
+                        0.0f, SividerY,
+                        (float)this->_Control->Width, SividerY,
                         COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight),
                         2.0f  // Thicker line for hover state
                     );
@@ -1322,18 +1329,18 @@ namespace MIDILightDrawer
                 else
                 {
                     // Draw normal divider
-                    _NativeRenderer->DrawLine(0.0f, dividerY, (float)this->_Control->Width, dividerY, COLOR_TO_COLOR_F(m_ColorTheme.MeasureLine), 1.0f);
+                    _NativeRenderer->DrawLine(0.0f, SividerY, (float)this->_Control->Width, SividerY, COLOR_TO_COLOR_F(m_ColorTheme.MeasureLine), 1.0f);
                 }
             }
 
             // Draw vertical divider between header and content
-            float headerBottom = currentY + track->Height;
-            if (headerBottom >= this->_ScrollPosition->Y && currentY <= this->_ScrollPosition->Y + (float)this->_Control->Height)
+            float headerBottom = CurrentY + T->Height;
+            if (headerBottom >= this->_ScrollPosition->Y && CurrentY <= this->_ScrollPosition->Y + (float)this->_Control->Height)
             {
-                _NativeRenderer->DrawLine(TRACK_HEADER_WIDTH, currentY, TRACK_HEADER_WIDTH, headerBottom, COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
+                _NativeRenderer->DrawLine(TRACK_HEADER_WIDTH, CurrentY, TRACK_HEADER_WIDTH, headerBottom, COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
             }
 
-            currentY += track->Height;
+            CurrentY += T->Height;
         }
 
         return true;
@@ -1375,29 +1382,29 @@ namespace MIDILightDrawer
         int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width);
 
 		
-		for each (BarEvent^ Bar in ToolAccess->SelectedBars)
-		{
-			if (Bar->EndTick < VisibleStartTick || Bar->StartTick > VisibleEndTick) {
-				continue;
-			}
+		//for each (BarEvent^ Bar in ToolAccess->SelectedBars)
+		//{
+		//	if (Bar->EndTick < VisibleStartTick || Bar->StartTick > VisibleEndTick) {
+		//		continue;
+		//	}
 
-			if (ToolAccess->IsDragging)
-			{
-				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->OriginalContainingTrack);
-				TrackContentBounds.Y += this->_ScrollPosition->Y;
-				
-				DrawGhostBar(Bar, TrackContentBounds);
-			}
-			else
-			{
-				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->ContainingTrack);
-				TrackContentBounds.Y += this->_ScrollPosition->Y;
+		//	if (ToolAccess->IsDragging)
+		//	{
+		//		System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->OriginalContainingTrack);
+		//		TrackContentBounds.Y += this->_ScrollPosition->Y;
+		//		
+		//		DrawGhostBar(Bar, TrackContentBounds);
+		//	}
+		//	else
+		//	{
+		//		System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->ContainingTrack);
+		//		TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-				DrawSelectedBar(Bar, TrackContentBounds);
-			}
-		}
+		//		DrawSelectedBar(Bar, TrackContentBounds);
+		//	}
+		//}
 
-		for each (BarEvent ^ Bar in ToolAccess->PreviewBars)
+		for each (BarEvent^ Bar in ToolAccess->PreviewBars)
 		{
 			if (Bar->EndTick < VisibleStartTick || Bar->StartTick > VisibleEndTick) {
 				continue;
@@ -1470,51 +1477,53 @@ namespace MIDILightDrawer
         return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewDrawToolDraw()
+	void Timeline_Direct2DRenderer::DrawToolPreviewDrawToolDraw()
     {
         if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
         // Draw preview bar if one exists
-        if (ToolAccess->PreviewBar != nullptr)
+        if (ToolAccess->PreviewBars->Count > 0)
         {
-            DrawPreviewBar(ToolAccess->PreviewBar, nullptr, ToolAccess->CurrentMousePosition, BarPreviewType::Creation);
+            DrawPreviewBar(ToolAccess->PreviewBars[0], nullptr, ToolAccess->CurrentMousePosition, BarPreviewType::Creation);
         }
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewDrawToolErase()
+	void Timeline_Direct2DRenderer::DrawToolPreviewDrawToolErase()
     {
         if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
-        BarEvent^ HoverBar = ToolAccess->SelectedBar;
-        if (HoverBar == nullptr) {
-            return true;
-        }
+		BarEvent^ HoveredBar = nullptr;
+		List<BarEvent^>^ SelectedBars = ToolAccess->SelectedBars;
+		if (SelectedBars->Count > 0) {
+			HoveredBar = SelectedBars[0];
+		}
+		else {
+			return;
+		}
 
         // Get track containing hover bar
-        Track^ ContainingTrack = HoverBar->ContainingTrack;
+        Track^ ContainingTrack = HoveredBar->ContainingTrack;
 
         if (ContainingTrack != nullptr)
         {
             System::Drawing::Rectangle bounds = GetTrackContentBounds(ContainingTrack);
             bounds.Y += this->_ScrollPosition->Y;
 
-            System::Drawing::Rectangle BarBounds = GetBarBounds(HoverBar, bounds);
+            System::Drawing::Rectangle BarBounds = GetBarBounds(HoveredBar, bounds);
 
             // Draw delete preview with semi-transparent red
             D2D1_RECT_F DeleteRect = RECT_TO_RECT_F(BarBounds);
@@ -1531,273 +1540,240 @@ namespace MIDILightDrawer
             _NativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Top, (float)BarBounds.Right, (float)BarBounds.Bottom, BorderColor, 2.0f);
             _NativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Bottom, (float)BarBounds.Right, (float)BarBounds.Top, BorderColor, 2.0f);
         }
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewDrawToolMove()
+	void Timeline_Direct2DRenderer::DrawToolPreviewDrawToolMove()
     {
         if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
-        BarEvent^ SelectedBar	= ToolAccess->SelectedBar;
-        BarEvent^ PreviewBar	= ToolAccess->PreviewBar;
+        List<BarEvent^>^ PreviewBars = ToolAccess->PreviewBars;
 
-        if (SelectedBar != nullptr)
+		if (PreviewBars->Count > 0)
 		{
-			if (ToolAccess->IsMoving)
-			{
-				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(SelectedBar->OriginalContainingTrack);
-				TrackContentBounds.Y += this->_ScrollPosition->Y;
-
-				DrawGhostBar(SelectedBar, TrackContentBounds);
-			}
-			else
-			{
-				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(SelectedBar->ContainingTrack);
-				TrackContentBounds.Y += this->_ScrollPosition->Y;
-
-				DrawSelectedBar(SelectedBar, TrackContentBounds);
-			}
-        }
-
-		if (PreviewBar != nullptr)
-		{
-			System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(PreviewBar->ContainingTrack);
+			System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(PreviewBars[0]->ContainingTrack);
 			TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-			DrawSelectedBar(PreviewBar, TrackContentBounds);
+			DrawSelectedBar(PreviewBars[0], TrackContentBounds);
 		}
-		/*
-        if (ToolAccess->IsMoving && (SelectedBar->StartTick != SelectedBar->OriginalStartTick || SelectedBar->ContainingTrack != SelectedBar->OriginalContainingTrack))
-        {
-            System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(SelectedBar->OriginalContainingTrack);
-            TrackContentBounds.Y += this->_ScrollPosition->Y;
-
-            DrawGhostBar(SelectedBar, TrackContentBounds);
-        }
-		*/
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewDrawToolResize()
+	void Timeline_Direct2DRenderer::DrawToolPreviewDrawToolResize()
     {
         if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
-        BarEvent^ HoverBar = ToolAccess->SelectedBar;
-        if (HoverBar == nullptr || ToolAccess->IsMoving) {
-            return true;
-        }
+		List<BarEvent^>^ PreviewBars = ToolAccess->PreviewBars;
+		if (PreviewBars->Count == 0 || !ToolAccess->IsResizing) {
+			return;
+		}
 
         // Get track containing hover bar
-        Track^ ContainingTrack = HoverBar->ContainingTrack;
+        Track^ ContainingTrack = PreviewBars[0]->ContainingTrack;
+		if (ContainingTrack == nullptr) {
+			return;
+		}
 
-        if (ContainingTrack != nullptr)
-        {
-            System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
-            TrackContentBounds.Y += this->_ScrollPosition->Y;
+		System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
+		TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-            DrawGhostBar(HoverBar, TrackContentBounds);
-            DrawPreviewBar(HoverBar, ContainingTrack, Point(), BarPreviewType::Duration);
+		//DrawGhostBar(HoveredBar, TrackContentBounds);
+		DrawPreviewBar(PreviewBars[0], ContainingTrack, Point(), BarPreviewType::Duration);
 
-            // Draw Resize Handle when Draw Tool is in Resize Mode
-            DrawResizeHandle(GetBarBounds(HoverBar, TrackContentBounds), true);
-        }
-
-        return true;
+		// Draw Resize Handle when Draw Tool is in Resize Mode
+		DrawResizeHandle(GetBarBounds(PreviewBars[0], TrackContentBounds), true);
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewEraseTool()
+	void Timeline_Direct2DRenderer::DrawToolPreviewEraseTool()
     {
         if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
         // Get the EraseTool's data
         List<BarEvent^>^ SelectedBars = ToolAccess->SelectedBars;
-        BarEvent^ HoverBar = ToolAccess->SelectedBar;
-
-        // Draw selection rectangle if present
-        System::Drawing::Rectangle SelectionRectangle = ToolAccess->SelectionRect;
-        DrawSelectionRectangle(SelectionRectangle);
+        BarEvent^ HoveredBar = ToolAccess->HoveredBar;
 
         // Check if we're hovering over a selected bar
-        bool IsHoveringSelected = (HoverBar != nullptr && SelectedBars->Contains(HoverBar));
+        bool IsHoveringSelected = (HoveredBar != nullptr && SelectedBars->Contains(HoveredBar));
 
-        // Draw all selected bars
-        for each (BarEvent^ bar in SelectedBars)
-        {
-            Track^ track = nullptr;
+		if(SelectedBars->Count > 0)
+		{
+			// Draw mark deleted for all selected bars
+			for each (BarEvent^ Bar in SelectedBars)
+			{
+				if (Bar->ContainingTrack != nullptr)
+				{
+					System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->ContainingTrack);
+					TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-            // Find the track containing this bar
-            for each (Track^ t in this->_Tracks)
-            {
-                if (t->Events->Contains(bar))
-                {
-                    track = t;
-                    break;
-                }
-            }
+					System::Drawing::Rectangle BarBounds = GetBarBounds(Bar, TrackContentBounds);
 
-            if (track != nullptr)
-            {
-                System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(track);
-                TrackContentBounds.Y += this->_ScrollPosition->Y;
+					DrawToolPreviewEraseToolDrawCross(BarBounds, IsHoveringSelected);
+				}
+			}
+		}
+		else if (HoveredBar != nullptr)
+		{
+			System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(HoveredBar->ContainingTrack);
+			TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-                System::Drawing::Rectangle BarBounds = GetBarBounds(bar, TrackContentBounds);
+			System::Drawing::Rectangle BarBounds = GetBarBounds(HoveredBar, TrackContentBounds);
 
-                // Create D2D rect
-                D2D1_RECT_F DeleteRect = RECT_TO_RECT_F(BarBounds);
+			DrawToolPreviewEraseToolDrawCross(BarBounds, true);
+		}
 
-                // Fill with light red
-                D2D1_COLOR_F FillColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.4f);  // Red with 40% opacity
-                _NativeRenderer->FillRectangle(DeleteRect, FillColor);
-
-                // If hovering over any selected bar, show delete preview for all selected bars
-                if (IsHoveringSelected)
-                {
-                    // Draw border and X with darker red
-                    D2D1_COLOR_F BorderColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.7f); // Red with 70% opacity
-
-                    // Draw border
-                    _NativeRenderer->DrawRectangle(DeleteRect, BorderColor, 2.0f);
-
-                    // Draw X
-                    _NativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Top, (float)BarBounds.Right, (float)BarBounds.Bottom, BorderColor, 2.0f);
-                    _NativeRenderer->DrawLine((float)BarBounds.Left, (float)BarBounds.Bottom, (float)BarBounds.Right, (float)BarBounds.Top, BorderColor, 2.0f);
-                }
-            }
-        }
-        
-        return true;
+		// Draw selection rectangle if present
+		DrawSelectionRectangle(ToolAccess->SelectionRect);
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewDurationTool()
+	void Timeline_Direct2DRenderer::DrawToolPreviewEraseToolDrawCross(System::Drawing::Rectangle barBounds, bool isHovered)
+	{
+		// Create D2D rect
+		D2D1_RECT_F DeleteRect = RECT_TO_RECT_F(barBounds);
+
+		// Fill with light red
+		D2D1_COLOR_F FillColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.4f);  // Red with 40% opacity
+		_NativeRenderer->FillRectangle(DeleteRect, FillColor);
+
+		// If hovering over any selected bar, show delete preview for all selected bars
+		if (isHovered)
+		{
+			// Draw border and X with darker red
+			D2D1_COLOR_F BorderColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.7f); // Red with 70% opacity
+
+			// Draw border
+			_NativeRenderer->DrawRectangle(DeleteRect, BorderColor, 2.0f);
+
+			// Draw X
+			_NativeRenderer->DrawLine((float)barBounds.Left, (float)barBounds.Top, (float)barBounds.Right, (float)barBounds.Bottom, BorderColor, 2.0f);
+			_NativeRenderer->DrawLine((float)barBounds.Left, (float)barBounds.Bottom, (float)barBounds.Right, (float)barBounds.Top, BorderColor, 2.0f);
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawToolPreviewDurationTool()
     {
         if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
         // Handle preview if tool is active
+		/*
         if (ToolAccess->PreviewBar != nullptr) {
             // Draw duration preview overlay
             DrawPreviewBar(ToolAccess->PreviewBar, ToolAccess->PreviewBar->ContainingTrack, Point(), BarPreviewType::Duration);
         }
+		*/
 
-        // Draw selected bars with enhanced visualization
-        List<BarEvent^>^ SelectedBars = ToolAccess->SelectedBars;
-        if (SelectedBars != nullptr && SelectedBars->Count > 0)
+        // Draw preview bars with enhanced visualization
+        for each (BarEvent^ Bar in ToolAccess->PreviewBars)
         {
-            for each (BarEvent^ Bar in SelectedBars)
-            {
-                Track^ ContainingTrack = Bar->ContainingTrack;
+            Track^ ContainingTrack = Bar->ContainingTrack;
 
-                if (ContainingTrack != nullptr)
-                {
-                    System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
-                    TrackContentBounds.Y += this->_ScrollPosition->Y;
+            if (ContainingTrack != nullptr)
+            {
+                System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
+                TrackContentBounds.Y += this->_ScrollPosition->Y;
                 
-                    DrawGhostBar(Bar, TrackContentBounds);
-                    DrawPreviewBar(Bar, ContainingTrack, Point(), BarPreviewType::Duration);
-                    DrawResizeHandle(GetBarBounds(Bar, TrackContentBounds), Bar == ToolAccess->PreviewBar);
-                }
+                //DrawGhostBar(Bar, TrackContentBounds);
+                DrawPreviewBar(Bar, ContainingTrack, Point(), BarPreviewType::Duration);
+                DrawResizeHandle(GetBarBounds(Bar, TrackContentBounds), Bar == ToolAccess->HoveredBar);
             }
         }
 
         // Draw selection rectangle if active
         DrawSelectionRectangle(ToolAccess->SelectionRect);
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewColorTool()
+	void Timeline_Direct2DRenderer::DrawToolPreviewColorTool()
     {
         if (!_NativeRenderer || !this->_ToolAccessDelegate) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
         // Get the ColorTool's specific data
-        List<BarEvent^>^    SelectedBars    = ToolAccess->SelectedBars;
-        BarEvent^           HoverBar        = ToolAccess->SelectedBar;
-        Color               CurrentColor    = ToolAccess->CurrentColor;
-        System::Drawing::Rectangle PreviewRect = ToolAccess->PreviewRect;
-        float BarXHoverRatio = ToolAccess->BarXHoverRatio;
+        List<BarEvent^>^	SelectedBars	= ToolAccess->SelectedBars;
+        BarEvent^			HoveredBar		= ToolAccess->HoveredBar;
+        Color				CurrentColor	= ToolAccess->CurrentColor;
 
-        // Draw selection rectangle if present
-        System::Drawing::Rectangle SelectionRectangle = ToolAccess->SelectionRect;
-        DrawSelectionRectangle(SelectionRectangle);
+		float BarXHoverRatio = ToolAccess->BarXHoverRatio;
 
-        // Draw all selected bars with a highlight
-        for each (BarEvent^ Bar in SelectedBars)
-        {
-            Track^ TargetTrack = Bar->ContainingTrack;
+		if (SelectedBars->Count > 0)
+		{
+			// Draw all selected bars with a highlight
+			for each (BarEvent ^ Bar in SelectedBars)
+			{
+				Track^ TargetTrack = Bar->ContainingTrack;
 
-            if (TargetTrack != nullptr)
-            {
-                System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(TargetTrack);
-                TrackContentBounds.Y += this->_ScrollPosition->Y;
+				if (TargetTrack != nullptr)
+				{
+					System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(TargetTrack);
+					TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-                System::Drawing::Rectangle BarBounds = GetBarBounds(Bar, TrackContentBounds);
-                D2D1_RECT_F BarRect = RECT_TO_RECT_F(BarBounds);
+					System::Drawing::Rectangle BarBounds = GetBarBounds(Bar, TrackContentBounds);
+					D2D1_RECT_F BarRect = RECT_TO_RECT_F(BarBounds);
 
-                DrawColorPreview(Bar, BarBounds, CurrentColor, 0.4f, 2.0f);
+					DrawColorPreview(Bar, BarBounds, CurrentColor, 0.4f, 2.0f);
 
-                // If this bar is being hovered over, show stronger highlight
-                if (Bar == HoverBar)
-                {
-                    // Draw glow effect
-                    for (int i = 2; i >= 0; i--)
-                    {
-                        D2D1_RECT_F GlowRect = D2D1::RectF(
-                            BarRect.left - i,
-                            BarRect.top - i,
-                            BarRect.right + i,
-                            BarRect.bottom + i
-                        );
+					// If this bar is being hovered over, show stronger highlight
+					if (Bar == HoveredBar)
+					{
+						// Draw glow effect
+						for (int i = 2; i >= 0; i--)
+						{
+							D2D1_RECT_F GlowRect = D2D1::RectF(
+								BarRect.left - i,
+								BarRect.top - i,
+								BarRect.right + i,
+								BarRect.bottom + i
+							);
 
-                        D2D1_COLOR_F GlowColor = COLOR_TO_COLOR_F_A(CurrentColor, 0.3f - (i * 0.1f));
-                        _NativeRenderer->DrawRectangle(GlowRect, GlowColor, 1.0f);
-                    }
-                }
-            }
-        }
+							D2D1_COLOR_F GlowColor = COLOR_TO_COLOR_F_A(CurrentColor, 0.3f - (i * 0.1f));
+							_NativeRenderer->DrawRectangle(GlowRect, GlowColor, 1.0f);
+						}
+					}
+				}
+			}
+		}
+		else if (HoveredBar != nullptr)
+		{
+			System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(HoveredBar->ContainingTrack);
+			TrackContentBounds.Y += this->_ScrollPosition->Y;
 
-        // Draw preview rectangle for hovered bar
-        if (!PreviewRect.IsEmpty && !SelectedBars->Contains(HoverBar))
-        {
-            DrawColorPreview(HoverBar, PreviewRect, CurrentColor, 0.3f, 1.0f);
-        }
+			System::Drawing::Rectangle BarBounds = GetBarBounds(HoveredBar, TrackContentBounds);
 
-        return true;
+			DrawColorPreview(HoveredBar, BarBounds, CurrentColor, 0.3f, 1.0f);
+		}
+
+		// Draw selection rectangle if present
+		DrawSelectionRectangle(ToolAccess->SelectionRect);
     }
 
     bool Timeline_Direct2DRenderer::DrawToolPreviewFadeTool()
@@ -1811,8 +1787,8 @@ namespace MIDILightDrawer
             return false;
         }
 
-        Track^      TargetTrack = ToolAccess->TargetTrack;
-        BarEvent^   PreviewBar = ToolAccess->PreviewBar;
+        Track^				TargetTrack = ToolAccess->TargetTrack;
+        List<BarEvent^>^	PreviewBars = ToolAccess->PreviewBars;
         System::Drawing::Point CurrentMousePos = ToolAccess->CurrentMousePosition;
 
         // Save current clip region
@@ -1827,10 +1803,10 @@ namespace MIDILightDrawer
 
         try
         {
-            if (PreviewBar != nullptr)
+            if (PreviewBars->Count > 0)
             {
                 // Draw single preview bar with creation effect
-                DrawPreviewBar(PreviewBar, nullptr, CurrentMousePos, BarPreviewType::Creation);
+                DrawPreviewBar(PreviewBars[0], nullptr, CurrentMousePos, BarPreviewType::Creation);
             }
         }
         finally
@@ -1853,8 +1829,8 @@ namespace MIDILightDrawer
             return false;
         }
 
-        Track^ TargetTrack = ToolAccess->TargetTrack;
-        BarEvent^ PreviewBar = ToolAccess->PreviewBar;
+        Track^				TargetTrack = ToolAccess->TargetTrack;
+        List<BarEvent^>^	PreviewBars = ToolAccess->PreviewBars;
         System::Drawing::Point CurrentMousePos = ToolAccess->CurrentMousePosition;
 
         // Save current clip region
@@ -1869,10 +1845,10 @@ namespace MIDILightDrawer
 
         try
         {
-            if (PreviewBar != nullptr)
+            if (PreviewBars->Count > 0)
             {
                 // Draw single preview bar with creation effect
-                DrawPreviewBar(PreviewBar, nullptr, CurrentMousePos, BarPreviewType::Creation);
+                DrawPreviewBar(PreviewBars[0], nullptr, CurrentMousePos, BarPreviewType::Creation);
             }
         }
         finally
@@ -1899,15 +1875,8 @@ namespace MIDILightDrawer
 			case BarEventType::Strobe:	DrawNormalBarStrobe	(bar, BarBounds); break;
 		}
 
-		TimelineToolType CurrentTool = this->_ToolAccessDelegate->CurrentToolType();
-
 		// Add tool-specific enhancements
-		// 1. Draw Resize Handles on each bar if Duration Tool is selected
-		if (CurrentTool == TimelineToolType::Duration)
-		{
-			DrawResizeHandle(BarBounds, false);
-		}
-
+		DrawToolEnhancements(BarBounds);
 	}
 
 	void Timeline_Direct2DRenderer::DrawNormalBarSolid(BarEvent^ bar, System::Drawing::Rectangle barBounds)
@@ -2239,7 +2208,10 @@ namespace MIDILightDrawer
 		}
 
         // Add glow effect
-        DrawBarGlowEffect(BarBounds, m_ColorTheme.SelectionHighlight, 2);
+        DrawBarGlowEffect(BarBounds, m_ColorTheme.SelectionHighlight, 6); // Was 2
+
+		// Add tool-specific enhancements
+		DrawToolEnhancements(BarBounds);
     }
 
 	void Timeline_Direct2DRenderer::DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
@@ -2344,23 +2316,6 @@ namespace MIDILightDrawer
         }
     }
 
-    void Timeline_Direct2DRenderer::DrawResizeHandle(System::Drawing::Rectangle barBounds, bool isTargeted)
-    {
-        if (!_NativeRenderer) {
-            return;
-        }
-
-        System::Drawing::Rectangle HandleBounds(barBounds.Right - 5, barBounds.Y + 5, 3, barBounds.Height - 10);
-
-        // Fill handle rectangle
-        _NativeRenderer->FillRectangle(RECT_TO_RECT_F(HandleBounds), COLOR_TO_COLOR_F_A(Color::White, 0.8f));
-
-        // Add glow effect for targeted handles
-        if (isTargeted) {
-            DrawBarGlowEffect(barBounds, m_ColorTheme.SelectionHighlight, 3);
-        }
-    }
-
     void Timeline_Direct2DRenderer::DrawSelectionRectangle(System::Drawing::Rectangle selectionRectangle)
     {
         if (!_NativeRenderer) {
@@ -2376,6 +2331,35 @@ namespace MIDILightDrawer
             _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(selectionRectangle), COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight), 1.0f);
         }
     }
+
+	void Timeline_Direct2DRenderer::DrawToolEnhancements(System::Drawing::Rectangle barBounds)
+	{
+		TimelineToolType CurrentTool = this->_ToolAccessDelegate->CurrentToolType();
+
+		// Add tool-specific enhancements
+		// 1. Draw Resize Handles on each bar if Duration Tool is selected
+		if (CurrentTool == TimelineToolType::Duration)
+		{
+			DrawResizeHandle(barBounds, false);
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawResizeHandle(System::Drawing::Rectangle barBounds, bool isTargeted)
+	{
+		if (!_NativeRenderer) {
+			return;
+		}
+
+		System::Drawing::Rectangle HandleBounds(barBounds.Right - 5, barBounds.Y + 5, 3, barBounds.Height - 10);
+
+		// Fill handle rectangle
+		_NativeRenderer->FillRectangle(RECT_TO_RECT_F(HandleBounds), COLOR_TO_COLOR_F_A(Color::White, 0.8f));
+
+		// Add glow effect for targeted handles
+		if (isTargeted) {
+			DrawBarGlowEffect(barBounds, m_ColorTheme.SelectionHighlight, 3);
+		}
+	}
 
     float Timeline_Direct2DRenderer::TicksToPixels(int ticks)
     {

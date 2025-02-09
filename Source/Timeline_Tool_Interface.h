@@ -15,41 +15,38 @@ namespace MIDILightDrawer
     // Interface for tool state access
     public interface class ITimelineToolAccess
     {
-        // Pointer Tool
-        property List<BarEvent^>^ SelectedBars { List<BarEvent^>^ get(); }
-        property System::Drawing::Rectangle SelectionRect { System::Drawing::Rectangle get(); }
+        // TimelineTool abstract
+		property List<BarEvent^>^ SelectedBars { List<BarEvent^>^ get(); }
+		property List<BarEvent^>^ PreviewBars { List<BarEvent^>^ get(); }
+		property bool IsSelecting { bool get(); }
+		property System::Drawing::Rectangle SelectionRect { System::Drawing::Rectangle get(); }
+		property System::Drawing::Point CurrentMousePosition { System::Drawing::Point get(); }
+		
+		// Pointer Tool
         property bool IsDragging { bool get(); }
-        property Track^ DragSourceTrack { Track^ get(); }
-        property Track^ DragTargetTrack { Track^ get(); }
         property bool IsMultiTrackSelection { bool get(); }
-        property System::Drawing::Point CurrentMousePosition { System::Drawing::Point get(); }
         property bool IsPasting { bool get(); }
         property List<BarEvent^>^ PastePreviewBars { List<BarEvent^>^ get(); }
 
         // Draw Tool
 		property System::Drawing::Color DrawColor { System::Drawing::Color get(); }
 		property int DrawTickLength { int get(); }
-		property BarEvent^ PreviewBar { BarEvent^ get(); }
 		property Track^ TargetTrack { Track^ get(); }
-		property Track^ SourceTrack { Track^  get(); }
 		property DrawToolMode CurrentMode { DrawToolMode  get(); }
-		property bool IsMoving  { bool get(); }
 		property bool IsResizing { bool get(); }
-		property BarEvent^ SelectedBar { BarEvent^ get(); }
 
         // Erase Tool
-        property System::Drawing::Rectangle ErasePreviewRect { System::Drawing::Rectangle get(); }
+		property BarEvent^ HoveredBar{ BarEvent ^ get(); }
 
         // Duration Tool
 		// All properties already covered by above definitions
 
         // Color Tool
-        property System::Drawing::Rectangle PreviewRect{ System::Drawing::Rectangle get(); }
         property System::Drawing::Color CurrentColor { System::Drawing::Color get(); }
         property float BarXHoverRatio { float get(); }
 
         // Fade Tool
-        property List<BarEvent^>^ PreviewBars { List<BarEvent^> ^ get(); }
+		// All properties already covered by above definitions
 
         // Strobe Tool
         // All properties already covered by above definitions

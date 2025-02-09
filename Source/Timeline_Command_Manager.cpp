@@ -42,9 +42,9 @@ namespace MIDILightDrawer
 	void TimelineCommandManager::Undo()
 	{
 		if (_UndoStack->Count > 0) {
-			ITimelineCommand^ command = _UndoStack->Pop();
-			command->Undo();
-			_RedoStack->Push(command);
+			ITimelineCommand^ Command = _UndoStack->Pop();
+			Command->Undo();
+			_RedoStack->Push(Command);
 
 			// Notify current tool
 			_Timeline->ToolAccess()->OnCommandStateChanged();
@@ -56,11 +56,11 @@ namespace MIDILightDrawer
 	void TimelineCommandManager::Redo()
 	{
 		if (_RedoStack->Count > 0) {
-			ITimelineCommand^ command = _RedoStack->Pop();
+			ITimelineCommand^ Command = _RedoStack->Pop();
 
-			command->Execute();
+			Command->Execute();
 
-			_UndoStack->Push(command);
+			_UndoStack->Push(Command);
 
 			// Notify current tool
 			_Timeline->ToolAccess()->OnCommandStateChanged();
@@ -193,11 +193,11 @@ namespace MIDILightDrawer
 		{
 			_SourceTrack->RemoveBar(_Bar);
 			_TargetTrack->AddBar(_Bar);
-
-			_Bar->OriginalContainingTrack = _Bar->ContainingTrack;
 		}
 
 		_Bar->StartTick = _NewStartTick;
+		_Bar->BasicInfoCopyWorkingToOriginal();
+
 		_Timeline->Invalidate();
 	}
 
@@ -206,11 +206,11 @@ namespace MIDILightDrawer
 		{
 			_TargetTrack->RemoveBar(_Bar);
 			_SourceTrack->AddBar(_Bar);
-
-			_Bar->OriginalContainingTrack = _Bar->ContainingTrack;
 		}
 
 		_Bar->StartTick = _OldStartTick;
+		_Bar->BasicInfoCopyWorkingToOriginal();
+
 		_Timeline->Invalidate();
 	}
 
@@ -232,15 +232,17 @@ namespace MIDILightDrawer
 
 	void ResizeBarCommand::Execute()
 	{
-		_Bar->Duration			= _NewDuration;
-		_Bar->OriginalDuration	= _NewDuration;
+		_Bar->Duration = _NewDuration;
+		_Bar->BasicInfoCopyWorkingToOriginal();
+
 		_Timeline->Invalidate();
 	}
 
 	void ResizeBarCommand::Undo()
 	{
-		_Bar->Duration			= _OldDuration;
-		_Bar->OriginalDuration	= _OldDuration;
+		_Bar->Duration = _OldDuration;
+		_Bar->BasicInfoCopyWorkingToOriginal();
+
 		_Timeline->Invalidate();
 	}
 
@@ -264,12 +266,14 @@ namespace MIDILightDrawer
 	void ChangeBarColorCommand::Execute()
 	{
 		_Bar->Color = _NewColor;
+
 		_Timeline->Invalidate();
 	}
 
 	void ChangeBarColorCommand::Undo()
 	{
 		_Bar->Color = _OldColor;
+
 		_Timeline->Invalidate();
 	}
 
@@ -340,6 +344,8 @@ namespace MIDILightDrawer
 	void DeleteBarCommand::Undo()
 	{
 		_Track->AddBar(_Bar);
+		_Bar->BasicInfoCopyWorkingToOriginal();
+
 		_Timeline->Invalidate();
 	}
 
@@ -363,15 +369,17 @@ namespace MIDILightDrawer
 	void PasteBarCommand::Execute()
 	{
 		_CreatedBars->Clear();
+
 		for (int i = 0; i < _Bars->Count; i++)
 		{
 			BarEvent^ OriginalBar = _Bars[i];
 			Track^ TargetTrack = _Tracks[i];
 
 			// Create a new bar with the same properties
-			BarEvent^ newBar = TimelineCommandManager::CreateBarCopy(OriginalBar, OriginalBar->StartTick, false);
-			TargetTrack->AddBar(newBar);
-			_CreatedBars->Add(newBar);
+			BarEvent^ NewBar = TimelineCommandManager::CreateBarCopy(OriginalBar, OriginalBar->StartTick, false);
+			TargetTrack->AddBar(NewBar);
+
+			_CreatedBars->Add(NewBar);
 		}
 		_Timeline->Invalidate();
 	}
@@ -381,6 +389,7 @@ namespace MIDILightDrawer
 		for each (BarEvent^ Bar in _CreatedBars) {
 			Bar->ContainingTrack->RemoveBar(Bar);
 		}
+
 		_Timeline->Invalidate();
 	}
 
@@ -408,12 +417,14 @@ namespace MIDILightDrawer
 			_Bar = gcnew BarEvent(_Track, _StartTick, _Duration, _FadeInfo);
 		}
 		_Track->AddBar(_Bar);
+
 		_Timeline->Invalidate();
 	}
 
 	void AddFadeBarCommand::Undo()
 	{
 		_Track->RemoveBar(_Bar);
+
 		_Timeline->Invalidate();
 	}
 
@@ -442,12 +453,14 @@ namespace MIDILightDrawer
 			_Bar = gcnew BarEvent(_Track, _StartTick, _Duration, _StrobeInfo);
 		}
 		_Track->AddBar(_Bar);
+
 		_Timeline->Invalidate();
 	}
 
 	void AddStrobeBarCommand::Undo()
 	{
 		_Track->RemoveBar(_Bar);
+
 		_Timeline->Invalidate();
 	}
 

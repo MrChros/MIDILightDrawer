@@ -39,7 +39,8 @@ namespace MIDILightDrawer {
 		}
 	}
 
-	void Widget_Toolbar::SetupToolIcons() {
+	void Widget_Toolbar::SetupToolIcons()
+	{
 		// Map tools to their corresponding icon names
 		// Note: These are placeholder names - replace with actual icon resources
 		_Tool_Icons->Add(TimelineToolType::Pointer	, "Pointer_White"	);
@@ -54,17 +55,17 @@ namespace MIDILightDrawer {
 
 	void Widget_Toolbar::CreateToolButtons()
 	{
-		FlowLayoutPanel^ toolPanel = gcnew FlowLayoutPanel();
-		toolPanel->AutoSize = true;
-		toolPanel->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
-		toolPanel->FlowDirection = FlowDirection::LeftToRight;
-		toolPanel->WrapContents = false;
-		toolPanel->Padding = System::Windows::Forms::Padding(1, 0, 0, 0);
-		toolPanel->Margin = System::Windows::Forms::Padding(0, 0, 0, 0);
-		toolPanel->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
+		FlowLayoutPanel^ ToolPanel = gcnew FlowLayoutPanel();
+		ToolPanel->AutoSize = true;
+		ToolPanel->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
+		ToolPanel->FlowDirection = FlowDirection::LeftToRight;
+		ToolPanel->WrapContents = false;
+		ToolPanel->Padding = System::Windows::Forms::Padding(1, 0, 0, 0);
+		ToolPanel->Margin = System::Windows::Forms::Padding(0, 0, 0, 0);
+		ToolPanel->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 
 		// Create a button for each tool
-		array<TimelineToolType>^ tools = {
+		array<TimelineToolType>^ Tools = {
 			TimelineToolType::Pointer,
 			TimelineToolType::Draw,
 			TimelineToolType::Split,
@@ -74,28 +75,28 @@ namespace MIDILightDrawer {
 			TimelineToolType::Fade
 		};
 
-		for each (KeyValuePair<TimelineToolType, String^> toolEntry in _Tool_Icons)
+		for each (KeyValuePair<TimelineToolType, String^> ToolEntry in _Tool_Icons)
 		{
-			Button^ btn = gcnew Button();
-			btn->Size		= Drawing::Size(BUTTON_SIZE, BUTTON_SIZE);
-			btn->Margin		= System::Windows::Forms::Padding(BUTTON_SPACING);
-			btn->FlatStyle	= FlatStyle::Flat;
-			btn->Tag		= toolEntry.Key;
-			btn->Text		= "";
-			btn->UseVisualStyleBackColor = false;
-			btn->Click += gcnew EventHandler(this, &Widget_Toolbar::OnToolButtonClick);
+			Button^ Btn = gcnew Button();
+			Btn->Size		= Drawing::Size(BUTTON_SIZE, BUTTON_SIZE);
+			Btn->Margin		= System::Windows::Forms::Padding(BUTTON_SPACING);
+			Btn->FlatStyle	= FlatStyle::Flat;
+			Btn->Tag		= ToolEntry.Key;
+			Btn->Text		= "";
+			Btn->UseVisualStyleBackColor = false;
+			Btn->Click += gcnew EventHandler(this, &Widget_Toolbar::OnToolButtonClick);
 
 			// Style the button using Theme Manager
-			Theme_Manager::Get_Instance()->ApplyThemeToButton(btn);
+			Theme_Manager::Get_Instance()->ApplyThemeToButton(Btn);
 
 			// Set icon and tooltip
-			StyleButton(btn, toolEntry.Value, toolEntry.Key.ToString());
+			StyleButton(Btn, ToolEntry.Value, ToolEntry.Key.ToString());
 
-			_Tool_Buttons->Add(btn);
-			toolPanel->Controls->Add(btn);
+			_Tool_Buttons->Add(Btn);
+			ToolPanel->Controls->Add(Btn);
 		}
 
-		this->Controls->Add(toolPanel);
+		this->Controls->Add(ToolPanel);
 	}
 
 	void Widget_Toolbar::StyleButton(Button^ button, String^ iconName, String^ toolTip)

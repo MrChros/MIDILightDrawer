@@ -17,18 +17,18 @@ namespace MIDILightDrawer
 	void Form_Settings_MIDI::Initialize_Note_Names()
 	{
 		_Note_Names = gcnew array<Note_Entry>{
-			Note_Entry("C" , 0),
-			Note_Entry("C#", 1),
-			Note_Entry("D" , 2),
-			Note_Entry("D#", 3),
-			Note_Entry("E" , 4),
-			Note_Entry("F" , 5),
-			Note_Entry("F#", 6),
-			Note_Entry("G" , 7),
-			Note_Entry("G#", 8),
-			Note_Entry("A" , 9),
-			Note_Entry("A#", 10),
-			Note_Entry("B" , 11)
+			Note_Entry("C", 0),
+				Note_Entry("C#", 1),
+				Note_Entry("D", 2),
+				Note_Entry("D#", 3),
+				Note_Entry("E", 4),
+				Note_Entry("F", 5),
+				Note_Entry("F#", 6),
+				Note_Entry("G", 7),
+				Note_Entry("G#", 8),
+				Note_Entry("A", 9),
+				Note_Entry("A#", 10),
+				Note_Entry("B", 11)
 		};
 	}
 
@@ -54,13 +54,12 @@ namespace MIDILightDrawer
 		_Main_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 350));
 		_Main_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 50));
 
-		_Group_Box_Notes = gcnew System::Windows::Forms::GroupBox();
-		_Group_Box_Notes->Text		= "Color MIDI Notes";
-		_Group_Box_Notes->Dock		= System::Windows::Forms::DockStyle::Fill;
-		_Group_Box_Notes->Height	= 150;
-		_Group_Box_Notes->Padding	= System::Windows::Forms::Padding(10, 15, 10, 10);
-		_Group_Box_Notes->Paint += gcnew PaintEventHandler(this, &Form_Settings_MIDI::GroupBox_Paint);
-		
+		_Group_Box_Notes = gcnew Control_GroupBox();
+		_Group_Box_Notes->Text = "Color MIDI Notes";
+		_Group_Box_Notes->Dock = System::Windows::Forms::DockStyle::Fill;
+		_Group_Box_Notes->Height = 150;
+		_Group_Box_Notes->Padding = System::Windows::Forms::Padding(10, 15, 10, 10);
+
 
 		_Notes_Layout = gcnew System::Windows::Forms::TableLayoutPanel();
 		_Notes_Layout->Dock = System::Windows::Forms::DockStyle::Fill;
@@ -84,7 +83,7 @@ namespace MIDILightDrawer
 		_Combo_Box_Red = gcnew System::Windows::Forms::ComboBox();
 		_Combo_Box_Red->Anchor = System::Windows::Forms::AnchorStyles::Left | System::Windows::Forms::AnchorStyles::Right;
 		_Combo_Box_Red->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-		_Combo_Box_Red->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::Combo_Box_Selected_Index_Changed);
+		_Combo_Box_Red->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::ComboBox_Selected_Index_Changed);
 		_Notes_Layout->Controls->Add(_Combo_Box_Red, 1, 0);
 
 		_Icon_Red = gcnew System::Windows::Forms::PictureBox();
@@ -102,7 +101,7 @@ namespace MIDILightDrawer
 		_Combo_Box_Green = gcnew System::Windows::Forms::ComboBox();
 		_Combo_Box_Green->Anchor = System::Windows::Forms::AnchorStyles::Left | System::Windows::Forms::AnchorStyles::Right;
 		_Combo_Box_Green->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-		_Combo_Box_Green->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::Combo_Box_Selected_Index_Changed);
+		_Combo_Box_Green->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::ComboBox_Selected_Index_Changed);
 		_Notes_Layout->Controls->Add(_Combo_Box_Green, 1, 1);
 
 		_Icon_Green = gcnew System::Windows::Forms::PictureBox();
@@ -120,7 +119,7 @@ namespace MIDILightDrawer
 		_Combo_Box_Blue = gcnew System::Windows::Forms::ComboBox();
 		_Combo_Box_Blue->Anchor = System::Windows::Forms::AnchorStyles::Left | System::Windows::Forms::AnchorStyles::Right;
 		_Combo_Box_Blue->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-		_Combo_Box_Blue->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::Combo_Box_Selected_Index_Changed);
+		_Combo_Box_Blue->SelectedIndexChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::ComboBox_Selected_Index_Changed);
 		_Notes_Layout->Controls->Add(_Combo_Box_Blue, 1, 2);
 
 		_Icon_Blue = gcnew System::Windows::Forms::PictureBox();
@@ -135,6 +134,7 @@ namespace MIDILightDrawer
 		_Checkbox_Anti_Flicker->AutoSize = true;
 		_Checkbox_Anti_Flicker->Padding = System::Windows::Forms::Padding(0, 0, 20, 5);
 		_Checkbox_Anti_Flicker->Anchor = System::Windows::Forms::AnchorStyles::Bottom;
+		_Checkbox_Anti_Flicker->CheckStateChanged += gcnew System::EventHandler(this, &Form_Settings_MIDI::Checkbox_Anti_Flicker_CheckStateChanged);
 		_Notes_Layout->Controls->Add(_Checkbox_Anti_Flicker, 0, 3);
 		_Notes_Layout->SetColumnSpan(_Checkbox_Anti_Flicker, 3);
 
@@ -151,11 +151,10 @@ namespace MIDILightDrawer
 		///////////////////////
 		// Group Box Octaves //
 		///////////////////////
-		_Group_Box_Octaves = gcnew System::Windows::Forms::GroupBox();
-		_Group_Box_Octaves->Text	= "Define Light Track Octaves";
-		_Group_Box_Octaves->Dock	= System::Windows::Forms::DockStyle::Fill;
+		_Group_Box_Octaves = gcnew Control_GroupBox();
+		_Group_Box_Octaves->Text = "Define Light Track Octaves";
+		_Group_Box_Octaves->Dock = System::Windows::Forms::DockStyle::Fill;
 		_Group_Box_Octaves->Padding = System::Windows::Forms::Padding(10, 15, 10, 10);
-		_Group_Box_Octaves->Paint += gcnew PaintEventHandler(this, &Form_Settings_MIDI::GroupBox_Paint);
 
 		_Octaves_Layout = gcnew System::Windows::Forms::TableLayoutPanel();
 		_Octaves_Layout->Dock = System::Windows::Forms::DockStyle::Fill;
@@ -198,7 +197,7 @@ namespace MIDILightDrawer
 	void Form_Settings_MIDI::Load_Current_Settings()
 	{
 		Settings^ Current_Settings = Settings::Get_Instance();
-	
+
 		// Find and select items by their values
 		for each (Note_Entry Note in _Note_Names)
 		{
@@ -224,9 +223,9 @@ namespace MIDILightDrawer
 	{
 		Settings^ Current_Settings = Settings::Get_Instance();
 
-		Current_Settings->MIDI_Note_Red		= Find_Note_Index_By_Name((String^)_Combo_Box_Red->SelectedItem);
-		Current_Settings->MIDI_Note_Green	= Find_Note_Index_By_Name((String^)_Combo_Box_Green->SelectedItem);
-		Current_Settings->MIDI_Note_Blue	= Find_Note_Index_By_Name((String^)_Combo_Box_Blue->SelectedItem);
+		Current_Settings->MIDI_Note_Red = Find_Note_Index_By_Name((String^)_Combo_Box_Red->SelectedItem);
+		Current_Settings->MIDI_Note_Green = Find_Note_Index_By_Name((String^)_Combo_Box_Green->SelectedItem);
+		Current_Settings->MIDI_Note_Blue = Find_Note_Index_By_Name((String^)_Combo_Box_Blue->SelectedItem);
 
 		Current_Settings->MIDI_Export_Anti_Flicker = _Checkbox_Anti_Flicker->Checked;
 	}
@@ -248,7 +247,7 @@ namespace MIDILightDrawer
 			_Icon_Red->Image = (_Combo_Box_Red->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
 			_Icon_Green->Image = (_Combo_Box_Green->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
 			_Icon_Blue->Image = (_Combo_Box_Blue->SelectedIndex != -1) ? Valid_Image : Invalid_Image;
-			
+
 			return;
 		}
 
@@ -260,11 +259,11 @@ namespace MIDILightDrawer
 
 			return;
 		}
-		
+
 		// Get note values
-		int RedValue	= _Note_Names[_Combo_Box_Red->SelectedIndex].Value;
-		int GreenValue	= _Note_Names[_Combo_Box_Green->SelectedIndex].Value;
-		int BlueValue	= _Note_Names[_Combo_Box_Blue->SelectedIndex].Value;
+		int RedValue = _Note_Names[_Combo_Box_Red->SelectedIndex].Value;
+		int GreenValue = _Note_Names[_Combo_Box_Green->SelectedIndex].Value;
+		int BlueValue = _Note_Names[_Combo_Box_Blue->SelectedIndex].Value;
 
 		// Red note checks
 		if (Math::Abs(RedValue - GreenValue) == 1 || Math::Abs(RedValue - BlueValue) == 1) {
@@ -318,7 +317,7 @@ namespace MIDILightDrawer
 		return -1;
 	}
 
-	void Form_Settings_MIDI::Combo_Box_Selected_Index_Changed(System::Object^ sender, System::EventArgs^ e)
+	void Form_Settings_MIDI::ComboBox_Selected_Index_Changed(System::Object^ sender, System::EventArgs^ e)
 	{
 		ComboBox^ Current_Combo_Box = safe_cast<ComboBox^>(sender);
 
@@ -328,7 +327,7 @@ namespace MIDILightDrawer
 		}
 
 		int NoteArrayIndex = Find_Note_Index_By_Name((String^)Current_Combo_Box->SelectedItem);
-		
+
 		if (NoteArrayIndex == -1) {
 			return;
 		}
@@ -337,7 +336,7 @@ namespace MIDILightDrawer
 
 		array<ComboBox^>^ All_Combo_Boxes = { _Combo_Box_Red, _Combo_Box_Green, _Combo_Box_Blue };
 
-		for each (ComboBox^ Other_Combo_Box in All_Combo_Boxes)
+		for each (ComboBox ^ Other_Combo_Box in All_Combo_Boxes)
 		{
 			NoteArrayIndex = Find_Note_Index_By_Name((String^)Other_Combo_Box->SelectedItem);
 			if (NoteArrayIndex == -1) {
@@ -353,6 +352,12 @@ namespace MIDILightDrawer
 		}
 
 		Update_Status_Icons();
+	}
+
+	void Form_Settings_MIDI::Checkbox_Anti_Flicker_CheckStateChanged(System::Object^ sender, System::EventArgs^ e)
+	{
+		Update_Status_Icons();
+		Save_Settings();
 	}
 
 	void Form_Settings_MIDI::Button_OK_Click(System::Object^ sender, System::EventArgs^ e)
@@ -390,66 +395,67 @@ namespace MIDILightDrawer
 		this->Close();
 	}
 
-	void Form_Settings_MIDI::Initialize_Octaves_Section() {
+	void Form_Settings_MIDI::Initialize_Octaves_Section()
+	{
 		_Octaves_Layout->ColumnCount = 1;
 		_Octaves_Layout->RowCount = 2;
 		_Octaves_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 51));
 		_Octaves_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100));
 
-		Panel^ buttonPanel = gcnew Panel();
-		buttonPanel->Dock = DockStyle::Fill;
+		Panel^ ButtonPanel = gcnew Panel();
+		ButtonPanel->Dock = DockStyle::Fill;
 
 		// Set fixed size for all buttons to accommodate 16x16 icon plus padding
-		int buttonWidth		= 33;	// 16px icon + 8px padding on each side
-		int buttonHeight	= 33;	// 16px icon + 8px padding on top and bottom + 1px extra
-		int buttonSpacing	= 8;	// Space between buttons
+		int ButtonWidth = 33;	// 16px icon + 8px padding on each side
+		int ButtonHeight = 33;	// 16px icon + 8px padding on top and bottom + 1px extra
+		int ButtonSpacing = 8;	// Space between buttons
 
 		// Calculate total width needed for all buttons
-		int totalButtonsWidth = (buttonWidth * 4) + (buttonSpacing * 3); // 4 buttons, 3 gaps
+		int TotalButtonsWidth = (ButtonWidth * 4) + (ButtonSpacing * 3); // 4 buttons, 3 gaps
 		// Calculate starting X to center the buttons in the panel
-		int startX = (buttonPanel->Width - totalButtonsWidth) / 2;
+		int StartX = (ButtonPanel->Width - TotalButtonsWidth) / 2;
 
 		// Center buttons vertically in the 41px high panel (excluding the 10px gap)
-		int startY = (41 - buttonHeight) / 2;
+		int StartY = (41 - ButtonHeight) / 2;
 
 		_Button_Add_Octave = gcnew Button();
-		_Button_Add_Octave->Size = System::Drawing::Size(buttonWidth, buttonHeight);
-		_Button_Add_Octave->Location = Point(startX, startY);
+		_Button_Add_Octave->Size = System::Drawing::Size(ButtonWidth, ButtonHeight);
+		_Button_Add_Octave->Location = Point(StartX, StartY);
 		_Button_Add_Octave->Click += gcnew EventHandler(this, &Form_Settings_MIDI::Add_Octave_Entry_Click);
 		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Add_Octave);
 		_Button_Add_Octave->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Add")));
 
 		_Button_Remove = gcnew Button();
-		_Button_Remove->Size = System::Drawing::Size(buttonWidth, buttonHeight);
-		_Button_Remove->Location = Point(startX + buttonWidth + buttonSpacing, startY);
+		_Button_Remove->Size = System::Drawing::Size(ButtonWidth, ButtonHeight);
+		_Button_Remove->Location = Point(StartX + ButtonWidth + ButtonSpacing, StartY);
 		_Button_Remove->Click += gcnew EventHandler(this, &Form_Settings_MIDI::Remove_Entry_Click);
 		_Button_Remove->Enabled = false;
 		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Remove);
 		_Button_Remove->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Delete")));
 
 		_Button_Move_Up = gcnew Button();
-		_Button_Move_Up->Size = System::Drawing::Size(buttonWidth, buttonHeight);
-		_Button_Move_Up->Location = Point(startX + (buttonWidth + buttonSpacing) * 2, startY);
+		_Button_Move_Up->Size = System::Drawing::Size(ButtonWidth, ButtonHeight);
+		_Button_Move_Up->Location = Point(StartX + (ButtonWidth + ButtonSpacing) * 2, StartY);
 		_Button_Move_Up->Click += gcnew EventHandler(this, &Form_Settings_MIDI::Move_Up_Click);
 		_Button_Move_Up->Enabled = false;
 		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Move_Up);
 		_Button_Move_Up->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Arrow_Up")));
 
 		_Button_Move_Down = gcnew Button();
-		_Button_Move_Down->Size = System::Drawing::Size(buttonWidth, buttonHeight);
-		_Button_Move_Down->Location = Point(startX + (buttonWidth + buttonSpacing) * 3, startY);
+		_Button_Move_Down->Size = System::Drawing::Size(ButtonWidth, ButtonHeight);
+		_Button_Move_Down->Location = Point(StartX + (ButtonWidth + ButtonSpacing) * 3, StartY);
 		_Button_Move_Down->Click += gcnew EventHandler(this, &Form_Settings_MIDI::Move_Down_Click);
 		_Button_Move_Down->Enabled = false;
 		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Move_Down);
 		_Button_Move_Down->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Arrow_Down")));
-		
-		
-		buttonPanel->Controls->Add(_Button_Add_Octave);
-		buttonPanel->Controls->Add(_Button_Remove);
-		buttonPanel->Controls->Add(_Button_Move_Up);
-		buttonPanel->Controls->Add(_Button_Move_Down);
 
-		_Octaves_Layout->Controls->Add(buttonPanel, 0, 0);
+
+		ButtonPanel->Controls->Add(_Button_Add_Octave);
+		ButtonPanel->Controls->Add(_Button_Remove);
+		ButtonPanel->Controls->Add(_Button_Move_Up);
+		ButtonPanel->Controls->Add(_Button_Move_Down);
+
+		_Octaves_Layout->Controls->Add(ButtonPanel, 0, 0);
 
 		// Initialize DataGridView
 		_Grid_Octaves = gcnew Control_DataGrid();
@@ -470,18 +476,18 @@ namespace MIDILightDrawer
 
 		// Name column
 		_Column_Name = gcnew DataGridViewTextBoxColumn();
-		_Column_Name->Name				= "Light Track Name";
-		_Column_Name->HeaderText		= "Light Track Name";
-		_Column_Name->DataPropertyName	= "Light Track Name";
-		_Column_Name->FillWeight		= 70;
+		_Column_Name->Name = "Light Track Name";
+		_Column_Name->HeaderText = "Light Track Name";
+		_Column_Name->DataPropertyName = "Light Track Name";
+		_Column_Name->FillWeight = 70;
 		_Column_Name->SortMode = DataGridViewColumnSortMode::NotSortable;
 
 		// Octave column with ComboBox
 		_Column_Octave = gcnew DataGridViewComboBoxColumn();
-		_Column_Octave->Name				= "Octave";
-		_Column_Octave->HeaderText			= "Octave";
-		_Column_Octave->DataPropertyName	= "Octave";
-		_Column_Octave->FillWeight			= 30;
+		_Column_Octave->Name = "Octave";
+		_Column_Octave->HeaderText = "Octave";
+		_Column_Octave->DataPropertyName = "Octave";
+		_Column_Octave->FillWeight = 30;
 		_Column_Octave->SortMode = DataGridViewColumnSortMode::NotSortable;
 
 		// Add octave range options
@@ -620,47 +626,5 @@ namespace MIDILightDrawer
 		//	}
 		//	_Grid_Octaves->Rows[e->RowIndex]->ErrorText = "";
 		//}
-	}
-
-	void Form_Settings_MIDI::GroupBox_Paint(Object^ sender, PaintEventArgs^ e)
-	{
-		GroupBox^ box = safe_cast<GroupBox^>(sender);
-		Theme_Manager^ theme = Theme_Manager::Get_Instance();
-
-		Graphics^ g = e->Graphics;
-		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
-
-		// Calculate text size and positions
-		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
-		SizeF textSize = g->MeasureString(box->Text, titleFont);
-
-		// Define header rect
-		System::Drawing::Rectangle headerRect = System::Drawing::Rectangle(0, 0, box->Width, 28);
-
-		// Draw header background with gradient
-		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
-			headerRect,
-			theme->BackgroundAlt,
-			theme->Background,
-			Drawing2D::LinearGradientMode::Vertical);
-
-		g->FillRectangle(headerBrush, headerRect);
-
-		// Draw title
-		g->DrawString(box->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
-
-		// Draw border
-		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
-		g->DrawRectangle(borderPen, 0, 0, box->Width - 1, box->Height - 1);
-
-		// Draw header bottom line with accent
-		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
-		g->DrawLine(accentPen, 0, headerRect.Bottom, box->Width, headerRect.Bottom);
-
-		// Clean up
-		delete headerBrush;
-		delete borderPen;
-		delete accentPen;
-		delete titleFont;
 	}
 }

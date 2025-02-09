@@ -15,9 +15,9 @@ namespace MIDILightDrawer {
 			uint8_t numerator;
 			uint8_t denominator;
 			uint32_t tempo_bpm;
-			uint32_t start_tick;
+			uint32_t tick_start;
 
-			Measure(uint8_t num, uint8_t denom, uint32_t tempo, uint32_t tick) : numerator(num), denominator(denom), tempo_bpm(tempo), start_tick(tick) { }
+			Measure(uint8_t num, uint8_t denom, uint32_t tempo, uint32_t tick) : numerator(num), denominator(denom), tempo_bpm(tempo), tick_start(tick) { }
 		};
 
 		struct MIDI_Event

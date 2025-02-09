@@ -248,6 +248,9 @@ namespace MIDILightDrawer
 		BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventFadeInfo^ fade_info);
 		BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventStrobeInfo^ strobe_info);
 
+		void BasicInfoCopyWorkingToOriginal();
+		void BasicInfoCopyOriginalToWorking();
+
 	private:
 		BarEventType _Type;
 		

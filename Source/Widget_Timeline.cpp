@@ -982,7 +982,7 @@ namespace MIDILightDrawer
 			// If we're actively resizing, update the track height
 			UpdateTrackResize(e->Y);
 		}
-		else if (IsOverDivider)
+		else if (IsOverDivider && !_CurrentTool->IsResizing)
 		{
 			// Just hovering over a divider
 			if (_ResizeHoverTrack != HoverTrack)

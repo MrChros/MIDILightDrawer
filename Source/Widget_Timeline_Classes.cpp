@@ -284,6 +284,20 @@ namespace MIDILightDrawer
 		this->_IgnoreForOverlap = false;
 	}
 
+	void BarEvent::BasicInfoCopyWorkingToOriginal()
+	{
+		this->_Original.StartTick		= this->_Working.StartTick;
+		this->_Original.DurationInTicks = this->_Working.DurationInTicks;
+		this->_Original.Track			= this->_Working.Track;
+	}
+
+	void BarEvent::BasicInfoCopyOriginalToWorking()
+	{
+		this->_Working.StartTick		= this->_Original.StartTick;
+		this->_Working.DurationInTicks	= this->_Original.DurationInTicks;
+		this->_Working.Track			= this->_Original.Track;
+	}
+
 	void BarEvent::StartTick::set(int value)
 	{
 		if(value < 0) {

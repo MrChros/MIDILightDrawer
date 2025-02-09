@@ -552,9 +552,9 @@ namespace MIDILightDrawer
 
 	void Form_Main::Menu_Edit_UndoHistory_Click(Object^ sender, EventArgs^ e)
 	{
-		ToolStripMenuItem^ item = safe_cast<ToolStripMenuItem^>(sender);
+		ToolStripMenuItem^ Item = safe_cast<ToolStripMenuItem^>(sender);
 
-		int TargetIndex = safe_cast<int>(item->Tag);
+		int TargetIndex = safe_cast<int>(Item->Tag);
 		int CurrentIndex = _Timeline->CommandManager()->GetCurrentIndex();
 
 		for (int i = CurrentIndex; i >= TargetIndex; i--) {
@@ -682,7 +682,7 @@ namespace MIDILightDrawer
 		{
 			if (i <= CurrentIndex && i < Commands->Count) {
 				_Menu_Edit_UndoSteps_Items[i]->Text = Commands[CurrentIndex - i]->GetDescription();
-				_Menu_Edit_UndoSteps_Items[i]->Tag = CurrentIndex;
+				_Menu_Edit_UndoSteps_Items[i]->Tag = i;
 				_Menu_Edit_UndoSteps_Items[i]->Visible = true;
 			}
 			else {

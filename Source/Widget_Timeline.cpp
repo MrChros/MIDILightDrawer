@@ -1,6 +1,9 @@
 #include "Widget_Timeline.h"
 #include "Widget_Timeline_Tools.h"
 
+#include "Control_ColorPreset.h"
+
+
 namespace MIDILightDrawer
 {
 	// Widget_Timeline Implementation
@@ -37,6 +40,7 @@ namespace MIDILightDrawer
 
 		_CommandManager = gcnew TimelineCommandManager(this);
 		InitializeToolSystem();
+		InitializeContextMenu();
 
 #ifdef _DEBUG
 		_D2DRenderer = gcnew Timeline_Direct2DRenderer_Performance(_Tracks, _Measures, _ZoomLevel, _ScrollPosition);
@@ -272,6 +276,47 @@ namespace MIDILightDrawer
 		this->_SnappingType = type;
 	}
 
+	void Widget_Timeline::ShowContextMenu(BarEvent^ bar, Point location)
+	{
+		if (bar == nullptr) {
+			return;
+		}
+
+		this->_ContextMenuBar = bar;
+		this->_ContextMenu->Items->Clear();
+
+		this->CreateContextMenuCommon();
+
+		switch (bar->Type)
+		{
+		case BarEventType::Solid:	CreateContextMenuSolid();
+			//_ContextMenu->Items->Add("Change Color");
+			break;
+
+		case BarEventType::Fade:	CreateContextMenuFade();	break;
+		case BarEventType::Strobe:	CreateContextMenuStrobe();	break;
+		/*
+		case BarEventType::Fade:
+			_ContextMenu->Items->Add("Change Start Color");
+			_ContextMenu->Items->Add("Change End Color");
+			if (bar->FadeInfo->Type == FadeType::Three_Colors) {
+				_ContextMenu->Items->Add("Change Center Color");
+			}
+			_ContextMenu->Items->Add("Change Quantization");
+			break;
+		*/
+		/*
+		case BarEventType::Strobe:
+			_ContextMenu->Items->Add("Change Strobe Color");
+			_ContextMenu->Items->Add("Change Strobe Rate");
+			break;
+		*/
+		}
+
+		// Show the context menu
+		_ContextMenu->Show(this, location);
+	}
+
 	void Widget_Timeline::SetCurrentTool(TimelineToolType tool)
 	{
 		if (_CurrentToolType != tool)
@@ -293,6 +338,65 @@ namespace MIDILightDrawer
 
 			Invalidate();
 		}
+	}
+
+	PointerTool^ Widget_Timeline::GetPointerTool()
+	{ 
+		return (PointerTool^)(_Tools[TimelineToolType::Pointer]);
+	}
+
+	DrawTool^ Widget_Timeline::GetDrawTool()
+	{ 
+		return (DrawTool^)(_Tools[TimelineToolType::Draw]); 
+	}
+
+	SplitTool^ Widget_Timeline::GetSplitTool()
+	{ 
+		return (SplitTool^)(_Tools[TimelineToolType::Split]); 
+	}
+
+	EraseTool^ Widget_Timeline::GetEraseTool()
+	{
+		return (EraseTool^)(_Tools[TimelineToolType::Erase]); 
+	}
+	DurationTool^ Widget_Timeline::GetDurationTool()
+	{
+		return (DurationTool^)(_Tools[TimelineToolType::Duration]);
+	}
+
+	ColorTool^ Widget_Timeline::GetColorTool()
+	{ 
+		return (ColorTool^)(_Tools[TimelineToolType::Color]); 
+	}
+	FadeTool^ Widget_Timeline::GetFadeTool()
+	{ 
+		return (FadeTool^)(_Tools[TimelineToolType::Fade]);
+	}
+
+	StrobeTool^ Widget_Timeline::GetStrobeTool()
+	{ 
+		return (StrobeTool^)(_Tools[TimelineToolType::Strobe]); 
+	
+	}
+
+	TimelineCommandManager^ Widget_Timeline::CommandManager()
+	{
+		return _CommandManager;
+	}
+
+	TimelineToolType Widget_Timeline::CurrentToolType()
+	{
+		return _CurrentToolType;
+	}
+
+	ITimelineToolAccess^ Widget_Timeline::ToolAccess()
+	{
+		return safe_cast<ITimelineToolAccess^>(_Tools[_CurrentToolType]);
+	}
+
+	TrackButtonId Widget_Timeline::HoverButton()
+	{
+		return _HoveredButton;
 	}
 
 	int Widget_Timeline::SnapTickToGrid(int tick)
@@ -906,6 +1010,17 @@ namespace MIDILightDrawer
 		Invalidate();
 	}
 
+	void Widget_Timeline::OnMouseClick(MouseEventArgs^ e)
+	{
+		if (e->Button == Windows::Forms::MouseButtons::Right) {
+			if (_CurrentTool != nullptr) {
+				_CurrentTool->OnMouseRightClick(e);
+			}
+		}
+
+		Control::OnMouseClick(e);
+	}
+
 	void Widget_Timeline::OnMouseDown(MouseEventArgs^ e)
 	{
 		if (_HoveredButton.Track != nullptr)
@@ -1105,6 +1220,19 @@ namespace MIDILightDrawer
 		}
 	}
 
+	bool Widget_Timeline::ProcessDialogKey(Keys keyData)
+	{
+		OnKeyDown(gcnew KeyEventArgs(keyData));
+
+		return true;
+	}
+
+	bool Widget_Timeline::IsInputKey(Keys keyData)
+	{
+		return true;  // Tell Windows Forms that all keys are input keys
+	}
+
+
 	/////////////////////
 	// Private Methods //
 	/////////////////////
@@ -1144,6 +1272,140 @@ namespace MIDILightDrawer
 		// Set default tool
 		_CurrentToolType = TimelineToolType::Pointer;
 		_CurrentTool = _Tools[_CurrentToolType];
+	}
+
+	void Widget_Timeline::InitializeContextMenu()
+	{
+		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
+		
+		_ContextMenu = gcnew System::Windows::Forms::ContextMenuStrip();
+		_ContextMenu->ItemClicked += gcnew ToolStripItemClickedEventHandler(this, &Widget_Timeline::HandleContextMenuClick);
+	
+		Theme_Manager::Get_Instance()->ApplyThemeToContextMenu(_ContextMenu);
+	}
+
+	void Widget_Timeline::CreateContextMenuCommon()
+	{
+		_ContextMenu->Items->Add(ContextMenuStrings::Copy);
+		_ContextMenu->Items->Add(ContextMenuStrings::Delete);
+		_ContextMenu->Items->Add(ContextMenuStrings::Separator);
+	}
+
+	void Widget_Timeline::CreateContextMenuSolid()
+	{
+		CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColor);
+	}
+
+	void Widget_Timeline::CreateContextMenuFade()
+	{
+		if (_ContextMenuBar->FadeInfo->Type == FadeType::Two_Colors)
+		{
+			_ContextMenu->Items->Add(ContextMenuStrings::FadeSwitchThree);
+		}
+		else if (_ContextMenuBar->FadeInfo->Type == FadeType::Two_Colors)
+		{
+			_ContextMenu->Items->Add(ContextMenuStrings::FadeSwitchTwo);
+		}
+		
+		CreateContextMenuSubChangeQuantization(_ContextMenuBar->FadeInfo->QuantizationTicks);
+		_ContextMenu->Items->Add(ContextMenuStrings::Separator);
+
+		CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColorStart);
+		if (_ContextMenuBar->FadeInfo->Type == FadeType::Three_Colors)
+		{
+			CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColorCenter);
+		}
+		CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColorEnd);
+	}
+
+	void Widget_Timeline::CreateContextMenuStrobe()
+	{
+		CreateContextMenuSubChangeQuantization(_ContextMenuBar->StrobeInfo->QuantizationTicks);
+		CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColor);
+	}
+
+	void Widget_Timeline::CreateContextMenuSubChangeColor(String^ menuTitle)
+	{
+		ToolStripMenuItem^ SubMenuChangeColor = gcnew ToolStripMenuItem(menuTitle);
+
+		Settings^ Settings = Settings::Get_Instance();
+		List<Color>^ PresetColors = Settings->ColorPresetsColor;
+
+		for (int i = 0;i<PresetColors->Count;i++)
+		{
+			Color Col = PresetColors[i];
+			SubMenuChangeColor->DropDownItems->Add("Preset Color " + (i+1).ToString(), Control_ColorPreset::CreateColorBitmap(Col, 20));
+		}
+
+		SubMenuChangeColor->DropDownItemClicked += gcnew ToolStripItemClickedEventHandler(this, &Widget_Timeline::HandleContextMenuClick);
+
+		this->_ContextMenu->Items->Add(SubMenuChangeColor);
+	}
+
+	void Widget_Timeline::CreateContextMenuSubChangeQuantization(int currentQuantization)
+	{
+		ToolStripMenuItem^ SubMenuChangeQuantization = gcnew ToolStripMenuItem(ContextMenuStrings::ChangeQuantization);
+
+		for each (String^ StringKey in ContextMenuStrings::QuantizationValues->Keys)
+		{
+			if(ContextMenuStrings::QuantizationValues[StringKey] == currentQuantization) {
+				SubMenuChangeQuantization->DropDownItems->Add(StringKey, (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Tick_White"))));
+			} 
+			else {
+				SubMenuChangeQuantization->DropDownItems->Add(StringKey);
+			}
+		}
+
+		SubMenuChangeQuantization->DropDownItemClicked += gcnew ToolStripItemClickedEventHandler(this, &Widget_Timeline::HandleContextMenuClick);
+
+		this->_ContextMenu->Items->Add(SubMenuChangeQuantization);
+	}
+
+	void Widget_Timeline::HandleContextMenuClick(System::Object^ sender, ToolStripItemClickedEventArgs^ e)
+	{
+		ToolStripItemClickedEventArgs^ Args = safe_cast<ToolStripItemClickedEventArgs^>(e);
+		
+		String^ ItemText = Args->ClickedItem->Text;
+
+		if (_ContextMenuBar == nullptr) {
+			return;
+		}
+
+		// Handle menu item clicks
+		if (ItemText == ContextMenuStrings::Copy) {
+			System::Diagnostics::Debug::WriteLine("Copy clicked for bar");
+		}
+		else if (ItemText == ContextMenuStrings::Delete) {
+			System::Diagnostics::Debug::WriteLine("Delete clicked for bar");
+		}
+		else if (ItemText == ContextMenuStrings::ChangeColor) {
+			System::Diagnostics::Debug::WriteLine("Change color clicked for solid bar");
+		}
+		else if (ItemText == ContextMenuStrings::ChangeColorStart) {
+			
+		}
+		else if (ItemText == ContextMenuStrings::ChangeColorCenter) {
+			
+		}
+		else if (ItemText == ContextMenuStrings::ChangeColorEnd) {
+			
+		}
+		else if (ItemText == ContextMenuStrings::ChangeQuantization) {
+
+		}
+		else if (ItemText == ContextMenuStrings::FadeSwitchTwo) {
+
+		}
+		else if (ItemText == ContextMenuStrings::FadeSwitchThree) {
+
+		}
+		else {
+			// Drop Down Menu clicked
+			ToolStripMenuItem^ ParentItem = safe_cast<ToolStripMenuItem^>(Args->ClickedItem->OwnerItem);
+			int a = 5;
+		}
+
+		_ContextMenuBar = nullptr; // Clear the reference
 	}
 
 	float Widget_Timeline::GetSubdivisionLevel()
@@ -1498,5 +1760,55 @@ namespace MIDILightDrawer
 	{
 		_ScrollPosition->Y = -e->NewValue;
 		Invalidate();
+	}
+
+	////////////////
+	// Properties //
+	////////////////
+	ThemeColors Widget_Timeline::Theme::get()
+	{
+		return _CurrentTheme;
+	}
+
+	void Widget_Timeline::Theme::set(ThemeColors value)
+	{
+		_CurrentTheme = value;
+	}
+
+	List<Track^>^ Widget_Timeline::Tracks:: get()
+	{
+		return _Tracks;
+	}
+	
+	List<Measure^>^ Widget_Timeline::Measures::get()
+	{
+		return _Measures;
+	}
+
+	int Widget_Timeline::TotalTicks::get()
+	{
+		int TotalTicks = 0;
+
+		for each(Measure^ M in _Measures)
+		{
+			TotalTicks += M->Length;
+		}
+
+		return TotalTicks;
+	}
+
+	TimelineToolType Widget_Timeline::CurrentTool::get()
+	{ 
+		return _CurrentToolType; 
+	}
+
+	void Widget_Timeline::CurrentTool::set(TimelineToolType value) 
+	{ 
+		SetCurrentTool(value); 
+	}
+
+	Point^ Widget_Timeline::ScrollPosition::get() 
+	{ 
+		return _ScrollPosition;
 	}
 }

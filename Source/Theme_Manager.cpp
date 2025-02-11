@@ -169,6 +169,25 @@ namespace MIDILightDrawer
 		grid->AlternatingRowsDefaultCellStyle->SelectionForeColor = ForegroundText;
 	}
 
+	void Theme_Manager::ApplyThemeToContextMenu(ContextMenuStrip^ contextMenu)
+	{
+		// Set basic properties
+		contextMenu->BackColor = BackgroundAlt;
+		contextMenu->ForeColor = ForegroundText;
+		contextMenu->RenderMode = ToolStripRenderMode::Professional;
+
+		// Use the custom renderer
+		contextMenu->Renderer = gcnew ToolStripProfessionalRenderer(GetColorTable());
+
+		// Apply theme to all items
+		for each (ToolStripItem ^ item in contextMenu->Items) {
+			ApplyThemeToMenuItem(item);
+		}
+
+		// Handle opening event to ensure proper styling of dynamically added items
+		contextMenu->Opening += gcnew CancelEventHandler(this, &Theme_Manager::OnContextMenuOpening);
+	}
+
 	void Theme_Manager::ApplyThemeToControls(Control::ControlCollection^ controls)
 	{
 		for each (Control ^ control in controls) {
@@ -346,6 +365,14 @@ namespace MIDILightDrawer
 		}
 
 		delete borderPen;
+	}
+
+	void Theme_Manager::OnContextMenuOpening(Object^ sender, CancelEventArgs^ e)
+	{
+		ContextMenuStrip^ menu = safe_cast<ContextMenuStrip^>(sender);
+		for each (ToolStripItem ^ item in menu->Items) {
+			ApplyThemeToMenuItem(item);
+		}
 	}
 
 	ProfessionalColorTable^ Theme_Manager::GetColorTable()

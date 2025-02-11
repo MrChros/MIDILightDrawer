@@ -17,6 +17,19 @@ namespace MIDILightDrawer
 		_PreviewBars = gcnew List<BarEvent^>;
 	}
 
+	void TimelineTool::OnMouseRightClick(MouseEventArgs^ e)
+	{
+		if (e->X > Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH)
+		{
+			Point ClickPoint(e->X, e->Y);
+			BarEvent^ ClickedBar = _Timeline->GetBarAtPoint(ClickPoint);
+
+			if (ClickedBar != nullptr) {
+				_Timeline->ShowContextMenu(ClickedBar, ClickPoint);
+			}
+		}
+	}
+
 	void TimelineTool::StartSelection(Point start)
 	{
 		if (!_CanSelectWithRectangle) {

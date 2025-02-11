@@ -3,6 +3,7 @@
 #include "Hotkey_Manager.h"
 
 using namespace System;
+using namespace System::Drawing;
 using namespace System::Collections::Generic;
 
 namespace MIDILightDrawer
@@ -16,10 +17,7 @@ namespace MIDILightDrawer
 			String^ Name;
 			int Octave_Number;
 
-			Octave_Entry(String^ name, int octave) {
-				Name = name;
-				Octave_Number = octave;
-			}
+			Octave_Entry(String^ name, int octave);
 		};
 
 	private:
@@ -51,70 +49,50 @@ namespace MIDILightDrawer
 		void Save_To_File();
 
 		// Hotkey methods
-		String^ Get_Hotkey_Binding(String^ action) {
-			return Hotkey_Manager::Instance->Get_Binding(action);
-		}
+		String^ Get_Hotkey_Binding(String^ action);
 
-		void Set_Hotkey_Binding(String^ action, String^ key) {
-			auto bindings = Hotkey_Manager::Instance->Get_All_Bindings();
-			bindings[action] = key;
-			Hotkey_Manager::Instance->Set_Bindings(bindings);
-			Save_To_File();
-		}
+		void Set_Hotkey_Binding(String^ action, String^ key);
 
 		// MIDI settings properties
 		property int MIDI_Note_Red
 		{
-			int get() { return _MIDI_Note_Red; }
-			void set(int value) {
-				_MIDI_Note_Red = value;
-				Save_To_File();
-			}
+			int get();
+			void set(int value);
 		}
 
 		property int MIDI_Note_Green
 		{
-			int get() { return _MIDI_Note_Green; }
-			void set(int value) {
-				_MIDI_Note_Green = value;
-				Save_To_File();
-			}
+			int get();
+			void set(int value);
 		}
 
 		property int MIDI_Note_Blue
 		{
-			int get() { return _MIDI_Note_Blue; }
-			void set(int value) {
-				_MIDI_Note_Blue = value;
-				Save_To_File();
-			}
+			int get();
+			void set(int value);
 		}
 
 		property bool MIDI_Export_Anti_Flicker
 		{
-			bool get() { return _MIDI_Export_Anti_Flicker; }
-			void set(bool value) {
-				_MIDI_Export_Anti_Flicker = value;
-				Save_To_File();
-			}
+			bool get();
+			void set(bool value);
 		}
 
 		property List<Octave_Entry^>^ Octave_Entries
 		{
-			List<Octave_Entry^> ^ get() { return _Octave_Entries; }
-			void set(List<Octave_Entry^> ^ value) {
-				_Octave_Entries = value;
-				Save_To_File();
-			}
+			List<Octave_Entry^>^ get();
+			void set(List<Octave_Entry^>^ value);
 		}
 
-		property List<String^>^ ColorPresets
+		property List<String^>^ ColorPresetsString
 		{
-			List<String^>^ get() { return _ColorPresets; }
-			void set(List<String^>^ value) {
-				_ColorPresets = value;
-				Save_To_File();
-			}
+			List<String^>^ get();
+			void set(List<String^>^ value);
+		}
+
+		property List<Color>^ ColorPresetsColor
+		{
+			List<Color>^ get();
 		}
 	};
 }

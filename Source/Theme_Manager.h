@@ -4,6 +4,7 @@ using namespace System;
 using namespace System::Drawing;
 using namespace System::Windows::Forms;
 using namespace System::Collections::Generic;
+using namespace System::ComponentModel;
 
 #include "Custom_Color_Table.h"
 
@@ -75,6 +76,9 @@ namespace MIDILightDrawer
 		// Apply theme to DataGridView
 		void ApplyThemeToDataGridView(DataGridView^ grid);
 
+		// Apply theme to Widget Timeline Contect Menu
+		void ApplyThemeToContextMenu(ContextMenuStrip^ contextMenu);
+
 	private:
 		Dictionary<Button^, String^>^ _Button_Texts;
 
@@ -87,6 +91,8 @@ namespace MIDILightDrawer
 
 		void OnDataGridViewScroll(Object^ sender, ScrollEventArgs^ e);
 		void OnDataGridViewPaint(Object^ sender, PaintEventArgs^ e);
+
+		void OnContextMenuOpening(Object^ sender, CancelEventArgs^ e);
 
 		ProfessionalColorTable^ GetColorTable();
 	};

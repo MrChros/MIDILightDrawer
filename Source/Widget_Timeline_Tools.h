@@ -51,6 +51,7 @@ namespace MIDILightDrawer
 		virtual void OnKeyUp(KeyEventArgs^ e) = 0;
 
 		virtual void OnCommandStateChanged() { };
+		virtual void OnMouseRightClick(MouseEventArgs^ e);
 
 		void StartSelection(Point start);
 		void UpdateSelection(Point current);

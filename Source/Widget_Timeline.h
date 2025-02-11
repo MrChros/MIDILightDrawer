@@ -6,6 +6,7 @@ using namespace System::Windows::Forms;
 using namespace System::Drawing;
 using namespace System::Collections::Generic;
 
+#include "Settings.h"
 #include "Theme_Manager.h"
 #include "Widget_Timeline_Common.h"
 #include "Widget_Timeline_Classes.h"
@@ -43,7 +44,7 @@ namespace MIDILightDrawer
 
 		// Constants
 		static const int INITIAL_TICK_OFFSET			= Timeline_Direct2DRenderer::TICKS_PER_QUARTER;
-		static const int DEFAULT_TRACK_HEIGHT			= 140;	// 100
+		static const int DEFAULT_TRACK_HEIGHT			= 140;
 		static const int MINIMUM_TRACK_HEIGHT			= 30;
 		static const int TRACK_RESIZE_HANDLE_HEIGHT		= 5;
 		static const int SCROLL_UNIT					= 50;	// Pixels per scroll unit
@@ -72,42 +73,34 @@ namespace MIDILightDrawer
 		void Redo();
 
 		// View methods
-		void ZoomIn		();
-		void ZoomOut	();
-		void SetZoom	(double zoom);
-		void ScrollTo	(Point newPosition);
+		void ZoomIn();
+		void ZoomOut();
+		void SetZoom(double zoom);
+		void ScrollTo(Point newPosition);
 		void SetTrackHeight(Track^ track, int height);
 		void SetAllTracksHeight(int height);
 		void SetToolSnapping(SnappingType type);
-		
-		// Tools setter/getter
+
+		void ShowContextMenu(BarEvent^ bar, Point location);
+
+		// Tools Setter & Getter
 		void SetCurrentTool(TimelineToolType tool);
-		PointerTool^	GetPointerTool()	{ return (PointerTool^) (_Tools[TimelineToolType::Pointer]);	}
-		DrawTool^		GetDrawTool()		{ return (DrawTool^)	(_Tools[TimelineToolType::Draw]);		}
-		SplitTool^		GetSplitTool()		{ return (SplitTool^)	(_Tools[TimelineToolType::Split]);		}
-		EraseTool^		GetEraseTool()		{ return (EraseTool^)	(_Tools[TimelineToolType::Erase]);		}
-		DurationTool^	GetDurationTool()	{ return (DurationTool^)(_Tools[TimelineToolType::Duration]);	}
-		ColorTool^		GetColorTool()		{ return (ColorTool^)	(_Tools[TimelineToolType::Color]);		}
-		FadeTool^		GetFadeTool()		{ return (FadeTool^)	(_Tools[TimelineToolType::Fade]);		}
-		StrobeTool^		GetStrobeTool()		{ return (StrobeTool^)	(_Tools[TimelineToolType::Strobe]);		}
+		PointerTool^ GetPointerTool();
+		DrawTool^ GetDrawTool();
+		SplitTool^ GetSplitTool();
+		EraseTool^ GetEraseTool();
+		DurationTool^ GetDurationTool();
+		ColorTool^ GetColorTool();
+		FadeTool^ GetFadeTool();
+		StrobeTool^ GetStrobeTool();
 
-		virtual TimelineCommandManager^ CommandManager() {
-			return _CommandManager;
-		}
+		// Interface Methods to the Direct 2D Renderer
+		virtual TimelineCommandManager^ CommandManager();
+		virtual TimelineToolType CurrentToolType();
+		virtual ITimelineToolAccess^ ToolAccess();
+		virtual TrackButtonId HoverButton();
 
-		virtual TimelineToolType CurrentToolType() {
-			return _CurrentToolType;
-		}
-
-		virtual ITimelineToolAccess^ ToolAccess() {
-			return safe_cast<ITimelineToolAccess^>(_Tools[_CurrentToolType]);
-		}
-
-		virtual TrackButtonId HoverButton() {
-			return _HoveredButton;
-		}
-
-		// Other interface metohds for the tools		
+		// Other interface methods for the tools
 		int  SnapTickToGrid(int tick);
 		int  SnapTickBasedOnType(int tick, Point mousePos);
 		void ScrollToMeasure(int measureNumber);
@@ -144,6 +137,7 @@ namespace MIDILightDrawer
 	protected:
 		virtual void OnPaint(PaintEventArgs^ e) override;
 		virtual void OnResize(EventArgs^ e) override;
+		void OnMouseClick(MouseEventArgs^ e) override;
 		void OnMouseDown(MouseEventArgs^ e) override;
 		void OnMouseMove(MouseEventArgs^ e) override;
 		void OnMouseUp(MouseEventArgs^ e) override;
@@ -152,14 +146,9 @@ namespace MIDILightDrawer
 		void OnKeyUp(KeyEventArgs^ e) override;
 		void OnHandleCreated(EventArgs^ e) override;
 
-		virtual bool ProcessDialogKey(Keys keyData) override {
-			OnKeyDown(gcnew KeyEventArgs(keyData));
-			return true;
-		}
+		virtual bool ProcessDialogKey(Keys keyData) override;
+		virtual bool IsInputKey(Keys keyData) override;
 
-		virtual bool IsInputKey(Keys keyData) override {
-			return true;  // Tell Windows Forms that all keys are input keys
-		}
 
 	private:
 		TimelineCommandManager^ _CommandManager;
@@ -175,6 +164,11 @@ namespace MIDILightDrawer
 		// Scroll Bars
 		System::Windows::Forms::HScrollBar^ _HScrollBar;
 		System::Windows::Forms::VScrollBar^ _VScrollBar;
+
+		// Context Menu
+		System::Resources::ResourceManager^ _Resources;
+		System::Windows::Forms::ContextMenuStrip^ _ContextMenu;
+		BarEvent^ _ContextMenuBar;
 
 		Track^ _TrackBeingResized;
 		Track^ _ResizeHoverTrack;
@@ -195,6 +189,16 @@ namespace MIDILightDrawer
 		// Private methods
 		void InitializeComponent();
 		void InitializeToolSystem();
+		void InitializeContextMenu();
+
+		void CreateContextMenuCommon();
+		void CreateContextMenuSolid();
+		void CreateContextMenuFade();
+		void CreateContextMenuStrobe();
+		void CreateContextMenuSubChangeColor(String^ menuTitle);
+		void CreateContextMenuSubChangeQuantization(int currentQuantization);
+		
+		void HandleContextMenuClick(System::Object^ sender, ToolStripItemClickedEventArgs^ e);
 
 		float	GetSubdivisionLevel	();
 		int		GetTrackTop			(Track^ track);
@@ -223,38 +227,32 @@ namespace MIDILightDrawer
 		void	OnScroll(Object^ sender, ScrollEventArgs^ e);
 		void	OnVerticalScroll(Object^ sender, ScrollEventArgs^ e);
 
+
 	public:
-		// Theme property
 		property ThemeColors Theme {
-			ThemeColors get() { return _CurrentTheme; }
-			void set(ThemeColors value) { _CurrentTheme = value; }
+			ThemeColors get();
+			void set(ThemeColors value);
 		}
 
 		property List<Track^>^ Tracks {
-			List<Track^>^ get() { return _Tracks; }
+			List<Track^> ^ get();
 		}
 
 		property List<Measure^>^ Measures {
-			List<Measure^>^ get() { return _Measures; }
+			List<Measure^> ^ get();
 		}
 
 		property int TotalTicks {
-			int get() {
-				int total = 0;
-				for each (Measure ^ m in _Measures) {
-					total += m->Length;
-				}
-				return total;
-			}
+			int get();
 		}
 
 		property TimelineToolType CurrentTool {
-			TimelineToolType get() { return _CurrentToolType; }
-			void set(TimelineToolType value) { SetCurrentTool(value); }
+			TimelineToolType get();
+			void set(TimelineToolType value);
 		}
 
 		property Point^ ScrollPosition {
-			Point^ get() { return _ScrollPosition; }
+			Point^ get();
 		}
 	};
 }

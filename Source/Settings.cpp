@@ -3,18 +3,35 @@
 using namespace System::IO;
 using namespace System::Text;
 
-namespace MIDILightDrawer {
-	static Settings::Settings() {
+namespace MIDILightDrawer
+{
+	//////////////////
+	// Octave_Entry //
+	//////////////////
+	Settings::Octave_Entry::Octave_Entry(String^ name, int octave)
+	{
+		Name = name;
+		Octave_Number = octave;
+	}
+	
+
+	//////////////////////
+	// Settings Private //
+	//////////////////////
+	static Settings::Settings()
+	{
 		_Instance = nullptr;
 		_Settings_File_Path = nullptr;
 	}
 
-	Settings::Settings() {
+	Settings::Settings()
+	{
 		_Octave_Entries = gcnew List<Octave_Entry^>();
 		Load_Defaults();
 	}
 
-	void Settings::Load_Defaults() {
+	void Settings::Load_Defaults()
+	{
 		// Add default note assignments
 		_MIDI_Note_Red		= 0;	// C
 		_MIDI_Note_Green	= 2;	// D
@@ -27,6 +44,7 @@ namespace MIDILightDrawer {
 		for (int i = 0; i < 10; i++) {
 			_ColorPresets->Add("255,255,255"); // Default white color
 		}
+
 		_ColorPresets[0] = "255,0,0";		// Red
 		_ColorPresets[1] = "0,127,0";		// Green
 		_ColorPresets[2] = "0,0,255";		// Blue
@@ -38,36 +56,21 @@ namespace MIDILightDrawer {
 		_ColorPresets[8] = "0,0,0";			// Black
 	}
 
-	void Settings::Initialize(String^ settingsFilePath) {
-		_Settings_File_Path = settingsFilePath;
-		Get_Instance();
-	}
-
-	void Settings::Save_To_File() {
+	void Settings::Load_From_File()
+	{
 		try {
-			String^ jsonString = SerializeToString();
-			File::WriteAllText(_Settings_File_Path, jsonString);
+			String^ fileContent = File::ReadAllText(_Settings_File_Path);
+			DeserializeFromString(fileContent);
 		}
 		catch (Exception^ ex) {
-			Console::WriteLine("Error saving settings: " + ex->Message);
+			Console::WriteLine("Error loading settings: " + ex->Message);
+			Load_Defaults();
+			Save_To_File();
 		}
 	}
 
-	Settings^ Settings::Get_Instance() {
-		if (_Instance == nullptr) {
-			_Instance = gcnew Settings();
-
-			if (File::Exists(_Settings_File_Path)) {
-				_Instance->Load_From_File();
-			}
-			else {
-				_Instance->Save_To_File();
-			}
-		}
-		return _Instance;
-	}
-
-	String^ Settings::SerializeToString() {
+	String^ Settings::SerializeToString()
+	{
 		StringBuilder^ sb = gcnew StringBuilder();
 
 		// Start JSON object
@@ -111,7 +114,7 @@ namespace MIDILightDrawer {
 		}
 		sb->AppendLine("  ]");
 
-		
+
 
 		// Close JSON object
 		sb->AppendLine("}");
@@ -241,15 +244,144 @@ namespace MIDILightDrawer {
 		}
 	}
 
-	void Settings::Load_From_File() {
+
+	/////////////////////
+	// Settings Public //
+	/////////////////////
+	Settings^ Settings::Get_Instance()
+	{
+		if (_Instance == nullptr) {
+			_Instance = gcnew Settings();
+
+			if (File::Exists(_Settings_File_Path)) {
+				_Instance->Load_From_File();
+			}
+			else {
+				_Instance->Save_To_File();
+			}
+		}
+		return _Instance;
+	}
+
+	void Settings::Initialize(String^ settingsFilePath)
+	{
+		_Settings_File_Path = settingsFilePath;
+		Get_Instance();
+	}
+
+	void Settings::Save_To_File()
+	{
 		try {
-			String^ fileContent = File::ReadAllText(_Settings_File_Path);
-			DeserializeFromString(fileContent);
+			String^ jsonString = SerializeToString();
+			File::WriteAllText(_Settings_File_Path, jsonString);
 		}
 		catch (Exception^ ex) {
-			Console::WriteLine("Error loading settings: " + ex->Message);
-			Load_Defaults();
-			Save_To_File();
+			Console::WriteLine("Error saving settings: " + ex->Message);
 		}
+	}
+
+	String^ Settings::Get_Hotkey_Binding(String^ action)
+	{
+		return Hotkey_Manager::Instance->Get_Binding(action);
+	}
+
+	void Settings::Set_Hotkey_Binding(String^ action, String^ key)
+	{
+		auto bindings = Hotkey_Manager::Instance->Get_All_Bindings();
+		bindings[action] = key;
+		Hotkey_Manager::Instance->Set_Bindings(bindings);
+
+		Save_To_File();
+	}
+
+
+	/////////////////////////
+	// Settings Properties //
+	/////////////////////////
+	int Settings::MIDI_Note_Red::get()
+	{ 
+		return _MIDI_Note_Red;
+	}
+
+	void Settings::MIDI_Note_Red::set(int value)
+	{
+		_MIDI_Note_Red = value;
+		Save_To_File();
+	}
+
+	int Settings::MIDI_Note_Green::get()
+	{
+		return _MIDI_Note_Green;
+	}
+
+	void Settings::MIDI_Note_Green::set(int value)
+	{
+		_MIDI_Note_Green = value;
+		Save_To_File();
+	}
+
+	int Settings::MIDI_Note_Blue::get()
+	{
+		return _MIDI_Note_Blue;
+	}
+
+	void Settings::MIDI_Note_Blue::set(int value)
+	{
+		_MIDI_Note_Blue = value;
+		Save_To_File();
+	}
+
+	bool Settings::MIDI_Export_Anti_Flicker::get() 
+	{ 
+		return _MIDI_Export_Anti_Flicker; 
+	}
+
+	void Settings::MIDI_Export_Anti_Flicker::set(bool value)
+	{
+		_MIDI_Export_Anti_Flicker = value;
+		Save_To_File();
+	}
+
+	List<Settings::Octave_Entry^>^ Settings::Octave_Entries::get()
+	{ 
+		return _Octave_Entries;
+	}
+
+	void Settings::Octave_Entries::set(List<Settings::Octave_Entry^>^ value)
+	{
+		_Octave_Entries = value;
+		Save_To_File();
+	}
+
+	List<String^>^ Settings::ColorPresetsString::get()
+	{
+		return _ColorPresets;
+	}
+
+	void Settings::ColorPresetsString::set(List<String^>^ value) 
+	{
+		_ColorPresets = value;
+		Save_To_File();
+	}
+
+	List<Color>^ Settings::ColorPresetsColor::get() 
+	{
+		List<Color>^ Colors = gcnew List<Color>();
+
+		for each (String^ ColorStr in _ColorPresets) 
+		{
+			array<String^>^ Parts = ColorStr->Split(',');
+
+			if (Parts->Length == 3)
+			{
+				int R = Int32::Parse(Parts[0]);
+				int G = Int32::Parse(Parts[1]);
+				int B = Int32::Parse(Parts[2]);
+
+				Colors->Add(Color::FromArgb(R, G, B));
+			}
+		}
+
+		return Colors;
 	}
 }

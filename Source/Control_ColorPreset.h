@@ -11,7 +11,11 @@ using namespace System::Collections::Generic;
 
 namespace MIDILightDrawer
 {
-	public ref class Control_ColorPreset : public UserControl {
+	public ref class Control_ColorPreset : public UserControl
+	{
+	public:
+		Control_ColorPreset(void);
+
 	private:
 		array<Button^>^ _Color_Preset_Buttons;
 		array<Button^>^ _Set_Buttons;
@@ -21,6 +25,7 @@ namespace MIDILightDrawer
 		Color			_Selected_Color;
 		Color			_Highlight_Color;
 
+		static const int COUNT_PRESET_COLORS = 10;
 		static const int COLOR_CIRCLE_DIAMETER = 27;
 
 		void Initialize_Component();
@@ -34,16 +39,14 @@ namespace MIDILightDrawer
 		void Button_MouseEnter(Object^ sender, EventArgs^ e);
 		void Button_MouseLeave(Object^ sender, EventArgs^ e);
 
-		Drawing::Icon^ CreateColorIcon(Color color);
 
 	public:
-		Control_ColorPreset(void);
+		static Drawing::Icon^ CreateColorIcon(Color color, int diameter);
+		static Drawing::Bitmap^ CreateColorBitmap(Color color, int diameter);
 
 		property Color SelectedColor {
-			Color get() { return _Selected_Color; }
-			void set(Color color) {
-				_Selected_Color = color;
-			}
+			Color get();
+			void set(Color color);
 		}
 
 		property int SelectedIndex {
@@ -52,16 +55,13 @@ namespace MIDILightDrawer
 
 		// Event that fires when a color preset is modified
 		event EventHandler^ PresetColorsChanged;
+
 		// Event that fires when the selected color is changed
 		event EventHandler^ SelectedColorChanged;
 
-	protected:
-		void OnPresetColorsChanged() {
-			PresetColorsChanged(this, EventArgs::Empty);
-		}
 
-		void OnSelectedColorChanged() {
-			SelectedColorChanged(this, EventArgs::Empty);
-		}
+	protected:
+		void OnPresetColorsChanged();
+		void OnSelectedColorChanged();
 	};
 }

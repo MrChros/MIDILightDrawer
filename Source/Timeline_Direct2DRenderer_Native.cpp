@@ -482,15 +482,16 @@ bool Timeline_Direct2DRenderer_Native::CreateAndCacheBitmap(const std::wstring& 
 
 ID2D1Bitmap* Timeline_Direct2DRenderer_Native::GetCachedBitmap(const std::wstring& key)
 {
-    auto it = std::find_if(m_bitmapCache.begin(), m_bitmapCache.end(),
-        [&key](const CachedBitmap& cached) { return cached.key == key; });
+    auto it = std::find_if(m_bitmapCache.begin(), m_bitmapCache.end(), [&key](const CachedBitmap& cached) { return cached.key == key; });
+
     return it != m_bitmapCache.end() ? it->bitmap : nullptr;
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth)
 {
-    if (!m_pRenderTarget)
+    if (!m_pRenderTarget) {
         return false;
+	}
 
     ID2D1SolidColorBrush* brush = GetCachedBrush(color);
     if (!brush) {

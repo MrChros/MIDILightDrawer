@@ -434,6 +434,91 @@ namespace MIDILightDrawer
 	}
 
 
+	///////////////////////////
+	// ChangeFadeTypeCommand //
+	///////////////////////////
+	ChangeFadeTypeCommand::ChangeFadeTypeCommand(Widget_Timeline^ timeline, BarEvent^ bar, FadeType newType)
+	{
+		_Timeline = timeline;
+		_Bar = bar;
+		_NewType = newType;
+		_OldType = bar->FadeInfo->Type;
+
+		// Store current colors
+		_OldColorStart = bar->FadeInfo->ColorStart;
+		_OldColorCenter = bar->FadeInfo->ColorCenter;
+		_OldColorEnd = bar->FadeInfo->ColorEnd;
+	}
+
+	void ChangeFadeTypeCommand::Execute()
+	{
+		BarEventFadeInfo^ NewFadeInfo;
+
+		if (_NewType == FadeType::Two_Colors) {
+			// When switching to two colors, use start and end colors
+			NewFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _Bar->FadeInfo->ColorStart, _Bar->FadeInfo->ColorEnd);
+		}
+		else {
+			// When switching to three colors, use existing colors and interpolate center if needed
+			Color CenterColor = _OldType == FadeType::Two_Colors ? _OldColorStart : _OldColorCenter;
+
+			NewFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _Bar->FadeInfo->ColorStart, CenterColor, _Bar->FadeInfo->ColorEnd);
+		}
+
+		_Bar->FadeInfo = NewFadeInfo;
+		_Timeline->Invalidate();
+	}
+
+	void ChangeFadeTypeCommand::Undo()
+	{
+		BarEventFadeInfo^ OldFadeInfo;
+
+		if (_OldType == FadeType::Two_Colors) {
+			OldFadeInfo = gcnew BarEventFadeInfo( _Bar->FadeInfo->QuantizationTicks, _OldColorStart, _OldColorEnd);
+		}
+		else {
+			OldFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _OldColorStart, _OldColorCenter, _OldColorEnd);
+		}
+
+		_Bar->FadeInfo = OldFadeInfo;
+		_Timeline->Invalidate();
+	}
+
+	String^ ChangeFadeTypeCommand::GetDescription()
+	{
+		return "Change Fade Type";
+	}
+
+
+	///////////////////////////////////
+	// ChangeFadeQuantizationCommand //
+	///////////////////////////////////
+	ChangeFadeQuantizationCommand::ChangeFadeQuantizationCommand(Widget_Timeline^ timeline, BarEvent^ bar, int oldQuantization, int newQuantization)
+	{
+		_Timeline = timeline;
+		_Bar = bar;
+		_OldQuantization = oldQuantization;
+		_NewQuantization = newQuantization;
+	}
+
+	void ChangeFadeQuantizationCommand::Execute()
+	{
+		_Bar->FadeInfo->QuantizationTicks = _NewQuantization;
+		_Timeline->Invalidate();
+	}
+
+	void ChangeFadeQuantizationCommand::Undo()
+	{
+		_Bar->FadeInfo->QuantizationTicks = _OldQuantization;
+		_Timeline->Invalidate();
+	}
+
+	String^ ChangeFadeQuantizationCommand::GetDescription()
+	{
+		return "Change Fade Quantization";
+	}
+
+
 	/////////////////////////
 	// AddStrobeBarCommand //
 	/////////////////////////
@@ -467,5 +552,34 @@ namespace MIDILightDrawer
 	String^ AddStrobeBarCommand::GetDescription()
 	{
 		return "Add Strobe Bar";
+	}
+
+
+	/////////////////////////////////////
+	// ChangeStrobeQuantizationCommand //
+	/////////////////////////////////////
+	ChangeStrobeQuantizationCommand::ChangeStrobeQuantizationCommand(Widget_Timeline^ timeline, BarEvent^ bar, int oldQuantization, int newQuantization)
+	{
+		_Timeline = timeline;
+		_Bar = bar;
+		_OldQuantization = oldQuantization;
+		_NewQuantization = newQuantization;
+	}
+
+	void ChangeStrobeQuantizationCommand::Execute()
+	{
+		_Bar->StrobeInfo->QuantizationTicks = _NewQuantization;
+		_Timeline->Invalidate();
+	}
+
+	void ChangeStrobeQuantizationCommand::Undo()
+	{
+		_Bar->StrobeInfo->QuantizationTicks = _OldQuantization;
+		_Timeline->Invalidate();
+	}
+
+	String^ ChangeStrobeQuantizationCommand::GetDescription()
+	{
+		return "Change Strobe Quantization";
 	}
 }

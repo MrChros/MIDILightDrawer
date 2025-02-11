@@ -1279,15 +1279,15 @@ namespace MIDILightDrawer
 		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
 		
 		_ContextMenu = gcnew System::Windows::Forms::ContextMenuStrip();
-		_ContextMenu->ItemClicked += gcnew ToolStripItemClickedEventHandler(this, &Widget_Timeline::HandleContextMenuClick);
+		//_ContextMenu->ItemClicked += gcnew ToolStripItemClickedEventHandler(this, &Widget_Timeline::HandleContextMenuClick);
 	
 		Theme_Manager::Get_Instance()->ApplyThemeToContextMenu(_ContextMenu);
 	}
 
 	void Widget_Timeline::CreateContextMenuCommon()
 	{
-		_ContextMenu->Items->Add(ContextMenuStrings::Copy);
-		_ContextMenu->Items->Add(ContextMenuStrings::Delete);
+		_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::Copy, true, nullptr));
+		_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::Delete, true, nullptr));
 		_ContextMenu->Items->Add(ContextMenuStrings::Separator);
 	}
 
@@ -1300,11 +1300,11 @@ namespace MIDILightDrawer
 	{
 		if (_ContextMenuBar->FadeInfo->Type == FadeType::Two_Colors)
 		{
-			_ContextMenu->Items->Add(ContextMenuStrings::FadeSwitchThree);
+			_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::FadeSwitchThree, true, nullptr));
 		}
-		else if (_ContextMenuBar->FadeInfo->Type == FadeType::Two_Colors)
+		else if (_ContextMenuBar->FadeInfo->Type == FadeType::Three_Colors)
 		{
-			_ContextMenu->Items->Add(ContextMenuStrings::FadeSwitchTwo);
+			_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::FadeSwitchTwo, true, nullptr));
 		}
 		
 		CreateContextMenuSubChangeQuantization(_ContextMenuBar->FadeInfo->QuantizationTicks);
@@ -1326,83 +1326,148 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::CreateContextMenuSubChangeColor(String^ menuTitle)
 	{
-		ToolStripMenuItem^ SubMenuChangeColor = gcnew ToolStripMenuItem(menuTitle);
+		ToolStripMenuItem^ SubMenuChangeColor = CreateContextMenuItem(menuTitle, false, nullptr);
 
 		Settings^ Settings = Settings::Get_Instance();
 		List<Color>^ PresetColors = Settings->ColorPresetsColor;
 
 		for (int i = 0;i<PresetColors->Count;i++)
 		{
-			Color Col = PresetColors[i];
-			SubMenuChangeColor->DropDownItems->Add("Preset Color " + (i+1).ToString(), Control_ColorPreset::CreateColorBitmap(Col, 20));
+			SubMenuChangeColor->DropDownItems->Add(CreateContextMenuItem("Preset Color " + (i + 1).ToString(), true, Control_ColorPreset::CreateColorBitmap(PresetColors[i], 20)));
 		}
-
-		SubMenuChangeColor->DropDownItemClicked += gcnew ToolStripItemClickedEventHandler(this, &Widget_Timeline::HandleContextMenuClick);
 
 		this->_ContextMenu->Items->Add(SubMenuChangeColor);
 	}
 
 	void Widget_Timeline::CreateContextMenuSubChangeQuantization(int currentQuantization)
 	{
-		ToolStripMenuItem^ SubMenuChangeQuantization = gcnew ToolStripMenuItem(ContextMenuStrings::ChangeQuantization);
+		ToolStripMenuItem^ SubMenuChangeQuantization = CreateContextMenuItem(ContextMenuStrings::ChangeQuantization, false, nullptr);
 
 		for each (String^ StringKey in ContextMenuStrings::QuantizationValues->Keys)
 		{
-			if(ContextMenuStrings::QuantizationValues[StringKey] == currentQuantization) {
-				SubMenuChangeQuantization->DropDownItems->Add(StringKey, (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Tick_White"))));
-			} 
-			else {
-				SubMenuChangeQuantization->DropDownItems->Add(StringKey);
-			}
-		}
+			ToolStripMenuItem^ ItemQuantization = CreateContextMenuItem(StringKey, true, nullptr);;
 
-		SubMenuChangeQuantization->DropDownItemClicked += gcnew ToolStripItemClickedEventHandler(this, &Widget_Timeline::HandleContextMenuClick);
+			if(ContextMenuStrings::QuantizationValues[StringKey] == currentQuantization) {
+				ItemQuantization->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Tick_White")));
+			} 
+
+			SubMenuChangeQuantization->DropDownItems->Add(ItemQuantization);
+		}
 
 		this->_ContextMenu->Items->Add(SubMenuChangeQuantization);
 	}
 
-	void Widget_Timeline::HandleContextMenuClick(System::Object^ sender, ToolStripItemClickedEventArgs^ e)
+	ToolStripMenuItem^ Widget_Timeline::CreateContextMenuItem(String^ text, bool clickable, Image^ image)
 	{
-		ToolStripItemClickedEventArgs^ Args = safe_cast<ToolStripItemClickedEventArgs^>(e);
-		
-		String^ ItemText = Args->ClickedItem->Text;
+		ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(text, image);
 
+		if (clickable) {
+			Item->Click += gcnew System::EventHandler(this, &Widget_Timeline::HandleContextMenuClick);
+		}
+
+		return Item;
+	}
+
+	void Widget_Timeline::HandleContextMenuClick(System::Object^ sender, EventArgs^ e)
+	{
 		if (_ContextMenuBar == nullptr) {
 			return;
 		}
 
+		ToolStripMenuItem^ Sender = safe_cast<ToolStripMenuItem^>(sender);
+		String^ ItemText = Sender->Text;
+
 		// Handle menu item clicks
-		if (ItemText == ContextMenuStrings::Copy) {
-			System::Diagnostics::Debug::WriteLine("Copy clicked for bar");
-		}
-		else if (ItemText == ContextMenuStrings::Delete) {
-			System::Diagnostics::Debug::WriteLine("Delete clicked for bar");
-		}
-		else if (ItemText == ContextMenuStrings::ChangeColor) {
-			System::Diagnostics::Debug::WriteLine("Change color clicked for solid bar");
-		}
-		else if (ItemText == ContextMenuStrings::ChangeColorStart) {
-			
-		}
-		else if (ItemText == ContextMenuStrings::ChangeColorCenter) {
-			
-		}
-		else if (ItemText == ContextMenuStrings::ChangeColorEnd) {
-			
-		}
-		else if (ItemText == ContextMenuStrings::ChangeQuantization) {
+		if (ItemText == ContextMenuStrings::Copy)
+		{
+			// Create a temporary list with just this bar and use the clipboard manager
+			List<BarEvent^>^ TempList = gcnew List<BarEvent^>();
+			TempList->Add(_ContextMenuBar);
 
-		}
-		else if (ItemText == ContextMenuStrings::FadeSwitchTwo) {
+			// Find the earliest start tick
+			int EarliestTick = _ContextMenuBar->StartTick;
 
+			// Create copy of the bar with relative position
+			BarEvent^ CopiedBar = TimelineCommandManager::CreateBarCopy(_ContextMenuBar, _ContextMenuBar->StartTick - EarliestTick, false);
+			TimelineClipboardManager::Content->Clear();
+			TimelineClipboardManager::Content->Add(CopiedBar);
 		}
-		else if (ItemText == ContextMenuStrings::FadeSwitchThree) {
-
+		else if (ItemText == ContextMenuStrings::Delete)
+		{
+			DeleteBarCommand^ Cmd = gcnew DeleteBarCommand(this, _ContextMenuBar->ContainingTrack, _ContextMenuBar);
+			CommandManager()->ExecuteCommand(Cmd);
+		}
+		else if (ItemText == ContextMenuStrings::FadeSwitchTwo)
+		{
+			ChangeFadeTypeCommand^ Cmd = gcnew ChangeFadeTypeCommand(this, _ContextMenuBar, FadeType::Two_Colors);
+			CommandManager()->ExecuteCommand(Cmd);
+		}
+		else if (ItemText == ContextMenuStrings::FadeSwitchThree)
+		{
+			ChangeFadeTypeCommand^ Cmd = gcnew ChangeFadeTypeCommand(this, _ContextMenuBar, FadeType::Three_Colors);
+			CommandManager()->ExecuteCommand(Cmd);
 		}
 		else {
 			// Drop Down Menu clicked
-			ToolStripMenuItem^ ParentItem = safe_cast<ToolStripMenuItem^>(Args->ClickedItem->OwnerItem);
-			int a = 5;
+			ToolStripMenuItem^ ParentItem = safe_cast<ToolStripMenuItem^>(Sender->OwnerItem);
+			String^ ParentItemText = ParentItem->Text;
+
+			Color NewColor = Color();
+			if (ParentItemText == ContextMenuStrings::ChangeColor ||
+				ParentItemText == ContextMenuStrings::ChangeColorStart ||
+				ParentItemText == ContextMenuStrings::ChangeColorCenter ||
+				ParentItemText == ContextMenuStrings::ChangeColorEnd)
+			{
+				int PresetIndex = Int32::Parse(ItemText->Substring(13)) - 1;
+				NewColor = Settings::Get_Instance()->ColorPresetsColor[PresetIndex];
+			}
+
+			if (ParentItemText == ContextMenuStrings::ChangeColor)
+			{
+				ChangeBarColorCommand^ Cmd = gcnew ChangeBarColorCommand(this, _ContextMenuBar, _ContextMenuBar->Color, NewColor);
+				CommandManager()->ExecuteCommand(Cmd);
+			}
+			
+			else if (ParentItemText == ContextMenuStrings::ChangeColorStart)
+			{
+				ChangeFadeBarColorCommand::ColorType ColorType = ChangeFadeBarColorCommand::ColorType::Start;
+				Color OldColor = _ContextMenuBar->FadeInfo->ColorStart;
+
+				ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
+				CommandManager()->ExecuteCommand(Cmd);
+			}
+
+			else if (ParentItemText == ContextMenuStrings::ChangeColorCenter)
+			{
+				ChangeFadeBarColorCommand::ColorType ColorType = ChangeFadeBarColorCommand::ColorType::Center;
+				Color OldColor = _ContextMenuBar->FadeInfo->ColorCenter;
+
+				ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
+				CommandManager()->ExecuteCommand(Cmd);
+			}
+
+			else if (ParentItemText == ContextMenuStrings::ChangeColorEnd)
+			{
+				ChangeFadeBarColorCommand::ColorType ColorType = ChangeFadeBarColorCommand::ColorType::End;
+				Color OldColor = _ContextMenuBar->FadeInfo->ColorEnd;
+
+				ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
+				CommandManager()->ExecuteCommand(Cmd);
+			}
+
+			else if (ParentItemText == ContextMenuStrings::ChangeQuantization)
+			{
+				int NewTickQuantization = ContextMenuStrings::QuantizationValues[ItemText];
+
+				if (_ContextMenuBar->Type == BarEventType::Fade) {
+					ChangeFadeQuantizationCommand^ Cmd = gcnew ChangeFadeQuantizationCommand(this, _ContextMenuBar, _ContextMenuBar->FadeInfo->QuantizationTicks, NewTickQuantization);
+					CommandManager()->ExecuteCommand(Cmd);
+				}
+				else if (_ContextMenuBar->Type == BarEventType::Strobe) {
+					ChangeStrobeQuantizationCommand^ Cmd = gcnew ChangeStrobeQuantizationCommand(this, _ContextMenuBar, _ContextMenuBar->StrobeInfo->QuantizationTicks, NewTickQuantization);
+					CommandManager()->ExecuteCommand(Cmd);
+				}
+			}
 		}
 
 		_ContextMenuBar = nullptr; // Clear the reference

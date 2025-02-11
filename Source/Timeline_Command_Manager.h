@@ -12,6 +12,7 @@ namespace MIDILightDrawer
 	ref class BarEvent;
 	ref class BarEventFadeInfo;
 	ref class BarEventStrobeInfo;
+	enum class FadeType;
 
 	
 	// Base interface for all undoable commands
@@ -221,6 +222,41 @@ namespace MIDILightDrawer
 		virtual String^ GetDescription();
 	};
 
+	// Change Fade Type
+	public ref class ChangeFadeTypeCommand : public ITimelineCommand
+	{
+	private:
+		Widget_Timeline^ _Timeline;
+		BarEvent^ _Bar;
+		FadeType _OldType;
+		FadeType _NewType;
+		Color _OldColorStart;
+		Color _OldColorCenter;
+		Color _OldColorEnd;
+
+	public:
+		ChangeFadeTypeCommand(Widget_Timeline^ timeline, BarEvent^ bar, FadeType newType);
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Change Fade Quantization
+	public ref class ChangeFadeQuantizationCommand : public ITimelineCommand
+	{
+	private:
+		Widget_Timeline^ _Timeline;
+		BarEvent^ _Bar;
+		int _OldQuantization;
+		int _NewQuantization;
+
+	public:
+		ChangeFadeQuantizationCommand(Widget_Timeline^ timeline, BarEvent^ bar, int oldQuantization, int newQuantization);
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
 	// Add Strobe Bar
 	public ref class AddStrobeBarCommand : public ITimelineCommand
 	{
@@ -235,6 +271,22 @@ namespace MIDILightDrawer
 	public:
 		AddStrobeBarCommand(Widget_Timeline^ timeline, Track^ track, int startTick, int duration, BarEventStrobeInfo^ strobeInfo);
 
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Change Strobe Quantization
+	public ref class ChangeStrobeQuantizationCommand : public ITimelineCommand
+	{
+	private:
+		Widget_Timeline^ _Timeline;
+		BarEvent^ _Bar;
+		int _OldQuantization;
+		int _NewQuantization;
+
+	public:
+		ChangeStrobeQuantizationCommand(Widget_Timeline^ timeline, BarEvent^ bar, int oldQuantization, int newQuantization);
 		virtual void Execute();
 		virtual void Undo();
 		virtual String^ GetDescription();

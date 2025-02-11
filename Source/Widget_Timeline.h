@@ -197,8 +197,9 @@ namespace MIDILightDrawer
 		void CreateContextMenuStrobe();
 		void CreateContextMenuSubChangeColor(String^ menuTitle);
 		void CreateContextMenuSubChangeQuantization(int currentQuantization);
-		
-		void HandleContextMenuClick(System::Object^ sender, ToolStripItemClickedEventArgs^ e);
+		ToolStripMenuItem^ CreateContextMenuItem(String^ text, bool clickable, Image^ image);
+
+		void HandleContextMenuClick(System::Object^ sender, EventArgs^ e);
 
 		float	GetSubdivisionLevel	();
 		int		GetTrackTop			(Track^ track);

@@ -25,10 +25,10 @@ namespace MIDILightDrawer {
 		}
 	}
 
-	bool Timeline_Direct2DRenderer_Performance::Initialize(System::Windows::Forms::Control^ control)
+	bool Timeline_Direct2DRenderer_Performance::Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback)
 	{
 		TIME_METHOD(m_perfMonitor);
-		return Timeline_Direct2DRenderer::Initialize(control);
+		return Timeline_Direct2DRenderer::Initialize(control, loadingCallback);
 	}
 
 	bool Timeline_Direct2DRenderer_Performance::BeginDraw()

@@ -16,6 +16,7 @@ namespace MIDILightDrawer
 		this->Size			= System::Drawing::Size(1200, 800);
 		this->MinimumSize	= System::Drawing::Size(1200, 800);
 		this->Padding		= System::Windows::Forms::Padding(1); // Border padding
+		this->StartPosition = FormStartPosition::CenterScreen;
 		this->_GP_Tab		= NULL;
 
 		// Register form closing event
@@ -73,6 +74,7 @@ namespace MIDILightDrawer
 
 		Table_Layout_Main->Controls->Add(TimelineContainer, 0, 1);
 		Table_Layout_Main->SetColumnSpan(TimelineContainer, Table_Layout_Main->ColumnCount);
+
 
 
 		////////////////////////

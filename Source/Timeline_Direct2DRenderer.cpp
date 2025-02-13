@@ -11,6 +11,7 @@
 #define COLOR_TO_COLOR_F(__color__)                 D2D1::ColorF(__color__.R / 255.0f, __color__.G / 255.0f, __color__.B / 255.0f, __color__.A / 255.0f)
 #define COLOR_TO_COLOR_F_A(__color__, __alpha__)    D2D1::ColorF(__color__.R / 255.0f, __color__.G / 255.0f, __color__.B / 255.0f, (__color__.A / 255.0f) * __alpha__)
 #define RECT_TO_RECT_F(__rect__)                    D2D1::RectF((float)__rect__.Left, (float)__rect__.Top, (float)__rect__.Right, (float)__rect__.Bottom)
+#define TO_LOGSCALE(__V__)							(float)Math::Log((float)__V__ + 1.0f, 2)
 
 namespace MIDILightDrawer
 {
@@ -40,7 +41,7 @@ namespace MIDILightDrawer
         Cleanup();
     }
 
-    bool Timeline_Direct2DRenderer::Initialize(System::Windows::Forms::Control^ control)
+    bool Timeline_Direct2DRenderer::Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback)
     {
         if (m_disposed || !control) {
             return false;
@@ -51,9 +52,32 @@ namespace MIDILightDrawer
         // Store control handle
         _ControlHandle = control->Handle;
 
-        // Initialize the native renderer
-        return _NativeRenderer->Initialize((HWND)_ControlHandle.ToPointer());
-    }
+		// Initialize the native renderer
+		if (!_NativeRenderer->Initialize((HWND)_ControlHandle.ToPointer())) {
+			return false;
+		}
+		
+		if (loadingCallback != nullptr)
+		{
+			loadingCallback(LoadingStage::Images);
+			PreloadImages();
+			
+			loadingCallback(LoadingStage::TabText);
+			PreloadTabTexts();
+
+			loadingCallback(LoadingStage::DrumSymbols);
+			PreloadDrumSymbols();
+
+			loadingCallback(LoadingStage::Complete);
+		}
+		else
+		{ 
+			PreloadTabTexts();
+			PreloadDrumSymbols();
+		}
+
+		return true;
+	}
 
     void Timeline_Direct2DRenderer::Resize(int width, int height)
     {
@@ -127,6 +151,30 @@ namespace MIDILightDrawer
         
         this->_NativeRenderer->PreloadBitmap(L"Note_White", TransformedIcon);
     }
+
+	void Timeline_Direct2DRenderer::PreloadTabTexts()
+	{
+		for (float z = MIN_ZOOM_LEVEL; z <= MAX_ZOOM_LEVEL; z += 0.1f)
+		{
+			float LogScale = TO_LOGSCALE(z);
+			float FontSize = GetTablatureScaledFontSize(LogScale);
+
+			_NativeRenderer->PreloadTabText(FontSize, COLOR_TO_COLOR_F(m_ColorTheme.Text), COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBackground, 0.86f));
+		}
+	}
+
+	void Timeline_Direct2DRenderer::PreloadDrumSymbols()
+	{
+		for(float z=MIN_ZOOM_LEVEL ; z <= MAX_ZOOM_LEVEL ; z += 0.1f)
+		{
+			float LogScale = TO_LOGSCALE(z);
+
+			float StringSpacing = GetTablatureScaledStringSpacing(LogScale);
+			float Size = (StringSpacing / 2.0f) - 1.0f;
+
+			_NativeRenderer->PreloadDrumSymbol(Size, COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f), COLOR_TO_COLOR_F_A(Color::Black, 0.0f));
+		}
+	}
 
     bool Timeline_Direct2DRenderer::BeginDraw()
     {
@@ -562,7 +610,9 @@ namespace MIDILightDrawer
         }
 
         // Early exit if zoom level is too small to be readable
-        if (this->_ZoomLevel < 0.1) return true;
+		if (this->_ZoomLevel < 0.1) {
+			return true;
+		}
 
         float logScale = (float)Math::Log(this->_ZoomLevel + 1, 2);
 
@@ -631,30 +681,30 @@ namespace MIDILightDrawer
                         DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions);
                     }
 
-                    float xPos = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+                    float XPos = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
 
-                    for each(Note ^ note in beat->Notes)
+                    for each(Note^ note in beat->Notes)
                     {
-                        DrumNoteInfo noteInfo = DrumNotationMap::GetNoteInfo(note->Value);
+                        DrumNoteInfo NoteInfo = DrumNotationMap::GetNoteInfo(note->Value);
 
                         // Calculate Y position (can be between lines)
-                        float yPos;
-                        int lineIndex = (int)Math::Floor(noteInfo.StringPosition);
-                        float fraction = noteInfo.StringPosition - lineIndex;
+                        float YPos;
+                        int LineIndex = (int)Math::Floor(NoteInfo.StringPosition);
+                        float Fraction = NoteInfo.StringPosition - LineIndex;
 
-                        lineIndex -= 1;
+                        LineIndex -= 1;
 
-                        if (fraction == 0.0f) { // On the line
-                            yPos = String_Info.StringYPositions[lineIndex];
+                        if (Fraction == 0.0f) { // On the line
+                            YPos = String_Info.StringYPositions[LineIndex];
                         }
-                        else if (lineIndex < 0) {
-                            yPos = String_Info.StringYPositions[0] - (String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) * fraction;
+                        else if (LineIndex < 0) {
+                            YPos = String_Info.StringYPositions[0] - (String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) * Fraction;
                         }
                         else { // Between lines
-                            yPos = String_Info.StringYPositions[lineIndex] + (String_Info.StringYPositions[lineIndex + 1] - String_Info.StringYPositions[lineIndex]) * fraction;
+                            YPos = String_Info.StringYPositions[LineIndex] + (String_Info.StringYPositions[LineIndex + 1] - String_Info.StringYPositions[LineIndex]) * Fraction;
                         }
 
-                        DrawDrumSymbol(noteInfo.SymbolType, xPos, yPos, ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0f) - 1);
+                        DrawDrumSymbol(NoteInfo.SymbolType, XPos, YPos, ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0f) - 1);
                     }
                 }
                 measureStartTick += measure->Length;
@@ -673,115 +723,97 @@ namespace MIDILightDrawer
             return false;
         }
 
-        // Calculate zoom-based scaling factors
-        const float BASE_FONT_SIZE = 9.0f;
-        const float FONT_SCALE_FACTOR = 2.0f;
-        float scaledFontSize = BASE_FONT_SIZE + (logScale * FONT_SCALE_FACTOR);
+		float ScaledFontSize = GetTablatureScaledFontSize(logScale);
+        float AvailableHeight = (float)(trackContentBounds.Height - TRACK_PADDING * 2);
 
-        // Clamp font size between min and max values
-        scaledFontSize = Math::Min(Math::Max(scaledFontSize, 4.0f), 18.0f);
+        TabStringInfo String_Info = DrawTablatureStrings(trackContentBounds, AvailableHeight, logScale, 6);
 
-        float availableHeight = (float)(trackContentBounds.Height - TRACK_PADDING * 2);
-
-        TabStringInfo String_Info = DrawTablatureStrings(trackContentBounds, availableHeight, logScale, 6);
-
-        if (String_Info.TotalHeight > availableHeight) {
+        if (String_Info.TotalHeight > AvailableHeight) {
             return true;
-        }
-
-        IDWriteTextFormat* TablatureTextFormat = _NativeRenderer->UpdateTablatureFormat(scaledFontSize);
-
-        if (TablatureTextFormat == nullptr) {
-            return false;
         }
 
         try
         {
             // Calculate visible tick range
-            int visibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
-            int visibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
+            int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
+            int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
 
             // Track measure position
-            int measureStartTick = 0;
+            int MeasureStartTick = 0;
 
             // Process only visible measures
             for (int i = 0; i < track->Measures->Count; i++)
             {
-                TrackMeasure^ measure = track->Measures[i];
-                if (measure == nullptr) {
-                    measureStartTick += measure->Length;
+                TrackMeasure^ Measure = track->Measures[i];
+                if (Measure == nullptr) {
+                    MeasureStartTick += Measure->Length;
                     continue;
                 }
 
-                int measureEndTick = measureStartTick + measure->Length;
+                int MeasureEndTick = MeasureStartTick + Measure->Length;
 
                 // Skip if measure is out of visible range
-                if (measureStartTick > visibleEndTick || measureEndTick < visibleStartTick)
+                if (MeasureStartTick > VisibleEndTick || MeasureEndTick < VisibleStartTick)
                 {
-                    measureStartTick = measureEndTick;
+                    MeasureStartTick = MeasureEndTick;
                     continue;
                 }
 
                 // Draw beats in this measure
-                for each (Beat ^ beat in measure->Beats)
+                for each (Beat^ beat in Measure->Beats)
                 {
                     if (beat == nullptr || beat->Notes == nullptr || beat->Notes->Count == 0) {
                         continue;
                     }
 
-                    int beatTick = beat->StartTick;
+                    int BeatTick = beat->StartTick;
 
                     // Skip if beat is outside visible range
-                    if (beatTick > visibleEndTick || beatTick + beat->Duration < visibleStartTick) {
+                    if (BeatTick > VisibleEndTick || BeatTick + beat->Duration < VisibleStartTick) {
                         continue;
                     }
 
-                    float beatX = (float)(TicksToPixels(beatTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+                    float BeatX = (float)(TicksToPixels(BeatTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
 
                     const float BASE_DURATION_SPACE = 23.0f;
                     const float DURATION_SCALE_FACTOR = 20.0f;
-                    float requiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
+                    float RequiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
 
                     // Draw duration lines for beats with multiple notes
-                    if ((beat->Duration > 0) && (beat->Notes->Count > 0) && availableHeight > String_Info.TotalHeight + requiredSpace)
+                    if ((beat->Duration > 0) && (beat->Notes->Count > 0) && AvailableHeight > String_Info.TotalHeight + RequiredSpace)
                     {
                         DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions);
                     }
 
                     // Draw the notes
-                    for each (Note ^ note in beat->Notes)
+                    for each (Note^ note in beat->Notes)
                     {
                         if (note == nullptr || note->String < 1 || note->String > 6) {
                             continue;
                         }
+					                        
+						TabTextCacheEntry* CachedText = _NativeRenderer->GetNearestCachedTabTextEntry(ScaledFontSize);
 
-                        std::wstring fretText = std::to_wstring(note->Value);
+						if (CachedText == nullptr) {
+							return false;
+						}
 
-                        float textWidth = _NativeRenderer->MeasureTextWidth(fretText, TablatureTextFormat);
+						float TextWidth = CachedText->TextWidths[note->Value];
 
-                        D2D1_RECT_F textRect;
-                        textRect.left = beatX - (textWidth / 2.0f);
-                        textRect.top = String_Info.StringYPositions[note->String - 1] - (scaledFontSize / 2.0f);
-                        textRect.right = textRect.left + textWidth;
-                        textRect.bottom = textRect.top + scaledFontSize;
+						D2D1_RECT_F TextRect;
+						TextRect.left	= BeatX - (TextWidth / 2.0f);
+						TextRect.right	= BeatX + (TextWidth / 2.0f);
+						TextRect.top	= String_Info.StringYPositions[note->String - 1] - (String_Info.StringSpacing / 2.0f);
+						TextRect.bottom = TextRect.top + String_Info.StringSpacing;
 
-                        // Draw background for better readability
-                        D2D1_RECT_F bgRect = D2D1::RectF(textRect.left - 1, textRect.top, textRect.right + 1, textRect.bottom - 1);
-
-                        D2D1_COLOR_F bgColor = COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBackground, 0.86f);
-
-                        _NativeRenderer->FillRectangle(bgRect, bgColor);
-
-                        // Draw the fret number
-                        D2D1_COLOR_F textColor = COLOR_TO_COLOR_F(m_ColorTheme.Text);
-                        _NativeRenderer->DrawText(fretText, textRect, textColor, TablatureTextFormat);
+						_NativeRenderer->DrawCachedTabText(note->Value, TextRect, ScaledFontSize);
                     }
                 }
 
-                measureStartTick = measureEndTick;
+                MeasureStartTick = MeasureEndTick;
             }
 
-            DrawTieLines(track, trackContentBounds, String_Info.StringYPositions, scaledFontSize);
+            DrawTieLines(track, trackContentBounds, String_Info.StringYPositions, ScaledFontSize);
 
             return true;
         }
@@ -797,92 +829,92 @@ namespace MIDILightDrawer
         }
 
         // Calculate logarithmic scaling factor
-        float logScale = (float)Math::Log(this->_ZoomLevel + 1, 2);
+		float LogScale = TO_LOGSCALE(this->_ZoomLevel);
 
         // Scale base sizes logarithmically with limits
-        const float BASE_STEM_LENGTH = 10.0f;
-        const float BASE_LINE_LENGTH = 8.0f;
-        const float BASE_LINE_SPACING = 3.0f;
-        const float BASE_STEM_OFFSET = 8.0f;
+        const float BASE_STEM_LENGTH	= 10.0f;
+        const float BASE_LINE_LENGTH	= 8.0f;
+        const float BASE_LINE_SPACING	= 3.0f;
+        const float BASE_STEM_OFFSET	= 8.0f;
 
-        float scaledStemLength = Math::Min(BASE_STEM_LENGTH + (logScale * 6.0f), 35.0f);
-        float scaledLineLength = Math::Min(BASE_LINE_LENGTH + (logScale * 2.0f), 15.0f);
-        float scaledLineSpacing = Math::Min(BASE_LINE_SPACING + (logScale * 1.0f), 6.0f);
-        float scaledLineThickness = Math::Min(1.0f + (logScale * 0.2f), 2.0f);
-        float scaledStemOffset = Math::Min(BASE_STEM_OFFSET + (logScale * 2.0f), 20.0f);
+        float ScaledStemLength		= Math::Min(BASE_STEM_LENGTH + (LogScale * 6.0f), 35.0f);
+        float ScaledLineLength		= Math::Min(BASE_LINE_LENGTH + (LogScale * 2.0f), 15.0f);
+        float ScaledLineSpacing		= Math::Min(BASE_LINE_SPACING + (LogScale * 1.0f), 6.0f);
+        float ScaledLineThickness	= Math::Min(1.0f + (LogScale * 0.2f), 2.0f);
+        float ScaledStemOffset		= Math::Min(BASE_STEM_OFFSET + (LogScale * 2.0f), 20.0f);
 
         // Get bottom string Y position
-        float bottomStringY = stringYPositions[stringYPositions->Length - 1];
+        float BottomStringY = stringYPositions[stringYPositions->Length - 1];
 
         // Calculate x position centered on the note text
-        float noteX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+        float NoteX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
 
         // Position stem below the bottom string with scaled offset
-        float stemY = bottomStringY + scaledStemOffset;
-        float stemEndY = stemY + scaledStemLength;
+        float StemY = BottomStringY + ScaledStemOffset;
+        float StemEndY = StemY + ScaledStemLength;
 
         // Calculate stem position - centered below the note
-        float stemX = noteX;
+        float StemX = NoteX;
 
         // Create base color with 70% opacity
-        D2D1_COLOR_F stemColor = COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f);
+        D2D1_COLOR_F StemColor = COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f);
 
         // Calculate duration details
-        int duration = beat->Duration;
-        int numLines = 0;
+        int Duration = beat->Duration;
+        int NumLines = 0;
 
-        if ((duration >= TICKS_PER_QUARTER * 2) && (duration < TICKS_PER_QUARTER * 4)) // Half note
+        if ((Duration >= TICKS_PER_QUARTER * 2) && (Duration < TICKS_PER_QUARTER * 4)) // Half note
         {
             // Draw only bottom half of stem
-            float halfStemLength = scaledStemLength / 2;
-            _NativeRenderer->DrawLine(stemX, stemY + halfStemLength, stemX, stemEndY, stemColor, scaledLineThickness);
+            float HalfStemLength = ScaledStemLength / 2;
+            _NativeRenderer->DrawLine(StemX, StemY + HalfStemLength, StemX, StemEndY, StemColor, ScaledLineThickness);
         }
-        else if (duration < TICKS_PER_QUARTER * 2) // Quarter note or shorter
+        else if (Duration < TICKS_PER_QUARTER * 2) // Quarter note or shorter
         {
             // Draw full stem
-            _NativeRenderer->DrawLine(stemX, stemY, stemX, stemEndY, stemColor, scaledLineThickness);
+            _NativeRenderer->DrawLine(StemX, StemY, StemX, StemEndY, StemColor, ScaledLineThickness);
 
-            if (duration <= TICKS_PER_QUARTER / 8)           numLines = 3; // 32nd note
-            else if (duration <= TICKS_PER_QUARTER / 4)      numLines = 2; // 16th note
-            else if (duration <= TICKS_PER_QUARTER / 2)      numLines = 1; // 8th note
-            else numLines = 0; // Quarter note or longer
+            if (Duration <= TICKS_PER_QUARTER / 8)           NumLines = 3; // 32nd note
+            else if (Duration <= TICKS_PER_QUARTER / 4)      NumLines = 2; // 16th note
+            else if (Duration <= TICKS_PER_QUARTER / 2)      NumLines = 1; // 8th note
+            else NumLines = 0; // Quarter note or longer
 
             // Draw horizontal lines
-            if (numLines > 0)
+            if (NumLines > 0)
             {
-                for (int i = 0; i < numLines; i++)
+                for (int i = 0; i < NumLines; i++)
                 {
-                    float lineY = stemEndY - (i * scaledLineSpacing);
-                    float lineStartX = stemX;
-                    float lineEndX = stemX + scaledLineLength;
+                    float LineY = StemEndY - (i * ScaledLineSpacing);
+                    float LineStartX = StemX;
+                    float LineEndX = StemX + ScaledLineLength;
 
-                    _NativeRenderer->DrawLine(lineStartX, lineY, lineEndX, lineY, stemColor, scaledLineThickness);
+                    _NativeRenderer->DrawLine(LineStartX, LineY, LineEndX, LineY, StemColor, ScaledLineThickness);
                 }
             }
         }
 
         if (beat->IsDotted)
         {
-            float dotSize = Math::Min(2.0f + (logScale * 0.5f), 4.0f);
-            float dotX = stemX + scaledLineLength + (dotSize * 2) - 10;
-            float dotY = stemEndY - (numLines * scaledLineSpacing);
+            float DotSize = Math::Min(2.0f + (LogScale * 0.5f), 4.0f);
+            float DotX = StemX + ScaledLineLength + (DotSize * 2) - 10;
+            float DotY = StemEndY - (NumLines * ScaledLineSpacing);
 
-            D2D1_ELLIPSE dotEllipse = D2D1::Ellipse(D2D1::Point2F(dotX, dotY), dotSize, dotSize);
-            _NativeRenderer->FillEllipse(dotEllipse, stemColor);
+            D2D1_ELLIPSE DotEllipse = D2D1::Ellipse(D2D1::Point2F(DotX, DotY), DotSize, DotSize);
+            _NativeRenderer->FillEllipse(DotEllipse, StemColor);
         }
         // Draw triplet indicator (small "3")
-        else if (duration * 3 / 2 == TICKS_PER_QUARTER ||    // Triplet quarter
-            duration * 3 / 2 == TICKS_PER_QUARTER / 2 ||     // Triplet eighth
-            duration * 3 / 2 == TICKS_PER_QUARTER / 4)       // Triplet sixteenth
+        else if (Duration * 3 / 2 == TICKS_PER_QUARTER ||    // Triplet quarter
+            Duration * 3 / 2 == TICKS_PER_QUARTER / 2 ||     // Triplet eighth
+            Duration * 3 / 2 == TICKS_PER_QUARTER / 4)       // Triplet sixteenth
         {
             // Calculate position for the "3" text
-            float textX = stemX + scaledLineLength - 10;
-            float textY = stemEndY - (numLines * scaledLineSpacing) - 14; // -14 for approx text height
+            float TextX = StemX + ScaledLineLength - 10;
+            float TextY = StemEndY - (NumLines * ScaledLineSpacing) - 14; // -14 for approx text height
 
             // Draw the "3"
-            D2D1_RECT_F textRect = D2D1::RectF(textX, textY, textX + 10, textY + 14);
-            std::wstring tripletText = L"3";
-            _NativeRenderer->DrawText(tripletText, textRect, stemColor, _NativeRenderer->GetMeasureNumberFormat());
+            D2D1_RECT_F TextRect = D2D1::RectF(TextX, TextY, TextX + 10, TextY + 14);
+            std::wstring TripletText = L"3";
+            _NativeRenderer->DrawText(TripletText, TextRect, StemColor, _NativeRenderer->GetMeasureNumberFormat());
         }
     }
 
@@ -1035,119 +1067,65 @@ namespace MIDILightDrawer
             return;
         }
 
-        D2D1_COLOR_F symbolColor = COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f); // 70% opacity for symbols
+		D2D1_RECT_F DestRect = D2D1::RectF(
+			x - size,	// Center horizontally
+			y - size,	// Center vertically
+			x + size,
+			y + size
+		);
 
-        switch (symbolType)
-        {
-            case DrumNotationType::FilledDiamond:
-            {
-                D2D1_POINT_2F points[4] = {
-                    D2D1::Point2F(x, y - size),      // Top
-                    D2D1::Point2F(x + size, y),      // Right
-                    D2D1::Point2F(x, y + size),      // Bottom
-                    D2D1::Point2F(x - size, y)       // Left
-                };
-                _NativeRenderer->FillDiamond(points, 4, symbolColor);
-                break;
-            }
-
-            case DrumNotationType::HollowDiamond:
-            {
-                D2D1_POINT_2F points[4] = {
-                    D2D1::Point2F(x, y - size),
-                    D2D1::Point2F(x + size, y),
-                    D2D1::Point2F(x, y + size),
-                    D2D1::Point2F(x - size, y)
-                };
-                _NativeRenderer->DrawPolygon(points, 4, symbolColor, 1.0f);
-                break;
-            }
-
-            case DrumNotationType::CircledX:
-            {
-                // Draw circle
-                _NativeRenderer->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(x, y), size, size), symbolColor, 1.0f);
-
-                // Draw X
-                float xSize = size * 0.7f;
-                _NativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 1.0f);
-                _NativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 1.0f);
-                break;
-            }
-
-            case DrumNotationType::AccentedX:
-            {
-                // Draw X
-                float xSize = size * 0.8f;
-                _NativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 2.5f);
-                _NativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 2.5f);
-
-                // Draw accent mark (^)
-                D2D1_POINT_2F points[3] = {
-                    D2D1::Point2F(x - size, y - size * 1.5f),
-                    D2D1::Point2F(x, y - size * 2.0f),
-                    D2D1::Point2F(x + size, y - size * 1.5f)
-                };
-                _NativeRenderer->DrawLines(points, 3, symbolColor, 2.5f);
-                break;
-            }
-
-            case DrumNotationType::RegularX:
-            {
-                float xSize = size * 0.8f;
-                _NativeRenderer->DrawLine(x - xSize, y - xSize, x + xSize, y + xSize, symbolColor, 1.0f);
-                _NativeRenderer->DrawLine(x - xSize, y + xSize, x + xSize, y - xSize, symbolColor, 1.0f);
-                break;
-            }
-
-            case DrumNotationType::NoteEllipse:
-            {
-                D2D1_ELLIPSE ellipse = D2D1::Ellipse(D2D1::Point2F(x, y), size * 0.7f, size * 0.5f);
-
-                _NativeRenderer->FillEllipse(ellipse, symbolColor);
-                break;
-            }
-
-            case DrumNotationType::Unknown:
-            {
-                D2D1_COLOR_F errorColor = D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.7f); // Red with 70% opacity
-                D2D1_ELLIPSE ellipse = D2D1::Ellipse(D2D1::Point2F(x, y), size * 0.7f, size * 0.5f);
-
-                _NativeRenderer->FillEllipse(ellipse, errorColor);
-                break;
-            }
-        }
+		// Draw using the cached bitmap
+		_NativeRenderer->DrawCachedDrumSymbol((int)symbolType, DestRect, size);
     }
 
     TabStringInfo Timeline_Direct2DRenderer::DrawTablatureStrings(System::Drawing::Rectangle bounds, float availableHeight, float logScale, int numStrings)
     {
-        TabStringInfo info;
+        TabStringInfo Info;
 
-        // Calculate spacing and dimensions
-        const float BASE_STRING_SPACING = 10.0f;
-        const float SPACING_SCALE_FACTOR = 3.0f;
-        float scaledStringSpacing = BASE_STRING_SPACING + (logScale * SPACING_SCALE_FACTOR);
-        scaledStringSpacing = Math::Min(Math::Max(scaledStringSpacing, 12.0f), 40.0f);
+		float ScaledStringSpacing = GetTablatureScaledStringSpacing(logScale);
 
-        float Total_Tab_Height = scaledStringSpacing * (numStrings - 1);
-        float verticalOffset = bounds.Y + TRACK_PADDING + (availableHeight - Total_Tab_Height) / 2;
+        float Total_Tab_Height = ScaledStringSpacing * (numStrings - 1);
+        float VerticalOffset = bounds.Y + TRACK_PADDING + (availableHeight - Total_Tab_Height) / 2;
 
         // Store calculated values
-        info.StringSpacing = scaledStringSpacing;
-        info.TotalHeight = Total_Tab_Height;
-        info.VerticalOffset = verticalOffset;
-        info.StringYPositions = gcnew array<float>(numStrings);
+        Info.StringSpacing = ScaledStringSpacing;
+        Info.TotalHeight = Total_Tab_Height;
+        Info.VerticalOffset = VerticalOffset;
+        Info.StringYPositions = gcnew array<float>(numStrings);
 
         if (Total_Tab_Height < availableHeight)
         {
             for (int i = 0; i < numStrings; i++) {
-                info.StringYPositions[i] = verticalOffset + (i * scaledStringSpacing);
-                _NativeRenderer->DrawLine((float)bounds.X, info.StringYPositions[i], (float)bounds.Right, info.StringYPositions[i], COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f), 1.0f);
+                Info.StringYPositions[i] = VerticalOffset + (i * ScaledStringSpacing);
+                _NativeRenderer->DrawLine((float)bounds.X, Info.StringYPositions[i], (float)bounds.Right, Info.StringYPositions[i], COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f), 1.0f);
             }
         }
 
-        return info;
+        return Info;
     }
+
+	float Timeline_Direct2DRenderer::GetTablatureScaledFontSize(float logScale)
+	{
+		// Calculate zoom-based scaling factors
+		const float BASE_FONT_SIZE = 9.0f;
+		const float FONT_SCALE_FACTOR = 2.0f;
+
+		float scaledFontSize = BASE_FONT_SIZE + (logScale * FONT_SCALE_FACTOR);
+
+		// Clamp font size between min and max values
+		return Math::Min(Math::Max(scaledFontSize, 4.0f), 18.0f);
+	}
+
+	float Timeline_Direct2DRenderer::GetTablatureScaledStringSpacing(float logScale)
+	{
+		// Calculate spacing and dimensions
+		const float BASE_STRING_SPACING = 10.0f;
+		const float SPACING_SCALE_FACTOR = 3.0f;
+
+		float ScaledStringSpacing = BASE_STRING_SPACING + (logScale * SPACING_SCALE_FACTOR);
+
+		return Math::Min(Math::Max(ScaledStringSpacing, 12.0f), 40.0f);
+	}
 
     bool Timeline_Direct2DRenderer::DrawTrackHeaders()
     {

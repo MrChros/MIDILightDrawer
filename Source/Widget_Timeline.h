@@ -7,6 +7,7 @@ using namespace System::Drawing;
 using namespace System::Collections::Generic;
 
 #include "Settings.h"
+#include "Form_Loading.h"
 #include "Theme_Manager.h"
 #include "Widget_Timeline_Common.h"
 #include "Widget_Timeline_Classes.h"
@@ -49,8 +50,7 @@ namespace MIDILightDrawer
 		static const int TRACK_RESIZE_HANDLE_HEIGHT		= 5;
 		static const int SCROLL_UNIT					= 50;	// Pixels per scroll unit
 		static const int DEFAULT_FADE_TICK_QUANTIZATION = Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 4; // 16th Note
-		static const double MIN_ZOOM_LEVEL				= 0.1;	// 1/10x zoom
-		static const double MAX_ZOOM_LEVEL				= 20.0;	// 20x zoom
+		
 		static const float TAB_PADDING					= 4.0f;	// Padding for tablature elements
 		static const float MIN_VISIBLE_FONT_SIZE		= 4.0f;	// Minimum readable font size
 		static const float MIN_TRACK_HEIGHT_WITH_TAB	= Timeline_Direct2DRenderer::TRACK_PADDING * 2 + Timeline_Direct2DRenderer::FIXED_STRING_SPACING * 5;

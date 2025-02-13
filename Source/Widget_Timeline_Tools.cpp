@@ -616,7 +616,7 @@ namespace MIDILightDrawer
 				BarTick = _PastePreviewBars[0]->StartTick + CopiedBar->OriginalStartTick;
 			}
 
-			BarEvent^ PasteBar = TimelineCommandManager::CreateBarCopy(CopiedBar, BarTick, true);
+			BarEvent^ PasteBar = TimelineCommandManager::CreateBarCopy(CopiedBar, BarTick, false);
 			PasteBar->OriginalStartTick = CopiedBar->OriginalStartTick;
 
 			if (!CopiedBarsFroMultipleTracks && TargetTrack != nullptr) {

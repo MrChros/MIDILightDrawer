@@ -145,4 +145,13 @@ namespace MIDILightDrawer
 			QuantizationValues->Add(L"1/16 (100% SW)", 319);
 		}
 	};
+
+	public enum class LoadingStage
+	{
+		Images,
+		TabText,
+		DrumSymbols,
+		DurationSymbols,
+		Complete
+	};
 }

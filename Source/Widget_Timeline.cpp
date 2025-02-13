@@ -48,13 +48,9 @@ namespace MIDILightDrawer
 		_D2DRenderer = gcnew Timeline_Direct2DRenderer(_Tracks, _Measures, _ZoomLevel, _ScrollPosition);
 #endif
 
-		if (_D2DRenderer->Initialize(this)) {
-			_D2DRenderer->Resize(this->Width, this->Height);
-			_D2DRenderer->SetThemeColors(_CurrentTheme.Background, _CurrentTheme.HeaderBackground, _CurrentTheme.Text, _CurrentTheme.MeasureLine, _CurrentTheme.BeatLine, _CurrentTheme.SubdivisionLine, _CurrentTheme.SelectionHighlight, _CurrentTheme.TrackBackground, _CurrentTheme.TrackBackground);
-			_D2DRenderer->SetTimelineAccess(this);
-			_D2DRenderer->PreloadImages();
-		}
-
+		_D2DRenderer->SetThemeColors(_CurrentTheme.Background, _CurrentTheme.HeaderBackground, _CurrentTheme.Text, _CurrentTheme.MeasureLine, _CurrentTheme.BeatLine, _CurrentTheme.SubdivisionLine, _CurrentTheme.SelectionHighlight, _CurrentTheme.TrackBackground, _CurrentTheme.TrackBackground);
+		_D2DRenderer->SetTimelineAccess(this);
+		
 		_PerformanceMetrics	= gcnew PerformanceMetrics();
 	}
 
@@ -200,7 +196,7 @@ namespace MIDILightDrawer
 	void Widget_Timeline::SetZoom(double newZoom)
 	{
 		// Clamp zoom level to valid range
-		newZoom = Math::Min(Math::Max(newZoom, MIN_ZOOM_LEVEL), MAX_ZOOM_LEVEL);
+		newZoom = Math::Min(Math::Max(newZoom, Timeline_Direct2DRenderer::MIN_ZOOM_LEVEL), Timeline_Direct2DRenderer::MAX_ZOOM_LEVEL);
 
 		// If no change in zoom, exit early
 		if (Math::Abs(newZoom - _ZoomLevel) < 0.0001) return;
@@ -990,7 +986,7 @@ namespace MIDILightDrawer
 			_D2DRenderer->DrawMeasureNumbers();
 			_D2DRenderer->DrawTrackContent(_ResizeHoverTrack);
 			_D2DRenderer->DrawToolPreview();
-
+			
 			_D2DRenderer->EndDraw();
 		}
 		
@@ -1212,8 +1208,12 @@ namespace MIDILightDrawer
 
 		if (_D2DRenderer != nullptr)
 		{
-			System::Diagnostics::Debug::WriteLine("OnHandleCreated: Initializing D2D");
-			if (_D2DRenderer->Initialize(this))
+			FormLoading^ Loading = gcnew FormLoading();
+			LoadingStatusCallback^ Callback = gcnew LoadingStatusCallback(Loading, &FormLoading::OnLoadingStageChanged);
+
+			Loading->Show();
+
+			if (_D2DRenderer->Initialize(this, Callback))
 			{
 				_D2DRenderer->Resize(Width, Height);
 			}
@@ -1672,7 +1672,7 @@ namespace MIDILightDrawer
 	void Widget_Timeline::SetZoomLevelAtPoint(double newZoom, Point referencePoint)
 	{
 		// Clamp zoom level to valid range
-		newZoom = Math::Min(Math::Max(newZoom, MIN_ZOOM_LEVEL), MAX_ZOOM_LEVEL);
+		newZoom = Math::Min(Math::Max(newZoom, Timeline_Direct2DRenderer::MIN_ZOOM_LEVEL), Timeline_Direct2DRenderer::MAX_ZOOM_LEVEL);
 
 		// If no change in zoom, exit early
 		if (Math::Abs(newZoom - _ZoomLevel) < 0.0001) return;

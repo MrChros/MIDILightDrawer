@@ -7,6 +7,7 @@ Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
     m_pD2DFactory(nullptr),
     m_pRenderTarget(nullptr),
     m_pSolidStroke(nullptr),
+	m_pDashedStroke(nullptr),
 	m_pLinearGradientBrush(nullptr),
     m_pDWriteFactory(nullptr),
     m_pMeasureNumberFormat(nullptr),
@@ -64,22 +65,23 @@ void Timeline_Direct2DRenderer_Native::Cleanup()
     ReleaseDeviceResources();
 
     // Release brush cache
-    for (auto& cached : m_brushCache)
+    for (auto& cached : m_BrushCache)
     {
-        if (cached.brush)
-            cached.brush->Release();
+        if (cached.Brush) {
+            cached.Brush->Release();
+		}
     }
-    m_brushCache.clear();
+    m_BrushCache.clear();
 
     // Release bitmap cache
-    for (auto& cached : m_bitmapCache) {
-        if (cached.bitmap) {
-            cached.bitmap->Release();
+    for (auto& cached : m_BitmapCache) {
+        if (cached.Bitmap) {
+            cached.Bitmap->Release();
         }
     }
-    m_bitmapCache.clear();
+    m_BitmapCache.clear();
 
-    // Release text formats
+	// Release text formats
     if (m_pMeasureNumberFormat)
     {
         m_pMeasureNumberFormat->Release();
@@ -123,6 +125,12 @@ void Timeline_Direct2DRenderer_Native::Cleanup()
         m_pDWriteFactory = nullptr;
     }
 
+	if (m_pDashedStroke)
+	{
+		m_pDashedStroke->Release();
+		m_pDashedStroke = nullptr;
+	}
+
     if (m_pSolidStroke)
     {
         m_pSolidStroke->Release();
@@ -142,8 +150,9 @@ bool Timeline_Direct2DRenderer_Native::CreateDeviceResources()
     if (!m_hwnd || !m_pD2DFactory)
         return false;
 
-    if (m_resourcesValid)
+    if (m_resourcesValid) {
         return true;
+	}
 
     // Get window size
     RECT rc;
@@ -188,18 +197,19 @@ bool Timeline_Direct2DRenderer_Native::CreateDeviceResources()
     //m_pRenderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
 
     m_resourcesValid = true;
+
     return true;
 }
 
 void Timeline_Direct2DRenderer_Native::ReleaseDeviceResources()
 {
     // Release brushes
-    for (auto& cached : m_brushCache)
+    for (auto& cached : m_BrushCache)
     {
-        if (cached.brush)
-            cached.brush->Release();
+        if (cached.Brush)
+            cached.Brush->Release();
     }
-    m_brushCache.clear();
+    m_BrushCache.clear();
 
     // Release render target
     if (m_pRenderTarget)
@@ -211,10 +221,89 @@ void Timeline_Direct2DRenderer_Native::ReleaseDeviceResources()
     m_resourcesValid = false;
 }
 
-IDWriteTextFormat* Timeline_Direct2DRenderer_Native::UpdateTablatureFormat(float fontsize)
+bool Timeline_Direct2DRenderer_Native::PreloadTabText(float fontSize, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor)
 {
-    if (!m_pDWriteFactory)
+	if (!m_pRenderTarget || !m_resourcesValid) {
+		return false;
+	}
+
+	float TabTextFontSize = fontSize * 1.0f;
+
+	IDWriteTextFormat* TextFormat = UpdateTablatureFormat(TabTextFontSize);
+
+	TabTextCacheEntry Entry;
+	Entry.FontSize = fontSize;
+
+	for (int TabText = 0; TabText <= 87; TabText++)
+	{
+		ID2D1Bitmap* Bitmap = nullptr;
+		std::wstring TextStr = std::to_wstring(TabText);
+
+		CreateTabTextBitmap(TextStr, TabTextFontSize, &Bitmap, textColor, bgColor);
+		
+		Entry.TabTexts[TabText]		= Bitmap;
+		Entry.TextWidths[TabText]	= MeasureTextWidth(TextStr, TextFormat);
+	}
+
+	m_TabTextCache.push_back(Entry);
+
+	return true;
+}
+
+bool Timeline_Direct2DRenderer_Native::PreloadDrumSymbol(float stringSpace, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
+{
+	if (!m_pRenderTarget || !m_resourcesValid) {
+		return false;
+	}
+	
+	float SymbolSize = stringSpace * 1.0f;
+
+	DrumSymbolCacheEntry Entry;
+	Entry.StringSpace = stringSpace;
+
+	for (int SymbolType = 0; SymbolType < 7; SymbolType++)
+	{
+		ID2D1Bitmap* Bitmap = nullptr;
+		CreateDrumSymbolBitmap(SymbolType, SymbolSize, &Bitmap, symbolColor, bgColor);
+		
+		Entry.DrumSymbols[SymbolType] = Bitmap;
+	}
+
+	m_DrumSymbolCache.push_back(Entry);
+
+	return true;
+}
+
+bool Timeline_Direct2DRenderer_Native::PreloadDurationSymbols(float zoomLevel, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
+{
+	if (!m_pRenderTarget || !m_resourcesValid) {
+		return false;
+	}
+
+	DurationSymbolCacheEntry entry;
+	entry.ZoomLevel = zoomLevel;
+
+	/*
+	// Create complete symbol for each possible duration
+	for (int Duration : POSSIBLE_DURATIONS)
+	{
+		ID2D1Bitmap* Bitmap = nullptr;
+		if (!CreateDurationSymbolBitmap(Duration, fontSize, &Bitmap, symbolColor, bgColor)) {
+			return false;
+		}
+		entry.DurationSymbols[Duration] = Bitmap;
+	}
+
+	m_DurationSymbolCache.push_back(entry);
+	*/
+	return true;
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::UpdateTablatureFormat(float fontSize)
+{
+    if (!m_pDWriteFactory) {
         return nullptr;
+	}
 
     // Release previous dynamic text format if it exists
     if (m_pTablatureFormat)
@@ -230,7 +319,7 @@ IDWriteTextFormat* Timeline_Direct2DRenderer_Native::UpdateTablatureFormat(float
         DWRITE_FONT_WEIGHT_NORMAL,
         DWRITE_FONT_STYLE_NORMAL,
         DWRITE_FONT_STRETCH_NORMAL,
-        fontsize,              // Font size
+        fontSize,              // Font size
         L"en-us",              // Locale
         &m_pTablatureFormat
     );
@@ -263,6 +352,7 @@ bool Timeline_Direct2DRenderer_Native::BeginDraw()
         return false;
 
     m_pRenderTarget->BeginDraw();
+
     return true;
 }
 
@@ -297,30 +387,7 @@ void Timeline_Direct2DRenderer_Native::Clear(float r, float g, float b, float a)
     this->Clear(color);
 }
 
-ID2D1SolidColorBrush* Timeline_Direct2DRenderer_Native::GetCachedBrush(const D2D1_COLOR_F& color)
-{
-    // Check cache first
-    for (const auto& cached : m_brushCache)
-    {
-        if (memcmp(&cached.color, &color, sizeof(D2D1_COLOR_F)) == 0)
-            return cached.brush;
-    }
 
-    // Create new brush
-    ID2D1SolidColorBrush* brush = nullptr;
-    HRESULT hr = m_pRenderTarget->CreateSolidColorBrush(color, &brush);
-
-    if (FAILED(hr))
-        return nullptr;
-
-    // Add to cache
-    CachedBrush newCached;
-    newCached.color = color;
-    newCached.brush = brush;
-    m_brushCache.push_back(newCached);
-
-    return brush;
-}
 
 bool Timeline_Direct2DRenderer_Native::CreateStrokeStyles()
 {
@@ -342,7 +409,320 @@ bool Timeline_Direct2DRenderer_Native::CreateStrokeStyles()
         &m_pSolidStroke
     );
 
-    return SUCCEEDED(hr);
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Create dashed stroke style
+	D2D1_STROKE_STYLE_PROPERTIES dashedProps = D2D1::StrokeStyleProperties(
+		D2D1_CAP_STYLE_FLAT,
+		D2D1_CAP_STYLE_FLAT,
+		D2D1_CAP_STYLE_FLAT,
+		D2D1_LINE_JOIN_MITER,
+		10.0f,
+		D2D1_DASH_STYLE_CUSTOM,
+		0.0f
+	);
+
+	// Define dash pattern
+	float dashes[] = { 1.0f, 1.0f };  // These values will be multiplied by stroke width
+
+	hr = m_pD2DFactory->CreateStrokeStyle(
+		dashedProps,
+		dashes,
+		ARRAYSIZE(dashes),
+		&m_pDashedStroke
+	);
+
+	return SUCCEEDED(hr);
+}
+
+bool Timeline_Direct2DRenderer_Native::CreateTabTextBitmap(const std::wstring& text, float fontSize, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor)
+{
+	if (!m_pRenderTarget || !m_pDWriteFactory) {
+		return false;
+	}
+
+	// Create temporary text format
+	IDWriteTextFormat* TextFormat = nullptr;
+	HRESULT hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fontSize, L"en-us", &TextFormat);
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Measure text
+	IDWriteTextLayout* TextLayout = nullptr;
+	hr = m_pDWriteFactory->CreateTextLayout(text.c_str(), static_cast<UINT32>(text.length()), TextFormat, 1000.0f, 100.0f, &TextLayout);
+
+	if (FAILED(hr)) {
+		TextFormat->Release();
+		return false;
+	}
+
+	DWRITE_TEXT_METRICS Metrics;
+	TextLayout->GetMetrics(&Metrics);
+
+	// Create bitmap render target
+	ID2D1BitmapRenderTarget* BitmapRT = nullptr;
+	hr = m_pRenderTarget->CreateCompatibleRenderTarget(D2D1::SizeF(Metrics.width + 2, Metrics.height + 2), &BitmapRT); // Add padding
+
+	if (SUCCEEDED(hr))
+	{
+		// Draw text to bitmap
+		BitmapRT->BeginDraw();
+		BitmapRT->Clear(bgColor);
+
+		ID2D1SolidColorBrush* Brush = nullptr;
+		BitmapRT->CreateSolidColorBrush(textColor, &Brush);
+
+		if (Brush) {
+			BitmapRT->DrawTextLayout(D2D1::Point2F(1, 1), TextLayout, Brush);	// Add 1px padding
+			Brush->Release();
+		}
+
+		BitmapRT->EndDraw();
+
+		// Get bitmap from render target
+		ID2D1Bitmap* Bitmap = nullptr;
+		BitmapRT->GetBitmap(&Bitmap);
+		*ppBitmap = Bitmap;
+
+		BitmapRT->Release();
+	}
+
+	TextLayout->Release();
+	TextFormat->Release();
+
+	return SUCCEEDED(hr);
+}
+
+bool Timeline_Direct2DRenderer_Native::CreateDrumSymbolBitmap(int symbolType, float size, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
+{
+	if (!m_pRenderTarget) {
+		return false;
+	}
+
+	float BitmapSize = size * 4.0f;  // Increase padding to 4x the symbol size
+
+	// Create the geometry for the drum symbol
+	ID2D1Geometry* SymbolGeometry = CreateDrumSymbolGeometry(symbolType, size, BitmapSize);
+	if (!SymbolGeometry) {
+		return false;
+	}
+
+	// Create bitmap render target with more padding
+	ID2D1BitmapRenderTarget* BitmapRT = nullptr;
+
+	HRESULT hr = m_pRenderTarget->CreateCompatibleRenderTarget(D2D1::SizeF(BitmapSize, BitmapSize), &BitmapRT);
+
+	if (SUCCEEDED(hr))
+	{
+		BitmapRT->BeginDraw();
+		BitmapRT->Clear(bgColor);
+
+		ID2D1SolidColorBrush* Brush = nullptr;
+		BitmapRT->CreateSolidColorBrush(symbolColor, &Brush);
+
+		if (Brush)
+		{
+			// Draw the geometry
+			if (SymbolGeometry)
+			{
+				// For filled symbols
+				if (symbolType == 0 || symbolType == 5 || symbolType == 6)
+				{
+					BitmapRT->FillGeometry(SymbolGeometry, Brush);
+				}
+				// For hollow/outline symbols
+				else
+				{
+					BitmapRT->DrawGeometry(SymbolGeometry, Brush, size * 0.2f);  // Line width proportional to size
+				}
+			}
+
+			Brush->Release();
+		}
+
+		BitmapRT->EndDraw();
+
+		// Get bitmap from render target
+		ID2D1Bitmap* Bitmap = nullptr;
+		BitmapRT->GetBitmap(&Bitmap);
+		*ppBitmap = Bitmap;
+
+		BitmapRT->Release();
+	}
+
+	// Clean up the geometry
+	if (SymbolGeometry) {
+		SymbolGeometry->Release();
+	}
+
+	return SUCCEEDED(hr);
+}
+
+ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int symbolType, float size, float bitmapSize)
+{
+	if (!m_pD2DFactory) {
+		return nullptr;
+	}
+
+	ID2D1PathGeometry* PathGeometry = nullptr;
+	HRESULT hr = m_pD2DFactory->CreatePathGeometry(&PathGeometry);
+	if (FAILED(hr)) {
+		return nullptr;
+	}
+
+	ID2D1GeometrySink* sink = nullptr;
+	hr = PathGeometry->Open(&sink);
+
+	if (FAILED(hr)) {
+		PathGeometry->Release();
+		return nullptr;
+	}
+
+	// Calculate center point and dimensions
+	D2D1_POINT_2F Center = D2D1::Point2F(bitmapSize/2, bitmapSize/2);
+	float HalfSize = size * 2.0f;
+
+	switch (symbolType)
+	{
+		case 0:  // FilledDiamond
+		{
+			sink->BeginFigure(D2D1::Point2F(Center.x, Center.y - HalfSize), D2D1_FIGURE_BEGIN_FILLED);	// Top
+			sink->AddLine(D2D1::Point2F(Center.x + HalfSize, Center.y));  // Right
+			sink->AddLine(D2D1::Point2F(Center.x, Center.y + HalfSize));  // Bottom
+			sink->AddLine(D2D1::Point2F(Center.x - HalfSize, Center.y));  // Left
+			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+			break;
+		}
+		case 1:  // HollowDiamond
+		{
+			sink->BeginFigure(D2D1::Point2F(Center.x, Center.y - HalfSize), D2D1_FIGURE_BEGIN_HOLLOW);	// Top
+			sink->AddLine(D2D1::Point2F(Center.x + HalfSize, Center.y));  // Right
+			sink->AddLine(D2D1::Point2F(Center.x, Center.y + HalfSize));  // Bottom
+			sink->AddLine(D2D1::Point2F(Center.x - HalfSize, Center.y));  // Left
+			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+			break;
+		}
+		case 2:  // CircledX
+		{
+			// Draw circle
+			float Radius = HalfSize * 1.0f; // before: 0.8f
+			sink->BeginFigure(D2D1::Point2F(Center.x + Radius, Center.y), D2D1_FIGURE_BEGIN_HOLLOW);
+
+			// Draw full circle using two arcs
+			sink->AddArc(D2D1::ArcSegment(D2D1::Point2F(Center.x - Radius, Center.y), D2D1::SizeF(Radius, Radius), 0.0f, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
+			sink->AddArc(D2D1::ArcSegment(D2D1::Point2F(Center.x + Radius, Center.y), D2D1::SizeF(Radius, Radius), 0.0f, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
+			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+
+			// Draw X
+			float xSize = Radius * 0.7f;
+			sink->BeginFigure(D2D1::Point2F(Center.x - xSize, Center.y - xSize), D2D1_FIGURE_BEGIN_HOLLOW);
+			sink->AddLine(D2D1::Point2F(Center.x + xSize, Center.y + xSize));
+			sink->EndFigure(D2D1_FIGURE_END_OPEN);
+
+			sink->BeginFigure(D2D1::Point2F(Center.x - xSize, Center.y + xSize), D2D1_FIGURE_BEGIN_HOLLOW);
+			sink->AddLine(D2D1::Point2F(Center.x + xSize, Center.y - xSize));
+			sink->EndFigure(D2D1_FIGURE_END_OPEN);
+			break;
+		}
+		case 3:  // AccentedX
+		{
+			float xSize = HalfSize * 0.8f;
+			// Draw accent mark
+			sink->BeginFigure(D2D1::Point2F(Center.x - xSize, Center.y - HalfSize * 1.5f), D2D1_FIGURE_BEGIN_HOLLOW);
+			sink->AddLine(D2D1::Point2F(Center.x, Center.y - HalfSize * 2.0f));
+			sink->AddLine(D2D1::Point2F(Center.x + xSize, Center.y - HalfSize * 1.5f));
+			sink->EndFigure(D2D1_FIGURE_END_OPEN);
+
+			// Draw X
+			sink->BeginFigure(D2D1::Point2F(Center.x - xSize, Center.y - xSize), D2D1_FIGURE_BEGIN_HOLLOW);
+			sink->AddLine(D2D1::Point2F(Center.x + xSize, Center.y + xSize));
+			sink->EndFigure(D2D1_FIGURE_END_OPEN);
+
+			sink->BeginFigure(D2D1::Point2F(Center.x - xSize, Center.y + xSize), D2D1_FIGURE_BEGIN_HOLLOW);
+			sink->AddLine(D2D1::Point2F(Center.x + xSize, Center.y - xSize));
+			sink->EndFigure(D2D1_FIGURE_END_OPEN);
+			break;
+		}
+		case 4:  // RegularX
+		{
+			float XSize = HalfSize * 0.8f;
+			sink->BeginFigure(D2D1::Point2F(Center.x - XSize, Center.y - XSize), D2D1_FIGURE_BEGIN_HOLLOW);
+			sink->AddLine(D2D1::Point2F(Center.x + XSize, Center.y + XSize));
+			sink->EndFigure(D2D1_FIGURE_END_OPEN);
+
+			sink->BeginFigure(D2D1::Point2F(Center.x - XSize, Center.y + XSize), D2D1_FIGURE_BEGIN_HOLLOW);
+			sink->AddLine(D2D1::Point2F(Center.x + XSize, Center.y - XSize));
+			sink->EndFigure(D2D1_FIGURE_END_OPEN);
+			break;
+		}
+		case 5:  // NoteEllipse
+		{
+			// Adjust ellipse size for better proportions
+			float RadiusX = HalfSize * 0.7f;
+			float RadiusY = HalfSize * 0.5f;
+
+			sink->BeginFigure(D2D1::Point2F(Center.x + RadiusX, Center.y),D2D1_FIGURE_BEGIN_FILLED);
+
+			// Create full ellipse using two arcs
+			sink->AddArc(D2D1::ArcSegment(D2D1::Point2F(Center.x - RadiusX, Center.y), D2D1::SizeF(RadiusX, RadiusY), 0.0f, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
+			sink->AddArc(D2D1::ArcSegment(D2D1::Point2F(Center.x + RadiusX, Center.y), D2D1::SizeF(RadiusX, RadiusY), 0.0f, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
+			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+			break;
+		}
+		case 6:  // Unknown (error symbol)
+		{
+			float radius = HalfSize * 0.7f;
+			sink->BeginFigure(D2D1::Point2F(Center.x + radius, Center.y), D2D1_FIGURE_BEGIN_FILLED);
+			sink->AddArc(D2D1::ArcSegment(D2D1::Point2F(Center.x - radius, Center.y), D2D1::SizeF(radius, radius), 0.0f, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
+			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+			break;
+		}
+	}
+
+	sink->Close();
+	sink->Release();
+
+	return PathGeometry;
+}
+
+void Timeline_Direct2DRenderer_Native::CleanupTablatureCache()
+{
+	/*
+	try
+	{
+		for (auto& entry : m_tablatureCache)
+		{
+			// Clean up text bitmaps
+			for (auto& pair : entry.textBitmaps)
+			{
+				if (pair.second) {
+					pair.second->Release();
+					pair.second = nullptr;  // Important: null after release
+				}
+			}
+			entry.textBitmaps.clear();
+
+			// Clean up drum symbols
+			for (auto& pair : entry.drumSymbols)
+			{
+				if (pair.second) {
+					pair.second->Release();
+					pair.second = nullptr;  // Important: null after release
+				}
+			}
+			entry.drumSymbols.clear();
+		}
+		m_tablatureCache.clear();
+	}
+	catch (...) {
+		// Ensure cache is cleared even if cleanup fails
+		m_tablatureCache.clear();
+	}
+	*/
 }
 
 bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
@@ -452,6 +832,18 @@ bool Timeline_Direct2DRenderer_Native::CreateBitmapFromImage(System::Drawing::Im
     return SUCCEEDED(hr);
 }
 
+bool Timeline_Direct2DRenderer_Native::CreateAndCacheBitmap(const std::wstring& key, System::Drawing::Image^ image)
+{
+	ID2D1Bitmap* Bitmap = nullptr;
+	if (!CreateBitmapFromImage(image, &Bitmap)) {
+		return false;
+	}
+
+	m_BitmapCache.push_back({ key, Bitmap });
+
+	return true;
+}
+
 bool Timeline_Direct2DRenderer_Native::DrawBitmap(ID2D1Bitmap* bitmap, const D2D1_RECT_F& destRect, float opacity)
 {
     if (!m_pRenderTarget || !bitmap) {
@@ -468,23 +860,36 @@ bool Timeline_Direct2DRenderer_Native::DrawBitmap(ID2D1Bitmap* bitmap, const D2D
     return true;
 }
 
-bool Timeline_Direct2DRenderer_Native::CreateAndCacheBitmap(const std::wstring& key, System::Drawing::Image^ image)
+ID2D1SolidColorBrush* Timeline_Direct2DRenderer_Native::GetCachedBrush(const D2D1_COLOR_F& color)
 {
-    ID2D1Bitmap* Bitmap = nullptr;
-    if (!CreateBitmapFromImage(image, &Bitmap)) {
-        return false;
-    }
+	// Check cache first
+	for (const auto& cached : m_BrushCache)
+	{
+		if (memcmp(&cached.Color, &color, sizeof(D2D1_COLOR_F)) == 0)
+			return cached.Brush;
+	}
 
-    m_bitmapCache.push_back({ key, Bitmap });
+	// Create new brush
+	ID2D1SolidColorBrush* brush = nullptr;
+	HRESULT hr = m_pRenderTarget->CreateSolidColorBrush(color, &brush);
 
-    return true;
+	if (FAILED(hr))
+		return nullptr;
+
+	// Add to cache
+	CachedBrush newCached;
+	newCached.Color = color;
+	newCached.Brush = brush;
+	m_BrushCache.push_back(newCached);
+
+	return brush;
 }
 
 ID2D1Bitmap* Timeline_Direct2DRenderer_Native::GetCachedBitmap(const std::wstring& key)
 {
-    auto it = std::find_if(m_bitmapCache.begin(), m_bitmapCache.end(), [&key](const CachedBitmap& cached) { return cached.key == key; });
+    auto it = std::find_if(m_BitmapCache.begin(), m_BitmapCache.end(), [&key](const CachedBitmap& cached) { return cached.Key == key; });
 
-    return it != m_bitmapCache.end() ? it->bitmap : nullptr;
+    return it != m_BitmapCache.end() ? it->Bitmap : nullptr;
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth)
@@ -497,16 +902,6 @@ bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, fl
     if (!brush) {
         return false;
     }
-
-    /*
-    // Something is wrong with 'm_pSolidStroke'
-    if (m_pSolidStroke) {
-        m_pRenderTarget->DrawLine(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), brush, strokeWidth, m_pSolidStroke);
-    }
-    else {
-        m_pRenderTarget->DrawLine(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), brush, strokeWidth);
-    }
-    */
 
     m_pRenderTarget->DrawLine(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), brush, strokeWidth);
 
@@ -575,47 +970,42 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangleDashed(const D2D1_RECT_F& re
         return false;
     }
 
-    // Top line
-    float x = rect.left;
-    while (x < rect.right) {
-        float segmentEnd = min(x + dashLength, rect.right);
-        m_pRenderTarget->DrawLine(D2D1::Point2F(x, rect.top),
-            D2D1::Point2F(segmentEnd, rect.top),
-            brush, strokeWidth);
-        x += dashLength + gapLength;
-    }
+	// Create dashed stroke style with the specified pattern
+	D2D1_STROKE_STYLE_PROPERTIES dashedProps = D2D1::StrokeStyleProperties(
+		D2D1_CAP_STYLE_FLAT,
+		D2D1_CAP_STYLE_FLAT,
+		D2D1_CAP_STYLE_FLAT,
+		D2D1_LINE_JOIN_MITER,
+		10.0f,
+		D2D1_DASH_STYLE_CUSTOM,
+		0.0f
+	);
 
-    // Right line
-    float y = rect.top;
-    while (y < rect.bottom) {
-        float segmentEnd = min(y + dashLength, rect.bottom);
-        m_pRenderTarget->DrawLine(D2D1::Point2F(rect.right, y),
-            D2D1::Point2F(rect.right, segmentEnd),
-            brush, strokeWidth);
-        y += dashLength + gapLength;
-    }
+	// Calculate dash pattern (normalize by stroke width)
+	float dashes[] = { dashLength / strokeWidth, gapLength / strokeWidth };
 
-    // Bottom line
-    x = rect.left;
-    while (x < rect.right) {
-        float segmentEnd = min(x + dashLength, rect.right);
-        m_pRenderTarget->DrawLine(D2D1::Point2F(x, rect.bottom),
-            D2D1::Point2F(segmentEnd, rect.bottom),
-            brush, strokeWidth);
-        x += dashLength + gapLength;
-    }
+	// Release existing dashed stroke style
+	if (m_pDashedStroke) {
+		m_pDashedStroke->Release();
+		m_pDashedStroke = nullptr;
+	}
 
-    // Left line
-    y = rect.top;
-    while (y < rect.bottom) {
-        float segmentEnd = min(y + dashLength, rect.bottom);
-        m_pRenderTarget->DrawLine(D2D1::Point2F(rect.left, y),
-            D2D1::Point2F(rect.left, segmentEnd),
-            brush, strokeWidth);
-        y += dashLength + gapLength;
-    }
+	// Create new stroke style with the specified dash pattern
+	HRESULT hr = m_pD2DFactory->CreateStrokeStyle(
+		dashedProps,
+		dashes,
+		ARRAYSIZE(dashes),
+		&m_pDashedStroke
+	);
 
-    return true;
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Draw the rectangle with the dashed stroke style
+	m_pRenderTarget->DrawRectangle(rect, brush, strokeWidth, m_pDashedStroke);
+
+	return true;
 }
 
 bool Timeline_Direct2DRenderer_Native::FillRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color)
@@ -906,86 +1296,45 @@ bool Timeline_Direct2DRenderer_Native::DrawTieLine(const D2D1_POINT_2F& point1, 
         return false;
     }
 
-    // Use a fixed number of segments for reliability
-    const int numSegments = 10;
-    D2D1_POINT_2F prevPoint = point1;
+	// Create path geometry
+	ID2D1PathGeometry* pathGeometry = nullptr;
+	HRESULT hr = m_pD2DFactory->CreatePathGeometry(&pathGeometry);
+	if (FAILED(hr) || !pathGeometry) {
+		return false;
+	}
 
-    for (int i = 1; i <= numSegments; i++)
-    {
-        // Calculate t for this segment (0 to 1)
-        float t = i / (float)numSegments;
-        float u = 1.0f - t;
+	// Open the geometry sink
+	ID2D1GeometrySink* sink = nullptr;
+	hr = pathGeometry->Open(&sink);
+	if (FAILED(hr) || !sink) {
+		pathGeometry->Release();
+		return false;
+	}
 
-        // Calculate powers once
-        float u2 = u * u;
-        float u3 = u2 * u;
-        float t2 = t * t;
-        float t3 = t2 * t;
+	// Define the bezier curve
+	sink->BeginFigure(point1, D2D1_FIGURE_BEGIN_HOLLOW);
 
-        // Cubic Bezier formula
-        D2D1_POINT_2F currentPoint;
-        currentPoint.x = u3 * point1.x + 3.0f * u2 * t * point2.x + 3.0f * u * t2 * point3.x + t3 * point4.x;
-        currentPoint.y = u3 * point1.y + 3.0f * u2 * t * point2.y + 3.0f * u * t2 * point3.y + t3 * point4.y;
+	D2D1_BEZIER_SEGMENT bezier;
+	bezier.point1 = point2;  // First control point
+	bezier.point2 = point3;  // Second control point
+	bezier.point3 = point4;  // End point
 
-        m_pRenderTarget->DrawLine(prevPoint, currentPoint, brush, strokeWidth);
-        prevPoint = currentPoint;
-    }
+	sink->AddBezier(bezier);
+	sink->EndFigure(D2D1_FIGURE_END_OPEN);
 
-    return true;
+	// Close the sink
+	hr = sink->Close();
+	sink->Release();
 
-    // The main bezier draw geometry function does not work for some reason. I have no clue why. May investiagte at a later point.
-    /*
-    // Create path geometry for the bezier curve
-    ID2D1PathGeometry* pathGeometry = nullptr;
-    HRESULT hr = m_pD2DFactory->CreatePathGeometry(&pathGeometry);
+	if (SUCCEEDED(hr)) {
+		// Draw the bezier curve
+		m_pRenderTarget->DrawGeometry(pathGeometry, brush, strokeWidth);
+	}
 
-    if (FAILED(hr) || !pathGeometry) {
-        return false;
-    }
+	// Clean up
+	pathGeometry->Release();
 
-    // Create geometry sink
-    ID2D1GeometrySink* sink = nullptr;
-    hr = pathGeometry->Open(&sink);
-
-    if (FAILED(hr) || !sink) {
-        pathGeometry->Release();
-        return false;
-    }
-
-    // Basic geometry construction - absolute minimal steps
-    sink->BeginFigure(point1, D2D1_FIGURE_BEGIN_FILLED);
-
-    // Try just a single bezier segment
-    sink->AddBezier(
-        D2D1::BezierSegment(
-            point2,
-            point3,
-            point4
-        )
-    );
-
-    sink->EndFigure(D2D1_FIGURE_END_OPEN);
-
-    // Must close the sink before drawing
-    hr = sink->Close();
-    sink->Release();
-
-    // Try to stream the geometry for debug
-    if (SUCCEEDED(hr)) {
-        // Draw with a much thicker stroke for testing
-        const float testStrokeWidth = 5.0f;  // Make it very visible
-
-        // Try both filled and stroked
-        //m_pRenderTarget->FillGeometry(pathGeometry, brush);
-        m_pRenderTarget->DrawGeometry(pathGeometry, brush, testStrokeWidth);
-        m_pRenderTarget->Flush();
-    }
-
-    pathGeometry->Release();
-    pathGeometry = nullptr;
-    
-    return SUCCEEDED(hr);
-    */
+	return SUCCEEDED(hr);
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawPath(ID2D1Geometry* geometry, const D2D1_COLOR_F& color, float strokeWidth)
@@ -1081,6 +1430,92 @@ bool Timeline_Direct2DRenderer_Native::DrawCachedBitmap(const std::wstring& key,
     ID2D1Bitmap* Bitmap = GetCachedBitmap(key);
     return Bitmap ? DrawBitmap(Bitmap, destRect, opacity) : false;
 }
+
+bool Timeline_Direct2DRenderer_Native::DrawCachedTabText(int fretNumber, const D2D1_RECT_F& destRect, float fontSize)
+{
+	if (!m_pRenderTarget) {
+		return false;
+	}
+
+	TabTextCacheEntry* CachedEntry = GetNearestCachedTabTextEntry(fontSize);
+	if (!CachedEntry) {
+		return false;
+	}
+
+	auto it = CachedEntry->TabTexts.find(fretNumber);
+	if (it == CachedEntry->TabTexts.end()) {
+		// Symbol not found in cache - this shouldn't happen if preloading worked correctly
+		return false;
+	}
+
+	// Draw the cached bitmap
+	m_pRenderTarget->DrawBitmap(
+		it->second,    // The cached bitmap
+		destRect,      // Destination rectangle
+		1.0f,          // Opacity
+		D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  // Use linear interpolation for smooth scaling
+	);
+
+	return true;
+}
+
+bool Timeline_Direct2DRenderer_Native::DrawCachedDrumSymbol(int symbolIndex, const D2D1_RECT_F& destRect, float stringSpace)
+{
+	if (!m_pRenderTarget) {
+		return false;
+	}
+
+	DrumSymbolCacheEntry* CachedEntry = GetNearestCachedDrumSymbolEntry(stringSpace);
+	if (!CachedEntry) {
+		return false;
+	}
+
+	auto it = CachedEntry->DrumSymbols.find(symbolIndex);
+	if (it == CachedEntry->DrumSymbols.end()) {
+		// Symbol not found in cache - this shouldn't happen if preloading worked correctly
+		return false;
+	}
+
+	// Draw the cached bitmap
+	m_pRenderTarget->DrawBitmap(
+		it->second,    // The cached bitmap
+		destRect,      // Destination rectangle
+		1.0f,          // Opacity
+		D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  // Use linear interpolation for smooth scaling
+	);
+	
+	return true;
+}
+
+TabTextCacheEntry* Timeline_Direct2DRenderer_Native::GetNearestCachedTabTextEntry(float fontSize)
+{
+	if (m_TabTextCache.empty()) {
+		return nullptr;
+	}
+
+	auto it = std::min_element(m_TabTextCache.begin(), m_TabTextCache.end(), [fontSize](const TabTextCacheEntry& a, const TabTextCacheEntry& b)
+		{
+			return std::abs(a.FontSize - fontSize) < std::abs(b.FontSize - fontSize);
+		});
+
+	return &(*it);
+}
+
+DrumSymbolCacheEntry* Timeline_Direct2DRenderer_Native::GetNearestCachedDrumSymbolEntry(float stringSpace)
+{
+	if (m_DrumSymbolCache.empty()) {
+		return nullptr;
+	}
+
+	// Find the cache entry with the closest font size
+	auto it = std::min_element(m_DrumSymbolCache.begin(), m_DrumSymbolCache.end(), [stringSpace](const DrumSymbolCacheEntry& a, const DrumSymbolCacheEntry& b)
+		{
+			return std::abs(a.StringSpace - stringSpace) < std::abs(b.StringSpace - stringSpace);
+		});
+
+	return &(*it);
+}
+
 
 bool Timeline_Direct2DRenderer_Native::PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer)
 {

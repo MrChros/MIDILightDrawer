@@ -9,6 +9,13 @@
 #include <vector>
 #include <string>
 #include <dwrite.h>
+#include <utility>
+#include <unordered_map>
+
+
+// Defines
+# define DURATION_SYMBOL_DURATIONS_COUNT	15
+
 
 // Forward declarations
 struct ID2D1Factory;
@@ -17,17 +24,61 @@ struct ID2D1SolidColorBrush;
 struct ID2D1StrokeStyle;
 struct IDWriteFactory;
 
-struct MeasureInfo {
-    int number;
-    int startTick;
-    int length;
-    int numerator;
-    int denominator;
-    std::wstring markerText;
+struct CachedBrush
+{
+	D2D1_COLOR_F Color;
+	ID2D1SolidColorBrush* Brush;
+};
+
+struct CachedBitmap
+{
+	std::wstring Key;
+	ID2D1Bitmap* Bitmap;
+};
+
+struct TabTextCacheEntry
+{
+	float FontSize;
+	std::unordered_map<int, ID2D1Bitmap*> TabTexts;
+	std::unordered_map<int, float> TextWidths;
+};
+
+struct DrumSymbolCacheEntry
+{
+	float StringSpace;
+	std::unordered_map<int, ID2D1Bitmap*> DrumSymbols;
+};
+
+struct DurationSymbolCacheEntry
+{
+	float ZoomLevel;
+	std::unordered_map<int, ID2D1Bitmap*> DurationSymbols;
+	ID2D1Bitmap* DotSymbol;
+	ID2D1Bitmap* TripletText;
 };
 
 class Timeline_Direct2DRenderer_Native
 {
+private:
+	const int POSSIBLE_DURATIONS[DURATION_SYMBOL_DURATIONS_COUNT] = {
+		3840,	// Whole note (960 * 4)
+		1920,	// Half note (960 * 2)
+		960,	// Quarter note
+		480,	// 8th note
+		240,	// 16th note
+		120,	// 32nd note
+		5760,	// Dotted whole note
+		2880,	// Dotted half note
+		1440,	// Dotted quarter note
+		720,	// Dotted 8th note
+		360,	// Dotted 16th note
+		180,	// Dotted 32nd note
+		640,	// Quarter note triplet
+		320,	// 8th note triplet
+		160		// 16th note triplet
+	};
+
+	
 public:
     Timeline_Direct2DRenderer_Native();
     ~Timeline_Direct2DRenderer_Native();
@@ -39,14 +90,17 @@ public:
     // Resource Management
     bool CreateDeviceResources();
     void ReleaseDeviceResources();
+	bool PreloadTabText(float fontSize, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor);
+	bool PreloadDrumSymbol(float stringSpace, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
+	bool PreloadDurationSymbols(float zoomLevel, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
 
     // Add getters for text formats
-    IDWriteTextFormat* GetMeasureNumberFormat() const { return m_pMeasureNumberFormat; }
-    IDWriteTextFormat* GetMarkerTextFormat()    const { return m_pMarkerTextFormat; }
-    IDWriteTextFormat* GetTimeSignatureFormat() const { return m_pTimeSignatureFormat; }
-    IDWriteTextFormat* GetQuarterNoteFormat()   const { return m_pQuarterNoteFormat; }
-    IDWriteTextFormat* GetTrackHeaderFormat()   const { return m_pTrackHeaderFormat; }
-    IDWriteTextFormat* UpdateTablatureFormat(float fontsize);
+    IDWriteTextFormat* GetMeasureNumberFormat() const { return m_pMeasureNumberFormat;	}
+    IDWriteTextFormat* GetMarkerTextFormat()    const { return m_pMarkerTextFormat;		}
+    IDWriteTextFormat* GetTimeSignatureFormat() const { return m_pTimeSignatureFormat;	}
+    IDWriteTextFormat* GetQuarterNoteFormat()   const { return m_pQuarterNoteFormat;	}
+    IDWriteTextFormat* GetTrackHeaderFormat()   const { return m_pTrackHeaderFormat;	}
+    IDWriteTextFormat* UpdateTablatureFormat(float fontSize);
 
     // Render Target Management
     bool ResizeRenderTarget(UINT width, UINT height);
@@ -90,6 +144,11 @@ public:
     bool PreloadBitmap(const std::wstring& key, System::Drawing::Image^ image);
     bool DrawCachedBitmap(const std::wstring& key, const D2D1_RECT_F& destRect, float opacity = 1.0f);
 
+	// Draw Cached Texts & Symbols
+	bool DrawCachedTabText(int fretNumber, const D2D1_RECT_F& destRect, float fontSize);
+	bool DrawCachedDrumSymbol(int symbolIndex, const D2D1_RECT_F& destRect, float stringSpace);
+	TabTextCacheEntry* GetNearestCachedTabTextEntry(float fontSize);
+	DrumSymbolCacheEntry* GetNearestCachedDrumSymbolEntry(float stringSpace);
 
     // Layer Support
     bool PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer);
@@ -112,6 +171,15 @@ private:
     ID2D1Factory* m_pD2DFactory;
     ID2D1HwndRenderTarget* m_pRenderTarget;
 
+	HWND m_hwnd;			// Window Handle
+	bool m_resourcesValid;	// State Tracking
+
+	// Stroke Styles
+	ID2D1StrokeStyle* m_pSolidStroke;
+	ID2D1StrokeStyle* m_pDashedStroke;
+
+	ID2D1LinearGradientBrush* m_pLinearGradientBrush;
+
     // DirectWrite resources
     IDWriteFactory* m_pDWriteFactory;
     IDWriteTextFormat* m_pMeasureNumberFormat;  // For measure numbers
@@ -122,40 +190,29 @@ private:
     IDWriteTextFormat* m_pTablatureFormat;      // For Tablature Text
 
     // Cached Resources
-    struct CachedBrush {
-        D2D1_COLOR_F color;
-        ID2D1SolidColorBrush* brush;
-    };
-    std::vector<CachedBrush> m_brushCache;
-
-    // Stroke Styles
-    ID2D1StrokeStyle* m_pSolidStroke;
-
-    struct CachedBitmap {
-        std::wstring key;
-        ID2D1Bitmap* bitmap;
-    };
-    std::vector<CachedBitmap> m_bitmapCache;
-
-	ID2D1LinearGradientBrush* m_pLinearGradientBrush;
-
+    std::vector<CachedBrush>				m_BrushCache;
+    std::vector<CachedBitmap>				m_BitmapCache;
+	std::vector<TabTextCacheEntry>			m_TabTextCache;
+	std::vector<DrumSymbolCacheEntry>		m_DrumSymbolCache;
+	std::vector<DurationSymbolCacheEntry>	m_DurationSymbolCache;
+	
     // Resource Management Helpers
-    ID2D1SolidColorBrush* GetCachedBrush(const D2D1_COLOR_F& color);
-    bool CreateStrokeStyles();
-    bool CreateTextFormats();
+	bool CreateStrokeStyles();
+	bool CreateTextFormats();
+	bool CreateTabTextBitmap(const std::wstring& text, float fontSize, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor);
+	bool CreateDrumSymbolBitmap(int symbolType, float size, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
+	ID2D1Geometry* CreateDrumSymbolGeometry(int symbolType, float size, float bitmapSize);
 
-    bool CreateBitmapFromImage(System::Drawing::Image^ image, ID2D1Bitmap** ppBitmap);
-    bool DrawBitmap(ID2D1Bitmap* bitmap, const D2D1_RECT_F& destRect, float opacity = 1.0f);
-    bool CreateAndCacheBitmap(const std::wstring& key, System::Drawing::Image^ image);
-    ID2D1Bitmap* GetCachedBitmap(const std::wstring& key);
-    
-    // Window Handle
-    HWND m_hwnd;
+	void CleanupTablatureCache();	// Obsolete?
 
-    // State Tracking
-    bool m_resourcesValid;
+	bool CreateBitmapFromImage(System::Drawing::Image^ image, ID2D1Bitmap** ppBitmap);
+	bool CreateAndCacheBitmap(const std::wstring& key, System::Drawing::Image^ image);
+	bool DrawBitmap(ID2D1Bitmap* bitmap, const D2D1_RECT_F& destRect, float opacity = 1.0f);
 
-    // Prevent copying
-    Timeline_Direct2DRenderer_Native(const Timeline_Direct2DRenderer_Native&) = delete;
-    Timeline_Direct2DRenderer_Native& operator=(const Timeline_Direct2DRenderer_Native&) = delete;
+	ID2D1SolidColorBrush* GetCachedBrush(const D2D1_COLOR_F& color);
+	ID2D1Bitmap* GetCachedBitmap(const std::wstring& key);
+
+	// Prevent copying
+	Timeline_Direct2DRenderer_Native(const Timeline_Direct2DRenderer_Native&) = delete;
+	Timeline_Direct2DRenderer_Native& operator=(const Timeline_Direct2DRenderer_Native&) = delete;
 };

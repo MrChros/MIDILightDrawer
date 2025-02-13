@@ -11,7 +11,7 @@ namespace MIDILightDrawer
 		Timeline_Direct2DRenderer_Performance(List<Track^>^ tracks, List<Measure^>^ measures, double zoomlevel, System::Drawing::Point^ scrollposition);
 
 		// Override key methods to add timing
-		virtual bool Initialize(System::Windows::Forms::Control^ control) override;
+		virtual bool Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback) override;
 		virtual bool BeginDraw() override;
 		virtual bool EndDraw() override;
 		virtual bool DrawWidgetBackground() override;

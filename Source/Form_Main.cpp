@@ -462,6 +462,7 @@ namespace MIDILightDrawer
 			this->_Tab_Info->Update_Info(GuiterPro5_Filename, gcnew String(this->_GP_Tab->getTabFile().title.data()), (unsigned int)this->_GP_Tab->getTabFile().measureHeaders.size(), this->_GP_Tab->getTabFile().trackCount);
 
 			this->_Timeline->Clear();
+			this->_TrackBar_Zoom->Value = 1.0f;
 			SettingsMIDI_On_Settings_Accepted();
 
 
@@ -1189,8 +1190,6 @@ namespace MIDILightDrawer
 
 #ifdef _DEBUG
 		this->_Timeline->LogPerformanceMetrics();
-		String^ report = this->_Timeline->GetRendererPerformanceReport();
-		Console::WriteLine(report);
 #endif
 	}
 
@@ -1199,8 +1198,7 @@ namespace MIDILightDrawer
 		Console::WriteLine("Button 2 Clicked");
 
 #ifdef _DEBUG
-		Console::WriteLine("Reset Renderer Performance Monitor");
-		this->_Timeline->ResetRendererPerformanceMonitor();
+		
 #endif
 	}
 }

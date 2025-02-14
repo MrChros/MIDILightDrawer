@@ -29,6 +29,7 @@ namespace MIDILightDrawer
 
         SetZoomLevel(zoomlevel);
         SetScrollPositionReference(scrollposition);
+        UpdateLevelOfDetail();
     }
 
     Timeline_Direct2DRenderer::~Timeline_Direct2DRenderer()
@@ -41,7 +42,7 @@ namespace MIDILightDrawer
         Cleanup();
     }
 
-    bool Timeline_Direct2DRenderer::Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback)
+    bool Timeline_Direct2DRenderer::Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback, LoadingProgressCallback^ progressCallback)
     {
         if (m_disposed || !control) {
             return false;
@@ -60,20 +61,25 @@ namespace MIDILightDrawer
 		if (loadingCallback != nullptr)
 		{
 			loadingCallback(LoadingStage::Images);
-			PreloadImages();
+			PreloadImages(progressCallback);
 			
 			loadingCallback(LoadingStage::TabText);
-			PreloadTabTexts();
+			PreloadTabTexts(progressCallback);
 
 			loadingCallback(LoadingStage::DrumSymbols);
-			PreloadDrumSymbols();
+			PreloadDrumSymbols(progressCallback);
+
+            loadingCallback(LoadingStage::DurationSymbols);
+            PreloadDurationSymbols(progressCallback);
 
 			loadingCallback(LoadingStage::Complete);
 		}
 		else
 		{ 
-			PreloadTabTexts();
-			PreloadDrumSymbols();
+            PreloadImages(nullptr);
+            PreloadTabTexts(nullptr);
+			PreloadDrumSymbols(nullptr);
+            PreloadDurationSymbols(nullptr);
 		}
 
 		return true;
@@ -118,10 +124,13 @@ namespace MIDILightDrawer
         this->_ToolAccessDelegate = access;
     }
 
-    void Timeline_Direct2DRenderer::PreloadImages()
+    void Timeline_Direct2DRenderer::PreloadImages(LoadingProgressCallback^ progressCallback)
     {
-        // Draw the image with color transformation if needed
-
+        if (progressCallback != nullptr) {
+            progressCallback(0.33f);
+        }
+       
+       // Draw the image with color transformation if needed
         System::Drawing::Imaging::ColorMatrix^ ColorMatrix = gcnew System::Drawing::Imaging::ColorMatrix(
             gcnew array<array<float>^> {
             gcnew array<float>{m_ColorTheme.Text.R / 255.0f, 0, 0, 0, 0},
@@ -132,6 +141,10 @@ namespace MIDILightDrawer
         }
         );
         
+        if (progressCallback != nullptr) {
+            progressCallback(0.66f);
+        }
+
         System::Drawing::Imaging::ImageAttributes^ Attributes = gcnew System::Drawing::Imaging::ImageAttributes();
         Attributes->SetColorMatrix(ColorMatrix);
 
@@ -150,46 +163,115 @@ namespace MIDILightDrawer
         }
         
         this->_NativeRenderer->PreloadBitmap(L"Note_White", TransformedIcon);
+
+        if (progressCallback != nullptr) {
+            progressCallback(1.00f);
+        }
     }
 
-	void Timeline_Direct2DRenderer::PreloadTabTexts()
+	void Timeline_Direct2DRenderer::PreloadTabTexts(LoadingProgressCallback^ progressCallback)
 	{
-		for (float z = MIN_ZOOM_LEVEL; z <= MAX_ZOOM_LEVEL; z += 0.1f)
+        float TotalSteps = (float)(MAX_ZOOM_LEVEL - MIN_ZOOM_LEVEL) / 0.1f;
+        float CurrentStep = 0;
+        
+        for (float z = (float)MIN_ZOOM_LEVEL; z <= (float)MAX_ZOOM_LEVEL; z += 0.1f)
 		{
 			float LogScale = TO_LOGSCALE(z);
 			float FontSize = GetTablatureScaledFontSize(LogScale);
 
 			_NativeRenderer->PreloadTabText(FontSize, COLOR_TO_COLOR_F(m_ColorTheme.Text), COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBackground, 0.86f));
+
+            CurrentStep++;
+            if (progressCallback != nullptr)
+            {
+                progressCallback(CurrentStep / TotalSteps);
+            }
 		}
 	}
 
-	void Timeline_Direct2DRenderer::PreloadDrumSymbols()
+	void Timeline_Direct2DRenderer::PreloadDrumSymbols(LoadingProgressCallback^ progressCallback)
 	{
-		for(float z=MIN_ZOOM_LEVEL ; z <= MAX_ZOOM_LEVEL ; z += 0.1f)
+        float TotalSteps = (float)(MAX_ZOOM_LEVEL - MIN_ZOOM_LEVEL) / 0.1f;
+        float CurrentStep = 0;
+        
+        for(float z = (float)MIN_ZOOM_LEVEL ; z <= (float)MAX_ZOOM_LEVEL ; z += 0.1f)
 		{
 			float LogScale = TO_LOGSCALE(z);
 
 			float StringSpacing = GetTablatureScaledStringSpacing(LogScale);
 			float Size = (StringSpacing / 2.0f) - 1.0f;
 
-			_NativeRenderer->PreloadDrumSymbol(Size, COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f), COLOR_TO_COLOR_F_A(Color::Black, 0.0f));
+			_NativeRenderer->PreloadDrumSymbol(Size, COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f), COLOR_TO_COLOR_F_A(Color::Transparent, 0.0f));
+
+            CurrentStep++;
+            if (progressCallback != nullptr)
+            {
+                progressCallback(CurrentStep / TotalSteps);
+            }
 		}
 	}
 
+    void Timeline_Direct2DRenderer::PreloadDurationSymbols(LoadingProgressCallback^ progressCallback)
+    {
+        float TotalSteps = (float)(MAX_ZOOM_LEVEL - MIN_ZOOM_LEVEL) / 0.1f;
+        float CurrentStep = 0;
+        
+        for (float z = (float)MIN_ZOOM_LEVEL; z <= (float)MAX_ZOOM_LEVEL; z += 0.1f)
+        {
+            float LogScale = TO_LOGSCALE(z);
+
+            _NativeRenderer->PreloadDurationSymbols(z, LogScale, COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f), COLOR_TO_COLOR_F_A(Color::Transparent, 0.0f));
+
+            CurrentStep++;
+            if (progressCallback != nullptr)
+            {
+                progressCallback(CurrentStep / TotalSteps);
+            }
+        }
+    }
+
     bool Timeline_Direct2DRenderer::BeginDraw()
     {
-        if (m_disposed || !_NativeRenderer)
+        if (m_disposed || !_NativeRenderer) {
             return false;
+        }
 
         return _NativeRenderer->BeginDraw();
     }
 
     bool Timeline_Direct2DRenderer::EndDraw()
     {
-        if (m_disposed || !_NativeRenderer)
+        if (m_disposed || !_NativeRenderer) {
             return false;
+        }
 
         return _NativeRenderer->EndDraw();
+    }
+
+    void Timeline_Direct2DRenderer::UpdateLevelOfDetail()
+    {
+        float PixelsPerFullMeasure = TicksToPixels(TICKS_PER_QUARTER * 4);
+        
+        m_LevelOfDetail.MeasureSkipFactor = GetMeasureSkipFactor(PixelsPerFullMeasure);
+        m_LevelOfDetail.ShowBeatLines = (PixelsPerFullMeasure > MIN_MEASURE_BEAT_SPACING);
+        m_LevelOfDetail.ShowAllNotes = this->_ZoomLevel >= 1.0f;
+        m_LevelOfDetail.ShowTieLines = this->_ZoomLevel >= 0.2f;
+
+        // Determine tick resolution based on zoom level
+        float PixelsPerQuarter = TicksToPixels(TICKS_PER_QUARTER);
+
+        if (PixelsPerQuarter >= 15.0f) {
+            m_LevelOfDetail.TabResolution = TablatureResolution::FullDetail;
+        }
+        else if (PixelsPerQuarter >= 10.0f) {
+            m_LevelOfDetail.TabResolution = TablatureResolution::BeatLevel;
+        }
+        else if (PixelsPerQuarter >= 5.0f) {
+            m_LevelOfDetail.TabResolution = TablatureResolution::HalfMeasure;
+        }
+        else {
+            m_LevelOfDetail.TabResolution = TablatureResolution::MeasureLevel;
+        }
     }
 
     bool Timeline_Direct2DRenderer::DrawWidgetBackground()
@@ -199,7 +281,7 @@ namespace MIDILightDrawer
         }
 
         // Create the rectangle for the tracks area
-        D2D1_RECT_F widgetArea = D2D1::RectF(
+        D2D1_RECT_F WidgetArea = D2D1::RectF(
             0,                              // Left
             0,                              // Top
             (float)this->_Control->Width,   // Right
@@ -207,9 +289,9 @@ namespace MIDILightDrawer
         );
 
         // Fill the rectangle using the native renderer
-        return _NativeRenderer->FillRectangle(widgetArea, COLOR_TO_COLOR_F(m_ColorTheme.Background));
+        return _NativeRenderer->FillRectangle(WidgetArea, COLOR_TO_COLOR_F(m_ColorTheme.Background));
     }
-
+    
     bool Timeline_Direct2DRenderer::DrawTrackBackground()
     {
         if (!_NativeRenderer) {
@@ -235,78 +317,74 @@ namespace MIDILightDrawer
         }
 
         // Fill the header background
-        D2D1_RECT_F headerRect = D2D1::RectF(0, 0, (float)this->_Control->Width, HEADER_HEIGHT);
-        _NativeRenderer->FillRectangle(headerRect, COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground));
+        D2D1_RECT_F HeaderRect = D2D1::RectF(0, 0, (float)this->_Control->Width, HEADER_HEIGHT);
+        _NativeRenderer->FillRectangle(HeaderRect, COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground));
 
         // Constants for vertical positioning within header
-        const float markerTextY = 2;
-        const float timeSignatureY = markerTextY + 14 + 2;
-        const float measureNumberY = timeSignatureY + 14 + 4;
+        const float MarkerTextY = 2;
+        const float TimeSignatureY = MarkerTextY + 14 + 2;
+        const float MeasureNumberY = TimeSignatureY + 14 + 4;
 
-        D2D1_COLOR_F d2dTextColor = COLOR_TO_COLOR_F(m_ColorTheme.Text);
+        D2D1_COLOR_F D2DTextColor = COLOR_TO_COLOR_F(m_ColorTheme.Text);
 
-        int accumulated = 0;
-        int measureNumber = 1;
+        int Accumulated = 0;
+        int MeasureNumber = 1;
 
         // For each measure
-        for each(MIDILightDrawer::Measure ^ measure in  this->_Measures)
+        for each(Measure^ Meas in  this->_Measures)
         {
-            // Convert tick position to pixels
-            float x = TicksToPixels(accumulated) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
-
-            if (x >= TRACK_HEADER_WIDTH && x <= (float)this->_Control->Width)
-            {
-                // Draw vertical tick mark for measure start
-                _NativeRenderer->DrawLine(
-                    x, HEADER_HEIGHT - 5,
-                    x, HEADER_HEIGHT - 0,
-                    d2dTextColor,
-                    1.0f
-                );
+            bool ShouldDrawDetails = (MeasureNumber % m_LevelOfDetail.MeasureSkipFactor) == 0;
                 
+            // Convert tick position to pixels
+            float X = TicksToPixels(Accumulated) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+
+            if (X >= TRACK_HEADER_WIDTH && X <= (float)this->_Control->Width)
+            {
                 // Draw marker text if present
-                if (!System::String::IsNullOrEmpty(measure->Marker_Text))
+                if (!System::String::IsNullOrEmpty(Meas->Marker_Text))
                 {
-                    D2D1_RECT_F markerRect = D2D1::RectF(x - 50, markerTextY, x + 50, markerTextY + 14);
+                    D2D1_RECT_F markerRect = D2D1::RectF(X - 50, MarkerTextY, X + 50, MarkerTextY + 14);
 
-                    std::wstring markerText = ConvertString(measure->Marker_Text);
-                    _NativeRenderer->DrawText(markerText, markerRect, d2dTextColor, _NativeRenderer->GetMarkerTextFormat());
+                    std::wstring markerText = ConvertString(Meas->Marker_Text);
+                    _NativeRenderer->DrawText(markerText, markerRect, D2DTextColor, _NativeRenderer->GetMarkerTextFormat());
                 }
+                
+                if(ShouldDrawDetails) {
+                    // Draw vertical tick mark for measure start
+                    _NativeRenderer->DrawLine(X, HEADER_HEIGHT - 5,  X, HEADER_HEIGHT - 0, D2DTextColor, 1.0f);
 
-                // Draw measure number
-                D2D1_RECT_F numberRect = D2D1::RectF(x - 25, measureNumberY, x + 25, measureNumberY + 14);
+                    // Draw measure number
+                    D2D1_RECT_F NumberRect = D2D1::RectF(X - 25, MeasureNumberY, X + 25, MeasureNumberY + 14);
+                    std::wstring NumText = std::to_wstring(MeasureNumber);
+                    _NativeRenderer->DrawText(NumText, NumberRect, D2DTextColor, _NativeRenderer->GetMeasureNumberFormat());
 
-                std::wstring numText = std::to_wstring(measureNumber);
-                _NativeRenderer->DrawText(numText, numberRect, d2dTextColor, _NativeRenderer->GetMeasureNumberFormat());
-
-                // Draw time signature
-                D2D1_RECT_F sigRect = D2D1::RectF(x - 25, timeSignatureY, x + 25, timeSignatureY + 14);
-
-                std::wstring timeSignature = std::to_wstring(measure->Numerator) + L"/" + std::to_wstring(measure->Denominator);
-
-                _NativeRenderer->DrawText(timeSignature, sigRect, d2dTextColor, _NativeRenderer->GetTimeSignatureFormat());
+                    // Draw time signature
+                    D2D1_RECT_F SigRect = D2D1::RectF(X - 25, TimeSignatureY, X + 25, TimeSignatureY + 14);
+                    std::wstring TimeSignature = std::to_wstring(Meas->Numerator) + L"/" + std::to_wstring(Meas->Denominator);
+                    _NativeRenderer->DrawText(TimeSignature, SigRect, D2DTextColor, _NativeRenderer->GetTimeSignatureFormat());
+                }
             }
 
             // Calculate subdivision level based on time signature
-            int ticksPerBeat = measure->Denominator == 8 ?
+            int TicksPerBeat = Meas->Denominator == 8 ?
                 TICKS_PER_QUARTER / 2 :  // 8th note-based measures
                 TICKS_PER_QUARTER;       // Quarter note-based measures
 
-            float pixelsPerBeat = TicksToPixels(ticksPerBeat);
-            float subdivLevel = GetSubdivisionLevel(pixelsPerBeat);
+            float PixelsPerBeat = TicksToPixels(TicksPerBeat);
+            float SubdivLevel = GetSubdivisionLevel(PixelsPerBeat);
 
             // Determine if we should show subdivisions
-            bool showSubdivisions = (measure->Denominator == 8) ?
-                (subdivLevel >= 3) :  // For 8th-based measures
-                (subdivLevel >= 2);   // For quarter-based measures
+            bool ShowSubdivisions = (Meas->Denominator == 8) ?
+                (SubdivLevel >= 3) :  // For 8th-based measures
+                (SubdivLevel >= 2);   // For quarter-based measures
 
-            if (showSubdivisions)
+            if (ShowSubdivisions)
             {
-                DrawBeatNumbers(measure, x, measureNumberY, subdivLevel, measureNumber, ticksPerBeat);
+                DrawBeatNumbers(Meas, X, MeasureNumberY, SubdivLevel, MeasureNumber, TicksPerBeat);
             }
 
-            accumulated += measure->Length;
-            measureNumber++;
+            Accumulated += Meas->Length;
+            MeasureNumber++;
         }
 
         return true;
@@ -447,36 +525,35 @@ namespace MIDILightDrawer
         return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawGridLines(float totalHeight)
+    void Timeline_Direct2DRenderer::DrawGridLines(float totalHeight)
     {
         // Calculate visible range in ticks
-        int StartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
-        int EndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width - TRACK_HEADER_WIDTH);
+        int StartTick   = (int)PixelsToTicks(-this->_ScrollPosition->X);
+        int EndTick     = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width - TRACK_HEADER_WIDTH);
 
         // Draw grid lines in proper order (back to front)
         DrawSubdivisionLines(totalHeight, StartTick, EndTick);
         DrawBeatLines(totalHeight, StartTick, EndTick);
         DrawMeasureLines(totalHeight, StartTick, EndTick);
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawSubdivisionLines(float totalHeight, int startTick, int endTick)
+    void Timeline_Direct2DRenderer::DrawSubdivisionLines(float totalHeight, int startTick, int endTick)
     {
         float SubdivLevel = GetSubdivisionLevel(TicksToPixels(TICKS_PER_QUARTER));
+        
         if (SubdivLevel <= 1) {
-            return true;
+            return;
         }
 
         int Accumulated = 0;
-        for each (Measure^ measure in this->_Measures)
+        for each (Measure^ Meas in this->_Measures)
         {
             int MeasureStart = Accumulated;
-            int TicksPerBeat = TICKS_PER_QUARTER * 4 / measure->Denominator;
+            int TicksPerBeat = TICKS_PER_QUARTER * 4 / Meas->Denominator;
             int TicksPerSubdiv = TicksPerBeat / (int)SubdivLevel;
 
             // Calculate subdivisions for this measure
-            int Subdivisions = (measure->Length / TicksPerSubdiv);
+            int Subdivisions = (Meas->Length / TicksPerSubdiv);
 
             for (int subdiv = 1; subdiv < Subdivisions; subdiv++)
             {
@@ -489,75 +566,70 @@ namespace MIDILightDrawer
 
                 if (SubdivTick >= startTick && SubdivTick <= endTick)
                 {
-                    float x = TicksToPixels(SubdivTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
-                    _NativeRenderer->DrawLine(
-                        x, HEADER_HEIGHT,
-                        x, HEADER_HEIGHT + totalHeight,
-                        COLOR_TO_RGBA(m_ColorTheme.SubdivisionLine),
-                        1.0f
-                    );
+                    float X = TicksToPixels(SubdivTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+                    _NativeRenderer->DrawLine(X, HEADER_HEIGHT, X, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.SubdivisionLine), 1.0f);
                 }
             }
 
-            Accumulated += measure->Length;
+            Accumulated += Meas->Length;
         }
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawBeatLines(float totalHeight, int startTick, int endTick)
+    void Timeline_Direct2DRenderer::DrawBeatLines(float totalHeight, int startTick, int endTick)
     {
-        int accumulated = 0;
-        for each (MIDILightDrawer::Measure ^ measure in this->_Measures)
+        if (!m_LevelOfDetail.ShowBeatLines) {
+            return;
+        }
+
+        int Accumulated = 0;
+
+        for each (Measure^ Meas in this->_Measures)
         {
-            int measureStart = accumulated;
-            int ticksPerBeat = TICKS_PER_QUARTER * 4 / measure->Denominator;
+            int MeasureStart = Accumulated;
+            int TicksPerBeat = TICKS_PER_QUARTER * 4 / Meas->Denominator;
 
             // Draw lines for each beat except measure start
-            for (int beat = 1; beat < measure->Numerator; beat++)
+            for (int beat = 1; beat < Meas->Numerator; beat++)
             {
-                int beatTick = measureStart + beat * ticksPerBeat;
+                int beatTick = MeasureStart + beat * TicksPerBeat;
 
                 if (beatTick >= startTick && beatTick <= endTick)
                 {
-                    float x = TicksToPixels(beatTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
-                    _NativeRenderer->DrawLine(
-                        x, HEADER_HEIGHT,
-                        x, HEADER_HEIGHT + totalHeight,
-                        COLOR_TO_RGBA(m_ColorTheme.BeatLine),
-                        1.0f
-                    );
+                    float X = TicksToPixels(beatTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+                    _NativeRenderer->DrawLine(X, HEADER_HEIGHT, X, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.BeatLine), 1.0f);
                 }
             }
 
-            accumulated += measure->Length;
+            Accumulated += Meas->Length;
         }
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawMeasureLines(float totalHeight, int startTick, int endTick)
+    void Timeline_Direct2DRenderer::DrawMeasureLines(float totalHeight, int startTick, int endTick)
     {
-        int accumulated = 0;
-        for each (MIDILightDrawer::Measure ^ measure in this->_Measures)
+        int Accumulated = 0;
+        int MeasureNumber = 1;
+
+        for each (Measure^ Meas in this->_Measures)
         {
-            if (accumulated > endTick)
+            if (Accumulated > endTick) {
                 break;
+            }
 
-            if (accumulated + measure->Length >= startTick)
+            bool ShouldDrawDetails = (MeasureNumber % m_LevelOfDetail.MeasureSkipFactor) == 0;
+
+            if (ShouldDrawDetails && Accumulated + Meas->Length >= startTick)
             {
-                float x = TicksToPixels(accumulated) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+                float X = TicksToPixels(Accumulated) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
 
-                if (x >= TRACK_HEADER_WIDTH && x <= (float)this->_Control->Width)
+                if (X >= TRACK_HEADER_WIDTH && X <= (float)this->_Control->Width)
                 {
-                    _NativeRenderer->DrawLine(x, HEADER_HEIGHT, x, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.MeasureLine), 1.0f);
+                    _NativeRenderer->DrawLine(X, HEADER_HEIGHT, X, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.MeasureLine), 1.0f);
                 }
             }
 
-            accumulated += measure->Length;
+            Accumulated += Meas->Length;
+            MeasureNumber++;
         }
-
-        return true;
     }
 
     void Timeline_Direct2DRenderer::DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType)
@@ -609,11 +681,6 @@ namespace MIDILightDrawer
             return true;
         }
 
-        // Early exit if zoom level is too small to be readable
-		if (this->_ZoomLevel < 0.1) {
-			return true;
-		}
-
         float logScale = (float)Math::Log(this->_ZoomLevel + 1, 2);
 
         if (track->IsDrumTrack && track->ShowAsStandardNotation)
@@ -643,45 +710,49 @@ namespace MIDILightDrawer
 
         try {
             // Calculate visible range
-            int visibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
-            int visibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
+            int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
+            int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
 
             // Calculate required space for Beat Duration drawing
             const float BASE_DURATION_SPACE = 23.0f;
             const float DURATION_SCALE_FACTOR = 20.0f;
-            float requiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
+            float RequiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
 
             // Draw notes with symbols
-            int measureStartTick = 0;
+            int MeasureStartTick = 0;
 
             for (int i = 0; i < track->Measures->Count; i++)
             {
-                TrackMeasure^ measure = track->Measures[i];
-                if (measure == nullptr) {
-                    measureStartTick += measure->Length;
+                TrackMeasure^ Measure = track->Measures[i];
+                if (Measure == nullptr) {
+                    MeasureStartTick += Measure->Length;
                     continue;
                 }
 
-                int measureEndTick = measureStartTick + measure->Length;
+                int MeasureEndTick = MeasureStartTick + Measure->Length;
 
                 // Skip if measure is out of visible range
-                if (measureStartTick > visibleEndTick || measureEndTick < visibleStartTick)
+                if (MeasureStartTick > VisibleEndTick || MeasureEndTick < VisibleStartTick)
                 {
-                    measureStartTick = measureEndTick;
+                    MeasureStartTick = MeasureEndTick;
                     continue;
                 }
 
-                for each(Beat^ beat in measure->Beats)
+                for each(Beat^ beat in Measure->Beats)
                 {
                     if (beat == nullptr || beat->Notes == nullptr || beat->Notes->Count == 0) {
                         continue;
                     }
 
-                    if ((beat->Duration > 0) && (beat->Notes->Count > 0) && availableHeight > String_Info.TotalHeight + requiredSpace) {
-                        DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions);
+                    if (!ShouldRenderBeat(beat, Measure, m_LevelOfDetail.TabResolution)) {
+                        continue;
                     }
 
-                    float XPos = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+                    float BeatX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+
+                    if ((beat->Duration > 0) && (beat->Notes->Count > 0) && availableHeight > String_Info.TotalHeight + RequiredSpace) {
+                        DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions);
+                    }
 
                     for each(Note^ note in beat->Notes)
                     {
@@ -704,10 +775,10 @@ namespace MIDILightDrawer
                             YPos = String_Info.StringYPositions[LineIndex] + (String_Info.StringYPositions[LineIndex + 1] - String_Info.StringYPositions[LineIndex]) * Fraction;
                         }
 
-                        DrawDrumSymbol(NoteInfo.SymbolType, XPos, YPos, ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0f) - 1);
+                        DrawDrumSymbol(NoteInfo.SymbolType, BeatX, YPos, ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0f) - 1);
                     }
                 }
-                measureStartTick += measure->Length;
+                MeasureStartTick += Measure->Length;
             }
 
             return true;
@@ -766,6 +837,10 @@ namespace MIDILightDrawer
                         continue;
                     }
 
+                    if (!ShouldRenderBeat(beat, Measure, m_LevelOfDetail.TabResolution)) {
+                        continue;
+                    }
+
                     int BeatTick = beat->StartTick;
 
                     // Skip if beat is outside visible range
@@ -778,7 +853,7 @@ namespace MIDILightDrawer
                     const float BASE_DURATION_SPACE = 23.0f;
                     const float DURATION_SCALE_FACTOR = 20.0f;
                     float RequiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
-
+                        
                     // Draw duration lines for beats with multiple notes
                     if ((beat->Duration > 0) && (beat->Notes->Count > 0) && AvailableHeight > String_Info.TotalHeight + RequiredSpace)
                     {
@@ -828,20 +903,23 @@ namespace MIDILightDrawer
             return;
         }
 
-        // Calculate logarithmic scaling factor
-		float LogScale = TO_LOGSCALE(this->_ZoomLevel);
-
         // Scale base sizes logarithmically with limits
-        const float BASE_STEM_LENGTH	= 10.0f;
-        const float BASE_LINE_LENGTH	= 8.0f;
-        const float BASE_LINE_SPACING	= 3.0f;
-        const float BASE_STEM_OFFSET	= 8.0f;
+        const float BASE_STEM_LENGTH = 10.0f;
+        const float BASE_LINE_LENGTH = 8.0f;
+        const float BASE_STEM_OFFSET = 8.0f;
 
-        float ScaledStemLength		= Math::Min(BASE_STEM_LENGTH + (LogScale * 6.0f), 35.0f);
-        float ScaledLineLength		= Math::Min(BASE_LINE_LENGTH + (LogScale * 2.0f), 15.0f);
-        float ScaledLineSpacing		= Math::Min(BASE_LINE_SPACING + (LogScale * 1.0f), 6.0f);
-        float ScaledLineThickness	= Math::Min(1.0f + (LogScale * 0.2f), 2.0f);
-        float ScaledStemOffset		= Math::Min(BASE_STEM_OFFSET + (LogScale * 2.0f), 20.0f);
+        DurationSymbolCacheEntry* CachedSymbol = _NativeRenderer->GetNearestCachedDurationSymbolEntry(_ZoomLevel);
+
+        if (CachedSymbol == nullptr) {
+            return;
+        }
+
+        // Calculate logarithmic scaling factor
+        float LogScale = TO_LOGSCALE(this->_ZoomLevel);
+
+        float ScaledStemLength = Math::Min(BASE_STEM_LENGTH + (LogScale * 6.0f), 35.0f);
+        float ScaledLineLength = Math::Min(BASE_LINE_LENGTH + (LogScale * 2.0f), 15.0f);
+        float ScaledStemOffset = Math::Min(BASE_STEM_OFFSET + (LogScale * 2.0f), 20.0f);
 
         // Get bottom string Y position
         float BottomStringY = stringYPositions[stringYPositions->Length - 1];
@@ -849,158 +927,103 @@ namespace MIDILightDrawer
         // Calculate x position centered on the note text
         float NoteX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
 
-        // Position stem below the bottom string with scaled offset
-        float StemY = BottomStringY + ScaledStemOffset;
-        float StemEndY = StemY + ScaledStemLength;
-
-        // Calculate stem position - centered below the note
-        float StemX = NoteX;
-
-        // Create base color with 70% opacity
-        D2D1_COLOR_F StemColor = COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f);
-
-        // Calculate duration details
         int Duration = beat->Duration;
-        int NumLines = 0;
-
-        if ((Duration >= TICKS_PER_QUARTER * 2) && (Duration < TICKS_PER_QUARTER * 4)) // Half note
-        {
-            // Draw only bottom half of stem
-            float HalfStemLength = ScaledStemLength / 2;
-            _NativeRenderer->DrawLine(StemX, StemY + HalfStemLength, StemX, StemEndY, StemColor, ScaledLineThickness);
-        }
-        else if (Duration < TICKS_PER_QUARTER * 2) // Quarter note or shorter
-        {
-            // Draw full stem
-            _NativeRenderer->DrawLine(StemX, StemY, StemX, StemEndY, StemColor, ScaledLineThickness);
-
-            if (Duration <= TICKS_PER_QUARTER / 8)           NumLines = 3; // 32nd note
-            else if (Duration <= TICKS_PER_QUARTER / 4)      NumLines = 2; // 16th note
-            else if (Duration <= TICKS_PER_QUARTER / 2)      NumLines = 1; // 8th note
-            else NumLines = 0; // Quarter note or longer
-
-            // Draw horizontal lines
-            if (NumLines > 0)
-            {
-                for (int i = 0; i < NumLines; i++)
-                {
-                    float LineY = StemEndY - (i * ScaledLineSpacing);
-                    float LineStartX = StemX;
-                    float LineEndX = StemX + ScaledLineLength;
-
-                    _NativeRenderer->DrawLine(LineStartX, LineY, LineEndX, LineY, StemColor, ScaledLineThickness);
-                }
-            }
+        if (beat->IsDotted) {
+            Duration *= (3 / 2);
         }
 
-        if (beat->IsDotted)
-        {
-            float DotSize = Math::Min(2.0f + (LogScale * 0.5f), 4.0f);
-            float DotX = StemX + ScaledLineLength + (DotSize * 2) - 10;
-            float DotY = StemEndY - (NumLines * ScaledLineSpacing);
+        D2D1_RECT_F DurationRect;
+        DurationRect.left = NoteX - ScaledLineLength;
+        DurationRect.right = NoteX + ScaledLineLength;
+        DurationRect.top = BottomStringY;
+        DurationRect.bottom = BottomStringY + ScaledStemOffset + ScaledStemLength;
 
-            D2D1_ELLIPSE DotEllipse = D2D1::Ellipse(D2D1::Point2F(DotX, DotY), DotSize, DotSize);
-            _NativeRenderer->FillEllipse(DotEllipse, StemColor);
-        }
-        // Draw triplet indicator (small "3")
-        else if (Duration * 3 / 2 == TICKS_PER_QUARTER ||    // Triplet quarter
-            Duration * 3 / 2 == TICKS_PER_QUARTER / 2 ||     // Triplet eighth
-            Duration * 3 / 2 == TICKS_PER_QUARTER / 4)       // Triplet sixteenth
-        {
-            // Calculate position for the "3" text
-            float TextX = StemX + ScaledLineLength - 10;
-            float TextY = StemEndY - (NumLines * ScaledLineSpacing) - 14; // -14 for approx text height
-
-            // Draw the "3"
-            D2D1_RECT_F TextRect = D2D1::RectF(TextX, TextY, TextX + 10, TextY + 14);
-            std::wstring TripletText = L"3";
-            _NativeRenderer->DrawText(TripletText, TextRect, StemColor, _NativeRenderer->GetMeasureNumberFormat());
-        }
+        _NativeRenderer->DrawCachedDudationSymbol(Duration, DurationRect, _ZoomLevel);
     }
 
     void Timeline_Direct2DRenderer::DrawTieLines(Track^ track, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, float scaledFontSize)
     {
-        if (!_NativeRenderer || !track->ShowTablature || track->Measures == nullptr || track->Measures->Count == 0) {
+        if (!_NativeRenderer || !track->ShowTablature || track->Measures == nullptr || track->Measures->Count == 0 || !m_LevelOfDetail.ShowTieLines) {
             return;
         }
 
         // Calculate visible range
-        int visibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
-        int visibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
+        int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
+        int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
 
         // Create color for tie lines with transparency
-        D2D1_COLOR_F tieColor = COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f);
+        D2D1_COLOR_F TieColor = COLOR_TO_COLOR_F_A(m_ColorTheme.Text, 0.7f);
 
         // Track measure position
-        int measureStartTick = 0;
+        int MeasureStartTick = 0;
 
         try {
             // For each measure, find tied notes and draw connections
             for (int i = 0; i < track->Measures->Count; i++)
             {
-                TrackMeasure^ measure = track->Measures[i];
-                if (measure == nullptr) {
-                    measureStartTick += measure->Length;
+                TrackMeasure^ Measure = track->Measures[i];
+                if (Measure == nullptr) {
+                    MeasureStartTick += Measure->Length;
                     continue;
                 }
 
-                int measureEndTick = measureStartTick + measure->Length;
+                int MeasureEndTick = MeasureStartTick + Measure->Length;
 
                 // Skip if measure is completely outside visible range
-                if (measureStartTick > visibleEndTick || measureEndTick < visibleStartTick) {
-                    measureStartTick = measureEndTick;
+                if (MeasureStartTick > VisibleEndTick || MeasureEndTick < VisibleStartTick) {
+                    MeasureStartTick = MeasureEndTick;
                     continue;
                 }
 
                 // Process each beat to find tied notes
-                for each (Beat^ currentBeat in measure->Beats)
+                for each (Beat^ CurrentBeat in Measure->Beats)
                 {
-                    if (currentBeat == nullptr || currentBeat->Notes == nullptr) {
+                    if (CurrentBeat == nullptr || CurrentBeat->Notes == nullptr) {
                         continue;
                     }
 
                     // For each tied note in current beat, find its previous note
-                    for each (Note^ currentNote in currentBeat->Notes)
+                    for each (Note^ CurrentNote in CurrentBeat->Notes)
                     {
-                        if (!currentNote->IsTied) {
+                        if (!CurrentNote->IsTied) {
                             continue;
                         }
 
                         // Find the previous note with the same string and value
-                        Beat^ previousBeat = nullptr;
-                        Note^ previousNote = nullptr;
+                        Beat^ PreviousBeat = nullptr;
+                        Note^ PreviousNote = nullptr;
 
                         // Search in current measure first
-                        for each (Beat ^ checkBeat in measure->Beats) {
-                            if (checkBeat->StartTick >= currentBeat->StartTick) {
+                        for each (Beat^ CheckBeat in Measure->Beats) {
+                            if (CheckBeat->StartTick >= CurrentBeat->StartTick) {
                                 break;
                             }
 
                             // Look for matching note
-                            for each (Note ^ checkNote in checkBeat->Notes) {
-                                if (checkNote->String == currentNote->String && checkNote->Value == currentNote->Value)
+                            for each (Note ^ CheckNote in CheckBeat->Notes) {
+                                if (CheckNote->String == CurrentNote->String && CheckNote->Value == CurrentNote->Value)
                                 {
-                                    previousBeat = checkBeat;
-                                    previousNote = checkNote;
+                                    PreviousBeat = CheckBeat;
+                                    PreviousNote = CheckNote;
                                 }
                             }
                         }
 
                         // If not found and we're not in first measure, check previous measure
-                        if (previousNote == nullptr && i > 0)
+                        if (PreviousNote == nullptr && i > 0)
                         {
-                            TrackMeasure^ prevMeasure = track->Measures[i - 1];
+                            TrackMeasure^ PrevMeasure = track->Measures[i - 1];
 
-                            if (prevMeasure != nullptr && prevMeasure->Beats != nullptr) 
+                            if (PrevMeasure != nullptr && PrevMeasure->Beats != nullptr) 
                             {
-                                for each (Beat ^ checkBeat in prevMeasure->Beats) 
+                                for each (Beat^ CheckBeat in PrevMeasure->Beats) 
                                 {
-                                    for each (Note ^ checkNote in checkBeat->Notes)
+                                    for each (Note^ CheckNote in CheckBeat->Notes)
                                     {
-                                        if (checkNote->String == currentNote->String && checkNote->Value == currentNote->Value)
+                                        if (CheckNote->String == CurrentNote->String && CheckNote->Value == CurrentNote->Value)
                                         {
-                                            previousBeat = checkBeat;
-                                            previousNote = checkNote;
+                                            PreviousBeat = CheckBeat;
+                                            PreviousNote = CheckNote;
                                         }
                                     }
                                 }
@@ -1008,11 +1031,11 @@ namespace MIDILightDrawer
                         }
 
                         // Draw tie line if we found the previous note
-                        if (previousBeat != nullptr && previousNote != nullptr)
+                        if (PreviousBeat != nullptr && PreviousNote != nullptr)
                         {
                             // Calculate note text dimensions
-                            std::wstring prevNoteText = std::to_wstring(previousNote->Value);
-                            std::wstring currentNoteText = std::to_wstring(currentNote->Value);
+                            std::wstring prevNoteText = std::to_wstring(PreviousNote->Value);
+                            std::wstring currentNoteText = std::to_wstring(CurrentNote->Value);
 
                             // Get text format with appropriate size
                             IDWriteTextFormat* textFormat = _NativeRenderer->UpdateTablatureFormat(scaledFontSize);
@@ -1020,32 +1043,32 @@ namespace MIDILightDrawer
                                 continue;
                             }
 
-                            float prevNoteWidth = _NativeRenderer->MeasureTextWidth(prevNoteText, textFormat);
-                            float currentNoteWidth = _NativeRenderer->MeasureTextWidth(currentNoteText, textFormat);
+                            float PrevNoteWidth = _NativeRenderer->MeasureTextWidth(prevNoteText, textFormat);
+                            float CurrentNoteWidth = _NativeRenderer->MeasureTextWidth(currentNoteText, textFormat);
 
                             // Calculate x positions for both notes
-                            float prevNoteX = (float)(TicksToPixels(previousBeat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
-                            float currentNoteX = (float)(TicksToPixels(currentBeat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+                            float PrevNoteX = (float)(TicksToPixels(PreviousBeat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+                            float CurrentNoteX = (float)(TicksToPixels(CurrentBeat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
 
                             // Get y position for the string
-                            float stringY = stringYPositions[currentNote->String - 1];
+                            float StringY = stringYPositions[CurrentNote->String - 1];
 
                             // Calculate start and end points
-                            float startX = prevNoteX + (prevNoteWidth / 2);
-                            float endX = currentNoteX - (currentNoteWidth / 2);
-                            float startY = stringY + (scaledFontSize / 2);
-                            float endY = stringY + (scaledFontSize / 2);
+                            float StartX = PrevNoteX + (PrevNoteWidth / 2);
+                            float EndX = CurrentNoteX - (CurrentNoteWidth / 2);
+                            float StartY = StringY + (scaledFontSize / 2);
+                            float EndY = StringY + (scaledFontSize / 2);
 
                             // Calculate control points for Bezier curve that dips below
-                            float controlHeight = 8.0f * (float)Math::Min(2.0f, Math::Max(0.5f, this->_ZoomLevel));
+                            float ControlHeight = 8.0f * (float)Math::Min(2.0f, Math::Max(0.5f, this->_ZoomLevel));
 
                             // Draw Bezier curve using Direct2D
                             _NativeRenderer->DrawTieLine(
-                                D2D1::Point2F(startX, startY),                                          // Start point
-                                D2D1::Point2F(startX + (endX - startX) / 3, startY + controlHeight),    // First control point
-                                D2D1::Point2F(startX + (endX - startX) * 2 / 3, endY + controlHeight),  // Second control point
-                                D2D1::Point2F(endX, endY),                                              // End point
-                                tieColor,
+                                D2D1::Point2F(StartX, StartY),                                          // Start point
+                                D2D1::Point2F(StartX + (EndX - StartX) / 3, StartY + ControlHeight),    // First control point
+                                D2D1::Point2F(StartX + (EndX - StartX) * 2 / 3, EndY + ControlHeight),  // Second control point
+                                D2D1::Point2F(EndX, EndY),                                              // End point
+                                TieColor,
                                 1.5f  // Line thickness
                             );
                             
@@ -1053,7 +1076,7 @@ namespace MIDILightDrawer
                     }
                 }
 
-                measureStartTick = measureEndTick;
+                MeasureStartTick = MeasureEndTick;
             }
         }
         catch (...) {
@@ -1126,6 +1149,53 @@ namespace MIDILightDrawer
 
 		return Math::Min(Math::Max(ScaledStringSpacing, 12.0f), 40.0f);
 	}
+
+    bool Timeline_Direct2DRenderer::ShouldRenderBeat(Beat^ beat, Measure^ measure, TablatureResolution resolution)
+    {
+        if (resolution == TablatureResolution::FullDetail) {
+            return true;
+        }
+
+        // Calculate beat position within measure
+        int MeasureStartTick = measure->StartTick;
+        int BeatPositionInMeasure = beat->StartTick - MeasureStartTick;
+
+        // Calculate ticks per beat for this measure
+        int TicksPerBeat = TICKS_PER_QUARTER * 4 / measure->Denominator;
+
+        // Calculate total beats in measure
+        int TotalBeats = measure->Numerator;
+
+        switch (resolution)
+        {
+            case TablatureResolution::BeatLevel:
+                // Render only on beat boundaries
+                return (BeatPositionInMeasure % TicksPerBeat) == 0;
+
+            case TablatureResolution::HalfMeasure:
+            {
+                // For odd time signatures, show first beat and middle beat
+                if (TotalBeats % 2 == 1)
+                {
+                    int MiddleBeat = TotalBeats / 2;
+                    int BeatNumber = BeatPositionInMeasure / TicksPerBeat;
+                    return BeatNumber == 0 || BeatNumber == MiddleBeat;
+                }
+                // For even time signatures, show beats at half-measure intervals
+                else
+                {
+                    return (BeatPositionInMeasure % (TicksPerBeat * (TotalBeats / 2))) == 0;
+                }
+        }
+
+        case TablatureResolution::MeasureLevel:
+            // Show only first beat of each measure
+            return BeatPositionInMeasure == 0;
+
+        default:
+            return true;
+        }
+    }
 
     bool Timeline_Direct2DRenderer::DrawTrackHeaders()
     {
@@ -2377,6 +2447,16 @@ namespace MIDILightDrawer
         if (subdivLevel >= 2) return 2;
 
         return 1;
+    }
+
+    int Timeline_Direct2DRenderer::GetMeasureSkipFactor(float pixelsBetweenMeasures)
+    {
+        if (pixelsBetweenMeasures >= MIN_MEASURE_NUMBER_SPACING) return 1;
+        if (pixelsBetweenMeasures * 2 >= MIN_MEASURE_NUMBER_SPACING) return 2;
+        if (pixelsBetweenMeasures * 4 >= MIN_MEASURE_NUMBER_SPACING) return 4;
+        if (pixelsBetweenMeasures * 8 >= MIN_MEASURE_NUMBER_SPACING) return 8;
+
+        return 16;  // Maximum skip factor
     }
 
     int Timeline_Direct2DRenderer::GetTrackTop(Track^ track)

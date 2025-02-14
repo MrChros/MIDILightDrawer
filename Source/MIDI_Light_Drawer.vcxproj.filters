@@ -132,9 +132,6 @@
     <ClInclude Include="Performance_Monitor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Timeline_Direct2DRenderer_Performance.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MIDI_Exporter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -142,6 +139,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Form_Loading.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Control_ProgressBar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -251,9 +251,6 @@
     <ClCompile Include="Performance_Monitor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Timeline_Direct2DRenderer_Performance.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MIDI_Exporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -261,6 +258,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Form_Loading.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Control_ProgressBar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

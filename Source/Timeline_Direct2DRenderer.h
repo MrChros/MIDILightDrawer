@@ -30,6 +30,7 @@ namespace MIDILightDrawer
     value struct TrackButtonId;
 
 	public delegate void LoadingStatusCallback(LoadingStage stage);
+    public delegate void LoadingProgressCallback(float progress);
 
 	// Managed wrapper for TimelineD2DRenderer
     public ref class Timeline_Direct2DRenderer
@@ -43,6 +44,10 @@ namespace MIDILightDrawer
         static const int BUTTON_SIZE					= 24;
 		static const int BUTTON_MARGIN					= 6;
         static const float FIXED_STRING_SPACING			= 12.0f;
+        static const float MIN_MEASURE_NUMBER_SPACING   = 20.0f;
+        static const float MIN_MEASURE_BEAT_SPACING     = 20.0f;
+        static const float MIN_NOTE_SPACING_PIXELS      = 10.0f;
+
 		static const double MIN_ZOOM_LEVEL				= 0.1;	// 1/10x zoom
 		static const double MAX_ZOOM_LEVEL				= 20.0;	// 20x zoom
 
@@ -58,27 +63,44 @@ namespace MIDILightDrawer
             System::Drawing::Color TrackBorder;
         };
 
+        enum class TablatureResolution {
+            FullDetail,      // Show all notes
+            BeatLevel,       // Show notes on beat boundaries
+            HalfMeasure,     // Show notes at half-measure intervals
+            MeasureLevel     // Show only first note of each measure
+        };
+
+        value struct LevelOfDetail {
+            int MeasureSkipFactor;
+            bool ShowBeatLines;
+            bool ShowAllNotes;
+            bool ShowTieLines;
+            TablatureResolution TabResolution;
+        };
+
     public:
         Timeline_Direct2DRenderer(List<Track^>^ tracks, List<Measure^>^ measures, double zoomlevel, System::Drawing::Point^ scrollposition);
         virtual ~Timeline_Direct2DRenderer();
 		!Timeline_Direct2DRenderer();
 
         // Initialization
-		virtual bool Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback);
+		virtual bool Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback, LoadingProgressCallback^ progressCallback);
         virtual void Resize(int width, int height);
         virtual void SetThemeColors(System::Drawing::Color background, System::Drawing::Color headerbackground, System::Drawing::Color text, System::Drawing::Color measureline, System::Drawing::Color beatline, System::Drawing::Color subdivisionline, System::Drawing::Color selectionhighlight, System::Drawing::Color trackbackground, System::Drawing::Color trackborder);
         virtual void SetZoomLevel(double zoomlevel);
         virtual void SetScrollPositionReference(System::Drawing::Point^ scrollposition);
         virtual void SetTimelineAccess(ITimelineAccess^ access);
-        virtual void PreloadImages();
-        virtual void PreloadTabTexts();
-		virtual void PreloadDrumSymbols();
+        virtual void PreloadImages(LoadingProgressCallback^ progressCallback);
+        virtual void PreloadTabTexts(LoadingProgressCallback^ progressCallback);
+		virtual void PreloadDrumSymbols(LoadingProgressCallback^ progressCallback);
+		virtual void PreloadDurationSymbols(LoadingProgressCallback^ progressCallback);
 
         // Drawing Methods
 		virtual bool BeginDraw();
 		virtual bool EndDraw();
 
         // Widget Timeline Drawing 
+        virtual void UpdateLevelOfDetail();
         virtual bool DrawWidgetBackground();
         virtual bool DrawTrackBackground();
         virtual bool DrawMeasureNumbers();
@@ -91,10 +113,10 @@ namespace MIDILightDrawer
 
 
         // Sub-Methods for DrawTrackContent
-        virtual bool DrawGridLines(float totalHeight);
-        virtual bool DrawSubdivisionLines(float totalHeight, int startTick, int endTick);
-        virtual bool DrawBeatLines(float totalHeight, int startTick, int endTick);
-        virtual bool DrawMeasureLines(float totalHeight, int startTick, int endTick);
+        virtual void DrawGridLines(float totalHeight);
+        virtual void DrawSubdivisionLines(float totalHeight, int startTick, int endTick);
+        virtual void DrawBeatLines(float totalHeight, int startTick, int endTick);
+        virtual void DrawMeasureLines(float totalHeight, int startTick, int endTick);
 
 
         // Sub-Methods for DrawTrackContent - DrawTrackEvents and DrawTrackTablature
@@ -108,7 +130,7 @@ namespace MIDILightDrawer
         virtual TabStringInfo DrawTablatureStrings(System::Drawing::Rectangle bounds, float availableHeight, float logScale, int numStrings);
 		virtual float GetTablatureScaledFontSize(float logScale);
 		virtual float GetTablatureScaledStringSpacing(float logScale);
-
+        virtual bool ShouldRenderBeat(Beat^ beat, Measure^ measure, TablatureResolution resolution);
 
         virtual bool DrawTrackHeaders();
         virtual bool DrawTrackButtons(Track^ track, System::Drawing::Rectangle trackHeaderBounds);
@@ -170,6 +192,7 @@ namespace MIDILightDrawer
         float TicksToPixels(int ticks);
         float PixelsToTicks(int pixels);
         float GetSubdivisionLevel(float pixelsPerBeat);
+        int GetMeasureSkipFactor(float pixelsBetweenMeasures);
         int GetTrackTop(Track^ track);
         float GetTotalTrackHeight();
         Track^ GetTrackAtPoint(System::Drawing::Point point);
@@ -190,6 +213,7 @@ namespace MIDILightDrawer
         bool m_disposed;
         bool m_themeColorsCached;
         CachedThemeColors m_ColorTheme;
+        LevelOfDetail m_LevelOfDetail;
 
         System::Windows::Forms::Control^ _Control;
         List<Track^>^           _Tracks;

@@ -141,6 +141,7 @@
     <ClInclude Include="Control_DropDown.h" />
     <ClInclude Include="Control_FadePreview.h" />
     <ClInclude Include="Control_GroupBox.h" />
+    <ClInclude Include="Control_ProgressBar.h" />
     <ClInclude Include="Control_ScrollBar.h" />
     <ClInclude Include="Control_Trackbar_Zoom.h" />
     <ClInclude Include="Custom_Color_Table.h" />
@@ -159,7 +160,6 @@
     <ClInclude Include="Timeline_Command_Manager.h" />
     <ClInclude Include="Timeline_Direct2DRenderer.h" />
     <ClInclude Include="Timeline_Direct2DRenderer_Native.h" />
-    <ClInclude Include="Timeline_Direct2DRenderer_Performance.h" />
     <ClInclude Include="Timeline_Performance_Metrics.h" />
     <ClInclude Include="Timeline_Tool_Interface.h" />
     <ClInclude Include="Widget_Bucket_Options.h" />
@@ -185,6 +185,7 @@
     <ClCompile Include="Control_DropDown.cpp" />
     <ClCompile Include="Control_FadePreview.cpp" />
     <ClCompile Include="Control_GroupBox.cpp" />
+    <ClCompile Include="Control_ProgressBar.cpp" />
     <ClCompile Include="Control_ScrollBar.cpp" />
     <ClCompile Include="Control_Trackbar_Zoom.cpp" />
     <ClCompile Include="Form_Loading.cpp" />
@@ -204,7 +205,6 @@
     <ClCompile Include="Timeline_Command_Manager.cpp" />
     <ClCompile Include="Timeline_Direct2DRenderer.cpp" />
     <ClCompile Include="Timeline_Direct2DRenderer_Native.cpp" />
-    <ClCompile Include="Timeline_Direct2DRenderer_Performance.cpp" />
     <ClCompile Include="Timeline_Performance_Metrics.cpp" />
     <ClCompile Include="Widget_Bucket_Options.cpp" />
     <ClCompile Include="Widget_Color_Options.cpp" />

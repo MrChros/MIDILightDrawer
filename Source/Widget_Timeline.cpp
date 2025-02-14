@@ -42,12 +42,7 @@ namespace MIDILightDrawer
 		InitializeToolSystem();
 		InitializeContextMenu();
 
-#ifdef _DEBUG
-		_D2DRenderer = gcnew Timeline_Direct2DRenderer_Performance(_Tracks, _Measures, _ZoomLevel, _ScrollPosition);
-#else
 		_D2DRenderer = gcnew Timeline_Direct2DRenderer(_Tracks, _Measures, _ZoomLevel, _ScrollPosition);
-#endif
-
 		_D2DRenderer->SetThemeColors(_CurrentTheme.Background, _CurrentTheme.HeaderBackground, _CurrentTheme.Text, _CurrentTheme.MeasureLine, _CurrentTheme.BeatLine, _CurrentTheme.SubdivisionLine, _CurrentTheme.SelectionHighlight, _CurrentTheme.TrackBackground, _CurrentTheme.TrackBackground);
 		_D2DRenderer->SetTimelineAccess(this);
 		
@@ -199,14 +194,16 @@ namespace MIDILightDrawer
 		newZoom = Math::Min(Math::Max(newZoom, Timeline_Direct2DRenderer::MIN_ZOOM_LEVEL), Timeline_Direct2DRenderer::MAX_ZOOM_LEVEL);
 
 		// If no change in zoom, exit early
-		if (Math::Abs(newZoom - _ZoomLevel) < 0.0001) return;
+		if (Math::Abs(newZoom - _ZoomLevel) < 0.0001) {
+			return;
+		}
 
 		// Calculate the center point of the visible area in ticks
-		int visibleWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
-		int centerTick = PixelsToTicks(-_ScrollPosition->X + (visibleWidth / 2));
+		int VisibleWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int CenterTick = PixelsToTicks(-_ScrollPosition->X + (VisibleWidth / 2));
 
 		// Store old zoom level and apply new zoom
-		double oldZoom = _ZoomLevel;
+		double OldZoom = _ZoomLevel;
 		_ZoomLevel = newZoom;
 
 		if (_D2DRenderer != nullptr) {
@@ -214,8 +211,8 @@ namespace MIDILightDrawer
 		}
 
 		// Recalculate scroll position to maintain center
-		int newCenterPixel = TicksToPixels(centerTick);
-		_ScrollPosition->X = -(newCenterPixel - (visibleWidth / 2));
+		int newCenterPixel = TicksToPixels(CenterTick);
+		_ScrollPosition->X = -(newCenterPixel - (VisibleWidth / 2));
 
 		// Ensure proper alignment
 		UpdateScrollBounds();
@@ -975,6 +972,8 @@ namespace MIDILightDrawer
 	{
 		_PerformanceMetrics->StartFrame();
 
+		_D2DRenderer->UpdateLevelOfDetail();
+
 		if (_D2DRenderer->BeginDraw())
 		{
 			// Clear the background
@@ -1209,11 +1208,12 @@ namespace MIDILightDrawer
 		if (_D2DRenderer != nullptr)
 		{
 			FormLoading^ Loading = gcnew FormLoading();
-			LoadingStatusCallback^ Callback = gcnew LoadingStatusCallback(Loading, &FormLoading::OnLoadingStageChanged);
+			LoadingStatusCallback^ StatusCallback = gcnew LoadingStatusCallback(Loading, &FormLoading::OnLoadingStageChanged);
+			LoadingProgressCallback^ ProgressCallback = gcnew LoadingProgressCallback(Loading, &FormLoading::UpdateProgress);
 
 			Loading->Show();
 
-			if (_D2DRenderer->Initialize(this, Callback))
+			if (_D2DRenderer->Initialize(this, StatusCallback, ProgressCallback))
 			{
 				_D2DRenderer->Resize(Width, Height);
 			}

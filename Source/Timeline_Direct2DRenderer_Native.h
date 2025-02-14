@@ -5,16 +5,18 @@
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "user32.lib")
 
+#define NOMINMAX
+
 #include <d2d1.h>
 #include <vector>
 #include <string>
 #include <dwrite.h>
 #include <utility>
+#include <algorithm>
 #include <unordered_map>
 
-
 // Defines
-# define DURATION_SYMBOL_DURATIONS_COUNT	15
+#define DURATION_SYMBOL_DURATIONS_COUNT	15
 
 
 // Forward declarations
@@ -53,32 +55,38 @@ struct DurationSymbolCacheEntry
 {
 	float ZoomLevel;
 	std::unordered_map<int, ID2D1Bitmap*> DurationSymbols;
-	ID2D1Bitmap* DotSymbol;
-	ID2D1Bitmap* TripletText;
 };
 
 class Timeline_Direct2DRenderer_Native
 {
 private:
+    static const int TICKS_PER_QUARTER = 960;
+
 	const int POSSIBLE_DURATIONS[DURATION_SYMBOL_DURATIONS_COUNT] = {
-		3840,	// Whole note (960 * 4)
-		1920,	// Half note (960 * 2)
-		960,	// Quarter note
-		480,	// 8th note
-		240,	// 16th note
-		120,	// 32nd note
-		5760,	// Dotted whole note
-		2880,	// Dotted half note
-		1440,	// Dotted quarter note
-		720,	// Dotted 8th note
-		360,	// Dotted 16th note
-		180,	// Dotted 32nd note
-		640,	// Quarter note triplet
-		320,	// 8th note triplet
-		160		// 16th note triplet
+        TICKS_PER_QUARTER * 4,	    // Whole note (960 * 4)
+        TICKS_PER_QUARTER * 2,	    // Half note (960 * 2)
+        TICKS_PER_QUARTER,	        // Quarter note
+        TICKS_PER_QUARTER / 2,	    // 8th note
+        TICKS_PER_QUARTER / 4,	    // 16th note
+        TICKS_PER_QUARTER / 8,	    // 32nd note
+        TICKS_PER_QUARTER * 6,	    // Dotted whole note3
+        TICKS_PER_QUARTER * 3,	    // Dotted half note
+        TICKS_PER_QUARTER * 3 / 2,	// Dotted quarter note
+        TICKS_PER_QUARTER * 3 / 4,	// Dotted 8th note
+        TICKS_PER_QUARTER * 3 / 8,	// Dotted 16th note
+        TICKS_PER_QUARTER * 3 / 16,	// Dotted 32nd note
+        TICKS_PER_QUARTER * 2 / 3,	// Quarter note triplet
+        TICKS_PER_QUARTER * 2 / 6,	// 8th note triplet
+        TICKS_PER_QUARTER * 2 / 12	// 16th note triplet
 	};
 
+    // Scale base sizes logarithmically with limits
+    const float DURATION_SYMBOL_BASE_STEM_LENGTH    = 10.0f;
+    const float DURATION_SYMBOL_BASE_LINE_LENGTH    = 8.0f;
+    const float DURATION_SYMBOL_BASE_LINE_SPACING   = 3.0f;
+    const float DURATION_SYMBOL_BASE_STEM_OFFSET    = 8.0f;
 	
+
 public:
     Timeline_Direct2DRenderer_Native();
     ~Timeline_Direct2DRenderer_Native();
@@ -92,7 +100,7 @@ public:
     void ReleaseDeviceResources();
 	bool PreloadTabText(float fontSize, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor);
 	bool PreloadDrumSymbol(float stringSpace, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
-	bool PreloadDurationSymbols(float zoomLevel, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
+	bool PreloadDurationSymbols(float zoomLevel, float logScale, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
 
     // Add getters for text formats
     IDWriteTextFormat* GetMeasureNumberFormat() const { return m_pMeasureNumberFormat;	}
@@ -147,8 +155,10 @@ public:
 	// Draw Cached Texts & Symbols
 	bool DrawCachedTabText(int fretNumber, const D2D1_RECT_F& destRect, float fontSize);
 	bool DrawCachedDrumSymbol(int symbolIndex, const D2D1_RECT_F& destRect, float stringSpace);
+	bool DrawCachedDudationSymbol(int duration, const D2D1_RECT_F& destRect, float zoomLevel);
 	TabTextCacheEntry* GetNearestCachedTabTextEntry(float fontSize);
 	DrumSymbolCacheEntry* GetNearestCachedDrumSymbolEntry(float stringSpace);
+    DurationSymbolCacheEntry* GetNearestCachedDurationSymbolEntry(float zoomLevel);
 
     // Layer Support
     bool PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer);
@@ -201,7 +211,11 @@ private:
 	bool CreateTextFormats();
 	bool CreateTabTextBitmap(const std::wstring& text, float fontSize, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor);
 	bool CreateDrumSymbolBitmap(int symbolType, float size, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
+    bool CreateDurationSymbolBitmap(int duration, float zoomLevel, float logScale, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
 	ID2D1Geometry* CreateDrumSymbolGeometry(int symbolType, float size, float bitmapSize);
+
+    bool IsDottedDuration(int duration) const;
+    bool IsTripletDuration(int duration) const;
 
 	void CleanupTablatureCache();	// Obsolete?
 

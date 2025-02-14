@@ -1,6 +1,5 @@
 ﻿#include "Timeline_Direct2DRenderer_Native.h"
 
-#include <algorithm>
 
 Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
     m_hwnd(nullptr),
@@ -173,7 +172,8 @@ bool Timeline_Direct2DRenderer_Native::CreateDeviceResources()
             D2D1_ALPHA_MODE_PREMULTIPLIED
         ),
         96.0f,  // Default DPI
-        96.0f
+        96.0f,
+        D2D1_RENDER_TARGET_USAGE_NONE
     );
 
     D2D1_HWND_RENDER_TARGET_PROPERTIES hwndProps = D2D1::HwndRenderTargetProperties(
@@ -234,7 +234,20 @@ bool Timeline_Direct2DRenderer_Native::PreloadTabText(float fontSize, const D2D1
 	TabTextCacheEntry Entry;
 	Entry.FontSize = fontSize;
 
-	for (int TabText = 0; TabText <= 87; TabText++)
+    // Guitar Frets
+    for (int TabText = 0; TabText <= 24; TabText++)
+    {
+        ID2D1Bitmap* Bitmap = nullptr;
+        std::wstring TextStr = std::to_wstring(TabText);
+
+        CreateTabTextBitmap(TextStr, TabTextFontSize, &Bitmap, textColor, bgColor);
+
+        Entry.TabTexts[TabText] = Bitmap;
+        Entry.TextWidths[TabText] = MeasureTextWidth(TextStr, TextFormat);
+    }
+
+    // Drum Notes
+	for (int TabText = 30; TabText <= 60; TabText++)
 	{
 		ID2D1Bitmap* Bitmap = nullptr;
 		std::wstring TextStr = std::to_wstring(TabText);
@@ -274,7 +287,7 @@ bool Timeline_Direct2DRenderer_Native::PreloadDrumSymbol(float stringSpace, cons
 	return true;
 }
 
-bool Timeline_Direct2DRenderer_Native::PreloadDurationSymbols(float zoomLevel, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
+bool Timeline_Direct2DRenderer_Native::PreloadDurationSymbols(float zoomLevel, float logScale, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
 {
 	if (!m_pRenderTarget || !m_resourcesValid) {
 		return false;
@@ -283,19 +296,19 @@ bool Timeline_Direct2DRenderer_Native::PreloadDurationSymbols(float zoomLevel, c
 	DurationSymbolCacheEntry entry;
 	entry.ZoomLevel = zoomLevel;
 
-	/*
+	
 	// Create complete symbol for each possible duration
 	for (int Duration : POSSIBLE_DURATIONS)
 	{
 		ID2D1Bitmap* Bitmap = nullptr;
-		if (!CreateDurationSymbolBitmap(Duration, fontSize, &Bitmap, symbolColor, bgColor)) {
+		if (!CreateDurationSymbolBitmap(Duration, zoomLevel, logScale, &Bitmap, symbolColor, bgColor)) {
 			return false;
 		}
 		entry.DurationSymbols[Duration] = Bitmap;
 	}
 
 	m_DurationSymbolCache.push_back(entry);
-	*/
+
 	return true;
 }
 
@@ -562,6 +575,111 @@ bool Timeline_Direct2DRenderer_Native::CreateDrumSymbolBitmap(int symbolType, fl
 	return SUCCEEDED(hr);
 }
 
+bool Timeline_Direct2DRenderer_Native::CreateDurationSymbolBitmap(int duration, float zoomLevel, float logScale, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
+{
+    if (!m_pRenderTarget || !ppBitmap) {
+        return false;
+    }
+
+    float ScaledStemLength      = std::min(DURATION_SYMBOL_BASE_STEM_LENGTH + (logScale * 6.0f), 35.0f);
+    float ScaledLineLength      = std::min(DURATION_SYMBOL_BASE_LINE_LENGTH + (logScale * 2.0f), 15.0f);
+    float ScaledLineSpacing     = std::min(DURATION_SYMBOL_BASE_LINE_SPACING + (logScale * 1.0f), 6.0f);
+    float ScaledLineThickness   = std::min(1.0f + (logScale * 0.2f), 2.0f);
+    float ScaledStemOffset      = std::min(DURATION_SYMBOL_BASE_STEM_OFFSET + (logScale * 2.0f), 20.0f);
+
+    // Create a bitmap render target sized to accommodate the complete symbol
+    float SymbolWidth   = ScaledLineLength * 3.0f;                      // Width to accommodate stem and flags
+    float SymbolHeight  = ScaledStemOffset * 2.0f + ScaledStemLength;   // Height to accommodate full stem and triplet number
+    float SymbolXCenter = SymbolWidth / 2;
+
+    ID2D1BitmapRenderTarget* symbolRT = nullptr;
+    HRESULT hr = m_pRenderTarget->CreateCompatibleRenderTarget(D2D1::SizeF(SymbolWidth, SymbolHeight), &symbolRT);
+
+    if (FAILED(hr) || !symbolRT) {
+        return false;
+    }
+
+    symbolRT->BeginDraw();
+    symbolRT->Clear(bgColor);
+
+    ID2D1SolidColorBrush* Brush = nullptr;
+    hr = symbolRT->CreateSolidColorBrush(symbolColor, &Brush);
+
+    if (SUCCEEDED(hr) && Brush)
+    {
+        // Position stem below the bottom string with scaled offset
+        float StemStartY = ScaledStemOffset;
+        float StemEndY   = StemStartY + ScaledStemLength;
+
+        // Calculate stem position - centered below the note
+        float StemX = SymbolXCenter;
+        
+        int NumLines = 0;
+        
+        if ((duration >= TICKS_PER_QUARTER * 2) && (duration < TICKS_PER_QUARTER * 4)) // Half note
+        {
+            float HalfStemLength = ScaledStemLength / 2;
+            symbolRT->DrawLine(D2D1::Point2F(StemX, StemStartY + HalfStemLength), D2D1::Point2F(StemX, StemEndY), Brush, ScaledLineThickness);
+        }
+        else if(duration < TICKS_PER_QUARTER * 2)
+        {
+            // Draw Full Step
+            symbolRT->DrawLine(D2D1::Point2F(StemX, StemStartY), D2D1::Point2F(StemX, StemEndY), Brush, ScaledLineThickness);
+
+                 if (duration <= TICKS_PER_QUARTER / 8) { NumLines = 3; } // 32nd note
+            else if (duration <= TICKS_PER_QUARTER / 4) { NumLines = 2; } // 16th note
+            else if (duration <= TICKS_PER_QUARTER / 2) { NumLines = 1; } // 8th note
+
+            // Draw horizontal lines
+            if (NumLines > 0)
+            {
+                for (int i = 0; i < NumLines; i++)
+                {
+                    float LineY         = StemEndY - (i * ScaledLineSpacing);
+                    float LineStartX    = StemX;
+                    float LineEndX      = StemX + ScaledLineLength;
+
+                    symbolRT->DrawLine(D2D1::Point2F(LineStartX, LineY), D2D1::Point2F(LineEndX, LineY), Brush, ScaledLineThickness);
+                }
+            }
+        }
+        
+        // Add dot for dotted notes
+        if (IsDottedDuration(duration))
+        {
+            float DotSize = std::min(2.0f + (logScale * 0.5f), 4.0f);
+            float DotX = StemX + ScaledLineLength + (DotSize * 2) - 10;
+            float DotY = StemEndY - (NumLines * ScaledLineSpacing);
+
+            D2D1_ELLIPSE DotEllipse = D2D1::Ellipse(D2D1::Point2F(DotX, DotY), DotSize, DotSize);
+            symbolRT->FillEllipse(DotEllipse, Brush);
+        }
+        else if (IsTripletDuration(duration))
+        {
+            // Calculate position for the "3" text
+            float TextX = StemX + ScaledLineLength - 10;
+            float TextY = StemEndY - (NumLines * ScaledLineSpacing) - 14; // -14 for approx text height
+
+            // Draw the "3"
+            D2D1_RECT_F TextRect = D2D1::RectF(TextX, TextY, TextX + 10, TextY + 14);
+            std::wstring TripletText = L"3";
+
+            symbolRT->DrawText(TripletText.c_str(), static_cast<UINT32>(TripletText.length()), GetMeasureNumberFormat(), TextRect, Brush);
+        }
+        
+        Brush->Release();
+    }
+
+    hr = symbolRT->EndDraw();
+
+    if (SUCCEEDED(hr)) {
+        symbolRT->GetBitmap(ppBitmap);
+    }
+
+    symbolRT->Release();
+    return SUCCEEDED(hr);
+}
+
 ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int symbolType, float size, float bitmapSize)
 {
 	if (!m_pD2DFactory) {
@@ -687,6 +805,17 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
 	sink->Release();
 
 	return PathGeometry;
+}
+
+bool Timeline_Direct2DRenderer_Native::IsDottedDuration(int duration) const
+{
+    return  duration == TICKS_PER_QUARTER * 6       || duration == TICKS_PER_QUARTER * 3        || duration == TICKS_PER_QUARTER * 3 / 2 ||
+            duration == TICKS_PER_QUARTER * 3 / 4   || duration == TICKS_PER_QUARTER * 3 / 8    || duration == TICKS_PER_QUARTER * 3 / 16;
+}
+
+bool Timeline_Direct2DRenderer_Native::IsTripletDuration(int duration) const
+{
+    return duration == TICKS_PER_QUARTER * 2 / 3 || duration == TICKS_PER_QUARTER * 2 / 6 || duration == TICKS_PER_QUARTER * 2 / 12;
 }
 
 void Timeline_Direct2DRenderer_Native::CleanupTablatureCache()
@@ -1487,6 +1616,34 @@ bool Timeline_Direct2DRenderer_Native::DrawCachedDrumSymbol(int symbolIndex, con
 	return true;
 }
 
+bool Timeline_Direct2DRenderer_Native::DrawCachedDudationSymbol(int duration, const D2D1_RECT_F& destRect, float zoomLevel)
+{
+    if (!m_pRenderTarget) {
+        return false;
+    }
+
+    DurationSymbolCacheEntry* CachedEntry = GetNearestCachedDurationSymbolEntry(zoomLevel);
+    if (!CachedEntry) {
+        return false;
+    }
+
+    auto it = CachedEntry->DurationSymbols.find(duration);
+    if (it == CachedEntry->DurationSymbols.end()) {
+        // Symbol not found in cache - this shouldn't happen if preloading worked correctly
+        return false;
+    }
+
+    // Draw the cached bitmap
+    m_pRenderTarget->DrawBitmap(
+        it->second,    // The cached bitmap
+        destRect,      // Destination rectangle
+        1.0f,          // Opacity
+        D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  // Use linear interpolation for smooth scaling
+    );
+
+    return true;
+}
+
 TabTextCacheEntry* Timeline_Direct2DRenderer_Native::GetNearestCachedTabTextEntry(float fontSize)
 {
 	if (m_TabTextCache.empty()) {
@@ -1516,6 +1673,20 @@ DrumSymbolCacheEntry* Timeline_Direct2DRenderer_Native::GetNearestCachedDrumSymb
 	return &(*it);
 }
 
+DurationSymbolCacheEntry* Timeline_Direct2DRenderer_Native::GetNearestCachedDurationSymbolEntry(float zoomLevel)
+{
+    if (m_DurationSymbolCache.empty()) {
+        return nullptr;
+    }
+
+    // Find the cache entry with the closest font size
+    auto it = std::min_element(m_DurationSymbolCache.begin(), m_DurationSymbolCache.end(), [zoomLevel](const DurationSymbolCacheEntry& a, const DurationSymbolCacheEntry& b)
+        {
+            return std::abs(a.ZoomLevel - zoomLevel) < std::abs(b.ZoomLevel - zoomLevel);
+        });
+
+    return &(*it);
+}
 
 bool Timeline_Direct2DRenderer_Native::PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer)
 {

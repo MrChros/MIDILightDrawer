@@ -25,6 +25,7 @@ namespace MIDILightDrawer
 			BarEvent^ ClickedBar = _Timeline->GetBarAtPoint(ClickPoint);
 
 			if (ClickedBar != nullptr) {
+				ClearSelection();
 				_Timeline->ShowContextMenu(ClickedBar, ClickPoint);
 			}
 		}

@@ -1399,7 +1399,6 @@ namespace MIDILightDrawer
 				EarliestTick = Math::Min(EarliestTick, Bar->StartTick);
 			}
 
-			// Copy all selected bars with relative positions
 			for each(BarEvent^ Bar in TargetBars) {
 				BarEvent^ CopiedBar = TimelineCommandManager::CreateBarCopy(Bar, Bar->StartTick - EarliestTick, false);
 				TimelineClipboardManager::Content->Add(CopiedBar);
@@ -1422,13 +1421,45 @@ namespace MIDILightDrawer
 		}
 		else if (ItemText == ContextMenuStrings::FadeSwitchTwo)
 		{
-			ChangeFadeTypeCommand^ Cmd = gcnew ChangeFadeTypeCommand(this, _ContextMenuBar, FadeType::Two_Colors);
-			CommandManager()->ExecuteCommand(Cmd);
+			if (TargetBars->Count > 1) {
+				CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change Fade Type for Multiple Bars");
+
+				for each(BarEvent ^ Bar in TargetBars) {
+					if (Bar->Type != BarEventType::Fade || Bar->FadeInfo == nullptr) {
+						continue;
+					}
+
+					ChangeFadeTypeCommand^ Cmd = gcnew ChangeFadeTypeCommand(this, Bar, FadeType::Two_Colors);
+					CompoundCmd->AddCommand(Cmd);
+				}
+
+				CommandManager()->ExecuteCommand(CompoundCmd);
+			}
+			else {
+				ChangeFadeTypeCommand^ Cmd = gcnew ChangeFadeTypeCommand(this, _ContextMenuBar, FadeType::Two_Colors);
+				CommandManager()->ExecuteCommand(Cmd);
+			}
 		}
 		else if (ItemText == ContextMenuStrings::FadeSwitchThree)
 		{
-			ChangeFadeTypeCommand^ Cmd = gcnew ChangeFadeTypeCommand(this, _ContextMenuBar, FadeType::Three_Colors);
-			CommandManager()->ExecuteCommand(Cmd);
+			if (TargetBars->Count > 1) {
+				CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change Fade Type for Multiple Bars");
+
+				for each(BarEvent ^ Bar in TargetBars) {
+					if (Bar->Type != BarEventType::Fade || Bar->FadeInfo == nullptr) {
+						continue;
+					}
+
+					ChangeFadeTypeCommand^ Cmd = gcnew ChangeFadeTypeCommand(this, Bar, FadeType::Three_Colors);
+					CompoundCmd->AddCommand(Cmd);
+				}
+
+				CommandManager()->ExecuteCommand(CompoundCmd);
+			}
+			else {
+				ChangeFadeTypeCommand^ Cmd = gcnew ChangeFadeTypeCommand(this, _ContextMenuBar, FadeType::Three_Colors);
+				CommandManager()->ExecuteCommand(Cmd);
+			}
 		}
 		else {
 			// Drop Down Menu clicked
@@ -1449,7 +1480,12 @@ namespace MIDILightDrawer
 			{
 				if (TargetBars->Count > 1) {
 					CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change Color for Multiple Bars");
+					
 					for each(BarEvent ^ Bar in TargetBars) {
+						if (Bar->Type == BarEventType::Fade) {
+							continue;
+						}
+						
 						ChangeBarColorCommand^ Cmd = gcnew ChangeBarColorCommand(this, Bar, Bar->Color, NewColor);
 						CompoundCmd->AddCommand(Cmd);
 					}
@@ -1464,41 +1500,124 @@ namespace MIDILightDrawer
 			else if (ParentItemText == ContextMenuStrings::ChangeColorStart)
 			{
 				ChangeFadeBarColorCommand::ColorType ColorType = ChangeFadeBarColorCommand::ColorType::Start;
-				Color OldColor = _ContextMenuBar->FadeInfo->ColorStart;
+				
+				if (TargetBars->Count > 1) {
+					CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change Start Color for Fade Bars");
 
-				ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
-				CommandManager()->ExecuteCommand(Cmd);
+					for each(BarEvent ^ Bar in TargetBars) {
+						if (Bar->Type != BarEventType::Fade || Bar->FadeInfo == nullptr) {
+							continue;
+						}
+
+						Color OldColor = Bar->FadeInfo->ColorStart;
+
+						ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, Bar, ColorType, OldColor, NewColor);
+						CompoundCmd->AddCommand(Cmd);
+					}
+
+					CommandManager()->ExecuteCommand(CompoundCmd);
+				}
+				else {
+					Color OldColor = _ContextMenuBar->FadeInfo->ColorStart;
+
+					ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
+					CommandManager()->ExecuteCommand(Cmd);
+				}
 			}
 
 			else if (ParentItemText == ContextMenuStrings::ChangeColorCenter)
 			{
 				ChangeFadeBarColorCommand::ColorType ColorType = ChangeFadeBarColorCommand::ColorType::Center;
-				Color OldColor = _ContextMenuBar->FadeInfo->ColorCenter;
+				
+				if (TargetBars->Count > 1) {
+					CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change Center Color for Fade Bars");
 
-				ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
-				CommandManager()->ExecuteCommand(Cmd);
+					for each(BarEvent ^ Bar in TargetBars) {
+						if (Bar->Type != BarEventType::Fade || Bar->FadeInfo == nullptr) {
+							continue;
+						}
+
+						Color OldColor = Bar->FadeInfo->ColorCenter;
+
+						ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, Bar, ColorType, OldColor, NewColor);
+						CompoundCmd->AddCommand(Cmd);
+					}
+
+					CommandManager()->ExecuteCommand(CompoundCmd);
+				}
+				else {
+					Color OldColor = _ContextMenuBar->FadeInfo->ColorCenter;
+
+					ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
+					CommandManager()->ExecuteCommand(Cmd);
+				}
 			}
 
 			else if (ParentItemText == ContextMenuStrings::ChangeColorEnd)
 			{
 				ChangeFadeBarColorCommand::ColorType ColorType = ChangeFadeBarColorCommand::ColorType::End;
-				Color OldColor = _ContextMenuBar->FadeInfo->ColorEnd;
+				
+				if (TargetBars->Count > 1) {
+					CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change End Color for Fade Bars");
 
-				ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
-				CommandManager()->ExecuteCommand(Cmd);
+					for each(BarEvent ^ Bar in TargetBars) {
+						if (Bar->Type != BarEventType::Fade || Bar->FadeInfo == nullptr) {
+							continue;
+						}
+
+						Color OldColor = Bar->FadeInfo->ColorEnd;
+
+						ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, Bar, ColorType, OldColor, NewColor);
+						CompoundCmd->AddCommand(Cmd);
+					}
+
+					CommandManager()->ExecuteCommand(CompoundCmd);
+				}
+				else {
+					Color OldColor = _ContextMenuBar->FadeInfo->ColorEnd;
+
+					ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
+					CommandManager()->ExecuteCommand(Cmd);
+				}
 			}
 
 			else if (ParentItemText == ContextMenuStrings::ChangeQuantization)
 			{
 				int NewTickQuantization = ContextMenuStrings::QuantizationValues[ItemText];
 
-				if (_ContextMenuBar->Type == BarEventType::Fade) {
-					ChangeFadeQuantizationCommand^ Cmd = gcnew ChangeFadeQuantizationCommand(this, _ContextMenuBar, _ContextMenuBar->FadeInfo->QuantizationTicks, NewTickQuantization);
-					CommandManager()->ExecuteCommand(Cmd);
+				if (TargetBars->Count > 1) {
+					CompoundCommand^ CompoundCmd = gcnew CompoundCommand("ChangeQuantization for Multiple Bars");
+
+					for each(BarEvent ^ Bar in TargetBars) {
+						if (Bar->Type != BarEventType::Fade && Bar->Type != BarEventType::Strobe) {
+							continue;
+						}
+
+						if (Bar->FadeInfo == nullptr && Bar->StrobeInfo == nullptr) {
+							continue;
+						}
+
+						if (Bar->Type == BarEventType::Fade) {
+							ChangeFadeQuantizationCommand^ Cmd = gcnew ChangeFadeQuantizationCommand(this, Bar, Bar->FadeInfo->QuantizationTicks, NewTickQuantization);
+							CompoundCmd->AddCommand(Cmd);
+						}
+						else if (Bar->Type == BarEventType::Strobe) {
+							ChangeStrobeQuantizationCommand^ Cmd = gcnew ChangeStrobeQuantizationCommand(this, Bar, Bar->StrobeInfo->QuantizationTicks, NewTickQuantization);
+							CompoundCmd->AddCommand(Cmd);
+						}
+					}
+
+					CommandManager()->ExecuteCommand(CompoundCmd);
 				}
-				else if (_ContextMenuBar->Type == BarEventType::Strobe) {
-					ChangeStrobeQuantizationCommand^ Cmd = gcnew ChangeStrobeQuantizationCommand(this, _ContextMenuBar, _ContextMenuBar->StrobeInfo->QuantizationTicks, NewTickQuantization);
-					CommandManager()->ExecuteCommand(Cmd);
+				else {
+					if (_ContextMenuBar->Type == BarEventType::Fade) {
+						ChangeFadeQuantizationCommand^ Cmd = gcnew ChangeFadeQuantizationCommand(this, _ContextMenuBar, _ContextMenuBar->FadeInfo->QuantizationTicks, NewTickQuantization);
+						CommandManager()->ExecuteCommand(Cmd);
+					}
+					else if (_ContextMenuBar->Type == BarEventType::Strobe) {
+						ChangeStrobeQuantizationCommand^ Cmd = gcnew ChangeStrobeQuantizationCommand(this, _ContextMenuBar, _ContextMenuBar->StrobeInfo->QuantizationTicks, NewTickQuantization);
+						CommandManager()->ExecuteCommand(Cmd);
+					}
 				}
 			}
 		}

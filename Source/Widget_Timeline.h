@@ -105,12 +105,12 @@ namespace MIDILightDrawer
 		int  TicksToPixels(int ticks);
 		int  PixelsToTicks(int pixels);
 		
-		Track^		GetTrackAtPoint(Point p);
-		Rectangle	GetTrackBounds(Track^ track);
-		Rectangle	GetTrackHeaderBounds(Track^ track);
-		Rectangle	GetTrackContentBounds(Track^ track);
-		Measure^	GetMeasureAtTick(int tick);
-		BarEvent^	GetBarAtPoint(Point p);
+		Track^ GetTrackAtPoint(Point p);
+		Rectangle GetTrackBounds(Track^ track);
+		Rectangle GetTrackHeaderBounds(Track^ track);
+		Rectangle GetTrackContentBounds(Track^ track);
+		Measure^ GetMeasureAtTick(int tick);
+		BarEvent^ GetBarAtPoint(Point p);
 
 		String^ SaveBarEventsToFile(String^ filePath);
 		String^ LoadBarEventsFromFile(String^ filePath);
@@ -165,9 +165,9 @@ namespace MIDILightDrawer
 		double _ZoomLevel;
 
 		// Tools
-		TimelineToolType	_CurrentToolType;
-		TimelineTool^		_CurrentTool;
-		SnappingType		_SnappingType;
+		TimelineToolType _CurrentToolType;
+		TimelineTool^ _CurrentTool;
+		SnappingType _SnappingType;
 		Dictionary<TimelineToolType, TimelineTool^>^ _Tools;
 
 		// Private methods
@@ -185,32 +185,32 @@ namespace MIDILightDrawer
 
 		void HandleContextMenuClick(System::Object^ sender, EventArgs^ e);
 
-		float	GetSubdivisionLevel	();
-		int		GetTrackTop			(Track^ track);
-		int		GetTotalTracksHeight();
+		float GetSubdivisionLevel();
+		int GetTrackTop(Track^ track);
+		int GetTotalTracksHeight();
 
-		void	BeginTrackResize(Track^ track, int mouseY);
-		void	UpdateTrackResize(int mouseY);
-		void	EndTrackResize();
-		bool	IsOverTrackDivider(Point mousePoint, Track^% track);
-		bool	IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint);
+		void BeginTrackResize(Track^ track, int mouseY);
+		void UpdateTrackResize(int mouseY);
+		void EndTrackResize();
+		bool IsOverTrackDivider(Point mousePoint, Track^% track);
+		bool IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint);
 		Rectangle GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex);
 		Rectangle CalculateBarBounds(BarEvent^ bar, Rectangle bounds);
 
 		// Helper methods for measure management
-		void	RecalculateMeasurePositions();
-		void	UpdateDrawingForMeasures();
+		void RecalculateMeasurePositions();
+		void UpdateDrawingForMeasures();
 
-		double	GetRelativePositionInMeasure(int tick);
-		double	GetVirtualWidth();
-		void	SetZoomLevelAtPoint(double newZoom, Point referencePoint);
-		void	UpdateScrollBarRange();
-		int		GetScrollUnits(double width);
+		double GetRelativePositionInMeasure(int tick);
+		double GetVirtualWidth();
+		void SetZoomLevelAtPoint(double newZoom, Point referencePoint);
+		void UpdateScrollBarRange();
+		int	 GetScrollUnits(double width);
 						
-		void	UpdateScrollBounds();
-		void	UpdateVerticalScrollBarRange();
-		void	OnScroll(Object^ sender, ScrollEventArgs^ e);
-		void	OnVerticalScroll(Object^ sender, ScrollEventArgs^ e);
+		void UpdateScrollBounds();
+		void UpdateVerticalScrollBarRange();
+		void OnScroll(Object^ sender, ScrollEventArgs^ e);
+		void OnVerticalScroll(Object^ sender, ScrollEventArgs^ e);
 
 
 	public:

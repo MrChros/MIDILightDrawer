@@ -179,7 +179,7 @@ namespace MIDILightDrawer
 			float LogScale = TO_LOGSCALE(z);
 			float FontSize = GetTablatureScaledFontSize(LogScale);
 
-			_NativeRenderer->PreloadTabText(FontSize, COLOR_TO_COLOR_F(m_ColorTheme.Text), COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBackground, 0.86f));
+			_NativeRenderer->PreloadTabText(FontSize, COLOR_TO_COLOR_F(m_ColorTheme.Text), COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBackground, 0.3f)); // before 0.86f
 
             CurrentStep++;
             if (progressCallback != nullptr)

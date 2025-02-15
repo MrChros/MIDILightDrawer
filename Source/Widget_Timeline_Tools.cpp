@@ -25,7 +25,9 @@ namespace MIDILightDrawer
 			BarEvent^ ClickedBar = _Timeline->GetBarAtPoint(ClickPoint);
 
 			if (ClickedBar != nullptr) {
-				ClearSelection();
+				if (ClickedBar->Type == BarEventType::Fade || ClickedBar->Type == BarEventType::Strobe) {
+					ClearSelection();
+				}
 				_Timeline->ShowContextMenu(ClickedBar, ClickPoint);
 			}
 		}

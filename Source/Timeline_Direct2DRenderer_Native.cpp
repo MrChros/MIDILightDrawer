@@ -704,23 +704,25 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
 	D2D1_POINT_2F Center = D2D1::Point2F(bitmapSize/2, bitmapSize/2);
 	float HalfSize = size * 2.0f;
 
+    float DiamondSwage = (HalfSize - HalfSize * 0.714f) / 2.0f;
+
 	switch (symbolType)
 	{
 		case 0:  // FilledDiamond
 		{
-			sink->BeginFigure(D2D1::Point2F(Center.x, Center.y - HalfSize), D2D1_FIGURE_BEGIN_FILLED);	// Top
-			sink->AddLine(D2D1::Point2F(Center.x + HalfSize, Center.y));  // Right
-			sink->AddLine(D2D1::Point2F(Center.x, Center.y + HalfSize));  // Bottom
-			sink->AddLine(D2D1::Point2F(Center.x - HalfSize, Center.y));  // Left
+			sink->BeginFigure(D2D1::Point2F(Center.x, Center.y - HalfSize + 2*DiamondSwage), D2D1_FIGURE_BEGIN_FILLED);	// Top
+			sink->AddLine(D2D1::Point2F(Center.x + HalfSize, Center.y + DiamondSwage));   // Right
+			sink->AddLine(D2D1::Point2F(Center.x, Center.y + HalfSize));                  // Bottom
+			sink->AddLine(D2D1::Point2F(Center.x - HalfSize, Center.y + DiamondSwage));   // Left
 			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 			break;
 		}
 		case 1:  // HollowDiamond
 		{
-			sink->BeginFigure(D2D1::Point2F(Center.x, Center.y - HalfSize), D2D1_FIGURE_BEGIN_HOLLOW);	// Top
-			sink->AddLine(D2D1::Point2F(Center.x + HalfSize, Center.y));  // Right
-			sink->AddLine(D2D1::Point2F(Center.x, Center.y + HalfSize));  // Bottom
-			sink->AddLine(D2D1::Point2F(Center.x - HalfSize, Center.y));  // Left
+			sink->BeginFigure(D2D1::Point2F(Center.x, Center.y - HalfSize + 2 * DiamondSwage), D2D1_FIGURE_BEGIN_HOLLOW);	// Top
+			sink->AddLine(D2D1::Point2F(Center.x + HalfSize, Center.y + DiamondSwage));     // Right
+			sink->AddLine(D2D1::Point2F(Center.x, Center.y + HalfSize));                    // Bottom
+			sink->AddLine(D2D1::Point2F(Center.x - HalfSize, Center.y + DiamondSwage));     // Left
 			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 			break;
 		}
@@ -783,12 +785,24 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
 			float RadiusX = HalfSize * 0.7f;
 			float RadiusY = HalfSize * 0.5f;
 
+            float RotationAngleDeg = -20.0f;
+            float RotationAngleRad = RotationAngleDeg * (3.14159f / 180.0f); // Convert to radians
+
+            // Create rotation matrix
+            D2D1::Matrix3x2F Rotation = D2D1::Matrix3x2F::Rotation(RotationAngleDeg, Center);
+
+            // Transform start point
+            D2D1_POINT_2F StartPoint = D2D1::Point2F(Center.x + RadiusX, Center.y);
+            D2D1_POINT_2F RotatedStart;
+            RotatedStart.x = (StartPoint.x - Center.x) * cos(RotationAngleRad) - (StartPoint.y - Center.y) * sin(RotationAngleRad) + Center.x;
+            RotatedStart.y = (StartPoint.x - Center.x) * sin(RotationAngleRad) + (StartPoint.y - Center.y) * cos(RotationAngleRad) + Center.y;
+
 			sink->BeginFigure(D2D1::Point2F(Center.x + RadiusX, Center.y),D2D1_FIGURE_BEGIN_FILLED);
 
-			// Create full ellipse using two arcs
-			sink->AddArc(D2D1::ArcSegment(D2D1::Point2F(Center.x - RadiusX, Center.y), D2D1::SizeF(RadiusX, RadiusY), 0.0f, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
-			sink->AddArc(D2D1::ArcSegment(D2D1::Point2F(Center.x + RadiusX, Center.y), D2D1::SizeF(RadiusX, RadiusY), 0.0f, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
-			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+            // Create full ellipse using two arcs with rotation
+            sink->AddArc(D2D1::ArcSegment(D2D1::Point2F(Center.x - RadiusX * cos(RotationAngleRad), Center.y - RadiusX * sin(RotationAngleRad)), D2D1::SizeF(RadiusX, RadiusY), RotationAngleDeg, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
+            sink->AddArc(D2D1::ArcSegment(RotatedStart, D2D1::SizeF(RadiusX, RadiusY), RotationAngleDeg, D2D1_SWEEP_DIRECTION_CLOCKWISE, D2D1_ARC_SIZE_SMALL));
+            sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 			break;
 		}
 		case 6:  // Unknown (error symbol)

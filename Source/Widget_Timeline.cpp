@@ -1374,28 +1374,51 @@ namespace MIDILightDrawer
 			return;
 		}
 
+	
+		List<BarEvent^>^ TargetBars = gcnew List<BarEvent^>();
+		bool IsSelected = _CurrentTool->SelectedBars->Contains(_ContextMenuBar);
+
+		if (IsSelected) {
+			TargetBars->AddRange(_CurrentTool->SelectedBars);
+		}
+		else {
+			TargetBars->Add(_ContextMenuBar);
+		}
+
+
 		ToolStripMenuItem^ Sender = safe_cast<ToolStripMenuItem^>(sender);
 		String^ ItemText = Sender->Text;
 
-		// Handle menu item clicks
 		if (ItemText == ContextMenuStrings::Copy)
 		{
-			// Create a temporary list with just this bar and use the clipboard manager
-			List<BarEvent^>^ TempList = gcnew List<BarEvent^>();
-			TempList->Add(_ContextMenuBar);
-
-			// Find the earliest start tick
-			int EarliestTick = _ContextMenuBar->StartTick;
-
-			// Create copy of the bar with relative position
-			BarEvent^ CopiedBar = TimelineCommandManager::CreateBarCopy(_ContextMenuBar, _ContextMenuBar->StartTick - EarliestTick, false);
 			TimelineClipboardManager::Content->Clear();
-			TimelineClipboardManager::Content->Add(CopiedBar);
+			int EarliestTick = Int32::MaxValue;
+
+			// Find earliest tick among selected bars
+			for each(BarEvent^ Bar in TargetBars) {
+				EarliestTick = Math::Min(EarliestTick, Bar->StartTick);
+			}
+
+			// Copy all selected bars with relative positions
+			for each(BarEvent^ Bar in TargetBars) {
+				BarEvent^ CopiedBar = TimelineCommandManager::CreateBarCopy(Bar, Bar->StartTick - EarliestTick, false);
+				TimelineClipboardManager::Content->Add(CopiedBar);
+			}
 		}
 		else if (ItemText == ContextMenuStrings::Delete)
 		{
-			DeleteBarCommand^ Cmd = gcnew DeleteBarCommand(this, _ContextMenuBar->ContainingTrack, _ContextMenuBar);
-			CommandManager()->ExecuteCommand(Cmd);
+			if (TargetBars->Count > 1) {
+				CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Delete Multiple Bars");
+				for each(BarEvent^ Bar in TargetBars) {
+					DeleteBarCommand^ Cmd = gcnew DeleteBarCommand(this, Bar->ContainingTrack, Bar);
+					CompoundCmd->AddCommand(Cmd);
+				}
+				CommandManager()->ExecuteCommand(CompoundCmd);
+			}
+			else {
+				DeleteBarCommand^ Cmd = gcnew DeleteBarCommand(this, _ContextMenuBar->ContainingTrack, _ContextMenuBar);
+				CommandManager()->ExecuteCommand(Cmd);
+			}
 		}
 		else if (ItemText == ContextMenuStrings::FadeSwitchTwo)
 		{
@@ -1424,8 +1447,18 @@ namespace MIDILightDrawer
 
 			if (ParentItemText == ContextMenuStrings::ChangeColor)
 			{
-				ChangeBarColorCommand^ Cmd = gcnew ChangeBarColorCommand(this, _ContextMenuBar, _ContextMenuBar->Color, NewColor);
-				CommandManager()->ExecuteCommand(Cmd);
+				if (TargetBars->Count > 1) {
+					CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change Color for Multiple Bars");
+					for each(BarEvent ^ Bar in TargetBars) {
+						ChangeBarColorCommand^ Cmd = gcnew ChangeBarColorCommand(this, Bar, Bar->Color, NewColor);
+						CompoundCmd->AddCommand(Cmd);
+					}
+					CommandManager()->ExecuteCommand(CompoundCmd);
+				}
+				else {
+					ChangeBarColorCommand^ Cmd = gcnew ChangeBarColorCommand(this, _ContextMenuBar, _ContextMenuBar->Color, NewColor);
+					CommandManager()->ExecuteCommand(Cmd);
+				}
 			}
 			
 			else if (ParentItemText == ContextMenuStrings::ChangeColorStart)

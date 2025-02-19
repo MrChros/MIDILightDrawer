@@ -1,6 +1,7 @@
 #include "Widget_Fade_Options.h"
 
 
+
 namespace MIDILightDrawer
 {
 	Widget_Fade_Options::Widget_Fade_Options(Control_ColorPicker^ color_picker)
@@ -42,7 +43,7 @@ namespace MIDILightDrawer
 		// Create layout for GroupBox contents
 		TableLayoutPanel^ Table_Layout_Main = gcnew TableLayoutPanel();
 		Table_Layout_Main->RowCount = 2;
-		Table_Layout_Main->ColumnCount = 4;
+		Table_Layout_Main->ColumnCount = 5;
 		Table_Layout_Main->Dock = DockStyle::Fill;
 		Table_Layout_Main->Padding = System::Windows::Forms::Padding(5);
 
@@ -52,15 +53,15 @@ namespace MIDILightDrawer
 
 		// Configure column styles
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 250));	// Combo Box Column
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 50));	// Button Switch Column
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 50));	// Button Mode Column
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute,  50));	// Button Switch Column
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute,  50));	// Button Mode Column
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));	// ...
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));	// Padding Column
 
 
-
-		array<String^>^ Lines_First_Quantization = gcnew array<String^>	{ "1/1", "1/2", "1/4", "1/8", "1/16", "1/32", "1/4", "1/8", "1/16", "1/32", "1/8", "1/16", "1/32", "1/8", "1/16", "1/32", "1/8", "1/8", "1/8", "1/8", "1/8", "1/16", "1/16", "1/16", "1/16", "1/16"	};
-		array<String^>^ Lines_Second_Quantization = gcnew array<String^>{ "", "", "", "", "", "", "T", "T", "T", "T", "5:4", "5:4", "5:4", "7:8", "7:8", "7:8", "20% SW", "40% SW", "60% SW", "80% SW", "100% SW", "20% SW", "40% SW", "60% SW", "80% SW", "100% SW" };
-		array<int>^ Values_Quantization = gcnew array<int>				{ 3840, 1920, 960, 480, 240, 120, 640, 320, 160, 80, 384, 192, 96, 619, 278, 137, 542, 610, 672, 734, 802, 257, 271, 288, 305, 319 };
+		array<String^>^ Lines_First_Quantization = TimeSignatures::TimeSignatureExtendedrStringMain->ToArray();
+		array<String^>^ Lines_Second_Quantization = TimeSignatures::TimeSignatureExtendedStringSub->ToArray();
+		array<int>^ Values_Quantization = TimeSignatures::TimeSignatureExtendedValues->ToArray();
 
 		// DropDown Fade Quantization
 		this->_DropDown_Fade_Quantization = gcnew Control_DropDown();
@@ -74,6 +75,64 @@ namespace MIDILightDrawer
 		this->_DropDown_Fade_Quantization->Set_Items(Lines_First_Quantization, Lines_Second_Quantization, Values_Quantization);
 		this->_DropDown_Fade_Quantization->Selected_Index = 0;
 		this->_DropDown_Fade_Quantization->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Widget_Fade_Options::DropDown_Fade_Quantization_OnItem_Selected);
+
+
+		array<String^>^ Lines_First_Easings = gcnew array<String^>	{ "Linear", "Sine", "Quad", "Cubic", "Quart", "Quint", "Expo", "Circ", "Linear", "Sine", "Quad", "Cubic", "Quart", "Quint", "Expo", "Circ", "Linear", "Sine", "Quad", "Cubic", "Quart", "Quint", "Expo", "Circ" };
+		array<String^>^ Lines_Second_Easings = gcnew array<String^>	{ "", "In", "In", "In", "In", "In", "In", "In", "", "Out", "Out", "Out", "Out", "Out", "Out", "Out", "", "InOut", "InOut", "InOut", "InOut", "InOut", "InOut", "InOut" };
+		array<int>^ Values_Easings = gcnew array<int> {
+			(int)FadeEasing::Linear,
+			(int)FadeEasing::In_Sine,
+			(int)FadeEasing::In_Quad,
+			(int)FadeEasing::In_Cubic,
+			(int)FadeEasing::In_Quart,
+			(int)FadeEasing::In_Quint,
+			(int)FadeEasing::In_Expo,
+			(int)FadeEasing::In_Circ,
+			(int)FadeEasing::Linear,
+			(int)FadeEasing::Out_Sine,
+			(int)FadeEasing::Out_Quad,
+			(int)FadeEasing::Out_Cubic,
+			(int)FadeEasing::Out_Quart,
+			(int)FadeEasing::Out_Quint,
+			(int)FadeEasing::Out_Expo,
+			(int)FadeEasing::Out_Circ,
+			(int)FadeEasing::Linear,
+			(int)FadeEasing::InOut_Sine,
+			(int)FadeEasing::InOut_Quad,
+			(int)FadeEasing::InOut_Cubic,
+			(int)FadeEasing::InOut_Quart,
+			(int)FadeEasing::InOut_Quint,
+			(int)FadeEasing::InOut_Expo,
+			(int)FadeEasing::InOut_Circ
+		};
+
+
+		// DropDown Ease In
+		this->_DropDown_Ease_In = gcnew Control_DropDown();
+		this->_DropDown_Ease_In->Dock = DockStyle::Fill;
+		this->_DropDown_Ease_In->Set_Tile_Layout(55, 55, 8);
+		this->_DropDown_Ease_In->Title_Text = "Ease In";
+		this->_DropDown_Ease_In->Set_Title_Color(Color::DarkGray);
+		this->_DropDown_Ease_In->Set_Open_Direction(false);
+		this->_DropDown_Ease_In->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
+		this->_DropDown_Ease_In->Margin = System::Windows::Forms::Padding(1, 2, 2, 2);
+		this->_DropDown_Ease_In->Set_Items(Lines_First_Easings, Lines_Second_Easings, Values_Easings);
+		this->_DropDown_Ease_In->Selected_Index = 0;
+		this->_DropDown_Ease_In->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Widget_Fade_Options::DropDown_Easings_OnItem_Selected);
+
+		// DropDown Ease Out
+		this->_DropDown_Ease_Out = gcnew Control_DropDown();
+		this->_DropDown_Ease_Out->Dock = DockStyle::Fill;
+		this->_DropDown_Ease_Out->Set_Tile_Layout(55, 55, 8);
+		this->_DropDown_Ease_Out->Title_Text = "Ease Out";
+		this->_DropDown_Ease_Out->Set_Title_Color(Color::DarkGray);
+		this->_DropDown_Ease_Out->Set_Open_Direction(false);
+		this->_DropDown_Ease_Out->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
+		this->_DropDown_Ease_Out->Margin = System::Windows::Forms::Padding(1, 2, 2, 2);
+		this->_DropDown_Ease_Out->Set_Items(Lines_First_Easings, Lines_Second_Easings, Values_Easings);
+		this->_DropDown_Ease_Out->Selected_Index = 0;
+		this->_DropDown_Ease_Out->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Widget_Fade_Options::DropDown_Easings_OnItem_Selected);
+
 
 		// Color Picker Event Handler
 		this->_Color_Picker->ColorChanged += gcnew EventHandler(this, &Widget_Fade_Options::Color_Picker_OnColorChanged);
@@ -102,10 +161,13 @@ namespace MIDILightDrawer
 
 		// Add controls to main layout
 		Table_Layout_Main->Controls->Add(this->_DropDown_Fade_Quantization, 0, 0);
+		Table_Layout_Main->Controls->Add(this->_DropDown_Ease_In, 1, 0);
+		Table_Layout_Main->SetColumnSpan(this->_DropDown_Ease_In, 2);
+		Table_Layout_Main->Controls->Add(this->_DropDown_Ease_Out, 3, 0);
 		Table_Layout_Main->Controls->Add(this->_Fade_Preview, 0, 1);
 		Table_Layout_Main->Controls->Add(Button_Switch_Colors, 1, 1);
 		Table_Layout_Main->Controls->Add(Button_Fade_Mode, 2, 1);
-		//Table_Layout_Main->SetColumnSpan(this->_Color_Presets, Table_Layout_Main->ColumnCount);
+
 
 		// Add main layout to GroupBox
 		this->_GroupBox->Controls->Add(Table_Layout_Main);
@@ -117,6 +179,14 @@ namespace MIDILightDrawer
 	void Widget_Fade_Options::DropDown_Fade_Quantization_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
 	{
 		QuantizationChanged(e->Value);
+	}
+
+	void Widget_Fade_Options::DropDown_Easings_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
+	{
+		this->_Fade_Preview->EaseIn = static_cast<FadeEasing>(this->_DropDown_Ease_In->Selected_Value);
+		this->_Fade_Preview->EaseOut = static_cast<FadeEasing>(this->_DropDown_Ease_Out->Selected_Value);
+
+		EasingsChanged(static_cast<FadeEasing>(this->_DropDown_Ease_In->Selected_Value), (static_cast<FadeEasing>(this->_DropDown_Ease_Out->Selected_Value)));
 	}
 
 	void Widget_Fade_Options::Color_Picker_OnColorChanged(Object^ sender, EventArgs^ e)
@@ -157,6 +227,10 @@ namespace MIDILightDrawer
 		this->_DropDown_Fade_Quantization->Select_By_Value(value);
 	}
 
+	FadeType Widget_Fade_Options::FadeMode::get() {
+		return this->_Fade_Preview->Type;
+	}
+
 	Color Widget_Fade_Options::StartColor::get() {
 		return this->_Fade_Preview->StartColor;
 	}
@@ -169,8 +243,12 @@ namespace MIDILightDrawer
 		return this->_Fade_Preview->CenterColor;
 	}
 
-	Fade_Mode Widget_Fade_Options::FadeMode::get() {
-		return this->_Fade_Preview->Mode;
+	FadeEasing Widget_Fade_Options::EaseIn::get() {
+		return static_cast<FadeEasing>(this->_DropDown_Ease_In->Selected_Value);
+	}
+
+	FadeEasing Widget_Fade_Options::EaseOut::get() {
+		return static_cast<FadeEasing>(this->_DropDown_Ease_Out->Selected_Value);
 	}
 
 	void Widget_Fade_Options::Button_Switch_Colors_OnClick(System::Object^ sender, System::EventArgs^ e)
@@ -189,13 +267,13 @@ namespace MIDILightDrawer
 
 		System::Resources::ResourceManager^ Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
 
-		if (this->_Fade_Preview->Mode == Fade_Mode::Three_Colors) {
+		if (this->_Fade_Preview->Type == FadeType::Three_Colors) {
 			Toggle_Button->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Number_3_White")));
 		}
 		else {
 			Toggle_Button->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Number_2_White")));
 		}
 
-		FadeModeChanged(this->_Fade_Preview->Mode);
+		FadeModeChanged(this->_Fade_Preview->Type);
 	}
 }

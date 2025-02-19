@@ -1,4 +1,5 @@
 #include "MIDI_Exporter.h"
+#include "Easings.h"
 
 #include <vcclr.h>
 
@@ -14,21 +15,21 @@ namespace MIDILightDrawer
 		_LastColor			= Color();
 	}
 
-	String^ MIDI_Exporter::Export(String^ filename, gp_parser::Parser* _tab)
+	String^ MIDI_Exporter::Export(String^ filename, gp_parser::Parser* tab)
 	{
 		Settings^ Settings = Settings::Get_Instance();
 		List<Settings::Octave_Entry^>^ Octave_Entries = Settings->Octave_Entries;
 
 		MIDI_Writer Writer(960);  // Use 960 ticks per quarter note
 		
-		if (_tab == NULL) {
+		if (tab == NULL) {
 			return "No Guitar Pro 5 file opened";
 		}
 
 		// First, add all measures from the Guitar Pro file
-		for (auto i = 0; i < _tab->getTabFile().measureHeaders.size(); i++)
+		for (auto i = 0; i < tab->getTabFile().measureHeaders.size(); i++)
 		{
-			gp_parser::MeasureHeader* MH = &(_tab->getTabFile().measureHeaders.at(i));
+			gp_parser::MeasureHeader* MH = &(tab->getTabFile().measureHeaders.at(i));
 			Writer.Add_Measure(MH->timeSignature.numerator, MH->timeSignature.denominator.value, MH->tempo.value);
 		}
 
@@ -107,32 +108,56 @@ namespace MIDILightDrawer
 		// Calculate number of bars needed
 		int NumBars = (int)Math::Ceiling((double)Tick_Length / bar->FadeInfo->QuantizationTicks);
 
+		//FadeEasingsTest(NumBars, bar->FadeInfo->ColorStart, bar->FadeInfo->ColorEnd);
+
 		if (NumBars == 0) {
 			return;
 		}
 
+		Color ColorCenter;
+		if (bar->FadeInfo->Type == FadeType::Two_Colors) {
+			ColorCenter = Color::FromArgb(	Math::Abs(bar->FadeInfo->ColorEnd.R - bar->FadeInfo->ColorStart.R) / 2,
+											Math::Abs(bar->FadeInfo->ColorEnd.G - bar->FadeInfo->ColorStart.G) / 2,
+											Math::Abs(bar->FadeInfo->ColorEnd.B - bar->FadeInfo->ColorStart.B) / 2);
+		}
+		else {
+			ColorCenter = bar->FadeInfo->ColorCenter;
+		}
+
 		for (int i = 0; i < NumBars; i++)
 		{
-			float ratio = (float)i / (NumBars - 1);
+			float Ratio = (float)i / (NumBars - 1);
 
 			if (NumBars == 1) { // Single bar case
-				ratio = 0;
+				Ratio = 0;
 			}
 
 			Color BarColor;
+			bool IsFirstHalf = Ratio <= 0.5f;
 
-			if (bar->FadeInfo->Type == FadeType::Two_Colors)
+			Easing CurrentEasing = IsFirstHalf ? bar->FadeInfo->EaseIn : bar->FadeInfo->EaseOut;
+
+			if (IsFirstHalf)
 			{
-				BarColor = InterpolateFadeColor(bar->FadeInfo->ColorStart, bar->FadeInfo->ColorEnd, ratio);	// Simple linear interpolation between start and end colors
+				// First half: interpolate between start and center colors
+				float AdjustedRatio = Ratio * 2.0f;
+
+				int R = (int)Easings::ApplyEasing(AdjustedRatio, bar->FadeInfo->ColorStart.R, ColorCenter.R, CurrentEasing);
+				int G = (int)Easings::ApplyEasing(AdjustedRatio, bar->FadeInfo->ColorStart.G, ColorCenter.G, CurrentEasing);
+				int B = (int)Easings::ApplyEasing(AdjustedRatio, bar->FadeInfo->ColorStart.B, ColorCenter.B, CurrentEasing);
+
+				BarColor = Color::FromArgb(255, R, G, B);
 			}
 			else
-			{ 
-				if (ratio <= 0.5f) {
-					BarColor = InterpolateFadeColor(bar->FadeInfo->ColorStart, bar->FadeInfo->ColorCenter, ratio * 2.0f);			// First half: interpolate between start and center colors
-				}
-				else {
-					BarColor = InterpolateFadeColor(bar->FadeInfo->ColorCenter, bar->FadeInfo->ColorEnd, (ratio - 0.5f) * 2.0f);	// Second half: interpolate between center and end colors
-				}
+			{
+				// Second half: interpolate between center and end colors
+				float AdjustedRatio = (Ratio - 0.5f) * 2.0f;
+
+				int R = (int)Easings::ApplyEasing(AdjustedRatio, ColorCenter.R, bar->FadeInfo->ColorEnd.R, CurrentEasing);
+				int G = (int)Easings::ApplyEasing(AdjustedRatio, ColorCenter.G, bar->FadeInfo->ColorEnd.G, CurrentEasing);
+				int B = (int)Easings::ApplyEasing(AdjustedRatio, ColorCenter.B, bar->FadeInfo->ColorEnd.B, CurrentEasing);
+
+				BarColor = Color::FromArgb(255, R, G, B);
 			}
 
 			int BarTickStart	= Tick_Start + (i * bar->FadeInfo->QuantizationTicks);
@@ -206,15 +231,6 @@ namespace MIDILightDrawer
 
 		_LastEndTick = tick_start + tick_length;
 		_LastColor = color;
-	}
-
-	Color MIDI_Exporter::InterpolateFadeColor(Color start, Color end, float ratio)
-	{
-		int R = start.R + (int)((end.R - start.R) * ratio);
-		int G = start.G + (int)((end.G - start.G) * ratio);
-		int B = start.B + (int)((end.B - start.B) * ratio);
-
-		return Color::FromArgb(255, R, G, B);
 	}
 
 	void MIDI_Exporter::ToggleAdditionalOffset()

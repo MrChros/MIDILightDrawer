@@ -1,6 +1,7 @@
 #include "Timeline_Direct2DRenderer.h"
 #include "Timeline_Direct2DRenderer_Native.h"
 
+#include "Easings.h"
 #include "Widget_Timeline_Common.h"
 #include "Widget_Timeline_Classes.h"
 
@@ -1429,29 +1430,6 @@ namespace MIDILightDrawer
         int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
         int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width);
 
-		
-		//for each (BarEvent^ Bar in ToolAccess->SelectedBars)
-		//{
-		//	if (Bar->EndTick < VisibleStartTick || Bar->StartTick > VisibleEndTick) {
-		//		continue;
-		//	}
-
-		//	if (ToolAccess->IsDragging)
-		//	{
-		//		System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->OriginalContainingTrack);
-		//		TrackContentBounds.Y += this->_ScrollPosition->Y;
-		//		
-		//		DrawGhostBar(Bar, TrackContentBounds);
-		//	}
-		//	else
-		//	{
-		//		System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Bar->ContainingTrack);
-		//		TrackContentBounds.Y += this->_ScrollPosition->Y;
-
-		//		DrawSelectedBar(Bar, TrackContentBounds);
-		//	}
-		//}
-
 		for each (BarEvent^ Bar in ToolAccess->PreviewBars)
 		{
 			if (Bar->EndTick < VisibleStartTick || Bar->StartTick > VisibleEndTick) {
@@ -1485,7 +1463,8 @@ namespace MIDILightDrawer
                 for each (BarEvent^ PasteBar in ToolAccess->PastePreviewBars)
                 {
                     System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(PasteBar->ContainingTrack);
-                    
+                    TrackContentBounds.Y += this->_ScrollPosition->Y;
+
                     DrawPastePreviewBar(PasteBar, TrackContentBounds);
                 }
             }
@@ -1956,6 +1935,59 @@ namespace MIDILightDrawer
 													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorCenter, 0.8f),
 													COLOR_TO_COLOR_F_A(bar->FadeInfo->ColorEnd, 0.8f));
 		}
+
+        
+        std::wstring NoteText = ConvertString(TimeSignatures::TimeSignatureLookup[bar->FadeInfo->QuantizationTicks]);
+
+        const float Padding = 4.0f;
+        D2D1_RECT_F TextRect = D2D1::RectF(
+            BarRect.left + Padding,             // Left edge of text area
+            BarRect.top + Padding,              // Top edge of text area
+            BarRect.left + 40.0f,              // Right edge of text area
+            BarRect.top + 20.0f                // Bottom edge of text area
+        );
+
+        // Draw text with semi-transparent white color
+        D2D1_COLOR_F TextColor = D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.7f);
+        _NativeRenderer->DrawText(NoteText, TextRect, TextColor, _NativeRenderer->GetMeasureNumberFormat());
+
+
+        // Draw easing curve indicators
+        const float CurveHeight = barBounds.Height * 0.45f; // 45% of bar height
+        const float CurveY = barBounds.Y + (barBounds.Height - CurveHeight) / 2;
+
+        // Draw ease-in curve
+        std::vector<D2D1_POINT_2F> EaseInPoints;
+        std::vector<D2D1_POINT_2F> EaseOutPoints;
+        const int NumPoints = 20;
+        float EaseInWidth = barBounds.Width * 0.5f; // 50% of bar width
+        float EaseOutOffset = EaseInWidth;
+
+        float Y_In  = barBounds.Top + barBounds.Height / 2 + CurveHeight;
+        float Y_Out = barBounds.Top + barBounds.Height / 2;
+
+        for (int i = 0; i <= NumPoints; i++)
+        {
+            float Ratio = (float)i / NumPoints;
+            float X = barBounds.X + (Ratio * EaseInWidth);
+
+            float EasedTIn  = Easings::ApplyEasing(Ratio, bar->FadeInfo->EaseIn);
+            float EasedTOut = Easings::ApplyEasing(Ratio, bar->FadeInfo->EaseOut);
+
+            EaseInPoints.push_back(D2D1::Point2F(X, Y_In - CurveHeight * EasedTIn));
+            EaseOutPoints.push_back(D2D1::Point2F(X + EaseOutOffset, Y_Out - CurveHeight * EasedTOut));
+        }
+
+        // Draw the curves
+        D2D1_COLOR_F curveColor = D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.5f); // Semi-transparent white
+        float CurveThickness = 2.0f;
+
+        // Draw points as connected lines
+        for (size_t i = 1; i < EaseInPoints.size(); i++)
+        {
+            _NativeRenderer->DrawLine(EaseInPoints[i - 1].x, EaseInPoints[i - 1].y, EaseInPoints[i].x, EaseInPoints[i].y, curveColor, CurveThickness);
+            _NativeRenderer->DrawLine(EaseOutPoints[i - 1].x, EaseOutPoints[i - 1].y, EaseOutPoints[i].x, EaseOutPoints[i].y, curveColor, CurveThickness);
+        }
 	}
 
 	void Timeline_Direct2DRenderer::DrawNormalBarStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds)

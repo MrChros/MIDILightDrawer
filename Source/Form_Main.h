@@ -127,10 +127,11 @@ namespace MIDILightDrawer
 			void Length_Options_OnLengthChanged(int value);
 			void Color_Options_OnColorChanged(System::Drawing::Color color);
 			void Fade_Options_OnLengthChanged(int value);
+			void Fade_Options_OnFadeModeChanged(FadeType mode);
 			void Fade_Options_OnColorStartChanged(System::Drawing::Color color);
 			void Fade_Options_OnColorEndChanged(System::Drawing::Color color);
 			void Fade_Options_OnColorCenterChanged(System::Drawing::Color color);
-			void Fade_Options_OnFadeModeChanged(Fade_Mode mode);
+			void Fade_Options_OnEasingsChanged(FadeEasing easeIn, FadeEasing easeOut);
 			void Strobe_Options_OnLengthChanged(int value);
 			void Strobe_Options_OnColorChanged(System::Drawing::Color color);
 			void Bucket_Options_OnColorChanged(System::Drawing::Color color);

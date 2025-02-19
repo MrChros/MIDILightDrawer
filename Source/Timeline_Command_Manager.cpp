@@ -87,10 +87,10 @@ namespace MIDILightDrawer
 			BarEventFadeInfo^ CopiedFade;
 
 			if (OriginalFade->Type == FadeType::Two_Colors) {
-				CopiedFade = gcnew BarEventFadeInfo(OriginalFade->QuantizationTicks, OriginalFade->ColorStart, OriginalFade->ColorEnd);
+				CopiedFade = gcnew BarEventFadeInfo(OriginalFade->QuantizationTicks, OriginalFade->ColorStart, OriginalFade->ColorEnd, OriginalFade->EaseIn, OriginalFade->EaseOut);
 			}
 			else {
-				CopiedFade = gcnew BarEventFadeInfo(OriginalFade->QuantizationTicks, OriginalFade->ColorStart, OriginalFade->ColorCenter, OriginalFade->ColorEnd);
+				CopiedFade = gcnew BarEventFadeInfo(OriginalFade->QuantizationTicks, OriginalFade->ColorStart, OriginalFade->ColorCenter, OriginalFade->ColorEnd, OriginalFade->EaseIn, OriginalFade->EaseOut);
 			}
 
 			CopiedBar = gcnew BarEvent(sourceBar->ContainingTrack, startTick, sourceBar->Duration, CopiedFade);
@@ -448,6 +448,9 @@ namespace MIDILightDrawer
 		_OldColorStart = bar->FadeInfo->ColorStart;
 		_OldColorCenter = bar->FadeInfo->ColorCenter;
 		_OldColorEnd = bar->FadeInfo->ColorEnd;
+
+		_OldEaseIn = bar->FadeInfo->EaseIn;
+		_OldEaseOut = bar->FadeInfo->EaseOut;
 	}
 
 	void ChangeFadeTypeCommand::Execute()
@@ -456,13 +459,13 @@ namespace MIDILightDrawer
 
 		if (_NewType == FadeType::Two_Colors) {
 			// When switching to two colors, use start and end colors
-			NewFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _Bar->FadeInfo->ColorStart, _Bar->FadeInfo->ColorEnd);
+			NewFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _Bar->FadeInfo->ColorStart, _Bar->FadeInfo->ColorEnd, _Bar->FadeInfo->EaseIn, _Bar->FadeInfo->EaseOut);
 		}
 		else {
 			// When switching to three colors, use existing colors and interpolate center if needed
 			Color CenterColor = _OldType == FadeType::Two_Colors ? _OldColorStart : _OldColorCenter;
 
-			NewFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _Bar->FadeInfo->ColorStart, CenterColor, _Bar->FadeInfo->ColorEnd);
+			NewFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _Bar->FadeInfo->ColorStart, CenterColor, _Bar->FadeInfo->ColorEnd, _Bar->FadeInfo->EaseIn, _Bar->FadeInfo->EaseOut);
 		}
 
 		_Bar->FadeInfo = NewFadeInfo;
@@ -474,10 +477,10 @@ namespace MIDILightDrawer
 		BarEventFadeInfo^ OldFadeInfo;
 
 		if (_OldType == FadeType::Two_Colors) {
-			OldFadeInfo = gcnew BarEventFadeInfo( _Bar->FadeInfo->QuantizationTicks, _OldColorStart, _OldColorEnd);
+			OldFadeInfo = gcnew BarEventFadeInfo( _Bar->FadeInfo->QuantizationTicks, _OldColorStart, _OldColorEnd, _OldEaseIn, _OldEaseOut);
 		}
 		else {
-			OldFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _OldColorStart, _OldColorCenter, _OldColorEnd);
+			OldFadeInfo = gcnew BarEventFadeInfo(_Bar->FadeInfo->QuantizationTicks, _OldColorStart, _OldColorCenter, _OldColorEnd, _OldEaseIn, _OldEaseOut);
 		}
 
 		_Bar->FadeInfo = OldFadeInfo;
@@ -487,6 +490,46 @@ namespace MIDILightDrawer
 	String^ ChangeFadeTypeCommand::GetDescription()
 	{
 		return "Change Fade Type";
+	}
+
+
+	/////////////////////////////
+	// ChangeFadeEasingCommand //
+	/////////////////////////////
+	ChangeFadeEasingCommand::ChangeFadeEasingCommand(Widget_Timeline^ timeline, BarEvent^ bar, EasingType easingType, Easing oldEasing, Easing newEasing)
+	{
+		_Timeline = timeline;
+		_Bar = bar;
+		_EasingType = easingType;
+		_OldEasing = oldEasing;
+		_NewEasing = newEasing;
+	}
+
+	void ChangeFadeEasingCommand::Execute()
+	{
+		if (_EasingType == EasingType::InEasing) {
+			_Bar->FadeInfo->EaseIn = _NewEasing;
+		}
+		else {
+			_Bar->FadeInfo->EaseOut = _NewEasing;
+		}
+		_Timeline->Invalidate();
+	}
+
+	void ChangeFadeEasingCommand::Undo()
+	{
+		if (_EasingType == EasingType::InEasing) {
+			_Bar->FadeInfo->EaseIn = _OldEasing;
+		}
+		else {
+			_Bar->FadeInfo->EaseOut = _OldEasing;
+		}
+		_Timeline->Invalidate();
+	}
+
+	String^ ChangeFadeEasingCommand::GetDescription()
+	{
+		return _EasingType == EasingType::InEasing ? "Change Fade In Easing" : "Change Fade Out Easing";
 	}
 
 

@@ -2370,14 +2370,20 @@ namespace MIDILightDrawer
 	/////////////////////////////
 	FadeTool::FadeTool(Widget_Timeline^ timeline) : TimelineTool(timeline)
 	{
-		_IsDrawing		= false;
-		_DrawStart		= nullptr;
-		_TargetTrack	= nullptr;
+		this->_IsDrawing	= false;
+		this->_DrawStart	= nullptr;
+		this->_TargetTrack	= nullptr;
 
-		TickLength	= Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION;
-		Type		= FadeType::Two_Colors;
-		ColorStart	= Color::Red;
-		ColorEnd	= Color::Green;
+		this->_TickLength	= Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION;
+		this->_Type			= FadeType::Two_Colors;
+		
+		this->_ColorStart	= Color::Red;
+		this->_ColorCenter	= Color::Blue;
+		this->_ColorEnd		= Color::Green;
+
+		this->_EaseIn		= FadeEasing::Linear;
+		this->_EaseOut		= FadeEasing::Linear;
+
 		Cursor = TimelineCursorHelper::GetCursor(TimelineCursor::Cross);
 	}
 
@@ -2395,10 +2401,10 @@ namespace MIDILightDrawer
 				// Create initial preview bar with fade info
 				BarEventFadeInfo^ FadeInfo;
 				if (this->Type == FadeType::Two_Colors) {
-					FadeInfo = gcnew BarEventFadeInfo(this->TickLength, this->ColorStart, this->ColorEnd);
+					FadeInfo = gcnew BarEventFadeInfo(this->TickLength, this->ColorStart, this->ColorEnd, this->_EaseIn, this->_EaseOut);
 				}
 				else {
-					FadeInfo = gcnew BarEventFadeInfo(this->TickLength, this->ColorStart, this->ColorCenter, this->ColorEnd);
+					FadeInfo = gcnew BarEventFadeInfo(this->TickLength, this->ColorStart, this->ColorCenter, this->ColorEnd, this->_EaseIn, this->_EaseOut);
 				}
 
 				
@@ -2416,7 +2422,6 @@ namespace MIDILightDrawer
 				else
 				{
 					_PreviewBars->Clear();
-					//_PreviewBar = nullptr;
 				}	
 			}
 		}
@@ -2514,41 +2519,63 @@ namespace MIDILightDrawer
 
 	void FadeTool::TickLength::set(int value)
 	{
-		_TickLength = value;
+		this->_TickLength = value;
 		
 		if (_PreviewBars->Count > 0 && _PreviewBars[0]->FadeInfo != nullptr)
 		{
-			_PreviewBars[0]->FadeInfo->QuantizationTicks = value;
-			_Timeline->Invalidate();
+			this->_PreviewBars[0]->FadeInfo->QuantizationTicks = value;
+			this->_Timeline->Invalidate();
 		}
+	}
+
+	void FadeTool::Type::set(FadeType type)
+	{
+		this->_Type = type;
+
+		UpdatePreviewColors();
 	}
 
 	void FadeTool::ColorStart::set(Color color)
 	{
-		_ColorStart = color;
+		this->_ColorStart = color;
 
 		UpdatePreviewColors();
 	}
 
 	void FadeTool::ColorCenter::set(Color color)
 	{
-		_ColorCenter = color;
+		this->_ColorCenter = color;
 
 		UpdatePreviewColors();
 	}
 
 	void FadeTool::ColorEnd::set(Color color)
 	{
-		_ColorEnd = color;
+		this->_ColorEnd = color;
 
 		UpdatePreviewColors();
 	}
 
-	void FadeTool::Type::set(FadeType type)
+	void FadeTool::EaseIn::set(FadeEasing value)
 	{
-		_Type = type;
+		this->_EaseIn = value;
 
-		UpdatePreviewColors();
+		if (_PreviewBars->Count > 0 && _PreviewBars[0]->FadeInfo != nullptr)
+		{
+			this->_PreviewBars[0]->FadeInfo->EaseIn = value;
+			this->_Timeline->Invalidate();
+		}
+	}
+
+	void FadeTool::EaseOut::set(FadeEasing value)
+	{
+		this->_EaseOut = value;
+
+		if (_PreviewBars->Count > 0 && _PreviewBars[0]->FadeInfo != nullptr)
+		{
+			this->_PreviewBars[0]->FadeInfo->EaseOut = value;
+			this->_Timeline->Invalidate();
+		}
 	}
 
 	void FadeTool::AddBarToTrack()
@@ -2561,10 +2588,10 @@ namespace MIDILightDrawer
 		{
 			BarEventFadeInfo^ FadeInfo = nullptr;
 			if (this->Type == FadeType::Two_Colors) {
-				FadeInfo = gcnew BarEventFadeInfo(this->TickLength, this->ColorStart, this->ColorEnd);
+				FadeInfo = gcnew BarEventFadeInfo(this->_TickLength, this->_ColorStart, this->_ColorEnd, this->_EaseIn, this->_EaseOut);
 			}
 			else if (this->Type == FadeType::Three_Colors) {
-				FadeInfo = gcnew BarEventFadeInfo(this->TickLength, this->ColorStart, this->ColorCenter, this->ColorEnd);
+				FadeInfo = gcnew BarEventFadeInfo(this->TickLength, this->ColorStart, this->ColorCenter, this->ColorEnd, this->_EaseIn, this->_EaseOut);
 			}
 
 			// Create and execute the command

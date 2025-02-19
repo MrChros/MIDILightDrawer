@@ -170,7 +170,7 @@ namespace MIDILightDrawer
 	//////////////////////
 	// BarEventFadeInfo //
 	//////////////////////
-	BarEventFadeInfo::BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_end)
+	BarEventFadeInfo::BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_end, FadeEasing ease_in, FadeEasing ease_out)
 	{
 		this->Type = FadeType::Two_Colors;
 		
@@ -182,9 +182,12 @@ namespace MIDILightDrawer
 
 		this->ColorStart = color_start;
 		this->ColorEnd = color_end;
+
+		this->EaseIn = ease_in;
+		this->EaseOut = ease_out;
 	}
 
-	BarEventFadeInfo::BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_center, Color color_end)
+	BarEventFadeInfo::BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_center, Color color_end, FadeEasing ease_in, FadeEasing ease_out)
 	{
 		this->Type = FadeType::Three_Colors;
 
@@ -197,6 +200,9 @@ namespace MIDILightDrawer
 		this->ColorStart = color_start;
 		this->ColorEnd = color_end;
 		this->ColorCenter = color_center;
+
+		this->EaseIn = ease_in;
+		this->EaseOut = ease_out;
 	}
 
 
@@ -253,7 +259,7 @@ namespace MIDILightDrawer
 		this->_FadeInfo = fade_info;
 
 		if (this->_FadeInfo == nullptr) {
-			this->_FadeInfo = gcnew BarEventFadeInfo(Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION, System::Drawing::Color::White, System::Drawing::Color::Black);
+			this->_FadeInfo = gcnew BarEventFadeInfo(Widget_Timeline::DEFAULT_FADE_TICK_QUANTIZATION, System::Drawing::Color::White, System::Drawing::Color::Black, FadeEasing::Linear, FadeEasing::Linear);
 		}
 
 		this->_StrobeInfo = nullptr;

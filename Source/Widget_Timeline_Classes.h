@@ -219,8 +219,8 @@ namespace MIDILightDrawer
 	public ref class BarEventFadeInfo
 	{
 	public:
-		BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_end);
-		BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_center, Color color_end);
+		BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_end, FadeEasing ease_in, FadeEasing ease_out);
+		BarEventFadeInfo(int quantization_ticks, Color color_start, Color color_center, Color color_end, FadeEasing ease_in, FadeEasing ease_out);
 
 		property FadeType Type;
 		
@@ -229,6 +229,9 @@ namespace MIDILightDrawer
 		property Color ColorStart;
 		property Color ColorEnd;
 		property Color ColorCenter;
+
+		property FadeEasing EaseIn;
+		property FadeEasing EaseOut;
 	};
 
 	public ref class BarEventStrobeInfo

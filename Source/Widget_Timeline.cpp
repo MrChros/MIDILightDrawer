@@ -715,7 +715,7 @@ namespace MIDILightDrawer
 					case BarEventType::Fade:
 						if (bar->FadeInfo != nullptr) {
 							if (bar->FadeInfo->Type == FadeType::Two_Colors) {
-								lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}",
+								lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}",
 									baseData,
 									bar->FadeInfo->QuantizationTicks,
 									bar->FadeInfo->ColorStart.R,
@@ -725,11 +725,13 @@ namespace MIDILightDrawer
 									bar->FadeInfo->ColorEnd.G,
 									bar->FadeInfo->ColorEnd.B,
 									track->Name,
+									static_cast<int>(bar->FadeInfo->EaseIn),  // Add easing parameters
+									static_cast<int>(bar->FadeInfo->EaseOut),
 									"FADE2"  // Two-color fade identifier
 								));
 							}
 							else {  // Three-color fade
-								lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}",
+								lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14}",
 									baseData,
 									bar->FadeInfo->QuantizationTicks,
 									bar->FadeInfo->ColorStart.R,
@@ -742,6 +744,8 @@ namespace MIDILightDrawer
 									bar->FadeInfo->ColorEnd.G,
 									bar->FadeInfo->ColorEnd.B,
 									track->Name,
+									static_cast<int>(bar->FadeInfo->EaseIn),  // Add easing parameters
+									static_cast<int>(bar->FadeInfo->EaseOut),
 									"FADE3"  // Three-color fade identifier
 								));
 							}
@@ -897,31 +901,65 @@ namespace MIDILightDrawer
 
 						case BarEventType::Fade:
 							if (Identifier == "FADE2" && Parts->Length >= 11) {
-								int quantization, r1, g1, b1, r2, g2, b2;
-								if (!Int32::TryParse(Parts[4], quantization) || !Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) || !Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2)) {
-									continue;
-								}
 
-								BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
-									quantization,
-									Color::FromArgb(r1, g1, b1),
-									Color::FromArgb(r2, g2, b2)
-								);
-								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, fadeInfo));
+								bool HasEasing = Parts->Length >= 11 && IsCurrentFormat;
+								if (Parts->Length >= (HasEasing ? 12 : 10))
+								{
+									int quantization, r1, g1, b1, r2, g2, b2;
+									int easeIn = static_cast<int>(FadeEasing::Linear);
+									int easeOut = static_cast<int>(FadeEasing::Linear);
+
+									if (!Int32::TryParse(Parts[4], quantization) ||
+										!Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) ||
+										!Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2)) {
+										continue;
+									}
+
+									if (HasEasing) {
+										Int32::TryParse(Parts[9], easeIn);
+										Int32::TryParse(Parts[10], easeOut);
+									}
+
+									BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
+										quantization,
+										Color::FromArgb(r1, g1, b1),
+										Color::FromArgb(r2, g2, b2),
+										static_cast<FadeEasing>(easeIn),
+										static_cast<FadeEasing>(easeOut)
+									);
+									TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, fadeInfo));
+								}
 							}
-							else if (Identifier == "FADE3" && Parts->Length >= 14) {
-								int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
-								if (!Int32::TryParse(Parts[4], quantization) || !Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) || !Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2) || !Int32::TryParse(Parts[11], r3) || !Int32::TryParse(Parts[12], g3) || !Int32::TryParse(Parts[13], b3)) {
-									continue;
-								}
+							else if (Identifier == "FADE3" && Parts->Length >= 14)
+							{
+								bool HasEasing = Parts->Length >= 14 && IsCurrentFormat;
+								if (Parts->Length >= (HasEasing ? 15 : 13)) {
+									int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
+									int easeIn = static_cast<int>(FadeEasing::Linear);
+									int easeOut = static_cast<int>(FadeEasing::Linear);
 
-								BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
-									quantization,
-									Color::FromArgb(r1, g1, b1),
-									Color::FromArgb(r2, g2, b2),
-									Color::FromArgb(r3, g3, b3)
-								);
-								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, fadeInfo));
+									if (!Int32::TryParse(Parts[4], quantization) ||
+										!Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) ||
+										!Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2) ||
+										!Int32::TryParse(Parts[11], r3) || !Int32::TryParse(Parts[12], g3) || !Int32::TryParse(Parts[13], b3)) {
+										continue;
+									}
+
+									if (HasEasing) {
+										Int32::TryParse(Parts[12], easeIn);
+										Int32::TryParse(Parts[13], easeOut);
+									}
+
+									BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
+										quantization,
+										Color::FromArgb(r1, g1, b1),
+										Color::FromArgb(r2, g2, b2),
+										Color::FromArgb(r3, g3, b3),
+										static_cast<FadeEasing>(easeIn),
+										static_cast<FadeEasing>(easeOut)
+									);
+									TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, fadeInfo));
+								}
 							}
 							break;
 
@@ -1307,6 +1345,10 @@ namespace MIDILightDrawer
 			_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::FadeSwitchTwo, true, nullptr));
 		}
 		
+		_ContextMenu->Items->Add(ContextMenuStrings::Separator);
+		CreateContextMenuSubEasings(ContextMenuStrings::ChangeEasingIn, _ContextMenuBar->FadeInfo->EaseIn);
+		CreateContextMenuSubEasings(ContextMenuStrings::ChangeEasingOut, _ContextMenuBar->FadeInfo->EaseOut);
+
 		CreateContextMenuSubChangeQuantization(_ContextMenuBar->FadeInfo->QuantizationTicks);
 		_ContextMenu->Items->Add(ContextMenuStrings::Separator);
 
@@ -1337,6 +1379,24 @@ namespace MIDILightDrawer
 		}
 
 		this->_ContextMenu->Items->Add(SubMenuChangeColor);
+	}
+
+	void Widget_Timeline::CreateContextMenuSubEasings(String^ text, FadeEasing currentEasing)
+	{
+		ToolStripMenuItem^ SubMenuChangeEasing = CreateContextMenuItem(text, false, nullptr);
+
+		for each (String^ StringKey in ContextMenuStrings::FadeEasings->Keys)
+		{
+			ToolStripMenuItem^ ItemEasing = CreateContextMenuItem(StringKey, true, nullptr);
+
+			if (ContextMenuStrings::FadeEasings[StringKey] == currentEasing) {
+				ItemEasing->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Tick_White")));
+			}
+
+			SubMenuChangeEasing->DropDownItems->Add(ItemEasing);
+		}
+
+		this->_ContextMenu->Items->Add(SubMenuChangeEasing);
 	}
 
 	void Widget_Timeline::CreateContextMenuSubChangeQuantization(int currentQuantization)
@@ -1577,6 +1637,62 @@ namespace MIDILightDrawer
 					Color OldColor = _ContextMenuBar->FadeInfo->ColorEnd;
 
 					ChangeFadeBarColorCommand^ Cmd = gcnew ChangeFadeBarColorCommand(this, _ContextMenuBar, ColorType, OldColor, NewColor);
+					CommandManager()->ExecuteCommand(Cmd);
+				}
+			}
+
+			else if (ParentItemText == ContextMenuStrings::ChangeEasingIn)
+			{
+				FadeEasing NewEasing = ContextMenuStrings::FadeEasings[ItemText];
+				
+				if (TargetBars->Count > 1) {
+					CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change In Easing for Fade Bars");
+
+					for each (BarEvent ^ Bar in TargetBars) {
+						if (Bar->Type != BarEventType::Fade || Bar->FadeInfo == nullptr) {
+							continue;
+						}
+
+						FadeEasing OldEasing = _ContextMenuBar->FadeInfo->EaseIn;
+
+						ChangeFadeEasingCommand^ Cmd = gcnew ChangeFadeEasingCommand(this, _ContextMenuBar, ChangeFadeEasingCommand::EasingType::InEasing, OldEasing, NewEasing);
+						CompoundCmd->AddCommand(Cmd);
+					}
+
+					CommandManager()->ExecuteCommand(CompoundCmd);
+				}
+				else {
+					FadeEasing OldEasing = _ContextMenuBar->FadeInfo->EaseIn;
+
+					ChangeFadeEasingCommand^ Cmd = gcnew ChangeFadeEasingCommand(this, _ContextMenuBar, ChangeFadeEasingCommand::EasingType::InEasing, OldEasing, NewEasing);
+					CommandManager()->ExecuteCommand(Cmd);
+				}
+			}
+
+			else if (ParentItemText == ContextMenuStrings::ChangeEasingOut)
+			{
+				FadeEasing NewEasing = ContextMenuStrings::FadeEasings[ItemText];
+
+				if (TargetBars->Count > 1) {
+					CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Change Out Easing for Fade Bars");
+
+					for each (BarEvent ^ Bar in TargetBars) {
+						if (Bar->Type != BarEventType::Fade || Bar->FadeInfo == nullptr) {
+							continue;
+						}
+
+						FadeEasing OldEasing = _ContextMenuBar->FadeInfo->EaseOut;
+
+						ChangeFadeEasingCommand^ Cmd = gcnew ChangeFadeEasingCommand(this, _ContextMenuBar, ChangeFadeEasingCommand::EasingType::OutEasing, OldEasing, NewEasing);
+						CompoundCmd->AddCommand(Cmd);
+					}
+
+					CommandManager()->ExecuteCommand(CompoundCmd);
+				}
+				else {
+					FadeEasing OldEasing = _ContextMenuBar->FadeInfo->EaseOut;
+
+					ChangeFadeEasingCommand^ Cmd = gcnew ChangeFadeEasingCommand(this, _ContextMenuBar, ChangeFadeEasingCommand::EasingType::OutEasing, OldEasing, NewEasing);
 					CommandManager()->ExecuteCommand(Cmd);
 				}
 			}

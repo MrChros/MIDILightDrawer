@@ -145,6 +145,7 @@
     <ClInclude Include="Control_ScrollBar.h" />
     <ClInclude Include="Control_Trackbar_Zoom.h" />
     <ClInclude Include="Custom_Color_Table.h" />
+    <ClInclude Include="Easings.h" />
     <ClInclude Include="Form_Loading.h" />
     <ClInclude Include="Form_Main.h" />
     <ClInclude Include="Form_Settings_Hotkeys.h" />
@@ -188,6 +189,7 @@
     <ClCompile Include="Control_ProgressBar.cpp" />
     <ClCompile Include="Control_ScrollBar.cpp" />
     <ClCompile Include="Control_Trackbar_Zoom.cpp" />
+    <ClCompile Include="Easings.cpp" />
     <ClCompile Include="Form_Loading.cpp" />
     <ClCompile Include="Form_Settings_Hotkeys.cpp" />
     <ClCompile Include="Form_Settings_MIDI.cpp" />

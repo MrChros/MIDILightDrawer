@@ -235,10 +235,11 @@ namespace MIDILightDrawer
 		// Fade Options
 		this->_Fade_Options = this->_Tools_And_Control->Get_Widget_Fade_Options();
 		this->_Fade_Options->QuantizationChanged	+= gcnew QuantizationChangedHandler	(this, &Form_Main::Fade_Options_OnLengthChanged);
+		this->_Fade_Options->FadeModeChanged		+= gcnew FadeModeChangedHandler		(this, &Form_Main::Fade_Options_OnFadeModeChanged);
 		this->_Fade_Options->ColorStartChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Fade_Options_OnColorStartChanged);
 		this->_Fade_Options->ColorEndChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Fade_Options_OnColorEndChanged);
 		this->_Fade_Options->ColorCenterChanged		+= gcnew ColorChangedHandler		(this, &Form_Main::Fade_Options_OnColorCenterChanged);
-		this->_Fade_Options->FadeModeChanged		+= gcnew FadeModeChangedHandler		(this, &Form_Main::Fade_Options_OnFadeModeChanged);
+		this->_Fade_Options->EasingsChanged			+= gcnew EasingsChangedHandler		(this, &Form_Main::Fade_Options_OnEasingsChanged);
 
 		// Strobe Options
 		this->_Strobe_Options = this->_Tools_And_Control->Get_Widget_Strobe_Options();
@@ -790,10 +791,12 @@ namespace MIDILightDrawer
 			this->_Timeline->SetCurrentTool(TimelineToolType::Fade);
 
 			Fade_Tool->TickLength	= _Fade_Options->TickLength;
+			Fade_Tool->Type			= _Fade_Options->FadeMode;
 			Fade_Tool->ColorStart	= _Fade_Options->StartColor;
 			Fade_Tool->ColorEnd		= _Fade_Options->EndColor;
 			Fade_Tool->ColorCenter	= _Fade_Options->CenterColor;
-			Fade_Tool->Type			= (FadeType)_Fade_Options->FadeMode;
+			Fade_Tool->EaseIn		= _Fade_Options->EaseIn;
+			Fade_Tool->EaseOut		= _Fade_Options->EaseOut;
 			break;
 
 		case TimelineToolType::Strobe:
@@ -1143,6 +1146,12 @@ namespace MIDILightDrawer
 		Fade_Tool->TickLength = value;
 	}
 
+	void Form_Main::Fade_Options_OnFadeModeChanged(FadeType mode)
+	{
+		FadeTool^ Fade_Tool = this->_Timeline->GetFadeTool();
+		Fade_Tool->Type = _Fade_Options->FadeMode;
+	}
+
 	void Form_Main::Fade_Options_OnColorStartChanged(System::Drawing::Color color)
 	{
 		FadeTool^ Fade_Tool = this->_Timeline->GetFadeTool();
@@ -1161,10 +1170,11 @@ namespace MIDILightDrawer
 		Fade_Tool->ColorCenter = _Fade_Options->CenterColor;
 	}
 
-	void Form_Main::Fade_Options_OnFadeModeChanged(Fade_Mode mode)
+	void Form_Main::Fade_Options_OnEasingsChanged(FadeEasing easeIn, FadeEasing easeOut)
 	{
 		FadeTool^ Fade_Tool = this->_Timeline->GetFadeTool();
-		Fade_Tool->Type = (FadeType)_Fade_Options->FadeMode;
+		Fade_Tool->EaseIn = easeIn;
+		Fade_Tool->EaseOut = easeOut;
 	}
 
 	void Form_Main::Strobe_Options_OnLengthChanged(int value)
@@ -1202,3 +1212,6 @@ namespace MIDILightDrawer
 #endif
 	}
 }
+
+
+

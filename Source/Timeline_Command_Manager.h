@@ -13,6 +13,7 @@ namespace MIDILightDrawer
 	ref class BarEventFadeInfo;
 	ref class BarEventStrobeInfo;
 	enum class FadeType;
+	enum class Easing;
 
 	
 	// Base interface for all undoable commands
@@ -233,9 +234,34 @@ namespace MIDILightDrawer
 		Color _OldColorStart;
 		Color _OldColorCenter;
 		Color _OldColorEnd;
+		Easing _OldEaseIn;
+		Easing _OldEaseOut;
 
 	public:
 		ChangeFadeTypeCommand(Widget_Timeline^ timeline, BarEvent^ bar, FadeType newType);
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
+	// Change Fade Easing
+	public ref class ChangeFadeEasingCommand : public ITimelineCommand
+	{
+	public:
+		enum class EasingType {
+			InEasing,
+			OutEasing
+		};
+
+	private:
+		Widget_Timeline^ _Timeline;
+		BarEvent^ _Bar;
+		Easing _OldEasing;
+		Easing _NewEasing;
+		EasingType _EasingType;
+
+	public:
+		ChangeFadeEasingCommand(Widget_Timeline^ timeline, BarEvent^ bar, EasingType easingType, Easing oldEasing, Easing newEasing);
 		virtual void Execute();
 		virtual void Undo();
 		virtual String^ GetDescription();

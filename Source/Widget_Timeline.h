@@ -180,6 +180,7 @@ namespace MIDILightDrawer
 		void CreateContextMenuFade();
 		void CreateContextMenuStrobe();
 		void CreateContextMenuSubChangeColor(String^ menuTitle);
+		void CreateContextMenuSubEasings(String^ text, FadeEasing currentEasing);
 		void CreateContextMenuSubChangeQuantization(int currentQuantization);
 		ToolStripMenuItem^ CreateContextMenuItem(String^ text, bool clickable, Image^ image);
 

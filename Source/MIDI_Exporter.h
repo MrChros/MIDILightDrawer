@@ -36,7 +36,7 @@ namespace MIDILightDrawer
 	public:
 		MIDI_Exporter(Widget_Timeline^ timeline);
 
-		String^ Export(String^ filename, gp_parser::Parser* _tab);
+		String^ Export(String^ filename, gp_parser::Parser* tab);
 
 		std::string ConvertToStdString(System::String^ input_string);
 
@@ -46,8 +46,6 @@ namespace MIDILightDrawer
 		void RasterBarStrobe(List<RasteredEvent>^ rasteredEvents, BarEvent^ bar);
 
 		void WriteEventToMIDI(MIDI_Writer* writer, int tick_start, int tick_length, Color color, int octave_note_offset);
-
-		Color InterpolateFadeColor(Color start, Color end, float ratio);
 
 		void ToggleAdditionalOffset();
 	};

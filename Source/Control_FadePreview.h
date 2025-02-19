@@ -5,15 +5,12 @@ using namespace System::Drawing;
 using namespace System::Windows::Forms;
 using namespace System::Drawing::Drawing2D;
 
+#include "Easings.h"
 #include "Theme_Manager.h"
+#include "Widget_Timeline_Common.h"
 
 namespace MIDILightDrawer
 {
-	public enum class Fade_Mode {
-		Two_Colors,
-		Three_Colors
-	};
-	
 	public delegate void PreviewSideSelectedHandler(Color color);
 
 	public ref class Control_FadePreview : public Control
@@ -35,15 +32,18 @@ namespace MIDILightDrawer
 		virtual void OnMouseMove(MouseEventArgs^ e) override;
 
 	private:
-		System::Drawing::Color _Color_Start;
-		System::Drawing::Color _Color_End;
-		System::Drawing::Color _Color_Center;
+		FadeType _Current_Type;
+
+		Color _Color_Start;
+		Color _Color_End;
+		Color _Color_Center;
+
+		FadeEasing _Ease_In;
+		FadeEasing _Ease_Out;
 
 		Rectangle _Rect_Pad_Left;
 		Rectangle _Rect_Pad_Right;
 		Rectangle _Rect_Pad_Center;
-
-		Fade_Mode _Current_Mode;
 
 		const int BORDER_PADDING_Y	= 4;
 		const int PAD_FRAME_WIDTH	= 3;
@@ -58,12 +58,17 @@ namespace MIDILightDrawer
 		void Draw_Color_Pad(Graphics^ g, Color color, int x_offset);
 		void Draw_Color_Pad_Frame(Graphics^ g, bool is_selected, int x_offset);
 		void Draw_Color_Gradient(Graphics^ g, Color color_start, Color color_end, int x_start, int x_end);
+		void Draw_Easing_Curve(Graphics^ g, int x_start, int x_end, FadeEasing easing, bool isSecondHalf);
 
 		Rectangle Get_Color_Pad_Rect(int x_offset);
 
 	public:
+		property FadeType Type {
+			FadeType get() { return _Current_Type; }
+		}
+
 		property Color StartColor {
-			Color get() { return _Color_Start;  }
+			Color get() { return _Color_Start; }
 		}
 
 		property Color EndColor {
@@ -74,8 +79,14 @@ namespace MIDILightDrawer
 			Color get() { return _Color_Center; }
 		}
 
-		property Fade_Mode Mode {
-			Fade_Mode get() { return _Current_Mode; }
+		property FadeEasing EaseIn {
+			FadeEasing get() { return _Ease_In; }
+			void set(FadeEasing value);
+		}
+
+		property FadeEasing EaseOut {
+			FadeEasing get() { return _Ease_Out; }
+			void set(FadeEasing value);
 		}
 
 		event PreviewSideSelectedHandler^ PreviewSideSelected;

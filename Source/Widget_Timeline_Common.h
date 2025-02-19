@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Easings.h"
+
 namespace MIDILightDrawer
 {
 	// Tool types enumeration
@@ -80,6 +82,143 @@ namespace MIDILightDrawer
 		Strobe
 	};
 
+	public ref class TimeSignatures abstract sealed
+	{
+	public:
+		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureRegularStringMain;
+		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureRegularStringSub;
+		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureRegularStringComplete;
+		static initonly System::Collections::Generic::List<int>^				TimeSignatureRegularValues;
+
+		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureExtendedrStringMain;
+		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureExtendedStringSub;
+		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureExtendedStringComplete;
+		static initonly System::Collections::Generic::List<int>^				TimeSignatureExtendedValues;
+
+		static initonly System::Collections::Generic::Dictionary<int, System::String^>^ TimeSignatureLookup;
+
+		static TimeSignatures()
+		{
+			TimeSignatureRegularStringMain = gcnew System::Collections::Generic::List<System::String^>;
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/1"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/2"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/4"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/32"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/4"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/32"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/32"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/32"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/8"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+			TimeSignatureRegularStringMain->Add(gcnew System::String("1/16"));
+
+			TimeSignatureRegularStringSub = gcnew System::Collections::Generic::List<System::String^>;
+			TimeSignatureRegularStringSub->Add(gcnew System::String(""));
+			TimeSignatureRegularStringSub->Add(gcnew System::String(""));
+			TimeSignatureRegularStringSub->Add(gcnew System::String(""));
+			TimeSignatureRegularStringSub->Add(gcnew System::String(""));
+			TimeSignatureRegularStringSub->Add(gcnew System::String(""));
+			TimeSignatureRegularStringSub->Add(gcnew System::String(""));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("T"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("T"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("T"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("T"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("5:4"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("5:4"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("5:4"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("7:8"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("7:8"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("7:8"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("20% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("40% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("60% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("80% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("100% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("20% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("40% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("60% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("80% SW"));
+			TimeSignatureRegularStringSub->Add(gcnew System::String("100% SW"));
+
+			TimeSignatureRegularStringComplete = gcnew System::Collections::Generic::List<System::String^>;
+			for (int i = 0;i < TimeSignatureRegularStringMain->Count;i++) {
+				TimeSignatureRegularStringComplete->Add(gcnew System::String(TimeSignatureRegularStringMain[i] + " " + TimeSignatureRegularStringSub[i]));
+			}
+
+			TimeSignatureRegularValues = gcnew System::Collections::Generic::List<int>;
+			TimeSignatureRegularValues->Add(3840);
+			TimeSignatureRegularValues->Add(1920);
+			TimeSignatureRegularValues->Add(960);
+			TimeSignatureRegularValues->Add(480);
+			TimeSignatureRegularValues->Add(240);
+			TimeSignatureRegularValues->Add(120);
+			TimeSignatureRegularValues->Add(640);
+			TimeSignatureRegularValues->Add(320);
+			TimeSignatureRegularValues->Add(160);
+			TimeSignatureRegularValues->Add(80);
+			TimeSignatureRegularValues->Add(384);
+			TimeSignatureRegularValues->Add(192);
+			TimeSignatureRegularValues->Add(96);
+			TimeSignatureRegularValues->Add(619);
+			TimeSignatureRegularValues->Add(278);
+			TimeSignatureRegularValues->Add(137);
+			TimeSignatureRegularValues->Add(542);
+			TimeSignatureRegularValues->Add(610);
+			TimeSignatureRegularValues->Add(672);
+			TimeSignatureRegularValues->Add(734);
+			TimeSignatureRegularValues->Add(802);
+			TimeSignatureRegularValues->Add(257);
+			TimeSignatureRegularValues->Add(271);
+			TimeSignatureRegularValues->Add(288);
+			TimeSignatureRegularValues->Add(305);
+			TimeSignatureRegularValues->Add(319);
+
+			TimeSignatureExtendedrStringMain = gcnew System::Collections::Generic::List<System::String^>;
+			TimeSignatureExtendedrStringMain->AddRange(TimeSignatureRegularStringMain);
+			TimeSignatureExtendedrStringMain->Add("1/64");
+			TimeSignatureExtendedrStringMain->Add("1/128");
+
+			TimeSignatureExtendedStringSub = gcnew System::Collections::Generic::List<System::String^>;
+			TimeSignatureExtendedStringSub->AddRange(TimeSignatureRegularStringSub);
+			TimeSignatureExtendedStringSub->Add("");
+			TimeSignatureExtendedStringSub->Add("");
+
+			TimeSignatureExtendedStringComplete = gcnew System::Collections::Generic::List<System::String^>;
+			for (int i = 0;i < TimeSignatureExtendedrStringMain->Count;i++) {
+				TimeSignatureExtendedStringComplete->Add(gcnew System::String(TimeSignatureExtendedrStringMain[i] + " " + TimeSignatureExtendedStringSub[i]));
+			}
+
+			TimeSignatureExtendedValues = gcnew System::Collections::Generic::List<int>;
+			TimeSignatureExtendedValues->AddRange(TimeSignatureRegularValues);
+			TimeSignatureExtendedValues->Add(60);
+			TimeSignatureExtendedValues->Add(30);
+
+
+			TimeSignatureLookup = gcnew System::Collections::Generic::Dictionary<int, System::String^>;
+
+			for (int i = 0;i < TimeSignatureExtendedrStringMain->Count;i++) {
+				TimeSignatureLookup->Add(TimeSignatureExtendedValues[i], TimeSignatureExtendedStringComplete[i]);
+			}
+		}
+	};
+
+	typedef Easing FadeEasing;
+
 	public ref class ContextMenuStrings abstract sealed
 	{
 	public:
@@ -94,6 +233,10 @@ namespace MIDILightDrawer
 		static initonly System::String^ ChangeColorCenter = "Change Center Color";
 		static initonly System::String^ ChangeColorEnd = "Change End Color";
 
+		// Easing related menu items
+		static initonly System::String^ ChangeEasingIn = "Change Easing In";
+		static initonly System::String^ ChangeEasingOut = "Change Easing Out";
+
 		// Fade & Strobe specific menu items
 		static initonly System::String^ ChangeQuantization = "Change Quantization";
 
@@ -107,10 +250,37 @@ namespace MIDILightDrawer
 		// Separator
 		static initonly System::String^ Separator = "-";
 
-
+		static initonly System::Collections::Generic::Dictionary<System::String^, FadeEasing>^ FadeEasings;
+		
 		static initonly System::Collections::Generic::Dictionary<System::String^, int>^ QuantizationValues;
+
 		static ContextMenuStrings()
 		{
+			FadeEasings = gcnew System::Collections::Generic::Dictionary<System::String^, FadeEasing>;
+			FadeEasings->Add("Linear", Easing::Linear);
+			FadeEasings->Add("In Sine", Easing::In_Sine);
+			FadeEasings->Add("In Quad", Easing::In_Quad);
+			FadeEasings->Add("In Cubic", Easing::In_Cubic);
+			FadeEasings->Add("In Quart", Easing::In_Quart);
+			FadeEasings->Add("In Quint", Easing::In_Quint);
+			FadeEasings->Add("In Expo", Easing::In_Expo);
+			FadeEasings->Add("In Circ", Easing::In_Circ);
+			FadeEasings->Add("Out Sine", Easing::Out_Sine);
+			FadeEasings->Add("Out Quad", Easing::Out_Quad);
+			FadeEasings->Add("Out Cubic", Easing::Out_Cubic);
+			FadeEasings->Add("Out Quart", Easing::Out_Quart);
+			FadeEasings->Add("Out Quint", Easing::Out_Quint);
+			FadeEasings->Add("Out Expo", Easing::Out_Expo);
+			FadeEasings->Add("Out Circ", Easing::Out_Circ);
+			FadeEasings->Add("InOut Sine", Easing::InOut_Sine);
+			FadeEasings->Add("InOut Quad", Easing::InOut_Quad);
+			FadeEasings->Add("InOut Cubic", Easing::InOut_Cubic);
+			FadeEasings->Add("InOut Quart", Easing::InOut_Quart);
+			FadeEasings->Add("InOut Quint", Easing::InOut_Quint);
+			FadeEasings->Add("InOut Expo", Easing::InOut_Expo);
+			FadeEasings->Add("InOut Circ", Easing::InOut_Circ);
+
+
 			QuantizationValues = gcnew System::Collections::Generic::Dictionary<System::String^, int>;
 			QuantizationValues->Add(L"1/1", 3840);
 			QuantizationValues->Add(L"1/2", 1920);
@@ -118,6 +288,8 @@ namespace MIDILightDrawer
 			QuantizationValues->Add(L"1/8", 480);
 			QuantizationValues->Add(L"1/16", 240);
 			QuantizationValues->Add(L"1/32", 120);
+			QuantizationValues->Add(L"1/64", 60);
+			QuantizationValues->Add(L"1/128", 30);
 
 			QuantizationValues->Add(L"1/4 (T)", 640);
 			QuantizationValues->Add(L"1/8 (T)", 320);

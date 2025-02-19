@@ -9,12 +9,15 @@ namespace MIDILightDrawer
 			ControlStyles::AllPaintingInWmPaint |
 			ControlStyles::UserPaint, true);
 		
-		_Color_Start		= Color::Red;
-		_Color_End			= Color::Green;
-		_Color_Center		= Color::Blue;
-		_Color_Pad_Width	= color_pad_width;
+		this->_Current_Type = FadeType::Two_Colors;
 
-		_Current_Mode		= Fade_Mode::Two_Colors;
+		this->_Color_Start		= Color::Red;
+		this->_Color_End		= Color::Green;
+		this->_Color_Center		= Color::Blue;
+		this->_Color_Pad_Width	= color_pad_width;
+
+		this->_Ease_In			= FadeEasing::Linear;
+		this->_Ease_Out			= FadeEasing::Linear;
 
 		Deselect_All();
 	}
@@ -53,7 +56,7 @@ namespace MIDILightDrawer
 
 	bool Control_FadePreview::Center_Is_Selected(void)
 	{
-		if(this->_Current_Mode == Fade_Mode::Three_Colors) {
+		if(this->_Current_Type == FadeType::Three_Colors) {
 			return _Center_Selected;
 		}
 
@@ -71,11 +74,11 @@ namespace MIDILightDrawer
 
 	void Control_FadePreview::Toggle_Mode(void)
 	{
-		if (this->_Current_Mode == Fade_Mode::Two_Colors) {
-			this->_Current_Mode = Fade_Mode::Three_Colors;
+		if (this->_Current_Type == FadeType::Two_Colors) {
+			this->_Current_Type = FadeType::Three_Colors;
 		}
 		else {
-			this->_Current_Mode = Fade_Mode::Two_Colors;
+			this->_Current_Type = FadeType::Two_Colors;
 			_Center_Selected = false;
 		}
 
@@ -101,18 +104,29 @@ namespace MIDILightDrawer
 		// Draw Rectange for End Color
 		Draw_Color_Pad(g, _Color_End, bounds.Width - 1 - _Color_Pad_Width - PAD_FRAME_WIDTH);
 
-		// Draw Rectange for Center Color
-		if (this->_Current_Mode == Fade_Mode::Three_Colors) {
-			Draw_Color_Pad(g, _Color_Center, (Bounds.Width - _Color_Pad_Width) / 2);
-		}
-
-		// Draw the actual gradient
-		if (this->_Current_Mode == Fade_Mode::Three_Colors) {
+		if (this->_Current_Type == FadeType::Three_Colors)
+		{
+			Draw_Color_Pad(g, _Color_Center, (bounds.Width - _Color_Pad_Width) / 2);
 			Draw_Color_Gradient(g, _Color_Start, _Color_Center, _Rect_Pad_Left.Right + PAD_FRAME_WIDTH, _Rect_Pad_Center.Left - PAD_FRAME_WIDTH);
 			Draw_Color_Gradient(g, _Color_Center, _Color_End, _Rect_Pad_Center.Right + PAD_FRAME_WIDTH, _Rect_Pad_Right.Left - PAD_FRAME_WIDTH);
+
+			// Draw ease-in curve between start and center
+			Draw_Easing_Curve(g, _Rect_Pad_Left.Right + PAD_FRAME_WIDTH, _Rect_Pad_Center.Left - PAD_FRAME_WIDTH, _Ease_In, false);
+
+			// Draw ease-out curve between center and end
+			Draw_Easing_Curve(g, _Rect_Pad_Center.Right + PAD_FRAME_WIDTH, _Rect_Pad_Right.Left - PAD_FRAME_WIDTH, _Ease_Out, true);
 		}
-		else {
+		else // Two colors mode
+		{
 			Draw_Color_Gradient(g, _Color_Start, _Color_End, _Rect_Pad_Left.Right + PAD_FRAME_WIDTH, _Rect_Pad_Right.Left - PAD_FRAME_WIDTH);
+
+			int middle_x = (_Rect_Pad_Left.Right + _Rect_Pad_Right.Left) / 2;
+
+			// Draw ease-in curve from start to middle
+			Draw_Easing_Curve(g, _Rect_Pad_Left.Right + PAD_FRAME_WIDTH, middle_x, _Ease_In, false);
+
+			// Draw ease-out curve from middle to end
+			Draw_Easing_Curve(g, middle_x, _Rect_Pad_Right.Left - PAD_FRAME_WIDTH, _Ease_Out, true);
 		}
 
 		// Draw Frame for Start Color
@@ -122,7 +136,7 @@ namespace MIDILightDrawer
 		Draw_Color_Pad_Frame(g, _End_Selected, _Rect_Pad_Right.Left - PAD_FRAME_WIDTH + 1);
 
 		// Draw Frame for Center Color
-		if (this->_Current_Mode == Fade_Mode::Three_Colors) {
+		if (this->_Current_Type == FadeType::Three_Colors) {
 			Draw_Color_Pad_Frame(g, _Center_Selected, _Rect_Pad_Center.Left - PAD_FRAME_WIDTH + 1);
 		}
 	}
@@ -142,7 +156,7 @@ namespace MIDILightDrawer
 				_End_Selected = true;
 				PreviewSideSelected(_Color_End);
 			}
-			else if (e->X > _Rect_Pad_Center.Left && e->X < _Rect_Pad_Center.Right && _Current_Mode == Fade_Mode::Three_Colors) {
+			else if (e->X > _Rect_Pad_Center.Left && e->X < _Rect_Pad_Center.Right && _Current_Type == FadeType::Three_Colors) {
 				_Center_Selected = true;
 				PreviewSideSelected(_Color_Center);
 			}
@@ -160,7 +174,7 @@ namespace MIDILightDrawer
 		else if (e->X > _Rect_Pad_Right.Left && e->X < _Rect_Pad_Right.Right) {
 			this->Cursor = Cursors::Hand;
 		}
-		else if (e->X > _Rect_Pad_Center.Left && e->X < _Rect_Pad_Center.Right && _Current_Mode == Fade_Mode::Three_Colors) {
+		else if (e->X > _Rect_Pad_Center.Left && e->X < _Rect_Pad_Center.Right && _Current_Type == FadeType::Three_Colors) {
 			this->Cursor = Cursors::Hand;
 		}
 		else {
@@ -218,11 +232,60 @@ namespace MIDILightDrawer
 		delete Brush_Gradient;
 	}
 
+	void Control_FadePreview::Draw_Easing_Curve(Graphics^ g, int x_start, int x_end, FadeEasing easing, bool isSecondHalf)
+	{
+		int Width = x_end - x_start;
+		
+		if (Width <= 0) {
+			return;
+		}
+
+		// Create points array for the curve
+		array<Point>^ Points = gcnew array<Point>(Width);
+
+		int Height = (this->Height - 3 * BORDER_PADDING_Y) / 2;
+
+		int Y_Offset = 2*Height;
+
+		if (isSecondHalf) {
+			Y_Offset = Y_Offset / 2 + 1;
+		}
+
+		// Calculate curve points
+		for (int i = 0; i < Width; i++)
+		{
+			float Ratio = (float)i / (Width - 1);
+			float Y;
+
+			Y = Easings::ApplyEasing(Ratio, easing);
+
+			// Invert Y coordinate since screen coordinates go down
+			Points[i] = Point(x_start + i, BORDER_PADDING_Y + BORDER_PADDING_Y/4 + Y_Offset - (int)(Y * Height));
+		}
+
+		// Draw the curve
+		Pen^ CurvePen = gcnew Pen(Color::FromArgb(180, Color::White), 2.0f);
+		g->DrawLines(CurvePen, Points);
+		delete CurvePen;
+	}
+
 	Rectangle Control_FadePreview::Get_Color_Pad_Rect(int x_offset)
 	{
 		Rectangle Bounds = this->ClientRectangle;
 		Rectangle Rect_Pad = Rectangle(0 + x_offset, BORDER_PADDING_Y, _Color_Pad_Width, Bounds.Height - 1 - 2 * BORDER_PADDING_Y);
 
 		return Rect_Pad;
+	}
+
+	void Control_FadePreview::EaseIn::set(FadeEasing value)
+	{
+			_Ease_In = value;
+			this->Invalidate();
+	}
+
+	void Control_FadePreview::EaseOut::set(FadeEasing value)
+	{
+		_Ease_Out = value;
+		this->Invalidate();
 	}
 }

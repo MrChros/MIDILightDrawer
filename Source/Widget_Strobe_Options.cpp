@@ -42,9 +42,9 @@ namespace MIDILightDrawer
 
 
 
-		array<String^>^ Lines_First_Quantization = gcnew array<String^>	{ "1/1", "1/2", "1/4", "1/8", "1/16", "1/32", "1/4", "1/8", "1/16", "1/32", "1/8", "1/16", "1/32", "1/8", "1/16", "1/32", "1/8", "1/8", "1/8", "1/8", "1/8", "1/16", "1/16", "1/16", "1/16", "1/16"	};
-		array<String^>^ Lines_Second_Quantization = gcnew array<String^>{ "", "", "", "", "", "", "T", "T", "T", "T", "5:4", "5:4", "5:4", "7:8", "7:8", "7:8", "20% SW", "40% SW", "60% SW", "80% SW", "100% SW", "20% SW", "40% SW", "60% SW", "80% SW", "100% SW" };
-		array<int>^ Values_Quantization = gcnew array<int>				{ 3840, 1920, 960, 480, 240, 120, 640, 320, 160, 80, 384, 192, 96, 619, 278, 137, 542, 610, 672, 734, 802, 257, 271, 288, 305, 319		};
+		array<String^>^ Lines_First_Quantization = TimeSignatures::TimeSignatureExtendedrStringMain->ToArray();
+		array<String^>^ Lines_Second_Quantization = TimeSignatures::TimeSignatureExtendedStringSub->ToArray();
+		array<int>^ Values_Quantization = TimeSignatures::TimeSignatureExtendedValues->ToArray();
 
 		this->_DropDown_Strobe_Quantization = gcnew Control_DropDown();
 		this->_DropDown_Strobe_Quantization->Dock = DockStyle::Fill;

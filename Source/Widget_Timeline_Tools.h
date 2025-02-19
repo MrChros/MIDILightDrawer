@@ -473,10 +473,12 @@ namespace MIDILightDrawer
 		int			_StartTick;
 
 		int			_TickLength;
+		FadeType	_Type;
 		Color		_ColorStart;
 		Color		_ColorCenter;
 		Color		_ColorEnd;
-		FadeType	_Type;
+		FadeEasing	_EaseIn;
+		FadeEasing	_EaseOut;
 		
 		static const int MIN_DRAG_PIXELS = 5;
 		
@@ -494,6 +496,11 @@ namespace MIDILightDrawer
 			void set(int value);
 		}
 
+		property FadeType Type {
+			FadeType get() { return _Type; }
+			void set(FadeType type);
+		}
+
 		property Color ColorStart {
 			Color get() { return _ColorStart; }
 			void set(Color color);
@@ -508,10 +515,15 @@ namespace MIDILightDrawer
 			Color get() { return _ColorEnd; }
 			void set(Color color);
 		}
-		
-		property FadeType Type {
-			FadeType get() { return _Type; }
-			void set(FadeType type);
+
+		property FadeEasing EaseIn {
+			FadeEasing get() { return _EaseIn; }
+			void set(FadeEasing value);
+		}
+
+		property FadeEasing EaseOut {
+			FadeEasing get() { return _EaseOut; }
+			void set(FadeEasing value);
 		}
 
 		property Track^ TargetTrack {

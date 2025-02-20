@@ -154,6 +154,7 @@
     <ClInclude Include="MIDI_Exporter.h" />
     <ClInclude Include="MIDI_Writer.h" />
     <ClInclude Include="Performance_Monitor.h" />
+    <ClInclude Include="resource1.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="gp_parser.h" />
     <ClInclude Include="Resource.h" />
@@ -243,11 +244,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Easing.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Include="Icons.resx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
     <None Include="MIDI_Light_Drawer.targets" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="MIDI_Light_Drawer.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -106,6 +106,37 @@ namespace MIDILightDrawer
 			(int)FadeEasing::InOut_Circ
 		};
 
+		System::Resources::ResourceManager^ EasingImages = gcnew System::Resources::ResourceManager("MIDILightDrawer.Easing", System::Reflection::Assembly::GetExecutingAssembly());
+
+		array<Image^>^ Images_Easings = gcnew array<Image^> {
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"00_LINEAR")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"01_IN_SINE")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"04_IN_QUAD")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"07_IN_CUBIC")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"10_IN_QUART")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"13_IN_QUINT")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"16_IN_EXPO")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"19_IN_CIRC")),
+
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"00_LINEAR")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"02_OUT_SINE")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"05_OUT_QUAD")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"08_OUT_CUBIC")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"11_OUT_QUART")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"14_OUT_QUINT")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"17_OUT_EXPO")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"20_OUT_CIRC")),
+
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"00_LINEAR")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"03_INOUT_SINE")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"06_INOUT_QUAD")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"09_INOUT_CUBIC")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"12_INOUT_QUART")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"15_INOUT_QUINT")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"18_INOUT_EXPO")),
+			cli::safe_cast<System::Drawing::Image^>(EasingImages->GetObject(L"21_INOUT_CIRC"))
+		};
+
 
 		// DropDown Ease In
 		this->_DropDown_Ease_In = gcnew Control_DropDown();
@@ -116,7 +147,7 @@ namespace MIDILightDrawer
 		this->_DropDown_Ease_In->Set_Open_Direction(false);
 		this->_DropDown_Ease_In->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
 		this->_DropDown_Ease_In->Margin = System::Windows::Forms::Padding(1, 2, 2, 2);
-		this->_DropDown_Ease_In->Set_Items(Lines_First_Easings, Lines_Second_Easings, Values_Easings);
+		this->_DropDown_Ease_In->Set_Items(Lines_First_Easings, Lines_Second_Easings, Values_Easings, Images_Easings);
 		this->_DropDown_Ease_In->Selected_Index = 0;
 		this->_DropDown_Ease_In->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Widget_Fade_Options::DropDown_Easings_OnItem_Selected);
 
@@ -129,7 +160,7 @@ namespace MIDILightDrawer
 		this->_DropDown_Ease_Out->Set_Open_Direction(false);
 		this->_DropDown_Ease_Out->Set_Horizontal_Alignment(Panel_Horizontal_Alignment::Left);
 		this->_DropDown_Ease_Out->Margin = System::Windows::Forms::Padding(1, 2, 2, 2);
-		this->_DropDown_Ease_Out->Set_Items(Lines_First_Easings, Lines_Second_Easings, Values_Easings);
+		this->_DropDown_Ease_Out->Set_Items(Lines_First_Easings, Lines_Second_Easings, Values_Easings, Images_Easings);
 		this->_DropDown_Ease_Out->Selected_Index = 0;
 		this->_DropDown_Ease_Out->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Widget_Fade_Options::DropDown_Easings_OnItem_Selected);
 

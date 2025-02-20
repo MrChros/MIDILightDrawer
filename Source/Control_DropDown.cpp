@@ -11,12 +11,21 @@ namespace MIDILightDrawer
 
 	void Control_DropDown::Initialize_Component()
 	{
-		_Selected_Index		= -1;
-		_Is_Dropped			= false;
-		_Highlight_Index	= -1;
-		_Tile_Width			= 150;
-		_Tile_Height		= 50;
-		_Columns			= 3;
+		this->_First_Lines = nullptr;
+		this->_Second_Lines = nullptr;
+		this->_Values = nullptr;
+		this->_Item_Images = nullptr;
+
+		this->_First_Line_Colors = nullptr;
+		this->_Second_Line_Colors = nullptr;
+		
+		this->_Selected_Index	= -1;
+		this->_Is_Dropped		= false;
+		this->_Highlight_Index	= -1;
+		this->_Tile_Width		= 150;
+		this->_Tile_Height		= 50;
+		this->_Columns			= 3;
+		this->_Image_Padding	= 5;
 
 		_Title_Color			= Color::Black;
 		_Open_Above				= false;	// Default to opening below
@@ -26,8 +35,8 @@ namespace MIDILightDrawer
 		Apply_Theme();
 
 		// Calculate optimal height
-		int optimal_height = 20 + 20;	// Title Height + Content Height
-		this->Size = System::Drawing::Size(200, optimal_height);
+		int Optimal_Height = 20 + 20;	// Title Height + Content Height
+		this->Size = System::Drawing::Size(200, Optimal_Height);
 		this->BackColor = Color::White;
 
 		// Initialize timer
@@ -36,7 +45,7 @@ namespace MIDILightDrawer
 		_Close_Timer->Interval = 1; // Will be set when used
 
 		// Adjust arrow position for new height
-		_Arrow_Bounds = Rectangle(Width - 20, (optimal_height - 8) / 2, 10, 8);
+		_Arrow_Bounds = Rectangle(Width - 20, (Optimal_Height - 8) / 2, 10, 8);
 
 		_Drop_Down_Panel = gcnew Double_Buffered_Panel();
 		_Drop_Down_Panel->Visible		= false;
@@ -133,51 +142,93 @@ namespace MIDILightDrawer
 
 	void Control_DropDown::Draw_Item(Graphics^ g, int index, Rectangle bounds, bool is_highlighted, bool is_main_control)
 	{
-		if (index < 0 || index >= _First_Lines->Length) return;
+		if (index < 0 || index >= _First_Lines->Length) {
+			return;
+		}
 
 		// Create string format for center alignment
-		StringFormat^ format = gcnew StringFormat();
-		format->Alignment = StringAlignment::Center;
+		StringFormat^ Format = gcnew StringFormat();
+		Format->Alignment = StringAlignment::Center;
+
+		// Calculate image bounds and text bounds
+		Rectangle ImageBounds = bounds;
+		Rectangle TextBounds = bounds;
+		bool HasImage = _Item_Images != nullptr && index < _Item_Images->Length && _Item_Images[index] != nullptr;
+
+		if (HasImage && !is_main_control) {
+			Image^ Img = _Item_Images[index];
+			float Scale = 1.0f;
+			int MaxHeight = bounds.Height - (2 * _Image_Padding);
+
+			// Calculate scale if image is too tall
+			if (Img->Height > MaxHeight) {
+				Scale = (float)MaxHeight / Img->Height;
+			}
+
+			// Calculate scaled dimensions
+			int ScaledWidth = (int)(Img->Width * Scale);
+			int ScaledHeight = (int)(Img->Height * Scale);
+
+			// Center the image vertically
+			int y_offset = (bounds.Height - ScaledHeight) / 2;
+			ImageBounds = Rectangle(
+				bounds.X + _Image_Padding,
+				bounds.Y + y_offset,
+				ScaledWidth,
+				ScaledHeight
+			);
+
+			// Adjust text bounds to account for image
+			TextBounds = Rectangle(
+				bounds.X + ScaledWidth + (_Image_Padding * 2),
+				bounds.Y,
+				bounds.Width - ScaledWidth - (_Image_Padding * 3),
+				bounds.Height
+			);
+
+			// Draw the image
+			g->DrawImage(Img, ImageBounds);
+		}
 
 		if (is_main_control) {
 			// For main control, combine both lines into one and align center
-			format->LineAlignment = StringAlignment::Center;
-			String^ combined_text;
+			Format->LineAlignment = StringAlignment::Center;
+			String^ CombinedText;
 			if (!String::IsNullOrEmpty(_Second_Lines[index])) {
-				combined_text = _First_Lines[index] + " " + _Second_Lines[index];
+				CombinedText = _First_Lines[index] + " " + _Second_Lines[index];
 			}
 			else {
-				combined_text = _First_Lines[index];
+				CombinedText = _First_Lines[index];
 			}
-			g->DrawString(combined_text, this->Font, gcnew SolidBrush(_Title_Color), bounds, format);
+			g->DrawString(CombinedText, this->Font, gcnew SolidBrush(_Title_Color), TextBounds, Format);
 		}
 		else
 		{
 			// Normal two-line drawing for dropdown panel
-			Rectangle first_line_bounds;
-			Rectangle second_line_bounds;
+			Rectangle FirstLineBounds;
+			Rectangle SecondLineBounds;
 
 			if (String::IsNullOrEmpty(_Second_Lines[index]))
 			{
 				// Center single line vertically in the whole bounds
-				first_line_bounds = bounds;
-				format->LineAlignment = StringAlignment::Center;
-				g->DrawString(_First_Lines[index], this->Font, gcnew SolidBrush(_Title_Color), first_line_bounds, format);
+				FirstLineBounds = TextBounds;
+				Format->LineAlignment = StringAlignment::Center;
+				g->DrawString(_First_Lines[index], this->Font, gcnew SolidBrush(_Title_Color), FirstLineBounds, Format);
 			}
 			else
 			{
 				// Increased overlap between lines
-				float first_line_height = bounds.Height * 0.55f;
-				first_line_bounds = Rectangle(bounds.X, bounds.Y, bounds.Width, (int)first_line_height);
+				float FirstLineHeight = TextBounds.Height * 0.55f;
+				FirstLineBounds = Rectangle(TextBounds.X, TextBounds.Y, TextBounds.Width, (int)FirstLineHeight);
 				// Move second line up more and increase overlap
-				second_line_bounds = Rectangle(bounds.X, bounds.Y + (int)first_line_height - 12, bounds.Width, bounds.Height - (int)first_line_height + 12);
+				SecondLineBounds = Rectangle(TextBounds.X, TextBounds.Y + (int)FirstLineHeight - 12, TextBounds.Width, TextBounds.Height - (int)FirstLineHeight + 12);
 
-				format->LineAlignment = StringAlignment::Center;
-				g->DrawString(_First_Lines[index], this->Font, gcnew SolidBrush(_Title_Color), first_line_bounds, format);
+				Format->LineAlignment = StringAlignment::Center;
+				g->DrawString(_First_Lines[index], this->Font, gcnew SolidBrush(_Title_Color), FirstLineBounds, Format);
 
-				Drawing::Font^ smaller_font = gcnew Drawing::Font(this->Font->FontFamily, this->Font->Size * 0.8f, this->Font->Style);
-				g->DrawString(_Second_Lines[index], smaller_font, gcnew SolidBrush(_Title_Color), second_line_bounds, format);
-				delete smaller_font;
+				Drawing::Font^ SmallerFont = gcnew Drawing::Font(this->Font->FontFamily, this->Font->Size * 0.8f, this->Font->Style);
+				g->DrawString(_Second_Lines[index], SmallerFont, gcnew SolidBrush(_Title_Color), SecondLineBounds, Format);
+				delete SmallerFont;
 			}
 		}
 	}
@@ -363,10 +414,10 @@ namespace MIDILightDrawer
 		Graphics^ g = e->Graphics;
 		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 
-		Rectangle bounds = this->ClientRectangle;
+		Rectangle ClientBounds = this->ClientRectangle;
 
 		// Fill background
-		g->FillRectangle(gcnew SolidBrush(_Background_Color), bounds);
+		g->FillRectangle(gcnew SolidBrush(_Background_Color), ClientBounds);
 
 		// Draw simple border
 		g->DrawRectangle(gcnew Pen(_Border_Color), 0, 0, Width - 1, Height - 1);
@@ -398,16 +449,16 @@ namespace MIDILightDrawer
 
 			Arrow_Points = gcnew array<Point> {
 				Point(Width - 15, Border_Distance + Arrow_Height),	// Bottom point
-					Point(Width - 11, Border_Distance),					// Top left
-					Point(Width - 7, Border_Distance + Arrow_Height)	// Bottom right
+				Point(Width - 11, Border_Distance),					// Top left
+				Point(Width - 7, Border_Distance + Arrow_Height)	// Bottom right
 			};
 		}
 		else {
 			// Draw downward arrow
 			Arrow_Points = gcnew array<Point> {
 				Point(_Arrow_Bounds.Left, _Arrow_Bounds.Top),
-					Point(_Arrow_Bounds.Right, _Arrow_Bounds.Top),
-					Point(_Arrow_Bounds.Left + _Arrow_Bounds.Width / 2, _Arrow_Bounds.Bottom)
+				Point(_Arrow_Bounds.Right, _Arrow_Bounds.Top),
+				Point(_Arrow_Bounds.Left + _Arrow_Bounds.Width / 2, _Arrow_Bounds.Bottom)
 			};
 		}
 
@@ -443,35 +494,43 @@ namespace MIDILightDrawer
 	{
 		if (_Title_Color != color)
 		{
-			_Title_Color = color;
+			this->_Title_Color = color;
 			this->Invalidate(); // Redraw with new color
 		}
 	}
 
 	void Control_DropDown::Set_Items(array<String^>^ first_lines, array<String^>^ second_lines, array<int>^ values)
 	{
-		_First_Lines = first_lines;
-		_Second_Lines = second_lines;
-		_Values = values;
-		_First_Line_Colors = gcnew array<Color>(_First_Lines->Length);
-		_Second_Line_Colors = gcnew array<Color>(_First_Lines->Length);
+		this->_First_Lines = first_lines;
+		this->_Second_Lines = second_lines;
+		this->_Values = values;
+
+		this->_First_Line_Colors = gcnew array<Color>(_First_Lines->Length);
+		this->_Second_Line_Colors = gcnew array<Color>(_First_Lines->Length);
 
 		// Initialize with default colors
 		for (int i = 0; i < _First_Lines->Length; i++) {
-			_First_Line_Colors[i] = Color::Black;
-			_Second_Line_Colors[i] = Color::Black;
+			this->_First_Line_Colors[i] = Color::Black;
+			this->_Second_Line_Colors[i] = Color::Black;
 		}
 
 		if (_Selected_Index == -1 && _First_Lines->Length > 0) {
-			_Selected_Index = 0;
+			this->_Selected_Index = 0;
 		}
+
 		this->Invalidate();
+	}
+
+	void Control_DropDown::Set_Items(array<String^>^ first_lines, array<String^>^ second_lines, array<int>^ values, array<Image^>^ images)
+	{
+		this->_Item_Images = images;
+		this->Set_Items(first_lines, second_lines, values);
 	}
 
 	void Control_DropDown::Set_First_Line_Color(int index, Color color)
 	{
 		if (index >= 0 && index < _First_Line_Colors->Length) {
-			_First_Line_Colors[index] = color;
+			this->_First_Line_Colors[index] = color;
 			this->Invalidate();
 		}
 	}
@@ -479,7 +538,7 @@ namespace MIDILightDrawer
 	void Control_DropDown::Set_Second_Line_Color(int index, Color color)
 	{
 		if (index >= 0 && index < _Second_Line_Colors->Length) {
-			_Second_Line_Colors[index] = color;
+			this->_Second_Line_Colors[index] = color;
 			this->Invalidate();
 		}
 	}
@@ -520,6 +579,14 @@ namespace MIDILightDrawer
 			if (_Is_Dropped && _Drop_Down_Panel != nullptr && _Drop_Down_Panel->Visible) {
 				Update_Panel_Position();
 			}
+		}
+	}
+
+	void Control_DropDown::Set_Image_Padding(int padding)
+	{
+		if (_Image_Padding != padding) {
+			this->_Image_Padding = padding;
+			this->Invalidate();
 		}
 	}
 
@@ -587,6 +654,23 @@ namespace MIDILightDrawer
 				Item_Selected(this, args);
 			}
 
+			this->Invalidate();
+		}
+	}
+
+	int Control_DropDown::Selected_Value::get()
+	{
+		if (_Selected_Index >= 0 && _Selected_Index < _Values->Length) {
+			return _Values[_Selected_Index];
+		}
+
+		return -1;
+	}
+
+	void  Control_DropDown::Title_Text::set(String^ text)
+	{
+		if(_Title_Text != text) {
+			this->_Title_Text = text;
 			this->Invalidate();
 		}
 	}

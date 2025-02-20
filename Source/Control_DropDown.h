@@ -53,6 +53,7 @@ namespace MIDILightDrawer {
 		array<String^>^ _First_Lines;
 		array<String^>^ _Second_Lines;
 		array<int>^		_Values;
+		array<Image^>^	_Item_Images;
 
 		array<Color>^	_First_Line_Colors;
 		array<Color>^	_Second_Line_Colors;
@@ -82,6 +83,7 @@ namespace MIDILightDrawer {
 		int _Tile_Height;
 		int _Columns;
 		int _Close_Delay_Ms;
+		int _Image_Padding;
 	
 		// Private methods
 		void Initialize_Component();
@@ -115,11 +117,13 @@ namespace MIDILightDrawer {
 	public:
 		void Set_Title_Color(Color color);
 		void Set_Items(array<String^>^ first_lines, array<String^>^ second_lines, array<int>^ values);
+		void Set_Items(array<String^>^ first_lines, array<String^>^ second_lines, array<int>^ values, array<Image^>^ images);
 		void Set_First_Line_Color(int index, Color color);
 		void Set_Second_Line_Color(int index, Color color);
 		void Set_Tile_Layout(int tile_width, int tile_height, int columns);
 		void Set_Open_Direction(bool open_above);
 		void Set_Horizontal_Alignment(Panel_Horizontal_Alignment alignment);
+		void Set_Image_Padding(int padding);
 		bool Select_Next();
 		bool Select_Previous();
 		bool Select_By_Value(int value);
@@ -133,21 +137,12 @@ namespace MIDILightDrawer {
 		}
 
 		property int Selected_Value {
-			int get() {
-				if(_Selected_Index >= 0 && _Selected_Index < _Values->Length) {
-					return _Values[_Selected_Index];
-				}
-
-				return -1;
-			}
+			int get();
 		}
 
 		property String^ Title_Text {
 			String^ get() { return _Title_Text; }
-			void set(String^ value) {
-				_Title_Text = value;
-				this->Invalidate();
-			}
+			void set(String^ text);
 		}
 	};
 

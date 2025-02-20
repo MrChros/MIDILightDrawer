@@ -250,8 +250,10 @@ namespace MIDILightDrawer
 		// Separator
 		static initonly System::String^ Separator = "-";
 
+		// Lookup List for Easings
 		static initonly System::Collections::Generic::Dictionary<System::String^, FadeEasing>^ FadeEasings;
-		
+
+		// Lookup List for Quantization Values
 		static initonly System::Collections::Generic::Dictionary<System::String^, int>^ QuantizationValues;
 
 		static ContextMenuStrings()
@@ -279,7 +281,6 @@ namespace MIDILightDrawer
 			FadeEasings->Add("InOut Quint", Easing::InOut_Quint);
 			FadeEasings->Add("InOut Expo", Easing::InOut_Expo);
 			FadeEasings->Add("InOut Circ", Easing::InOut_Circ);
-
 
 			QuantizationValues = gcnew System::Collections::Generic::Dictionary<System::String^, int>;
 			QuantizationValues->Add(L"1/1", 3840);

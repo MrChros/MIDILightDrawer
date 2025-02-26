@@ -1,3 +1,3 @@
 #define VERSION 1
-#define BUILD 20
-#define VERSION_BUILD_STRING "1.0020"
+#define BUILD 23
+#define VERSION_BUILD_STRING "1.0023"

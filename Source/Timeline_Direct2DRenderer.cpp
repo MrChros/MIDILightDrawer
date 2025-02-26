@@ -14,6 +14,7 @@
 #define RECT_TO_RECT_F(__rect__)                    D2D1::RectF((float)__rect__.Left, (float)__rect__.Top, (float)__rect__.Right, (float)__rect__.Bottom)
 #define TO_LOGSCALE(__V__)							(float)Math::Log((float)__V__ + 1.0f, 2)
 
+
 namespace MIDILightDrawer
 {
     Timeline_Direct2DRenderer::Timeline_Direct2DRenderer(List<Track^>^ tracks, List<Measure^>^ measures, double zoomlevel, System::Drawing::Point^ scrollposition) : _NativeRenderer(nullptr), m_disposed(false), _ControlHandle(System::IntPtr::Zero), m_themeColorsCached(false)
@@ -134,11 +135,11 @@ namespace MIDILightDrawer
        // Draw the image with color transformation if needed
         System::Drawing::Imaging::ColorMatrix^ ColorMatrix = gcnew System::Drawing::Imaging::ColorMatrix(
             gcnew array<array<float>^> {
-            gcnew array<float>{m_ColorTheme.Text.R / 255.0f, 0, 0, 0, 0},
-                gcnew array<float>{0, m_ColorTheme.Text.G / 255.0f, 0, 0, 0},
-                gcnew array<float>{0, 0, m_ColorTheme.Text.B / 255.0f, 0, 0},
-                gcnew array<float>{0, 0, 0, m_ColorTheme.Text.A / 255.0f, 0},
-                gcnew array<float>{0, 0, 0, 0, 1.0f}
+            gcnew array<float>{ m_ColorTheme.Text.R / 255.0f, 0, 0, 0, 0 },
+            gcnew array<float>{ 0, m_ColorTheme.Text.G / 255.0f, 0, 0, 0 },
+            gcnew array<float>{ 0, 0, m_ColorTheme.Text.B / 255.0f, 0, 0 },
+            gcnew array<float>{ 0, 0, 0, m_ColorTheme.Text.A / 255.0f, 0 },
+            gcnew array<float>{ 0, 0, 0, 0, 1.0f }
         }
         );
         
@@ -156,8 +157,8 @@ namespace MIDILightDrawer
         {
             System::Drawing::Graphics ^ g = System::Drawing::Graphics::FromImage(TransformedIcon);
             g->DrawImage(NoteIcon,
-                System::Drawing::Rectangle(0, 0, NoteIcon->Width, NoteIcon->Height),  // dest rectangle
-                0, 0, NoteIcon->Width, NoteIcon->Height,                             // source rectangle
+                System::Drawing::Rectangle(0, 0, NoteIcon->Width, NoteIcon->Height),    // Dest Rectangle
+                0, 0, NoteIcon->Width, NoteIcon->Height,                                // Source Rectangle
                 System::Drawing::GraphicsUnit::Pixel,
                 Attributes);
             delete g;
@@ -237,7 +238,14 @@ namespace MIDILightDrawer
             return false;
         }
 
-        return _NativeRenderer->BeginDraw();
+        bool Result = _NativeRenderer->BeginDraw();
+
+        // Start a new batch if draw was successful
+        if (Result) {
+            _NativeRenderer->BeginBatch();
+        }
+
+        return Result;
     }
 
     bool Timeline_Direct2DRenderer::EndDraw()
@@ -245,6 +253,9 @@ namespace MIDILightDrawer
         if (m_disposed || !_NativeRenderer) {
             return false;
         }
+
+        // Execute the batch before ending draw
+        _NativeRenderer->ExecuteBatch();
 
         return _NativeRenderer->EndDraw();
     }
@@ -344,10 +355,10 @@ namespace MIDILightDrawer
                 // Draw marker text if present
                 if (!System::String::IsNullOrEmpty(Meas->Marker_Text))
                 {
-                    D2D1_RECT_F markerRect = D2D1::RectF(X - 50, MarkerTextY, X + 50, MarkerTextY + 14);
+                    D2D1_RECT_F MarkerRect = D2D1::RectF(X - 100, MarkerTextY, X + 100, MarkerTextY + 14);
 
-                    std::wstring markerText = ConvertString(Meas->Marker_Text);
-                    _NativeRenderer->DrawText(markerText, markerRect, D2DTextColor, _NativeRenderer->GetMarkerTextFormat());
+                    std::wstring MarkerText = ConvertString(Meas->Marker_Text);
+                    _NativeRenderer->DrawText(MarkerText, MarkerRect, D2DTextColor, _NativeRenderer->GetMarkerTextFormat());
                 }
                 
                 if(ShouldDrawDetails) {
@@ -435,8 +446,9 @@ namespace MIDILightDrawer
             }
 
             // 3. Draw track headers and borders
-            DrawTrackHeaders();
-            DrawTrackDividers(hoverTrack);
+            // Commented due to use of batched drawing -> Manual call from Widget_Timeline->OnPaint(...)
+            //DrawTrackHeaders();
+            //DrawTrackDividers(hoverTrack);
         }
         finally {
             // Restore clipping region
@@ -484,6 +496,44 @@ namespace MIDILightDrawer
         return true;
     }
 
+    void Timeline_Direct2DRenderer::DrawFPSCounter(double fps, double frameTimeMs)
+    {
+        if (!_NativeRenderer) {
+            return;
+        }
+
+        const float Opacity = 0.8f;
+
+        // Format the FPS string with frame time
+        std::wstring FPSText = L"";
+        if (frameTimeMs > 0) {
+            FPSText = std::to_wstring((int)fps) + L" FPS";
+        }
+        else {
+            FPSText = L"-- FPS"; // Display placeholder when no data
+        }
+
+        // Set text color based on performance
+        D2D1_COLOR_F TextColor;
+        if (fps >= 55.0) {
+            // Good performance (green)
+            TextColor = D2D1::ColorF(0.2f, 1.0f, 0.2f, Opacity);
+        }
+        else if (fps >= 30.0) {
+            // Acceptable performance (yellow)
+            TextColor = D2D1::ColorF(1.0f, 1.0f, 0.2f, Opacity);
+        }
+        else {
+            // Poor performance (red)
+            TextColor = D2D1::ColorF(1.0f, 0.2f, 0.2f, Opacity);
+        }
+
+        // Draw text at top-left corner with padding (left aligned)
+        D2D1_RECT_F TextRect = D2D1::RectF(5.0f, 5.0f, 100.0f, 30.0f);
+
+        // Use the TrackHeaderFormat which is already set to left alignment
+        _NativeRenderer->DrawText(FPSText, TextRect, TextColor, _NativeRenderer->GetFPSCounterFormat());
+    }
 
     bool Timeline_Direct2DRenderer::DrawBeatNumbers(Measure^ measure, float x, float measureNumberY, float subdivLevel, int measureNumber, int ticksPerBeat)
     {
@@ -1200,7 +1250,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackHeaders()
     {
-        if (!_NativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0) {
+        if (!_NativeRenderer || this->_Tracks == nullptr || this->_Tracks->Count == 0 || this->_Measures->Count == 0) {
             return false;
         }
 
@@ -1343,7 +1393,7 @@ namespace MIDILightDrawer
 
     bool Timeline_Direct2DRenderer::DrawTrackDividers(Track^ hoverTrack)
     {
-        if (!_NativeRenderer || !this->_ToolAccessDelegate || this->_Tracks == nullptr || this->_Tracks->Count == 0) {
+        if (!_NativeRenderer || !this->_ToolAccessDelegate || this->_Tracks == nullptr || this->_Tracks->Count == 0 || this->_Measures->Count == 0) {
             return false;
         }
 
@@ -1963,8 +2013,8 @@ namespace MIDILightDrawer
         float EaseInWidth = barBounds.Width * 0.5f; // 50% of bar width
         float EaseOutOffset = EaseInWidth;
 
-        float Y_In  = barBounds.Top + barBounds.Height / 2 + CurveHeight;
-        float Y_Out = barBounds.Top + barBounds.Height / 2;
+        float Y_In  = (float)(barBounds.Top + barBounds.Height / 2 + CurveHeight);
+        float Y_Out = (float)(barBounds.Top + barBounds.Height / 2);
 
         for (int i = 0; i <= NumPoints; i++)
         {

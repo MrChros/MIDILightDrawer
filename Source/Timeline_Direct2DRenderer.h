@@ -84,60 +84,61 @@ namespace MIDILightDrawer
 		!Timeline_Direct2DRenderer();
 
         // Initialization
-		virtual bool Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback, LoadingProgressCallback^ progressCallback);
-        virtual void Resize(int width, int height);
-        virtual void SetThemeColors(System::Drawing::Color background, System::Drawing::Color headerbackground, System::Drawing::Color text, System::Drawing::Color measureline, System::Drawing::Color beatline, System::Drawing::Color subdivisionline, System::Drawing::Color selectionhighlight, System::Drawing::Color trackbackground, System::Drawing::Color trackborder);
-        virtual void SetZoomLevel(double zoomlevel);
-        virtual void SetScrollPositionReference(System::Drawing::Point^ scrollposition);
-        virtual void SetTimelineAccess(ITimelineAccess^ access);
-        virtual void PreloadImages(LoadingProgressCallback^ progressCallback);
-        virtual void PreloadTabTexts(LoadingProgressCallback^ progressCallback);
-		virtual void PreloadDrumSymbols(LoadingProgressCallback^ progressCallback);
-		virtual void PreloadDurationSymbols(LoadingProgressCallback^ progressCallback);
+		bool Initialize(System::Windows::Forms::Control^ control, LoadingStatusCallback^ loadingCallback, LoadingProgressCallback^ progressCallback);
+        void Resize(int width, int height);
+        void SetThemeColors(System::Drawing::Color background, System::Drawing::Color headerbackground, System::Drawing::Color text, System::Drawing::Color measureline, System::Drawing::Color beatline, System::Drawing::Color subdivisionline, System::Drawing::Color selectionhighlight, System::Drawing::Color trackbackground, System::Drawing::Color trackborder);
+        void SetZoomLevel(double zoomlevel);
+        void SetScrollPositionReference(System::Drawing::Point^ scrollposition);
+        void SetTimelineAccess(ITimelineAccess^ access);
+        void PreloadImages(LoadingProgressCallback^ progressCallback);
+        void PreloadTabTexts(LoadingProgressCallback^ progressCallback);
+		void PreloadDrumSymbols(LoadingProgressCallback^ progressCallback);
+		void PreloadDurationSymbols(LoadingProgressCallback^ progressCallback);
 
         // Drawing Methods
-		virtual bool BeginDraw();
-		virtual bool EndDraw();
+		bool BeginDraw();
+		bool EndDraw();
 
         // Widget Timeline Drawing 
-        virtual void UpdateLevelOfDetail();
-        virtual bool DrawWidgetBackground();
-        virtual bool DrawTrackBackground();
-        virtual bool DrawMeasureNumbers();
-        virtual bool DrawTrackContent(Track^ hoverTrack);
-        virtual bool DrawToolPreview();
+        void UpdateLevelOfDetail();
+        bool DrawWidgetBackground();
+        bool DrawTrackBackground();
+        bool DrawMeasureNumbers();
+        bool DrawTrackContent(Track^ hoverTrack);
+        bool DrawToolPreview();
+        void DrawFPSCounter(double fps, double frameTimeMs);
 
 
         // Sub-Methods for DrawMeasureNumbers
-		virtual bool DrawBeatNumbers(Measure^ measure, float x, float measureNumberY, float subdivLevel, int measureNumber, int ticksPerBeat);
+		bool DrawBeatNumbers(Measure^ measure, float x, float measureNumberY, float subdivLevel, int measureNumber, int ticksPerBeat);
 
 
         // Sub-Methods for DrawTrackContent
-        virtual void DrawGridLines(float totalHeight);
-        virtual void DrawSubdivisionLines(float totalHeight, int startTick, int endTick);
-        virtual void DrawBeatLines(float totalHeight, int startTick, int endTick);
-        virtual void DrawMeasureLines(float totalHeight, int startTick, int endTick);
+        void DrawGridLines(float totalHeight);
+        void DrawSubdivisionLines(float totalHeight, int startTick, int endTick);
+        void DrawBeatLines(float totalHeight, int startTick, int endTick);
+        void DrawMeasureLines(float totalHeight, int startTick, int endTick);
 
 
         // Sub-Methods for DrawTrackContent - DrawTrackEvents and DrawTrackTablature
-        virtual void DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType);
-        virtual bool DrawTrackTablature(Track^ track, System::Drawing::Rectangle trackContentBounds);
-        virtual bool DrawTrackTablatureDrum(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
-        virtual bool DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
-        virtual void DrawBeatDuration(Beat^ beat, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions);
-        virtual void DrawTieLines(Track^ track, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, float scaledFontSize);
-        virtual void DrawDrumSymbol(DrumNotationType symbolType, float x, float y, float size);
-        virtual TabStringInfo DrawTablatureStrings(System::Drawing::Rectangle bounds, float availableHeight, float logScale, int numStrings);
-		virtual float GetTablatureScaledFontSize(float logScale);
-		virtual float GetTablatureScaledStringSpacing(float logScale);
-        virtual bool ShouldRenderBeat(Beat^ beat, Measure^ measure, TablatureResolution resolution);
+        void DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType);
+        bool DrawTrackTablature(Track^ track, System::Drawing::Rectangle trackContentBounds);
+        bool DrawTrackTablatureDrum(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
+        bool DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
+        void DrawBeatDuration(Beat^ beat, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions);
+        void DrawTieLines(Track^ track, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, float scaledFontSize);
+        void DrawDrumSymbol(DrumNotationType symbolType, float x, float y, float size);
+        TabStringInfo DrawTablatureStrings(System::Drawing::Rectangle bounds, float availableHeight, float logScale, int numStrings);
+		float GetTablatureScaledFontSize(float logScale);
+		float GetTablatureScaledStringSpacing(float logScale);
+        bool ShouldRenderBeat(Beat^ beat, Measure^ measure, TablatureResolution resolution);
 
-        virtual bool DrawTrackHeaders();
-        virtual bool DrawTrackButtons(Track^ track, System::Drawing::Rectangle trackHeaderBounds);
-        virtual bool DrawTrackButtonText(System::Drawing::Rectangle trackHeaderBounds, int buttonIndex, System::String^ text, bool isPressed, bool isHovered, System::Drawing::Color baseColor, System::Drawing::Color textColor);
-        virtual bool DrawTrackButtonIcon(System::Drawing::Rectangle trackHeaderBounds, int buttonIndex, System::Drawing::Image^ icon, bool isPressed, bool isHovered, System::Drawing::Color baseColor, System::Drawing::Color textColor);
-        virtual void DrawTrackButtonBase(System::Drawing::Rectangle buttonBounds, bool isPressed, bool isHovered, System::Drawing::Color baseColor);
-        virtual bool DrawTrackDividers(Track^ hoverTrack);
+        bool DrawTrackHeaders();
+        bool DrawTrackButtons(Track^ track, System::Drawing::Rectangle trackHeaderBounds);
+        bool DrawTrackButtonText(System::Drawing::Rectangle trackHeaderBounds, int buttonIndex, System::String^ text, bool isPressed, bool isHovered, System::Drawing::Color baseColor, System::Drawing::Color textColor);
+        bool DrawTrackButtonIcon(System::Drawing::Rectangle trackHeaderBounds, int buttonIndex, System::Drawing::Image^ icon, bool isPressed, bool isHovered, System::Drawing::Color baseColor, System::Drawing::Color textColor);
+        void DrawTrackButtonBase(System::Drawing::Rectangle buttonBounds, bool isPressed, bool isHovered, System::Drawing::Color baseColor);
+        bool DrawTrackDividers(Track^ hoverTrack);
 
 
         // Sub-Methods for DrawToolPreview
@@ -228,5 +229,4 @@ namespace MIDILightDrawer
 	protected:
 		virtual void Cleanup();
     };
-
-} // namespace MIDILightDrawer
+}

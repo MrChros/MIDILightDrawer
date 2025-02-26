@@ -64,7 +64,8 @@ namespace MIDILightDrawer
 		Invalidate();
 	}
 
-	void Widget_Timeline::AddMeasure(int numerator, int denominator, int tempo) {
+	void Widget_Timeline::AddMeasure(int numerator, int denominator, int tempo)
+	{
 		AddMeasure(numerator, denominator, tempo, "");
 	}
 
@@ -167,24 +168,28 @@ namespace MIDILightDrawer
 	void Widget_Timeline::ZoomIn()
 	{
 		double newZoom;
+
 		if (_ZoomLevel < 1.0) {
 			newZoom = _ZoomLevel * 1.2;
 		}
 		else {
 			newZoom = _ZoomLevel * 1.05;
 		}
+
 		SetZoom(newZoom);
 	}
 
 	void Widget_Timeline::ZoomOut()
 	{
 		double newZoom;
+
 		if (_ZoomLevel > 1.0) {
 			newZoom = _ZoomLevel / 1.05;
 		}
 		else {
 			newZoom = _ZoomLevel / 1.2;
 		}
+
 		SetZoom(newZoom);
 	}
 
@@ -211,15 +216,16 @@ namespace MIDILightDrawer
 		}
 
 		// Recalculate scroll position to maintain center
-		int newCenterPixel = TicksToPixels(CenterTick);
-		_ScrollPosition->X = -(newCenterPixel - (VisibleWidth / 2));
+		int NewCenterPixel = TicksToPixels(CenterTick);
+		_ScrollPosition->X = -(NewCenterPixel - (VisibleWidth / 2));
 
 		// Ensure proper alignment
 		UpdateScrollBounds();
 		Invalidate();
 	}
 
-	void Widget_Timeline::ScrollTo(Point newPosition) {
+	void Widget_Timeline::ScrollTo(Point newPosition)
+	{
 		_ScrollPosition = newPosition;
 		Invalidate();
 	}
@@ -282,28 +288,9 @@ namespace MIDILightDrawer
 
 		switch (bar->Type)
 		{
-		case BarEventType::Solid:	CreateContextMenuSolid();
-			//_ContextMenu->Items->Add("Change Color");
-			break;
-
-		case BarEventType::Fade:	CreateContextMenuFade();	break;
-		case BarEventType::Strobe:	CreateContextMenuStrobe();	break;
-		/*
-		case BarEventType::Fade:
-			_ContextMenu->Items->Add("Change Start Color");
-			_ContextMenu->Items->Add("Change End Color");
-			if (bar->FadeInfo->Type == FadeType::Three_Colors) {
-				_ContextMenu->Items->Add("Change Center Color");
-			}
-			_ContextMenu->Items->Add("Change Quantization");
-			break;
-		*/
-		/*
-		case BarEventType::Strobe:
-			_ContextMenu->Items->Add("Change Strobe Color");
-			_ContextMenu->Items->Add("Change Strobe Rate");
-			break;
-		*/
+			case BarEventType::Solid:	CreateContextMenuSolid();	break;
+			case BarEventType::Fade:	CreateContextMenuFade();	break;
+			case BarEventType::Strobe:	CreateContextMenuStrobe();	break;
 		}
 
 		// Show the context menu
@@ -395,16 +382,13 @@ namespace MIDILightDrawer
 	int Widget_Timeline::SnapTickToGrid(int tick)
 	{
 		// Get current subdivision level based on zoom
-		float subdivLevel = GetSubdivisionLevel();
+		float SubdivLevel = GetSubdivisionLevel();
 
 		// Calculate snap resolution based on subdivision level
-		int snapResolution = Timeline_Direct2DRenderer::TICKS_PER_QUARTER / (int)subdivLevel;
-
-		// Round to nearest snap point
-		//return ((tick + (snapResolution / 2)) / snapResolution) * snapResolution;
+		int SnapResolution = Timeline_Direct2DRenderer::TICKS_PER_QUARTER / (int)SubdivLevel;
 
 		// Calculate the grid point to the left of the given tick
-		return (tick / snapResolution) * snapResolution;
+		return (tick / SnapResolution) * SnapResolution;
 	}
 
 	int Widget_Timeline::SnapTickBasedOnType(int tick, Point mousePos)
@@ -423,7 +407,9 @@ namespace MIDILightDrawer
 		{
 			// Get the track under the mouse pointer
 			Track^ CurrentTrack = GetTrackAtPoint(mousePos);
-			if (CurrentTrack == nullptr) return tick;
+			if (CurrentTrack == nullptr) {
+				return tick;
+			}
 
 			int ClosestEndTick = tick;
 			int MinEndDistance = SNAP_THRESHOLD;
@@ -455,10 +441,14 @@ namespace MIDILightDrawer
 		{
 			// Get the track under the mouse pointer
 			Track^ CurrentTrack = GetTrackAtPoint(mousePos);
-			if (CurrentTrack == nullptr) return tick;
+			if (CurrentTrack == nullptr) {
+				return tick;
+			}
 
 			// Only proceed if the track has tablature visible
-			if (!CurrentTrack->ShowTablature) return tick;
+			if (!CurrentTrack->ShowTablature) {
+				return tick;
+			}
 
 			// Find the nearest left-side beat in the current track
 			int NearestLeftBeatTick = -1;  // Initialize to invalid value
@@ -466,7 +456,9 @@ namespace MIDILightDrawer
 
 			// Get the measure containing this tick
 			Measure^ Meas = GetMeasureAtTick(tick);
-			if (Meas == nullptr) return tick;
+			if (Meas == nullptr) {
+				return tick;
+			}
 
 			// Find corresponding track measure
 			TrackMeasure^ TrackMeas = nullptr;
@@ -479,7 +471,9 @@ namespace MIDILightDrawer
 				}
 			}
 
-			if (TrackMeas == nullptr) return tick;
+			if (TrackMeas == nullptr) {
+				return tick;
+			}
 
 			// Look for the closest beat that's to the left of our current position
 			for each (Beat^ B in TrackMeas->Beats)
@@ -1010,24 +1004,28 @@ namespace MIDILightDrawer
 	{
 		_PerformanceMetrics->StartFrame();
 
-		_D2DRenderer->UpdateLevelOfDetail();
-
 		if (_D2DRenderer->BeginDraw())
 		{
+			_D2DRenderer->UpdateLevelOfDetail();
+
 			// Clear the background
 			if(this->Measures->Count == 0) {
 				_D2DRenderer->DrawWidgetBackground();
 			}
 				
 			_D2DRenderer->DrawTrackBackground();
-			_D2DRenderer->DrawMeasureNumbers();
 			_D2DRenderer->DrawTrackContent(_ResizeHoverTrack);
 			_D2DRenderer->DrawToolPreview();
-			
+			_D2DRenderer->DrawTrackHeaders();
+			_D2DRenderer->DrawTrackDividers(_ResizeHoverTrack);
+			_D2DRenderer->DrawMeasureNumbers();
+
+			_D2DRenderer->DrawFPSCounter(_PerformanceMetrics->GetFPS(), _PerformanceMetrics->LastFrameTime);
+
 			_D2DRenderer->EndDraw();
 		}
 		
-		_PerformanceMetrics->EndFrame();
+		_PerformanceMetrics->EndFrame();	
 	}
 
 	void Widget_Timeline::OnResize(EventArgs^ e)
@@ -1783,25 +1781,25 @@ namespace MIDILightDrawer
 	{
 		if (_TrackBeingResized != nullptr)
 		{
-			int delta = mouseY - _ResizeStartY;
-			int newHeight = Math::Max(MINIMUM_TRACK_HEIGHT, _InitialTrackHeight + delta);
+			int Delta = mouseY - _ResizeStartY;
+			int NewHeight = Math::Max(MINIMUM_TRACK_HEIGHT, _InitialTrackHeight + Delta);
 
 			// Store previous total height
-			int oldTotalHeight = GetTotalTracksHeight();
+			int OldTotalHeight = GetTotalTracksHeight();
 
 			// Update the track height
-			SetTrackHeight(_TrackBeingResized, newHeight);
+			SetTrackHeight(_TrackBeingResized, NewHeight);
 
 			// Get new total height
-			int newTotalHeight = GetTotalTracksHeight();
+			int NewTotalHeight = GetTotalTracksHeight();
 
 			// If this changes total content height, ensure scroll position is still valid
-			if (oldTotalHeight != newTotalHeight) {
-				int viewportHeight = Height - Timeline_Direct2DRenderer::HEADER_HEIGHT - _HScrollBar->Height;
+			if (OldTotalHeight != NewTotalHeight) {
+				int ViewportHeight = Height - Timeline_Direct2DRenderer::HEADER_HEIGHT - _HScrollBar->Height;
 
 				// If we're scrolled to bottom, maintain bottom alignment
-				if (-_ScrollPosition->Y + viewportHeight >= oldTotalHeight) {
-					_ScrollPosition->Y = Math::Min(0, -(newTotalHeight - viewportHeight));
+				if (-_ScrollPosition->Y + ViewportHeight >= OldTotalHeight) {
+					_ScrollPosition->Y = Math::Min(0, -(NewTotalHeight - ViewportHeight));
 					if (_VScrollBar != nullptr) {
 						_VScrollBar->Value = -_ScrollPosition->Y;
 					}
@@ -1820,8 +1818,8 @@ namespace MIDILightDrawer
 		_TrackBeingResized = nullptr;
 
 		// Check if we're still over a divider
-		Track^ hoverTrack;
-		if (IsOverTrackDivider(Point(this->PointToClient(Control::MousePosition)), hoverTrack)) {
+		Track^ HoverTrack = nullptr;
+		if (IsOverTrackDivider(Point(this->PointToClient(Control::MousePosition)), HoverTrack)) {
 			this->Cursor = Cursors::SizeNS;
 		}
 		else {
@@ -1860,18 +1858,20 @@ namespace MIDILightDrawer
 
 	bool Widget_Timeline::IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint)
 	{
-		if (track == nullptr) return false;
+		if (track == nullptr) {
+			return false;
+		}
 
 		if (buttonIndex == 1) {
 			// Notation button only exists for drum tracks
 			if (!track->IsDrumTrack) return false;
 		}
 
-		Rectangle headerBounds = GetTrackHeaderBounds(track);
-		headerBounds.Y += _ScrollPosition->Y;
+		Rectangle HeaderBounds = GetTrackHeaderBounds(track);
+		HeaderBounds.Y += _ScrollPosition->Y;
 
-		Rectangle buttonBounds = GetTrackButtonBounds(headerBounds, buttonIndex);
-		return buttonBounds.Contains(mousePoint);
+		Rectangle ButtonBounds = GetTrackButtonBounds(HeaderBounds, buttonIndex);
+		return ButtonBounds.Contains(mousePoint);
 	}
 
 	Rectangle Widget_Timeline::GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex)
@@ -1891,14 +1891,6 @@ namespace MIDILightDrawer
 		}
 
 		return _D2DRenderer->GetBarBounds(bar, bounds);
-
-		// Former implementation
-		/*
-		x = TicksToPixels(bar->StartTick) + scrollPosition->X + TRACK_HEADER_WIDTH;
-		width = Math::Max(1, TicksToPixels(bar->Duration)); // Ensure minimum width of 1 pixel
-
-		barBounds = Rectangle(x, bounds.Y + TRACK_PADDING, width, bounds.Height - TRACK_PADDING * 2);
-		*/
 	}
 
 	void Widget_Timeline::RecalculateMeasurePositions()
@@ -1943,13 +1935,15 @@ namespace MIDILightDrawer
 		newZoom = Math::Min(Math::Max(newZoom, Timeline_Direct2DRenderer::MIN_ZOOM_LEVEL), Timeline_Direct2DRenderer::MAX_ZOOM_LEVEL);
 
 		// If no change in zoom, exit early
-		if (Math::Abs(newZoom - _ZoomLevel) < 0.0001) return;
+		if (Math::Abs(newZoom - _ZoomLevel) < 0.0001) {
+			return;
+		}
 
 		// Get position relative to content area
-		Point contentPos = Point(referencePoint.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH, referencePoint.Y);
+		Point ContentPos = Point(referencePoint.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH, referencePoint.Y);
 
 		// Find tick at reference point
-		int tickAtPosition = PixelsToTicks(contentPos.X - _ScrollPosition->X);
+		int TickAtPosition = PixelsToTicks(ContentPos.X - _ScrollPosition->X);
 
 		// Store old zoom level and apply new zoom
 		_ZoomLevel = newZoom;
@@ -1959,9 +1953,9 @@ namespace MIDILightDrawer
 		}
 
 		// Maintain position of reference point
-		int newPixelPosition = TicksToPixels(tickAtPosition);
-		int positionOffset = referencePoint.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
-		_ScrollPosition->X = -(newPixelPosition - positionOffset);
+		int NewPixelPosition = TicksToPixels(TickAtPosition);
+		int PositionOffset = referencePoint.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		_ScrollPosition->X = -(NewPixelPosition - PositionOffset);
 
 		// Ensure proper alignment
 		UpdateScrollBounds();
@@ -1971,27 +1965,27 @@ namespace MIDILightDrawer
 	void Widget_Timeline::UpdateScrollBarRange()
 	{
 		// Calculate virtual width
-		double virtualWidth = GetVirtualWidth();
+		double VirtualWidth = GetVirtualWidth();
 
 		// Calculate viewport width (excluding header)
-		int viewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int ViewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
 
 		// Convert to scroll units
-		int totalUnits = GetScrollUnits(virtualWidth);
-		int viewportUnits = GetScrollUnits(viewportWidth);
+		int TotalUnits = GetScrollUnits(VirtualWidth);
+		int ViewportUnits = GetScrollUnits(ViewportWidth);
 
 		// Ensure viewportUnits is at least 1
-		viewportUnits = Math::Max(1, viewportUnits);
+		ViewportUnits = Math::Max(1, ViewportUnits);
 
 		// Update scrollbar
 		_HScrollBar->Minimum		= 0;
-		_HScrollBar->Maximum		= Math::Max(0, totalUnits);
-		_HScrollBar->LargeChange = viewportUnits;
-		_HScrollBar->SmallChange = 1;
+		_HScrollBar->Maximum		= Math::Max(0, TotalUnits);
+		_HScrollBar->LargeChange	= ViewportUnits;
+		_HScrollBar->SmallChange	= 1;
 
 		// Ensure current position is valid
-		int currentUnit = GetScrollUnits(-_ScrollPosition->X);
-		_HScrollBar->Value = Math::Min(Math::Max(currentUnit, _HScrollBar->Minimum), _HScrollBar->Maximum - _HScrollBar->LargeChange + 1);
+		int CurrentUnit = GetScrollUnits(-_ScrollPosition->X);
+		_HScrollBar->Value = Math::Min(Math::Max(CurrentUnit, _HScrollBar->Minimum), _HScrollBar->Maximum - _HScrollBar->LargeChange + 1);
 	}
 
 	int Widget_Timeline::GetScrollUnits(double width)
@@ -2003,43 +1997,43 @@ namespace MIDILightDrawer
 	void Widget_Timeline::UpdateScrollBounds()
 	{
 		// Calculate total width in pixels
-		double virtualWidth = GetVirtualWidth();
-		int viewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		double VirtualWidth = GetVirtualWidth();
+		int ViewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
 
 		// Calculate maximum scroll position
-		double maxScroll;
-		if (virtualWidth > viewportWidth) {
-			maxScroll = -(virtualWidth - viewportWidth);
+		double MaxScroll;
+		if (VirtualWidth > ViewportWidth) {
+			MaxScroll = -(VirtualWidth - ViewportWidth);
 		}
 		else {
-			maxScroll = 0;
+			MaxScroll = 0;
 		}
 
 		// Calculate grid alignment based on zoom level
-		int gridPixels;
+		int GridPixels;
 		if (_ZoomLevel > 50.0) {
-			gridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 64); // Even finer grid at very high zoom
+			GridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 64); // Even finer grid at very high zoom
 		}
 		else if (_ZoomLevel > 20.0) {
-			gridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 32);
+			GridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 32);
 		}
 		else if (_ZoomLevel > 10.0) {
-			gridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 16);
+			GridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 16);
 		}
 		else if (_ZoomLevel > 5.0) {
-			gridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 8);
+			GridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 8);
 		}
 		else {
-			gridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 4);
+			GridPixels = TicksToPixels(Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 4);
 		}
 
-		if (gridPixels > 0) {
+		if (GridPixels > 0) {
 			// Snap scroll position to grid
-			_ScrollPosition->X = (int)Math::Round((double)_ScrollPosition->X / gridPixels) * gridPixels;
+			_ScrollPosition->X = (int)Math::Round((double)_ScrollPosition->X / GridPixels) * GridPixels;
 		}
 
 		// Clamp scroll position
-		_ScrollPosition->X = (int)Math::Round(Math::Max(maxScroll, Math::Min(0.0, (double)_ScrollPosition->X)));
+		_ScrollPosition->X = (int)Math::Round(Math::Max(MaxScroll, Math::Min(0.0, (double)_ScrollPosition->X)));
 
 		// Update scrollbar to reflect new position/range
 		UpdateScrollBarRange();
@@ -2047,21 +2041,21 @@ namespace MIDILightDrawer
 	
 	void Widget_Timeline::UpdateVerticalScrollBarRange()
 	{
-		int totalHeight = GetTotalTracksHeight();
+		int TotalHeight = GetTotalTracksHeight();
 		// Ensure viewportHeight is at least 0
-		int viewportHeight = Math::Max(0, Height - Timeline_Direct2DRenderer::HEADER_HEIGHT - _HScrollBar->Height);
+		int ViewportHeight = Math::Max(0, Height - Timeline_Direct2DRenderer::HEADER_HEIGHT - _HScrollBar->Height);
 
 		// Enable/update scrollbar if content exceeds viewport
-		if (totalHeight > viewportHeight)
+		if (TotalHeight > ViewportHeight)
 		{
 			_VScrollBar->Minimum = 0;
-			_VScrollBar->Maximum = totalHeight + 20;  // Use full total height as Maximum plus a little extra
+			_VScrollBar->Maximum = TotalHeight + 20;  // Use full total height as Maximum plus a little extra
 			// Ensure LargeChange is at least 1
-			_VScrollBar->LargeChange = Math::Max(1, viewportHeight);
-			_VScrollBar->SmallChange = Math::Max(1, viewportHeight / 20); // Adjust scroll speed
+			_VScrollBar->LargeChange = Math::Max(1, ViewportHeight);
+			_VScrollBar->SmallChange = Math::Max(1, ViewportHeight / 20); // Adjust scroll speed
 
 			// Ensure value stays within valid range
-			int maxValue = Math::Max(0, totalHeight - viewportHeight);
+			int maxValue = Math::Max(0, TotalHeight - ViewportHeight);
 			int currentValue = Math::Min(-_ScrollPosition->Y, maxValue);
 			_VScrollBar->Value = Math::Max(0, currentValue);
 		}
@@ -2078,12 +2072,13 @@ namespace MIDILightDrawer
 		_VScrollBar->Visible = true;
 	}
 	
-	void Widget_Timeline::OnScroll(Object^ sender, ScrollEventArgs^ e) {
+	void Widget_Timeline::OnScroll(Object^ sender, ScrollEventArgs^ e)
+	{
 		// Convert scroll units to pixels
-		double newScrollX = -(double)e->NewValue * SCROLL_UNIT;
+		double NewScrollX = -(double)e->NewValue * SCROLL_UNIT;
 
 		// Update scroll position
-		_ScrollPosition->X = (int)Math::Round(newScrollX);
+		_ScrollPosition->X = (int)Math::Round(NewScrollX);
 
 		// Request redraw
 		Invalidate();

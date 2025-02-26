@@ -4,55 +4,68 @@ namespace MIDILightDrawer
 {
 	PerformanceMetrics::PerformanceMetrics()
 	{
-		frameTimer = gcnew System::Diagnostics::Stopwatch();
-		frameTimings = gcnew System::Collections::Generic::Queue<double>();
+		_FrameTimer = gcnew Stopwatch();
+		_FrameTimings = gcnew Queue<double>();
+
 		Reset();
 	}
 
 	void PerformanceMetrics::StartFrame()
 	{
-		frameTimer->Restart();
+		_FrameTimer->Restart();
 	}
 
 	void PerformanceMetrics::EndFrame()
 	{
-		frameTimer->Stop();
-		frameTimings->Enqueue(frameTimer->Elapsed.TotalMilliseconds);
-		if (frameTimings->Count > MAX_FRAME_SAMPLES) {
-			frameTimings->Dequeue();
+		_FrameTimer->Stop();
+		_LastFrameTime = _FrameTimer->Elapsed.TotalMilliseconds;
+
+		_FrameTimings->Enqueue(_LastFrameTime);
+		if (_FrameTimings->Count > MAX_FRAME_SAMPLES) {
+			_FrameTimings->Dequeue();
 		}
+	}
+
+	double PerformanceMetrics::GetFPS()
+	{
+		if (_LastFrameTime <= 0.0) {
+			return 0.0;
+		}
+
+		return 1000.0 / _LastFrameTime;
 	}
 
 	double PerformanceMetrics::GetAverageFrameTime()
 	{
-		if (frameTimings->Count == 0) return 0.0;
+		if (_FrameTimings->Count == 0) {
+			return 0.0;
+		}
 
 		double total = 0.0;
-		for each (double timing in frameTimings) {
+		for each (double timing in _FrameTimings) {
 			total += timing;
 		}
-		return total / frameTimings->Count;
+
+		return total / _FrameTimings->Count;
+	}
+
+	double PerformanceMetrics::GetAverageFPS()
+	{
+		double avgFrameTime = GetAverageFrameTime();
+		if (avgFrameTime <= 0.0)
+			return 0.0;
+
+		return 1000.0 / avgFrameTime;
 	}
 
 	void PerformanceMetrics::Reset()
 	{
-		frameTimings->Clear();
-		measuresDrawn		= 0;
-		tracksDrawn			= 0;
-		notesDrawn			= 0;
-		barsDrawn			= 0;
-		gdiObjectsCreated	= 0;
-		gdiObjectsReused	= 0;
+		_FrameTimings->Clear();
+		_LastFrameTime = 0.0;
 	}
 
 	System::String^ PerformanceMetrics::GetReport()
 	{
-		System::Text::StringBuilder^ report = gcnew System::Text::StringBuilder();
-		report->AppendLine("Performance Report:");
-		report->AppendFormat("Average Frame Time: {0:F2}ms\n", GetAverageFrameTime());
-		report->AppendFormat("Zoom Level: {0:F2}\n", zoomLevel);
-		// report->AppendFormat("Elements Drawn: Measures={0}, Tracks={1}, Notes={2}, Bars={3}\n", measuresDrawn, tracksDrawn, notesDrawn, barsDrawn);
-		// report->AppendFormat("GDI+ Objects: Created={0}, Reused={1}\n", gdiObjectsCreated, gdiObjectsReused);
-		return report->ToString();
+		return System::String::Format("FPS: {0:F1} (Avg: {1:F1}) - Frame Time: {2:F2}ms", GetFPS(), GetAverageFPS(), GetAverageFrameTime());
 	}
 }

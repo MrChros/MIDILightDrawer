@@ -15,8 +15,11 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include "Timeline_Direct2DRenderer_CommandBatch.h"
+
 // Defines
-#define DURATION_SYMBOL_DURATIONS_COUNT	15
+#define DURATION_SYMBOL_DURATIONS_COUNT	    15
+#define USE_BATCH_RENDERING                 1  // Set to 1 to use batch rendering, 0 for immediate rendering
 
 
 // Forward declarations
@@ -103,17 +106,20 @@ public:
 	bool PreloadDurationSymbols(float zoomLevel, float logScale, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
 
     // Add getters for text formats
-    IDWriteTextFormat* GetMeasureNumberFormat() const { return m_pMeasureNumberFormat;	}
-    IDWriteTextFormat* GetMarkerTextFormat()    const { return m_pMarkerTextFormat;		}
-    IDWriteTextFormat* GetTimeSignatureFormat() const { return m_pTimeSignatureFormat;	}
-    IDWriteTextFormat* GetQuarterNoteFormat()   const { return m_pQuarterNoteFormat;	}
-    IDWriteTextFormat* GetTrackHeaderFormat()   const { return m_pTrackHeaderFormat;	}
+    IDWriteTextFormat* GetMeasureNumberFormat();
+    IDWriteTextFormat* GetMarkerTextFormat();
+    IDWriteTextFormat* GetTimeSignatureFormat();
+    IDWriteTextFormat* GetQuarterNoteFormat();
+    IDWriteTextFormat* GetTrackHeaderFormat();
+    IDWriteTextFormat* GetFPSCounterFormat();
     IDWriteTextFormat* UpdateTablatureFormat(float fontSize);
 
     // Render Target Management
     bool ResizeRenderTarget(UINT width, UINT height);
     bool BeginDraw();
     bool EndDraw();
+    void BeginBatch();
+    void ExecuteBatch();
     void Clear(const D2D1_COLOR_F& color);
     void Clear(float r, float g, float b, float a);
 
@@ -181,6 +187,11 @@ private:
     ID2D1Factory* m_pD2DFactory;
     ID2D1HwndRenderTarget* m_pRenderTarget;
 
+#if USE_BATCH_RENDERING
+    CommandBatch m_CommandBatch;  // Command batch for deferred rendering
+    float m_ZOrderCounter;
+#endif
+
 	HWND m_hwnd;			// Window Handle
 	bool m_resourcesValid;	// State Tracking
 
@@ -198,6 +209,7 @@ private:
     IDWriteTextFormat* m_pQuarterNoteFormat;    // For sub time-divisions
     IDWriteTextFormat* m_pTrackHeaderFormat;    // For Track Header Text
     IDWriteTextFormat* m_pTablatureFormat;      // For Tablature Text
+    IDWriteTextFormat* m_pFPSCounterFormat;     // For FPS Counter Text
 
     // Cached Resources
     std::vector<CachedBrush>				m_BrushCache;
@@ -216,8 +228,6 @@ private:
 
     bool IsDottedDuration(int duration) const;
     bool IsTripletDuration(int duration) const;
-
-	void CleanupTablatureCache();	// Obsolete?
 
 	bool CreateBitmapFromImage(System::Drawing::Image^ image, ID2D1Bitmap** ppBitmap);
 	bool CreateAndCacheBitmap(const std::wstring& key, System::Drawing::Image^ image);

@@ -129,9 +129,6 @@
     <ClInclude Include="Timeline_Tool_Interface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Performance_Monitor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MIDI_Exporter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -148,6 +145,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Timeline_Direct2DRenderer_CommandBatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -254,9 +254,6 @@
     <ClCompile Include="Timeline_Direct2DRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Performance_Monitor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MIDI_Exporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -270,6 +267,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Easings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Timeline_Direct2DRenderer_CommandBatch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

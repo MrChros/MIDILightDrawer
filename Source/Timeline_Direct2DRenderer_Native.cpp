@@ -15,6 +15,7 @@ Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
     m_pQuarterNoteFormat(nullptr),
     m_pTrackHeaderFormat(nullptr),
     m_pTablatureFormat(nullptr),
+    m_pFPSCounterFormat(nullptr),
     m_resourcesValid(false)
 {
 }
@@ -157,12 +158,6 @@ bool Timeline_Direct2DRenderer_Native::CreateDeviceResources()
     RECT rc;
     GetClientRect(m_hwnd, &rc);
 
-    // Create render target
-    /*
-    D2D1_SIZE_U size = D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top);
-    D2D1_RENDER_TARGET_PROPERTIES rtProps = D2D1::RenderTargetProperties();
-    D2D1_HWND_RENDER_TARGET_PROPERTIES hwndProps = D2D1::HwndRenderTargetProperties(m_hwnd, size);
-    */
 
     // Create render target with optimized properties
     D2D1_RENDER_TARGET_PROPERTIES rtProps = D2D1::RenderTargetProperties(
@@ -191,10 +186,6 @@ bool Timeline_Direct2DRenderer_Native::CreateDeviceResources()
     if (FAILED(hr)) {
         return false;
     }
-
-    // Enable more conservative rendering options
-    //m_pRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-    //m_pRenderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
 
     m_resourcesValid = true;
 
@@ -312,6 +303,36 @@ bool Timeline_Direct2DRenderer_Native::PreloadDurationSymbols(float zoomLevel, f
 	return true;
 }
 
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetMeasureNumberFormat()
+{ 
+    return m_pMeasureNumberFormat;
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetMarkerTextFormat()    
+{
+    return m_pMarkerTextFormat;
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetTimeSignatureFormat() 
+{
+    return m_pTimeSignatureFormat; 
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetQuarterNoteFormat() 
+{
+    return m_pQuarterNoteFormat; 
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetTrackHeaderFormat() 
+{
+    return m_pTrackHeaderFormat; 
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetFPSCounterFormat()   
+{
+    return m_pFPSCounterFormat;
+}
+
 IDWriteTextFormat* Timeline_Direct2DRenderer_Native::UpdateTablatureFormat(float fontSize)
 {
     if (!m_pDWriteFactory) {
@@ -386,6 +407,31 @@ bool Timeline_Direct2DRenderer_Native::EndDraw()
     return SUCCEEDED(hr);
 }
 
+void Timeline_Direct2DRenderer_Native::BeginBatch()
+{
+#if USE_BATCH_RENDERING
+    m_CommandBatch.Begin();
+    m_ZOrderCounter = 0.0f; // Reset z-order counter at the start of each batch
+#endif
+}
+
+void Timeline_Direct2DRenderer_Native::ExecuteBatch()
+{
+#if USE_BATCH_RENDERING
+    if (m_pRenderTarget) {
+        // Create brush cache map with the correct comparator type
+        std::unordered_map<D2D1_COLOR_F, ID2D1SolidColorBrush*, ColorHash, ColorEqual> brushCache;
+
+        // Convert our existing brush cache to the format needed by CommandBatch
+        for (const auto& cached : m_BrushCache) {
+            brushCache[cached.Color] = cached.Brush;
+        }
+
+        m_CommandBatch.Execute(m_pRenderTarget, brushCache, false);
+    }
+#endif
+}
+
 void Timeline_Direct2DRenderer_Native::Clear(const D2D1_COLOR_F& color)
 {
     if (m_pRenderTarget)
@@ -399,8 +445,6 @@ void Timeline_Direct2DRenderer_Native::Clear(float r, float g, float b, float a)
     D2D1_COLOR_F color = D2D1::ColorF(r, g, b, a);
     this->Clear(color);
 }
-
-
 
 bool Timeline_Direct2DRenderer_Native::CreateStrokeStyles()
 {
@@ -717,6 +761,7 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
 			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 			break;
 		}
+
 		case 1:  // HollowDiamond
 		{
 			sink->BeginFigure(D2D1::Point2F(Center.x, Center.y - HalfSize + 2 * DiamondSwage), D2D1_FIGURE_BEGIN_HOLLOW);	// Top
@@ -726,6 +771,7 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
 			sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 			break;
 		}
+
 		case 2:  // CircledX
 		{
 			// Draw circle
@@ -748,6 +794,7 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
 			sink->EndFigure(D2D1_FIGURE_END_OPEN);
 			break;
 		}
+
 		case 3:  // AccentedX
 		{
 			float xSize = HalfSize * 0.8f;
@@ -767,6 +814,7 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
 			sink->EndFigure(D2D1_FIGURE_END_OPEN);
 			break;
 		}
+
 		case 4:  // RegularX
 		{
 			float XSize = HalfSize * 0.8f;
@@ -779,6 +827,7 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
 			sink->EndFigure(D2D1_FIGURE_END_OPEN);
 			break;
 		}
+
 		case 5:  // NoteEllipse
 		{
 			// Adjust ellipse size for better proportions
@@ -805,6 +854,7 @@ ID2D1Geometry* Timeline_Direct2DRenderer_Native::CreateDrumSymbolGeometry(int sy
             sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 			break;
 		}
+
 		case 6:  // Unknown (error symbol)
 		{
 			float radius = HalfSize * 0.7f;
@@ -832,52 +882,18 @@ bool Timeline_Direct2DRenderer_Native::IsTripletDuration(int duration) const
     return duration == TICKS_PER_QUARTER * 2 / 3 || duration == TICKS_PER_QUARTER * 2 / 6 || duration == TICKS_PER_QUARTER * 2 / 12;
 }
 
-void Timeline_Direct2DRenderer_Native::CleanupTablatureCache()
-{
-	/*
-	try
-	{
-		for (auto& entry : m_tablatureCache)
-		{
-			// Clean up text bitmaps
-			for (auto& pair : entry.textBitmaps)
-			{
-				if (pair.second) {
-					pair.second->Release();
-					pair.second = nullptr;  // Important: null after release
-				}
-			}
-			entry.textBitmaps.clear();
-
-			// Clean up drum symbols
-			for (auto& pair : entry.drumSymbols)
-			{
-				if (pair.second) {
-					pair.second->Release();
-					pair.second = nullptr;  // Important: null after release
-				}
-			}
-			entry.drumSymbols.clear();
-		}
-		m_tablatureCache.clear();
-	}
-	catch (...) {
-		// Ensure cache is cleared even if cleanup fails
-		m_tablatureCache.clear();
-	}
-	*/
-}
-
 bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
 {
-    if (!m_pDWriteFactory)
+    if (!m_pDWriteFactory) {
         return false;
+    }
 
     // Create measure number format
     HRESULT hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12.0f, L"en-us", &m_pMeasureNumberFormat);
 
-    if (FAILED(hr))
+    if (FAILED(hr)) {
         return false;
+    }
 
     // Set text alignment
     m_pMeasureNumberFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
@@ -888,8 +904,9 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
     // Create test marker format
     hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 10.0f, L"en-us", &m_pMarkerTextFormat);
 
-    if (FAILED(hr))
+    if (FAILED(hr)) {
         return false;
+    }
 
     // Set text alignment
     m_pMarkerTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
@@ -900,8 +917,9 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
     // Create time signature format
     hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12.0f, L"en-us", &m_pTimeSignatureFormat);
 
-    if (FAILED(hr))
+    if (FAILED(hr)) {
         return false;
+    }
 
     // Set text alignment
     m_pTimeSignatureFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
@@ -912,8 +930,9 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
     // Create quarter note format
     hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 8.0f, L"en-us", &m_pQuarterNoteFormat);
 
-    if (FAILED(hr))
+    if (FAILED(hr)) {
         return false;
+    }
 
     // Set text alignment
     m_pQuarterNoteFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
@@ -924,8 +943,9 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
     // Create quarter note format
     hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14.0f, L"en-us", &m_pTrackHeaderFormat);
 
-    if (FAILED(hr))
+    if (FAILED(hr)) {
         return false;
+    }
 
     // Set text alignment
     m_pTrackHeaderFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
@@ -936,12 +956,26 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
     // Create quarter note format
     hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14.0f, L"en-us", &m_pTablatureFormat);
 
-    if (FAILED(hr))
+    if (FAILED(hr)) {
         return false;
+    }
 
     // Set text alignment
     m_pTablatureFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
     m_pTablatureFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+
+
+    // Create FPS Counter format
+    hr = m_pDWriteFactory->CreateTextFormat(L"Arial", NULL, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 10.0f, L"en-us", &m_pFPSCounterFormat);
+
+    if (FAILED(hr)) {
+        return false;
+    }
+
+    // Set text alignment
+    m_pFPSCounterFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+    m_pFPSCounterFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 
     return true;
 }
@@ -953,24 +987,18 @@ bool Timeline_Direct2DRenderer_Native::CreateBitmapFromImage(System::Drawing::Im
     }
 
     // Create temporary GDI+ bitmap to access pixels
-    System::Drawing::Bitmap^ gdiBitmap = gcnew System::Drawing::Bitmap(image);
-    System::Drawing::Rectangle rect(0, 0, gdiBitmap->Width, gdiBitmap->Height);
-    System::Drawing::Imaging::BitmapData^ bitmapData = gdiBitmap->LockBits(rect, System::Drawing::Imaging::ImageLockMode::ReadOnly, System::Drawing::Imaging::PixelFormat::Format32bppPArgb);
+    System::Drawing::Bitmap^ GDIBitmap = gcnew System::Drawing::Bitmap(image);
+    System::Drawing::Rectangle rect(0, 0, GDIBitmap->Width, GDIBitmap->Height);
+    System::Drawing::Imaging::BitmapData^ BitmapData = GDIBitmap->LockBits(rect, System::Drawing::Imaging::ImageLockMode::ReadOnly, System::Drawing::Imaging::PixelFormat::Format32bppPArgb);
 
     // Create D2D bitmap properties
     D2D1_BITMAP_PROPERTIES props = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
 
     // Create the bitmap
-    HRESULT hr = m_pRenderTarget->CreateBitmap(
-        D2D1::SizeU(gdiBitmap->Width, gdiBitmap->Height),
-        bitmapData->Scan0.ToPointer(),
-        bitmapData->Stride,
-        props,
-        ppBitmap
-    );
+    HRESULT hr = m_pRenderTarget->CreateBitmap(D2D1::SizeU(GDIBitmap->Width, GDIBitmap->Height), BitmapData->Scan0.ToPointer(), BitmapData->Stride, props, ppBitmap);
 
-    gdiBitmap->UnlockBits(bitmapData);
-    delete gdiBitmap;
+    GDIBitmap->UnlockBits(BitmapData);
+    delete GDIBitmap;
 
     return SUCCEEDED(hr);
 }
@@ -993,12 +1021,7 @@ bool Timeline_Direct2DRenderer_Native::DrawBitmap(ID2D1Bitmap* bitmap, const D2D
         return false;
     }
 
-    m_pRenderTarget->DrawBitmap(
-        bitmap,
-        destRect,
-        opacity,
-        D2D1_BITMAP_INTERPOLATION_MODE_LINEAR
-    );
+    m_pRenderTarget->DrawBitmap(bitmap, destRect, opacity, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
 
     return true;
 }
@@ -1037,6 +1060,10 @@ ID2D1Bitmap* Timeline_Direct2DRenderer_Native::GetCachedBitmap(const std::wstrin
 
 bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, float y2, const D2D1_COLOR_F& color, float strokeWidth)
 {
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddLine(x1, y1, x2, y2, color, strokeWidth);
+    return true;
+#else
     if (!m_pRenderTarget) {
         return false;
 	}
@@ -1049,6 +1076,7 @@ bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, fl
     m_pRenderTarget->DrawLine(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), brush, strokeWidth);
 
     return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, float y2, float r, float g, float b, float a, float strokeWidth)
@@ -1078,6 +1106,10 @@ bool Timeline_Direct2DRenderer_Native::DrawLines(const D2D1_POINT_2F* points, UI
 
 bool Timeline_Direct2DRenderer_Native::DrawRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float strokeWidth)
 {
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddRectangle(rect, color, strokeWidth);
+    return true;
+#else    
     if (!m_pRenderTarget) {
         return false;
     }
@@ -1091,6 +1123,7 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangle(const D2D1_RECT_F& rect, co
     m_pRenderTarget->DrawRectangle(rect, brush, strokeWidth);
 
     return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a, float strokeWidth)
@@ -1103,6 +1136,11 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangle(float left, float top, floa
 
 bool Timeline_Direct2DRenderer_Native::DrawRectangleDashed(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float strokeWidth, float dashLength, float gapLength)
 {
+#if USE_BATCH_RENDERING
+    float zOrder = m_ZOrderCounter++;
+    m_CommandBatch.AddDashedRectangle(rect, color, strokeWidth, dashLength, gapLength, zOrder);
+    return true;
+#else
     if (!m_pRenderTarget) {
         return false;
     }
@@ -1149,10 +1187,15 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangleDashed(const D2D1_RECT_F& re
 	m_pRenderTarget->DrawRectangle(rect, brush, strokeWidth, m_pDashedStroke);
 
 	return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::FillRectangle(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color)
 {
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddFilledRectangle(rect, color);
+    return true;
+#else
     if (!m_pRenderTarget) {
         return false;
     }
@@ -1164,6 +1207,7 @@ bool Timeline_Direct2DRenderer_Native::FillRectangle(const D2D1_RECT_F& rect, co
 
     m_pRenderTarget->FillRectangle(rect, brush);
     return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::FillRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a)
@@ -1176,18 +1220,27 @@ bool Timeline_Direct2DRenderer_Native::FillRectangle(float left, float top, floa
 
 bool Timeline_Direct2DRenderer_Native::FillRectangleGradient2(const D2D1_RECT_F& rect, const D2D1_COLOR_F& colorLeft, const D2D1_COLOR_F& colorRight)
 {
-	D2D1_GRADIENT_STOP gradientStops[2];
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddGradientRectangle(rect, colorLeft, colorRight, true);
+    return true;
+#else
+    D2D1_GRADIENT_STOP gradientStops[2];
 	gradientStops[0].color = colorLeft;
 	gradientStops[0].position = 0.0f;
 	gradientStops[1].color = colorRight;
 	gradientStops[1].position = 1.0f;
 
 	return FillRectangleGradient(rect, gradientStops, 2);
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::FillRectangleGradient3(const D2D1_RECT_F& rect, const D2D1_COLOR_F& colorLeft, const D2D1_COLOR_F& colorCenter, const D2D1_COLOR_F& colorRight)
 {
-	D2D1_GRADIENT_STOP gradientStops[3];
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddGradientRectangle(rect, colorLeft, colorCenter, colorRight, true);
+    return true;
+#else
+    D2D1_GRADIENT_STOP gradientStops[3];
 	gradientStops[0].color = colorLeft;
 	gradientStops[0].position = 0.0f;
 	gradientStops[1].color = colorCenter;
@@ -1196,11 +1249,26 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleGradient3(const D2D1_RECT_F&
 	gradientStops[2].position = 1.0f;
 
 	return FillRectangleGradient(rect, gradientStops, 3);
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::FillRectangleGradient(const D2D1_RECT_F& rect, const D2D1_GRADIENT_STOP* gradientStops, UINT32 count)
 {
-	if (!m_pRenderTarget || gradientStops == NULL) {
+#if USE_BATCH_RENDERING
+    if (gradientStops == NULL || count < 2) {
+        return false;
+    }
+
+    // Convert the gradient stops array to a vector for the CommandBatch
+    std::vector<D2D1_GRADIENT_STOP> stops;
+    for (UINT32 i = 0; i < count; i++) {
+        stops.push_back(gradientStops[i]);
+    }
+
+    m_CommandBatch.AddGradientRectangle(rect, stops, true);
+    return true;
+#else
+    if (!m_pRenderTarget || gradientStops == NULL) {
 		return false;
 	}
 	
@@ -1233,11 +1301,13 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleGradient(const D2D1_RECT_F& 
 	m_pRenderTarget->FillRectangle(rect, m_pLinearGradientBrush);
 	
 	return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::FillRectangleStripes(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float stripeWidth)
 {
-	if (!m_pRenderTarget) {
+#if !(USE_BATCH_RENDERING)
+    if (!m_pRenderTarget) {
 		return false;
 	}
 
@@ -1245,7 +1315,7 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleStripes(const D2D1_RECT_F& r
 	if (!brush) {
 		return false;
 	}
-	
+#endif	
 	// Calculate the number of stripes needed
 	float RectWidth			= rect.right - rect.left;
 	float TotalStripeWidth	= stripeWidth * 2; // Including the transparent gap
@@ -1271,15 +1341,24 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleStripes(const D2D1_RECT_F& r
             {
 				stripeRect.right = rect.right;
 			}
+#if USE_BATCH_RENDERING
+            m_CommandBatch.AddFilledRectangle(stripeRect, color);
+#else
 			m_pRenderTarget->FillRectangle(stripeRect, brush);
+#endif
 		}
 	}
 
 	return true;
+
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawRoundedRectangle(const D2D1_ROUNDED_RECT& rect, const D2D1_COLOR_F& color, float strokeWidth)
 {
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddRoundedRectangle(rect, color, strokeWidth);
+    return true;
+#else
     if (!m_pRenderTarget) {
         return false;
     }
@@ -1291,6 +1370,7 @@ bool Timeline_Direct2DRenderer_Native::DrawRoundedRectangle(const D2D1_ROUNDED_R
     
     m_pRenderTarget->DrawRoundedRectangle(rect, brush, strokeWidth);
     return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawRoundedRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a, float strokeWidth)
@@ -1303,6 +1383,10 @@ bool Timeline_Direct2DRenderer_Native::DrawRoundedRectangle(float left, float to
 
 bool Timeline_Direct2DRenderer_Native::FillRoundedRectangle(const D2D1_ROUNDED_RECT& rect, const D2D1_COLOR_F& color)
 {
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddFilledRoundedRectangle(rect, color);
+    return true;
+#else
     if (!m_pRenderTarget) {
         return false;
     }
@@ -1314,6 +1398,7 @@ bool Timeline_Direct2DRenderer_Native::FillRoundedRectangle(const D2D1_ROUNDED_R
 
     m_pRenderTarget->FillRoundedRectangle(rect, brush);
     return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::FillRoundedRectangle(float left, float top, float right, float bottom, float r, float g, float b, float a)
@@ -1326,6 +1411,10 @@ bool Timeline_Direct2DRenderer_Native::FillRoundedRectangle(float left, float to
 
 bool Timeline_Direct2DRenderer_Native::DrawEllipse(const D2D1_ELLIPSE& ellipse, const D2D1_COLOR_F& color, float strokeWidth)
 {
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddEllipse(ellipse, color, strokeWidth);
+    return true;
+#else
     if (!m_pRenderTarget) {
         return false;
     }
@@ -1337,10 +1426,15 @@ bool Timeline_Direct2DRenderer_Native::DrawEllipse(const D2D1_ELLIPSE& ellipse, 
 
     m_pRenderTarget->DrawEllipse(ellipse, brush, strokeWidth);
     return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::FillEllipse(const D2D1_ELLIPSE& ellipse, const D2D1_COLOR_F& color)
 {
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddFilledEllipse(ellipse, color);
+    return true;
+#else
     if (!m_pRenderTarget) {
         return false;
     }
@@ -1352,6 +1446,7 @@ bool Timeline_Direct2DRenderer_Native::FillEllipse(const D2D1_ELLIPSE& ellipse, 
 
     m_pRenderTarget->FillEllipse(ellipse, brush);
     return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawPolygon(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color, float strokeWidth)
@@ -1382,8 +1477,8 @@ bool Timeline_Direct2DRenderer_Native::FillDiamond(const D2D1_POINT_2F* points, 
         return false;
     }
 
-    ID2D1SolidColorBrush* brush = GetCachedBrush(color);
-    if (!brush) {
+    ID2D1SolidColorBrush* Brush = GetCachedBrush(color);
+    if (!Brush) {
         return false;
     }
 
@@ -1400,35 +1495,39 @@ bool Timeline_Direct2DRenderer_Native::FillDiamond(const D2D1_POINT_2F* points, 
     };
 
     // Calculate size (assuming uniform diamond)
-    float width = points[1].x - points[3].x;
-    float height = points[2].y - points[0].y;
+    float Width  = points[1].x - points[3].x;
+    float Height = points[2].y - points[0].y;
 
     // Save current transform
-    D2D1_MATRIX_3X2_F oldTransform;
-    m_pRenderTarget->GetTransform(&oldTransform);
+    D2D1_MATRIX_3X2_F OldTransform;
+    m_pRenderTarget->GetTransform(&OldTransform);
 
     // Create transform matrix for 45-degree rotation around center
-    D2D1_MATRIX_3X2_F rotationMatrix = D2D1::Matrix3x2F::Rotation(45.0f, center);
-    m_pRenderTarget->SetTransform(rotationMatrix);
+    D2D1_MATRIX_3X2_F RotationMatrix = D2D1::Matrix3x2F::Rotation(45.0f, center);
+    m_pRenderTarget->SetTransform(RotationMatrix);
 
     // Draw rotated rectangle
-    D2D1_RECT_F rect = D2D1::RectF(
-        center.x - width / 2.8284f,  // Adjust for 45-degree rotation (1/√2 ≈ 1/1.4142)
-        center.y - height / 2.8284f,
-        center.x + width / 2.8284f,
-        center.y + height / 2.8284f
+    D2D1_RECT_F Rect = D2D1::RectF(
+        center.x - Width  / 2.8284f,  // Adjust for 45-degree rotation (1/√2 ≈ 1/1.4142)
+        center.y - Height / 2.8284f,
+        center.x + Width  / 2.8284f,
+        center.y + Height / 2.8284f
     );
 
-    m_pRenderTarget->FillRectangle(rect, brush);
+    m_pRenderTarget->FillRectangle(Rect, Brush);
 
     // Restore original transform
-    m_pRenderTarget->SetTransform(oldTransform);
+    m_pRenderTarget->SetTransform(OldTransform);
 
     return true;
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawTieLine(const D2D1_POINT_2F& point1, const D2D1_POINT_2F& point2, const D2D1_POINT_2F& point3, const D2D1_POINT_2F& point4, const D2D1_COLOR_F& color, float strokeWidth)
 {
+#if USE_BATCH_RENDERING
+    m_CommandBatch.AddTieLine(point1, point2, point3, point4, color, strokeWidth);
+    return true;
+#else
     if (!m_pRenderTarget || !m_pD2DFactory) {
         return false;
     }
@@ -1478,6 +1577,7 @@ bool Timeline_Direct2DRenderer_Native::DrawTieLine(const D2D1_POINT_2F& point1, 
 	pathGeometry->Release();
 
 	return SUCCEEDED(hr);
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawPath(ID2D1Geometry* geometry, const D2D1_COLOR_F& color, float strokeWidth)
@@ -1512,6 +1612,14 @@ bool Timeline_Direct2DRenderer_Native::FillPath(ID2D1Geometry* geometry, const D
 
 bool Timeline_Direct2DRenderer_Native::DrawText(const std::wstring& text, const D2D1_RECT_F& layoutRect, const D2D1_COLOR_F& color, IDWriteTextFormat* textFormat, D2D1_DRAW_TEXT_OPTIONS options)
 {
+#if USE_BATCH_RENDERING
+    if (!textFormat) {
+        return false;
+    }
+
+    m_CommandBatch.AddText(text, layoutRect, color, textFormat);
+    return true;
+#else
     if (!m_pRenderTarget || !textFormat) {
         return false;
     }
@@ -1526,6 +1634,7 @@ bool Timeline_Direct2DRenderer_Native::DrawText(const std::wstring& text, const 
     m_pRenderTarget->DrawText(text.c_str(), static_cast<UINT32>(text.length()), textFormat, layoutRect, brush, options);
 
     return true;
+#endif
 }
 
 float Timeline_Direct2DRenderer_Native::MeasureTextWidth(const std::wstring& text, IDWriteTextFormat* textFormat)
@@ -1570,13 +1679,38 @@ bool Timeline_Direct2DRenderer_Native::PreloadBitmap(const std::wstring& key, Sy
 
 bool Timeline_Direct2DRenderer_Native::DrawCachedBitmap(const std::wstring& key, const D2D1_RECT_F& destRect, float opacity)
 {
+#if USE_BATCH_RENDERING
+    ID2D1Bitmap* bitmap = GetCachedBitmap(key);
+    if (!bitmap) {
+        return false;
+    }
+
+    m_CommandBatch.AddBitmap(bitmap, destRect, opacity);
+    return true;
+#else
     ID2D1Bitmap* Bitmap = GetCachedBitmap(key);
     return Bitmap ? DrawBitmap(Bitmap, destRect, opacity) : false;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawCachedTabText(int fretNumber, const D2D1_RECT_F& destRect, float fontSize)
 {
-	if (!m_pRenderTarget) {
+#if USE_BATCH_RENDERING
+    TabTextCacheEntry* cachedEntry = GetNearestCachedTabTextEntry(fontSize);
+    if (!cachedEntry) {
+        return false;
+    }
+
+    auto it = cachedEntry->TabTexts.find(fretNumber);
+    if (it == cachedEntry->TabTexts.end()) {
+        return false;
+    }
+
+    m_CommandBatch.AddBitmap(it->second, destRect, 1.0f);
+    //m_CommandBatch.AddTabText(it->second, destRect);
+    return true;
+#else
+    if (!m_pRenderTarget) {
 		return false;
 	}
 
@@ -1600,11 +1734,27 @@ bool Timeline_Direct2DRenderer_Native::DrawCachedTabText(int fretNumber, const D
 	);
 
 	return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawCachedDrumSymbol(int symbolIndex, const D2D1_RECT_F& destRect, float stringSpace)
 {
-	if (!m_pRenderTarget) {
+#if USE_BATCH_RENDERING
+    DrumSymbolCacheEntry* cachedEntry = GetNearestCachedDrumSymbolEntry(stringSpace);
+    if (!cachedEntry) {
+        return false;
+    }
+
+    auto it = cachedEntry->DrumSymbols.find(symbolIndex);
+    if (it == cachedEntry->DrumSymbols.end()) {
+        return false;
+    }
+
+    m_CommandBatch.AddBitmap(it->second, destRect, 1.0f);
+    //m_CommandBatch.AddDrumSymbol(it->second, destRect);
+    return true;
+#else
+    if (!m_pRenderTarget) {
 		return false;
 	}
 
@@ -1628,10 +1778,26 @@ bool Timeline_Direct2DRenderer_Native::DrawCachedDrumSymbol(int symbolIndex, con
 	);
 	
 	return true;
+#endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawCachedDudationSymbol(int duration, const D2D1_RECT_F& destRect, float zoomLevel)
 {
+#if USE_BATCH_RENDERING
+    DurationSymbolCacheEntry* cachedEntry = GetNearestCachedDurationSymbolEntry(zoomLevel);
+    if (!cachedEntry) {
+        return false;
+    }
+
+    auto it = cachedEntry->DurationSymbols.find(duration);
+    if (it == cachedEntry->DurationSymbols.end()) {
+        return false;
+    }
+
+    m_CommandBatch.AddBitmap(it->second, destRect, 1.0f);
+    //m_CommandBatch.AddDurationSymbol(it->second, destRect);
+    return true;
+#else
     if (!m_pRenderTarget) {
         return false;
     }
@@ -1656,6 +1822,7 @@ bool Timeline_Direct2DRenderer_Native::DrawCachedDudationSymbol(int duration, co
     );
 
     return true;
+#endif
 }
 
 TabTextCacheEntry* Timeline_Direct2DRenderer_Native::GetNearestCachedTabTextEntry(float fontSize)

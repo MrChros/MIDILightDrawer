@@ -52,6 +52,7 @@ namespace MIDILightDrawer
 			ToolStripMenuItem^					_Menu_Edit_Delete;
 			ToolStripMenuItem^					_Menu_Edit_UndoSteps;
 			List<ToolStripMenuItem^>^			_Menu_Edit_UndoSteps_Items;
+			ToolStripMenuItem^					_Menu_Edit_BatchAction;
 
 			gp_parser::Parser*					_GP_Tab;
 			Widget_Tab_Info^					_Tab_Info;
@@ -93,6 +94,7 @@ namespace MIDILightDrawer
 			void Menu_Edit_Copy_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_Paste_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_Delete_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Edit_BatchAction_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);
 

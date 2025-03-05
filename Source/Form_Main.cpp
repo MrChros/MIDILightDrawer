@@ -352,6 +352,11 @@ namespace MIDILightDrawer
 		_Menu_Edit_Delete->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_Delete_Click);
 		_Menu_Edit_Delete->Enabled = false;
 
+		// Edit -> Batch Action
+		_Menu_Edit_BatchAction = gcnew ToolStripMenuItem("Batch Action...");
+		_Menu_Edit_BatchAction-> Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Batch")));
+		_Menu_Edit_BatchAction->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_BatchAction_Click);
+
 		// Build Edit menu
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Undo);
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_UndoSteps);
@@ -361,6 +366,8 @@ namespace MIDILightDrawer
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Paste);
 		Menu_Edit->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Delete);
+		Menu_Edit->DropDownItems->Add(gcnew ToolStripSeparator());
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_BatchAction);
 
 		_Menu_Edit_UndoSteps_Items = gcnew List<ToolStripMenuItem^>();
 
@@ -619,6 +626,11 @@ namespace MIDILightDrawer
 				EraseTool->OnKeyDown(keyArgs);
 			}
 		}
+	}
+
+	void Form_Main::Menu_Edit_BatchAction_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+
 	}
 
 	void Form_Main::Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e)

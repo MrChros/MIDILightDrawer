@@ -74,7 +74,7 @@ namespace MIDILightDrawer
 		this->Controls->Add(Table_Layout_Main);
 	}
 
-	void Widget_Tools_And_Control::Select_Color_From_Preset(int color_index)
+	void Widget_Tools_And_Control::SelectColorFromPreset(int color_index)
 	{
 		switch (_Toolbar->CurrentTool)
 		{
@@ -88,34 +88,41 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Widget_Tools_And_Control::Snapping_Up(void)
+	void Widget_Tools_And_Control::SetColorDirect(Color color)
+	{
+		_Color_Picker->SelectedColor = color;
+	}
+
+	void Widget_Tools_And_Control::SnappingUp(void)
 	{
 		_Pointer_Options->Select_Pointer_Snapping_Next();
 		_Draw_Options->Select_Draw_Snapping_Next();
 	}
 
-	void Widget_Tools_And_Control::Snapping_Down(void)
+	void Widget_Tools_And_Control::SnappingDown(void)
 	{
 		_Pointer_Options->Select_Pointer_Snapping_Previous();
 		_Draw_Options->Select_Draw_Snapping_Previous();
 	}
 
-	void Widget_Tools_And_Control::Snap_To(int index)
+	void Widget_Tools_And_Control::SnapTo(int index)
 	{
 		_Pointer_Options->PointerSnapping = index;
 		_Draw_Options->DrawSnapping = index;
 	}
 
-	void Widget_Tools_And_Control::Length_Up(void)
+	void Widget_Tools_And_Control::LengthUp(void)
 	{
+		_Pointer_Options->Select_Next_ResizeQuantization_Value();
 		_Draw_Options->Select_Draw_Length_Next();
 		_Length_Options->Select_Next_Length_Value();
 		_Fade_Options->Select_Next_Fade_Value();
 		_Strobe_Options->Select_Next_Strobe_Value();
 	}
 
-	void Widget_Tools_And_Control::Length_Down(void)
+	void Widget_Tools_And_Control::LengthDown(void)
 	{
+		_Pointer_Options->Select_Previous_ResizeQuantization_Value();
 		_Draw_Options->Select_Draw_Length_Previous();
 		_Length_Options->Select_Previous_Length_Value();
 		_Fade_Options->Select_Previous_Fade_Value();
@@ -166,6 +173,11 @@ namespace MIDILightDrawer
 	Widget_Bucket_Options^ Widget_Tools_And_Control::Get_Widget_Bucket_Options(void)
 	{
 		return this->_Bucket_Options;
+	}
+
+	Color Widget_Tools_And_Control::GetColorPickerSelectedColor(void)
+	{
+		return this->_Color_Picker->SelectedColor;
 	}
 
 	Widget_Tools_And_Control::~Widget_Tools_And_Control()

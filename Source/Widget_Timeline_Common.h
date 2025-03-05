@@ -65,7 +65,7 @@ namespace MIDILightDrawer
 	{
 		Snap_None,
 		Snap_Grid,
-		Snap_Bars,
+		Snap_Events,
 		Snap_Tablature
 	};
 
@@ -223,25 +223,32 @@ namespace MIDILightDrawer
 	{
 	public:
 		// Common menu items
-		static initonly System::String^ Copy = "Copy";
-		static initonly System::String^ Paste = "Paste";
-		static initonly System::String^ Delete = "Delete";
+		static initonly System::String^ Copy	= "Copy";
+		static initonly System::String^ Paste	= "Paste";
+		static initonly System::String^ Delete	= "Delete";
 
 		// Color-related menu items
-		static initonly System::String^ ChangeColor = "Change Color";
-		static initonly System::String^ ChangeColorStart = "Change Start Color";
-		static initonly System::String^ ChangeColorCenter = "Change Center Color";
-		static initonly System::String^ ChangeColorEnd = "Change End Color";
+		static initonly System::String^ ChangeColor			= "Change Color";
+		static initonly System::String^ ChangeColorStart	= "Change Start Color";
+		static initonly System::String^ ChangeColorCenter	= "Change Center Color";
+		static initonly System::String^ ChangeColorEnd		= "Change End Color";
+		static initonly System::String^ GetColor			= "Color to Current";
+		static initonly System::String^ GetColorStart		= "Start Color to Current";
+		static initonly System::String^ GetColorCenter		= "Center Color to Currentl";
+		static initonly System::String^ GetColorEnd			= "End Color to Current";
+
+		static initonly System::String^ PresetColor			= "Preset Color";
+		static initonly System::String^ CurrentColor		= "Current Color";
 
 		// Easing related menu items
-		static initonly System::String^ ChangeEasingIn = "Change Easing In";
+		static initonly System::String^ ChangeEasingIn	= "Change Easing In";
 		static initonly System::String^ ChangeEasingOut = "Change Easing Out";
 
 		// Fade & Strobe specific menu items
 		static initonly System::String^ ChangeQuantization = "Change Quantization";
 
 		// Fade-specific menu items
-		static initonly System::String^ FadeSwitchTwo = "Switch to Two Colors";
+		static initonly System::String^ FadeSwitchTwo	= "Switch to Two Colors";
 		static initonly System::String^ FadeSwitchThree = "Switch to Three Colors";
 
 		// Strobe-specific menu items

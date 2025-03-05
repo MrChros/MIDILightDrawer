@@ -16,11 +16,6 @@ using namespace System::Collections::Generic;
 #include "Timeline_Direct2DRenderer.h"
 #include "Timeline_Performance_Metrics.h"
 
-
-typedef MIDILightDrawer::Timeline_Direct2DRenderer D2D_Renderer_t;
-
-
-
 namespace MIDILightDrawer 
 {
 	// Forward Declarations
@@ -33,6 +28,7 @@ namespace MIDILightDrawer
 	ref class ColorTool;
 	ref class FadeTool;
 	ref class StrobeTool;
+	ref class Widget_Tools_And_Control;
 	enum class TimelineToolType;
 
 	public ref class Widget_Timeline : public UserControl, public ITimelineAccess {
@@ -49,7 +45,7 @@ namespace MIDILightDrawer
 		static const float MIN_TRACK_HEIGHT_WITH_TAB	= Timeline_Direct2DRenderer::TRACK_PADDING * 2 + Timeline_Direct2DRenderer::FIXED_STRING_SPACING * 5;
 
 	public:
-		Widget_Timeline();
+		Widget_Timeline(Widget_Tools_And_Control^ toolsAndControl);
 		~Widget_Timeline();
 
 		// Adding methods
@@ -75,6 +71,7 @@ namespace MIDILightDrawer
 		void SetToolSnapping(SnappingType type);
 
 		void ShowContextMenu(BarEvent^ bar, Point location);
+		void UpdateLeftPanelEventSelection(List<BarEvent^>^ selectedEvents);
 
 		// Tools Setter & Getter
 		void SetCurrentTool(TimelineToolType tool);
@@ -99,6 +96,7 @@ namespace MIDILightDrawer
 		void ScrollToMeasure(int measureNumber);
 		int  GetMeasureStartTick(int measureNumber);
 		int  GetMeasureLength(int measureNumber);
+		int  GetLeftPanelAndTrackHeaderWidth();
 		void UpdateCursor(System::Windows::Forms::Cursor^ cursor);
 		bool DoesBarExist(BarEvent^ bar);
 
@@ -137,7 +135,9 @@ namespace MIDILightDrawer
 	private:
 		TimelineCommandManager^		_CommandManager;
 		Timeline_Direct2DRenderer^	_D2DRenderer;
+		Collapsible_Left_Panel^		_Left_Panel;
 		PerformanceMetrics^			_PerformanceMetrics;
+		Widget_Tools_And_Control^	_Tool_And_Control;
 		
 		ThemeColors		_CurrentTheme;
 		TrackButtonId	_HoveredButton;
@@ -161,6 +161,11 @@ namespace MIDILightDrawer
 
 		int	_ResizeStartY;
 		int	_InitialTrackHeight;
+
+		bool _IsOverPanelResizeHandle;
+		bool _IsPanelResizing;
+		int _PanelResizeStartX;
+		int _InitialPanelWidth;
 
 		double _ZoomLevel;
 
@@ -189,12 +194,19 @@ namespace MIDILightDrawer
 		float GetSubdivisionLevel();
 		int GetTrackTop(Track^ track);
 		int GetTotalTracksHeight();
+		
 
 		void BeginTrackResize(Track^ track, int mouseY);
 		void UpdateTrackResize(int mouseY);
 		void EndTrackResize();
+		void BeginPanelResize(int mouseX);
+		void UpdatePanelResize(int mouseX);
+		void EndPanelResize();
+		void ToggleLeftPanel();
 		bool IsOverTrackDivider(Point mousePoint, Track^% track);
 		bool IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint);
+		bool IsOverPanelResizeHandle(Point mousePoint);
+		bool IsOverPanelToggleButton(Point mousePoint);
 		Rectangle GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex);
 		Rectangle CalculateBarBounds(BarEvent^ bar, Rectangle bounds);
 

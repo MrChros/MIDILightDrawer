@@ -59,7 +59,7 @@ namespace MIDILightDrawer
 		void SelectBarsInRegion(Rectangle region);
 		void ClearSelection();
 
-		property bool IsActive{
+		property bool IsActive {
 			bool get() { return _IsActive; }
 		}
 
@@ -96,12 +96,24 @@ namespace MIDILightDrawer
 			bool get() { return false; }
 		}
 
+		virtual property bool IsResizing {
+			bool get() { return false; }
+		}
+
+		virtual property bool IsOverResizeHandle { 
+			bool get() { return false;  }
+		}
+
 		virtual property bool IsPasting {
 			bool get() { return false; }
 		}
 		
 		virtual property List<BarEvent^>^ PastePreviewBars {
 			List<BarEvent^>^ get() { return nullptr; }
+		}
+
+		virtual property BarEvent^ HoveredBar {
+			BarEvent^ get() { return nullptr; }
 		}
 
 		virtual property Color DrawColor {
@@ -118,14 +130,6 @@ namespace MIDILightDrawer
 
 		virtual property DrawToolMode CurrentMode {
 			DrawToolMode get() { return DrawToolMode::Draw; }
-		}
-
-		virtual property bool IsResizing {
-			bool get() { return false; }
-		}
-
-		virtual property BarEvent^ HoveredBar { 
-			BarEvent^ get() { return nullptr; }
 		}
 
 		virtual property Color CurrentColor {
@@ -172,15 +176,24 @@ namespace MIDILightDrawer
 	public ref class PointerTool : public TimelineTool
 	{
 	private:
+		int					_ResizeStartX;
 		int					_PasteStartTick;
+		int					_ChangeTickLength;
 		bool				_IsDragging;
+		bool				_IsResizing;
+		bool				_IsOverResizeHandle;
 		bool				_IsPasting;
 		Point^				_DragStart;
+		BarEvent^			_HoverBar;
 		Track^				_DragSourceTrack;
 		Track^				_DragTargetTrack;
 		Track^				_PasteTargetTrack;
 		List<BarEvent^>^	_PastePreviewBars;
 		List<int>^			_OriginalBarStartTicks;
+		Dictionary<BarEvent^, int>^ _OriginalLengths;
+
+		static const int HANDLE_WIDTH = 5;
+		static const int MIN_LENGTH_TICKS = 120;	// Minimum 1/32 note
 
 	public:
 		PointerTool(Widget_Timeline^ timeline);
@@ -197,6 +210,14 @@ namespace MIDILightDrawer
 		void FinishMoving(Point mousePos);
 		void CancelMoving();
 		
+		void StartResizing(Point mousePos);
+		void UpdateResizing(Point mousePos);
+		void FinishResizing();
+		void CancelResizing();
+
+		bool CursorOverResizeHandle(Point mousePos, BarEvent^ bar, Track^ track);
+		void StoreOriginalLengths();
+
 		void HandleCopy();
 		void StartPaste();
 		void UpdatePaste(Point mousePos);
@@ -211,12 +232,29 @@ namespace MIDILightDrawer
 			bool get() override { return IsMultiTrackList(_SelectedBars); }
 		}
 
+		property bool IsResizing{
+			bool get() override { return _IsResizing; }
+		}
+
+		property bool IsOverResizeHandle {
+			bool get() override { return _IsOverResizeHandle; }
+		}
+
 		property bool IsPasting {
 			bool get() override { return _IsPasting; }
 		}
 
 		property List<BarEvent^>^ PastePreviewBars {
 			List<BarEvent^>^ get() override { return _PastePreviewBars; }
+		}
+
+		property BarEvent^ HoveredBar {
+			BarEvent^ get() override { return _HoverBar; }
+		}
+
+		property int ChangeTickLength {
+			int get() { return _ChangeTickLength; }
+			void set(int value) { _ChangeTickLength = Math::Max((int)MIN_LENGTH_TICKS, value); }
 		}
 
 	private:
@@ -326,7 +364,7 @@ namespace MIDILightDrawer
 	//////////////////////////////
 	public ref class SplitTool : public TimelineTool {
 	private:
-		int splitPreviewTick;
+		int SplitPreviewTick;
 		Track^ hoverTrack;
 		BarEvent^ hoverBar;
 

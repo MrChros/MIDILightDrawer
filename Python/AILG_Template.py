@@ -26,8 +26,6 @@ def main():
 
     Song_List = []
 
-    Generate_Light("French Fries")
-
     # Iterate directory
     for File in os.listdir(os.path.dirname(os.path.abspath(__file__))):
         # Check only text files

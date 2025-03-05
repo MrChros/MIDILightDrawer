@@ -44,9 +44,9 @@ namespace MIDILightDrawer
 
 
 
-		array<String^>^ Lines_First_Snapping = gcnew array<String^>{ "None", "Grid", "Bars", "Tablature"};
+		array<String^>^ Lines_First_Snapping = gcnew array<String^>{ "None", "Grid", "Events", "Tablature"};
 		array<String^>^ Lines_Second_Snapping = gcnew array<String^>{ "", "", "", ""};
-		array<int>^ Values_Snapping = gcnew array<int>{ (int)SnappingType::Snap_None, (int)SnappingType::Snap_Grid, (int)SnappingType::Snap_Bars, (int)SnappingType::Snap_Tablature };
+		array<int>^ Values_Snapping = gcnew array<int>{ (int)SnappingType::Snap_None, (int)SnappingType::Snap_Grid, (int)SnappingType::Snap_Events, (int)SnappingType::Snap_Tablature };
 
 		this->_DropDown_Draw_Snapping = gcnew Control_DropDown();
 		this->_DropDown_Draw_Snapping->Dock = DockStyle::Fill;

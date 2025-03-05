@@ -112,6 +112,9 @@ public:
     IDWriteTextFormat* GetQuarterNoteFormat();
     IDWriteTextFormat* GetTrackHeaderFormat();
     IDWriteTextFormat* GetFPSCounterFormat();
+    IDWriteTextFormat* GetLeftPanelTextFormat();
+    IDWriteTextFormat* GetLeftPanelTitleFormat();
+    IDWriteTextFormat* GetLeftPanelSectionFormat();
     IDWriteTextFormat* UpdateTablatureFormat(float fontSize);
 
     // Render Target Management
@@ -203,13 +206,16 @@ private:
 
     // DirectWrite resources
     IDWriteFactory* m_pDWriteFactory;
-    IDWriteTextFormat* m_pMeasureNumberFormat;  // For measure numbers
-    IDWriteTextFormat* m_pMarkerTextFormat;     // For marker text
-    IDWriteTextFormat* m_pTimeSignatureFormat;  // For time signatures
-    IDWriteTextFormat* m_pQuarterNoteFormat;    // For sub time-divisions
-    IDWriteTextFormat* m_pTrackHeaderFormat;    // For Track Header Text
-    IDWriteTextFormat* m_pTablatureFormat;      // For Tablature Text
-    IDWriteTextFormat* m_pFPSCounterFormat;     // For FPS Counter Text
+    IDWriteTextFormat* m_pMeasureNumberFormat;		// For measure numbers
+    IDWriteTextFormat* m_pMarkerTextFormat;			// For marker text
+    IDWriteTextFormat* m_pTimeSignatureFormat;		// For time signatures
+    IDWriteTextFormat* m_pQuarterNoteFormat;		// For sub time-divisions
+    IDWriteTextFormat* m_pTrackHeaderFormat;		// For Track Header Text
+    IDWriteTextFormat* m_pTablatureFormat;			// For Tablature Text
+    IDWriteTextFormat* m_pFPSCounterFormat;			// For FPS Counter Text
+    IDWriteTextFormat* m_pLeftPanelTextFormat;		// For Collapsible Left Panel - Text
+    IDWriteTextFormat* m_pLeftPanelTitleFormat;		// For Collapsible Left Panel - Title
+    IDWriteTextFormat* m_pLeftPanelSectionFormat;	// For Collapsible Left Panel - Section
 
     // Cached Resources
     std::vector<CachedBrush>				m_BrushCache;

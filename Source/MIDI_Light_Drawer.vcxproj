@@ -153,7 +153,6 @@
     <ClInclude Include="Hotkey_Manager.h" />
     <ClInclude Include="MIDI_Exporter.h" />
     <ClInclude Include="MIDI_Writer.h" />
-    <ClInclude Include="resource1.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="gp_parser.h" />
     <ClInclude Include="Resource.h" />

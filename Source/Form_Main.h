@@ -120,6 +120,7 @@ namespace MIDILightDrawer
 			void Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e);
 
 			void Pointer_Options_OnSnappingChanged(int value);
+			void Pointer_Options_OnQuantizationChanged(int value);
 			void Draw_Options_OnSnappingChanged(int value);
 			void Draw_Options_OnLengthChanged(int value);
 			void Draw_Options_OnColorChanged(System::Drawing::Color color);

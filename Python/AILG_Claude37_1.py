@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 QUARTER_NOTE_TICKS = 960
 MIDI_LOWEST_OCTAVE = -2
-AI_NAME = "CLAUDE"
+AI_NAME = "Claude37_1"  # Claude Sonnet 3.7
 
 
 class Light_Change:
@@ -65,8 +65,6 @@ def Generate_Light(song_name : str):
     if not All_Tracks_Found:
         return
 
-    # Print_Message("--------------------------", 0)
-
     Light_Changes : list[Light_Change] = []
 
     Current_Measure_Tick = 0
@@ -80,13 +78,12 @@ def Generate_Light(song_name : str):
         Measure_Drums       : GP.Measure = Tracks["Drums"].measures[MH.number-1]
 
         
-        # Add Alorithm to generate Light Featues here...
-        Light_Changes.extend(process_measure_for_lights(Measure_Guitar, Current_Measure_Tick, "Guitar", MH.number))
-        Light_Changes.extend(process_measure_for_lights(Measure_Bass, Current_Measure_Tick, "Bass", MH.number))
-        Light_Changes.extend(process_measure_for_lights(Measure_Bass_Drive, Current_Measure_Tick, "Bass Drive", MH.number))
-        Light_Changes.extend(process_measure_for_lights(Measure_Drums, Current_Measure_Tick, "Drums", MH.number))
-
-        Current_Measure_Tick += MH.length
+        # Process each measure to create light changes
+        Process_Guitar_Measure(Light_Changes, Measure_Guitar, Current_Measure_Tick)
+        Process_Bass_Measure(Light_Changes, Measure_Bass, Measure_Bass_Drive, Current_Measure_Tick)
+        Process_Drums_Measure(Light_Changes, Measure_Drums, Current_Measure_Tick)
+        
+        #Current_Measure_Tick += MH.length
 
     
     FileName_wo_Ext = song_name + "_" + AI_NAME
@@ -98,141 +95,192 @@ def Generate_Light(song_name : str):
     return 0
 
 
-def get_rainbow_shift(base_hue, intensity):
-    """Generate a rainbow-shifted color based on intensity"""
-    hue = (base_hue + intensity/255) % 1.0
-    rgb = tuple(int(x * 255) for x in colorsys.hsv_to_rgb(hue, 0.9, 0.9))
-    return rgb
-
-def get_complementary_colors(base_hue):
-    """Get two complementary colors based on a base hue"""
-    hue1 = (base_hue + 0.33) % 1.0
-    hue2 = (base_hue + 0.66) % 1.0
-    rgb1 = tuple(int(x * 255) for x in colorsys.hsv_to_rgb(hue1, 1.0, 1.0))
-    rgb2 = tuple(int(x * 255) for x in colorsys.hsv_to_rgb(hue2, 1.0, 1.0))
-    return rgb1, rgb2
-
-def create_strobe_effect(start_tick, duration, track_name, color, subdivisions=4):
-    """Create a strobing effect by alternating colors"""
-    changes = []
-    sub_duration = duration // subdivisions
-    for i in range(subdivisions):
-        if i % 2 == 0:
-            changes.append(Light_Change(track_name, start_tick + i * sub_duration, 
-                                     sub_duration, color[0], color[1], color[2]))
-        else:
-            changes.append(Light_Change(track_name, start_tick + i * sub_duration, 
-                                     sub_duration, 0, 0, 0))
-    return changes
-
-def process_measure_for_lights(measure: GP.Measure, measure_start_tick: int, track_name: str, 
-                             measure_number: int) -> list[Light_Change]:
-    light_changes = []
-    base_time = measure_start_tick
-    
-    # Create different patterns based on measure number
-    pattern_type = measure_number % 4  # Cycle through 4 different patterns
-    
+# Process Guitar track to create light changes
+def Process_Guitar_Measure(light_changes: list[Light_Change], measure: GP.Measure, measure_start_tick: int):
     for voice in measure.voices:
-        current_tick = base_time
-        
         for beat in voice.beats:
-            if not beat.notes:
-                current_tick += beat.duration.time
+            if not beat.notes:  # Skip if no notes in the beat
                 continue
                 
-            duration_ticks = beat.duration.time
-            avg_velocity = sum(note.velocity for note in beat.notes) / len(beat.notes)
-            intensity = avg_velocity / 127.0
+            # Calculate pitch average and intensity for this beat
+            notes_count = len(beat.notes)
+            pitch_sum = sum(note.value for note in beat.notes)
+            avg_pitch = pitch_sum / notes_count if notes_count > 0 else 0
             
-            # Pattern 1: Psychedelic Rainbow Flow
-            if pattern_type == 0:
-                if track_name == "Guitar":
-                    # Create flowing rainbow effects based on note pitch
-                    avg_pitch = sum(note.value for note in beat.notes) / len(beat.notes)
-                    base_hue = (avg_pitch % 12) / 12.0
-                    rgb = get_rainbow_shift(base_hue, avg_velocity)
-                    light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
-                                                    rgb[0], rgb[1], rgb[2]))
-                
-                elif "Bass" in track_name:
-                    # Pulsing complementary colors
-                    base_hue = (current_tick / 1000.0) % 1.0
-                    rgb1, rgb2 = get_complementary_colors(base_hue)
-                    light_changes.extend(create_strobe_effect(current_tick, duration_ticks, 
-                                                            track_name, rgb1))
-                
-                elif track_name == "Drums":
-                    # Explosive burst colors on hits
-                    drum_type = beat.notes[0].string
-                    if avg_velocity > 100:  # Hard hits
-                        rgb = (255, 255, 255)  # White flash
-                    else:
-                        rgb = (int(255 * intensity), 
-                              int(150 * intensity), 
-                              int(50 * intensity))  # Orange glow
-                    light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
-                                                    rgb[0], rgb[1], rgb[2]))
+            # Map pitch to color (higher pitch = more blue/green, lower pitch = more red)
+            # Guitar note range is typically around 40 (low E) to 84 (high E)
+            normalized_pitch = min(1.0, max(0.0, (avg_pitch - 40) / 44))
             
-            # Pattern 2: Synchronized Pulse
-            elif pattern_type == 1:
-                phase = (current_tick % 3840) / 3840.0  # Complete cycle every 4 beats
-                pulse_intensity = abs(math.sin(phase * math.pi * 2))
-                
-                if track_name == "Guitar":
-                    rgb = (int(255 * pulse_intensity), 
-                          int(100 * pulse_intensity), 
-                          int(200 * pulse_intensity))
-                elif "Bass" in track_name:
-                    rgb = (int(100 * pulse_intensity), 
-                          int(200 * pulse_intensity), 
-                          int(255 * pulse_intensity))
-                else:  # Drums
-                    rgb = (int(200 * pulse_intensity), 
-                          int(255 * pulse_intensity), 
-                          int(100 * pulse_intensity))
-                    
-                light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
-                                                rgb[0], rgb[1], rgb[2]))
+            # Get note intensity from note effect and velocity
+            intensity = 1.0
+            for note in beat.notes:
+                if note.effect.palmMute:
+                    intensity *= 0.7  # Palm mute gives a softer light
+                if note.effect.vibrato:
+                    intensity *= 1.2  # Vibrato gives a slightly brighter light
             
-            # Pattern 3: Chase Effect
-            elif pattern_type == 2:
-                chase_position = (current_tick // 240) % 4  # Divide beat into 4 positions
-                if track_name == "Guitar" and chase_position == 0:
-                    rgb = (255, 0, 0)
-                elif "Bass" in track_name and chase_position == 1:
-                    rgb = (0, 0, 255)
-                elif track_name == "Drums" and chase_position == 2:
-                    rgb = (0, 255, 0)
-                else:
-                    rgb = (0, 0, 0)
-                    
-                light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
-                                                rgb[0], rgb[1], rgb[2]))
+            # Base intensity on the number of notes (chords are brighter)
+            intensity *= min(1.0, 0.5 + (notes_count * 0.1))
             
-            # Pattern 4: Harmonic Color Blend
-            else:
-                if beat.notes:
-                    note_values = [note.value for note in beat.notes]
-                    harmonic_factor = sum(note_values) % 12 / 12.0
-                    
-                    if track_name == "Guitar":
-                        rgb = tuple(int(x * 255) for x in colorsys.hsv_to_rgb(harmonic_factor, 1.0, intensity))
-                    elif "Bass" in track_name:
-                        rgb = tuple(int(x * 255) for x in colorsys.hsv_to_rgb((harmonic_factor + 0.5) % 1.0, 1.0, intensity))
-                    else:  # Drums
-                        rgb = (int(255 * intensity), 
-                              int(255 * abs(math.sin(harmonic_factor * math.pi))), 
-                              int(255 * abs(math.cos(harmonic_factor * math.pi))))
-                        
-                    light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
-                                                    rgb[0], rgb[1], rgb[2]))
+            # Calculate RGB values
+            if normalized_pitch < 0.5:  # Lower pitches
+                red = int(255 * intensity)
+                green = int(255 * normalized_pitch * 2 * intensity)
+                blue = int(100 * normalized_pitch * intensity)
+            else:  # Higher pitches
+                red = int(255 * (1 - normalized_pitch) * 2 * intensity)
+                green = int(255 * intensity)
+                blue = int(100 + 155 * (normalized_pitch - 0.5) * 2 * intensity)
             
-            current_tick += duration_ticks
+            # Create light change
+            start_tick = measure_start_tick + beat.start
+            duration = beat.duration.time
             
-    return light_changes
+            # Apply effects to duration
+            if any(note.effect.hammer for note in beat.notes):
+                duration = int(duration * 0.8)  # Shorter for hammer-ons
+            
+            light_changes.append(Light_Change(
+                "Guitar", 
+                start_tick, 
+                duration, 
+                red, green, blue
+            ))
 
-        
+# Process Bass tracks to create light changes
+def Process_Bass_Measure(light_changes: list[Light_Change], bass_measure: GP.Measure, 
+                        bass_drive_measure: GP.Measure, measure_start_tick: int):
+    # Process normal bass track
+    for voice in bass_measure.voices:
+        for beat in voice.beats:
+            if not beat.notes:
+                continue
+                
+            # Calculate intensity based on notes
+            notes_count = len(beat.notes)
+            lowest_note = min(note.value for note in beat.notes) if notes_count > 0 else 0
+            
+            # Bass is usually in lower range (around 28-52)
+            normalized_pitch = min(1.0, max(0.0, (lowest_note - 28) / 24))
+            
+            # Base colors on pitch range (bass focuses more on red/green spectrum)
+            red = int(150 + 105 * (1 - normalized_pitch))
+            green = int(100 + 100 * normalized_pitch)
+            blue = int(50 + 50 * normalized_pitch)
+            
+            # Check if there's a corresponding note in the bass drive track
+            drive_intensity = Check_Bass_Drive(bass_drive_measure, beat.start)
+            if drive_intensity > 0:
+                # Bass drive increases red component and overall brightness
+                red = min(255, int(red * 1.3))
+                green = min(255, int(green * 1.1))
+                blue = min(255, int(blue * 0.9))  # Reduce blue for warmer tone
+            
+            start_tick = measure_start_tick + beat.start
+            duration = beat.duration.time
+            
+            light_changes.append(Light_Change(
+                "Bass", 
+                start_tick, 
+                duration, 
+                red, green, blue
+            ))
+
+# Helper function to check if bass drive is active at a given position
+def Check_Bass_Drive(bass_drive_measure: GP.Measure, position: int) -> float:
+    for voice in bass_drive_measure.voices:
+        for beat in voice.beats:
+            # Check if this beat overlaps with the position we're checking
+            if beat.start <= position < (beat.start + beat.duration.time):
+                if beat.notes:
+                    # Return intensity based on note velocities
+                    return sum(note.velocity / 127 for note in beat.notes) / len(beat.notes)
+    return 0
+
+# Process Drums track to create light changes
+def Process_Drums_Measure(light_changes: list[Light_Change], measure: GP.Measure, measure_start_tick: int):
+    # Dictionary to track active drum events
+    active_drums = {}
+    
+    for voice in measure.voices:
+        for beat in voice.beats:
+            if not beat.notes:
+                continue
+            
+            # Analyze what kind of drum hits we have
+            has_kick = False
+            has_snare = False
+            has_hihat = False
+            has_crash = False
+            has_tom = False
+            
+            for note in beat.notes:
+                # MIDI mapping for standard drums (may need adjustment based on your GP5 files)
+                if note.value == 35 or note.value == 36:  # Bass Drum
+                    has_kick = True
+                elif note.value == 38 or note.value == 40:  # Snare
+                    has_snare = True
+                elif note.value in [42, 44, 46]:  # Hi-Hat
+                    has_hihat = True
+                elif note.value in [49, 57]:  # Crash
+                    has_crash = True
+                elif note.value in [41, 43, 45, 47, 48, 50]:  # Toms
+                    has_tom = True
+            
+            # Determine colors based on drum combination
+            red, green, blue = 0, 0, 0
+            
+            if has_kick:
+                red += 200
+                green += 50
+                blue += 50
+            
+            if has_snare:
+                red += 100
+                green += 150
+                blue += 100
+            
+            if has_hihat:
+                red += 50
+                green += 100
+                blue += 150
+            
+            if has_crash:
+                red += 200
+                green += 200
+                blue += 200  # White flash for crash
+            
+            if has_tom:
+                red += 100
+                green += 80
+                blue += 120
+            
+            # Normalize colors to 0-255 range
+            total = max(1, red + green + blue)
+            intensity_factor = min(255 / max(red, green, blue), 1.0) if max(red, green, blue) > 0 else 1.0
+            
+            red = int(red * intensity_factor)
+            green = int(green * intensity_factor)
+            blue = int(blue * intensity_factor)
+            
+            # Create light change with shorter duration for drums (percussive)
+            start_tick = measure_start_tick + beat.start
+            
+            # Different durations based on type of hit
+            if has_crash:
+                duration = QUARTER_NOTE_TICKS // 2  # Longer for crash
+            else:
+                duration = QUARTER_NOTE_TICKS // 4  # Shorter for most drum hits
+            
+            light_changes.append(Light_Change(
+                "Drums", 
+                start_tick, 
+                duration, 
+                red, green, blue
+            ))
+
+
+
 #---------------------------------------------------------------------------------------
 # Get Guitar Pro Track Object from Track Name
 def GuitarPro_Get_Track_From_Name(track_name : str, guitar_pro_track_list : list[GP.Track]) -> GP.Track:

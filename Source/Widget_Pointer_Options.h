@@ -23,9 +23,11 @@ namespace MIDILightDrawer
 		System::ComponentModel::Container^ _Components;
 		Control_GroupBox^ _GroupBox;
 		Control_DropDown^ _DropDown_Draw_Snapping;
+		Control_DropDown^ _DropDown_Resize_Quantization;
 
 		void Initialize_Component(void);
 		void DropDown_Draw_Snapping_OnItem_Selected(System::Object^ sender, MIDILightDrawer::Control_DropDown_Item_Selected_Event_Args^ e);
+		void DropDown_Resize_Quantization_OnItem_Selected(System::Object^ sender, MIDILightDrawer::Control_DropDown_Item_Selected_Event_Args^ e);
 
 	protected:
 		~Widget_Pointer_Options();
@@ -33,12 +35,20 @@ namespace MIDILightDrawer
 	public:
 		void Select_Pointer_Snapping_Next(void);
 		void Select_Pointer_Snapping_Previous(void);
+		void Select_Next_ResizeQuantization_Value(void);
+		void Select_Previous_ResizeQuantization_Value(void);
 
 		property int PointerSnapping {
 			int get();
 			void set(int value);
 		}
 
+		property int ResizeQuantization {
+			int get();
+			void set(int value);
+		}
+
 		event QuantizationChangedHandler^ SnappingChanged;
+		event QuantizationChangedHandler^ QuantizationChanged;
 	};
 }

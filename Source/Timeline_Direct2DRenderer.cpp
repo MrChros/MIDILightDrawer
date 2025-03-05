@@ -17,17 +17,18 @@
 
 namespace MIDILightDrawer
 {
-    Timeline_Direct2DRenderer::Timeline_Direct2DRenderer(List<Track^>^ tracks, List<Measure^>^ measures, double zoomlevel, System::Drawing::Point^ scrollposition) : _NativeRenderer(nullptr), m_disposed(false), _ControlHandle(System::IntPtr::Zero), m_themeColorsCached(false)
+    Timeline_Direct2DRenderer::Timeline_Direct2DRenderer(List<Track^>^ tracks, List<Measure^>^ measures, Collapsible_Left_Panel^ leftPanel, double zoomlevel, System::Drawing::Point^ scrollposition) : _NativeRenderer(nullptr), m_disposed(false), _ControlHandle(System::IntPtr::Zero), m_themeColorsCached(false)
     {
         this->_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
         
         // Create the native renderer
         this->_NativeRenderer = new Timeline_Direct2DRenderer_Native();
 
-        this->_Control              = nullptr;
-        this->_Tracks               = tracks;
-        this->_Measures             = measures;
-        this->_ToolAccessDelegate   = nullptr;
+        this->_Control				= nullptr;
+        this->_Tracks				= tracks;
+        this->_Measures				= measures;
+		this->_Left_Panel			= leftPanel;
+        this->_ToolAccessDelegate	= nullptr;
 
         SetZoomLevel(zoomlevel);
         SetScrollPositionReference(scrollposition);
@@ -312,10 +313,10 @@ namespace MIDILightDrawer
 
         // Create the rectangle for the tracks area
         D2D1_RECT_F tracksArea = D2D1::RectF(
-            0,                              // Left
-            HEADER_HEIGHT,                  // Top
-            (float)this->_Control->Width,   // Right
-            (float)this->_Control->Height   // Bottom
+			(float)GetLeftPanelWidth(),			// Left
+            HEADER_HEIGHT,					// Top
+            (float)this->_Control->Width,	// Right
+            (float)this->_Control->Height	// Bottom
         );
 
         // Fill the rectangle using the native renderer
@@ -348,9 +349,9 @@ namespace MIDILightDrawer
             bool ShouldDrawDetails = (MeasureNumber % m_LevelOfDetail.MeasureSkipFactor) == 0;
                 
             // Convert tick position to pixels
-            float X = TicksToPixels(Accumulated) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+            float X = TicksToPixels(Accumulated) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth();
 
-            if (X >= TRACK_HEADER_WIDTH && X <= (float)this->_Control->Width)
+            if (X >= GetLeftPanelAndTrackHeaderWidth() && X <= (float)this->_Control->Width)
             {
                 // Draw marker text if present
                 if (!System::String::IsNullOrEmpty(Meas->Marker_Text))
@@ -411,7 +412,7 @@ namespace MIDILightDrawer
         // Save current clipping region
         D2D1_RECT_F ContentArea = D2D1::RectF(
             0,
-            (float)HEADER_HEIGHT,
+            (float)GetLeftPanelAndTrackHeaderWidth(),
             (float)this->_Control->Width,
             (float)this->_Control->Height
         );
@@ -466,7 +467,7 @@ namespace MIDILightDrawer
 
         // Save the original clip region
         D2D1_RECT_F ContentArea = D2D1::RectF(
-            TRACK_HEADER_WIDTH,
+			(float)GetLeftPanelAndTrackHeaderWidth(),
             HEADER_HEIGHT,
             (float)this->_Control->Width,
             (float)this->_Control->Height
@@ -496,7 +497,7 @@ namespace MIDILightDrawer
         return true;
     }
 
-    void Timeline_Direct2DRenderer::DrawFPSCounter(double fps, double frameTimeMs)
+    void Timeline_Direct2DRenderer::DrawFPSCounter(float x, double fps, double frameTimeMs)
     {
         if (!_NativeRenderer) {
             return;
@@ -504,7 +505,6 @@ namespace MIDILightDrawer
 
         const float Opacity = 0.8f;
 
-        // Format the FPS string with frame time
         std::wstring FPSText = L"";
         if (frameTimeMs > 0) {
             FPSText = std::to_wstring((int)fps) + L" FPS";
@@ -513,27 +513,35 @@ namespace MIDILightDrawer
             FPSText = L"-- FPS"; // Display placeholder when no data
         }
 
-        // Set text color based on performance
         D2D1_COLOR_F TextColor;
         if (fps >= 55.0) {
-            // Good performance (green)
             TextColor = D2D1::ColorF(0.2f, 1.0f, 0.2f, Opacity);
         }
         else if (fps >= 30.0) {
-            // Acceptable performance (yellow)
             TextColor = D2D1::ColorF(1.0f, 1.0f, 0.2f, Opacity);
         }
         else {
-            // Poor performance (red)
             TextColor = D2D1::ColorF(1.0f, 0.2f, 0.2f, Opacity);
         }
 
-        // Draw text at top-left corner with padding (left aligned)
-        D2D1_RECT_F TextRect = D2D1::RectF(5.0f, 5.0f, 100.0f, 30.0f);
-
-        // Use the TrackHeaderFormat which is already set to left alignment
+        D2D1_RECT_F TextRect = D2D1::RectF(x + 5.0f, (float)PANEL_BUTTON_MARGIN, x + 100.0f, (float)PANEL_BUTTON_MARGIN + 30.0f);
         _NativeRenderer->DrawText(FPSText, TextRect, TextColor, _NativeRenderer->GetFPSCounterFormat());
     }
+
+	void Timeline_Direct2DRenderer::DrawLeftPanel(bool beingResized)
+	{
+		if (!_NativeRenderer) {
+			return;
+		}
+
+		if (_Left_Panel->IsExpanded) {
+			DrawLeftPanelExpanded(beingResized);
+			DrawLeftPanelContent();
+		}
+		else {
+			DrawLeftPanelHidden();
+		}
+	}
 
     bool Timeline_Direct2DRenderer::DrawBeatNumbers(Measure^ measure, float x, float measureNumberY, float subdivLevel, int measureNumber, int ticksPerBeat)
     {
@@ -548,19 +556,19 @@ namespace MIDILightDrawer
         // Calculate beat positions
         for (int beat = 1; beat < measure->Numerator; beat++)
         {
-            float beatX = x + TicksToPixels(beat * ticksPerBeat);
+            float BeatX = x + TicksToPixels(beat * ticksPerBeat);
 
             // Only draw if beat marker is visible
-            if (beatX >= TRACK_HEADER_WIDTH && beatX <= (float)this->_Control->Width)
+            if (BeatX >= GetLeftPanelAndTrackHeaderWidth() && BeatX <= (float)this->_Control->Width)
             {
                 // Create beat number text (e.g., "1.2" for measure 1, beat 2)
                 std::wstring beatText = std::to_wstring(measureNumber) + L"." + std::to_wstring(beat + 1);
 
                 // Define text rectangle
                 D2D1_RECT_F beatRect = D2D1::RectF(
-                    beatX - 25,
+                    BeatX - 25,
                     measureNumberY + 4, // Offset slightly below measure numbers
-                    beatX + 25,
+                    BeatX + 25,
                     measureNumberY + 18
                 );
 
@@ -569,7 +577,7 @@ namespace MIDILightDrawer
                 _NativeRenderer->DrawText(beatText, beatRect, beatColor, quarterNoteFormat);
 
                 // Draw tick mark
-                _NativeRenderer->DrawLine(beatX, HEADER_HEIGHT - 2, beatX, HEADER_HEIGHT, beatColor, 1.0f);
+                _NativeRenderer->DrawLine(BeatX, HEADER_HEIGHT - 2, BeatX, HEADER_HEIGHT, beatColor, 1.0f);
             }
         }
 
@@ -580,7 +588,7 @@ namespace MIDILightDrawer
     {
         // Calculate visible range in ticks
         int StartTick   = (int)PixelsToTicks(-this->_ScrollPosition->X);
-        int EndTick     = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width - TRACK_HEADER_WIDTH);
+        int EndTick     = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width - GetLeftPanelAndTrackHeaderWidth());
 
         // Draw grid lines in proper order (back to front)
         DrawSubdivisionLines(totalHeight, StartTick, EndTick);
@@ -617,7 +625,7 @@ namespace MIDILightDrawer
 
                 if (SubdivTick >= startTick && SubdivTick <= endTick)
                 {
-                    float X = TicksToPixels(SubdivTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+                    float X = TicksToPixels(SubdivTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth();
                     _NativeRenderer->DrawLine(X, HEADER_HEIGHT, X, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.SubdivisionLine), 1.0f);
                 }
             }
@@ -646,7 +654,7 @@ namespace MIDILightDrawer
 
                 if (beatTick >= startTick && beatTick <= endTick)
                 {
-                    float X = TicksToPixels(beatTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+                    float X = TicksToPixels(beatTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth();
                     _NativeRenderer->DrawLine(X, HEADER_HEIGHT, X, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.BeatLine), 1.0f);
                 }
             }
@@ -670,9 +678,9 @@ namespace MIDILightDrawer
 
             if (ShouldDrawDetails && Accumulated + Meas->Length >= startTick)
             {
-                float X = TicksToPixels(Accumulated) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+                float X = TicksToPixels(Accumulated) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth();
 
-                if (X >= TRACK_HEADER_WIDTH && X <= (float)this->_Control->Width)
+                if (X >= GetLeftPanelAndTrackHeaderWidth() && X <= (float)this->_Control->Width)
                 {
                     _NativeRenderer->DrawLine(X, HEADER_HEIGHT, X, HEADER_HEIGHT + totalHeight, COLOR_TO_RGBA(m_ColorTheme.MeasureLine), 1.0f);
                 }
@@ -732,15 +740,15 @@ namespace MIDILightDrawer
             return true;
         }
 
-        float logScale = (float)Math::Log(this->_ZoomLevel + 1, 2);
+		float LogScale = TO_LOGSCALE(this->_ZoomLevel);
 
         if (track->IsDrumTrack && track->ShowAsStandardNotation)
         {
-            return DrawTrackTablatureDrum(track, trackContentBounds, logScale);
+            return DrawTrackTablatureDrum(track, trackContentBounds, LogScale);
         }
         else
         {
-            return DrawTrackTablatureRegular(track, trackContentBounds, logScale);
+            return DrawTrackTablatureRegular(track, trackContentBounds, LogScale);
         }
 
         return true;
@@ -752,10 +760,10 @@ namespace MIDILightDrawer
             return false;
         }
 
-        float availableHeight = (float)(trackContentBounds.Height - TRACK_PADDING * 2);
-        TabStringInfo String_Info = DrawTablatureStrings(trackContentBounds, availableHeight, logScale, 5);
+        float AvailableHeight = (float)(trackContentBounds.Height - TRACK_PADDING * 2);
+        TabStringInfo String_Info = DrawTablatureStrings(trackContentBounds, AvailableHeight, logScale, 5);
 
-        if (String_Info.TotalHeight > availableHeight) {
+        if (String_Info.TotalHeight > AvailableHeight) {
             return true;
         }
 
@@ -799,9 +807,9 @@ namespace MIDILightDrawer
                         continue;
                     }
 
-                    float BeatX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+                    float BeatX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth());
 
-                    if ((beat->Duration > 0) && (beat->Notes->Count > 0) && availableHeight > String_Info.TotalHeight + RequiredSpace) {
+                    if ((beat->Duration > 0) && (beat->Notes->Count > 0) && AvailableHeight > String_Info.TotalHeight + RequiredSpace) {
                         DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions);
                     }
 
@@ -899,7 +907,7 @@ namespace MIDILightDrawer
                         continue;
                     }
 
-                    float BeatX = (float)(TicksToPixels(BeatTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+                    float BeatX = (float)(TicksToPixels(BeatTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth());
 
                     const float BASE_DURATION_SPACE = 23.0f;
                     const float DURATION_SCALE_FACTOR = 20.0f;
@@ -976,7 +984,7 @@ namespace MIDILightDrawer
         float BottomStringY = stringYPositions[stringYPositions->Length - 1];
 
         // Calculate x position centered on the note text
-        float NoteX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+        float NoteX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth());
 
         int Duration = beat->Duration;
         if (beat->IsDotted) {
@@ -1098,27 +1106,27 @@ namespace MIDILightDrawer
                             float CurrentNoteWidth = _NativeRenderer->MeasureTextWidth(currentNoteText, textFormat);
 
                             // Calculate x positions for both notes
-                            float PrevNoteX = (float)(TicksToPixels(PreviousBeat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
-                            float CurrentNoteX = (float)(TicksToPixels(CurrentBeat->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH);
+                            float PrevNoteX = (float)(TicksToPixels(PreviousBeat->StartTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth());
+                            float CurrentNoteX = (float)(TicksToPixels(CurrentBeat->StartTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth());
 
                             // Get y position for the string
                             float StringY = stringYPositions[CurrentNote->String - 1];
 
                             // Calculate start and end points
-                            float StartX = PrevNoteX + (PrevNoteWidth / 2);
-                            float EndX = CurrentNoteX - (CurrentNoteWidth / 2);
-                            float StartY = StringY + (scaledFontSize / 2);
-                            float EndY = StringY + (scaledFontSize / 2);
+                            float StartX	= PrevNoteX + (PrevNoteWidth / 2);
+                            float EndX		= CurrentNoteX - (CurrentNoteWidth / 2);
+                            float StartY	= StringY + (scaledFontSize / 2);
+                            float EndY		= StringY + (scaledFontSize / 2);
 
                             // Calculate control points for Bezier curve that dips below
                             float ControlHeight = 8.0f * (float)Math::Min(2.0f, Math::Max(0.5f, this->_ZoomLevel));
 
                             // Draw Bezier curve using Direct2D
                             _NativeRenderer->DrawTieLine(
-                                D2D1::Point2F(StartX, StartY),                                          // Start point
-                                D2D1::Point2F(StartX + (EndX - StartX) / 3, StartY + ControlHeight),    // First control point
-                                D2D1::Point2F(StartX + (EndX - StartX) * 2 / 3, EndY + ControlHeight),  // Second control point
-                                D2D1::Point2F(EndX, EndY),                                              // End point
+                                D2D1::Point2F(StartX, StartY),											// Start point
+                                D2D1::Point2F(StartX + (EndX - StartX) / 3, StartY + ControlHeight),	// First control point
+                                D2D1::Point2F(StartX + (EndX - StartX) * 2 / 3, EndY + ControlHeight),	// Second control point
+                                D2D1::Point2F(EndX, EndY),												// End point
                                 TieColor,
                                 1.5f  // Line thickness
                             );
@@ -1254,48 +1262,49 @@ namespace MIDILightDrawer
             return false;
         }
 
-        float totalHeight = GetTotalTrackHeight();
+        float TotalHeight = GetTotalTrackHeight();
+		float X_Offset = (float)GetLeftPanelWidth();
 
         // Fill header background
-        D2D1_RECT_F headerBackground = D2D1::RectF(
-            0,                              // Left
-            HEADER_HEIGHT,                  // Top
-            TRACK_HEADER_WIDTH,             // Right
-            totalHeight                     // Bottom
+        D2D1_RECT_F HeaderBackground = D2D1::RectF(
+			X_Offset,						// Left
+            HEADER_HEIGHT,					// Top
+			X_Offset + TRACK_HEADER_WIDTH,	// Right
+            TotalHeight						// Bottom
         );
 
-        _NativeRenderer->FillRectangle(headerBackground, COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground));
+        _NativeRenderer->FillRectangle(HeaderBackground, COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground));
 
         // Draw each track's header
         int CurrentY = HEADER_HEIGHT;
 
-        for each(Track^ track in this->_Tracks)
+        for each(Track^ Trk in this->_Tracks)
         {
             // Calculate track bounds
-            int TrackHeight = track->Height;
+            int TrackHeight = Trk->Height;
             int yPosition = CurrentY + this->_ScrollPosition->Y;
 
-            System::Drawing::Rectangle TrackHeaderBounds = System::Drawing::Rectangle(0, yPosition, TRACK_HEADER_WIDTH, TrackHeight);
+            System::Drawing::Rectangle TrackHeaderBounds = System::Drawing::Rectangle((int)X_Offset, yPosition, TRACK_HEADER_WIDTH, TrackHeight);
 
             // Draw header background (with selection highlight if track is selected)
-            Color bgColor = track->IsSelected ? m_ColorTheme.SelectionHighlight : m_ColorTheme.HeaderBackground;
-            _NativeRenderer->FillRectangle(RECT_TO_RECT_F(TrackHeaderBounds), COLOR_TO_COLOR_F(bgColor));
+            Color BGColor = Trk->IsSelected ? m_ColorTheme.SelectionHighlight : m_ColorTheme.HeaderBackground;
+            _NativeRenderer->FillRectangle(RECT_TO_RECT_F(TrackHeaderBounds), COLOR_TO_COLOR_F(BGColor));
 
 
             // Draw track name if present
-            if (!String::IsNullOrEmpty(track->Name))
+            if (!String::IsNullOrEmpty(Trk->Name))
             {
                 // Calculate text bounds with padding
-                float textPadding = TRACK_PADDING;
-                D2D1_RECT_F textBounds = D2D1::RectF(TrackHeaderBounds.Left + textPadding, TrackHeaderBounds.Top + textPadding, TrackHeaderBounds.Right - textPadding, TrackHeaderBounds.Bottom - textPadding);
+                float TextPadding = TRACK_PADDING;
+                D2D1_RECT_F TextBounds = D2D1::RectF(TrackHeaderBounds.Left + TextPadding, TrackHeaderBounds.Top + TextPadding, TrackHeaderBounds.Right - TextPadding, TrackHeaderBounds.Bottom - TextPadding);
 
                 // Draw the track name using the measure number format (for now)
-                std::wstring trackName = ConvertString(track->Name);
-                _NativeRenderer->DrawText(trackName, textBounds, COLOR_TO_COLOR_F(m_ColorTheme.Text), _NativeRenderer->GetTrackHeaderFormat());
+                std::wstring TrackName = ConvertString(Trk->Name);
+                _NativeRenderer->DrawText(TrackName, TextBounds, COLOR_TO_COLOR_F(m_ColorTheme.Text), _NativeRenderer->GetTrackHeaderFormat());
             }
 
             // Draw track buttons
-            DrawTrackButtons(track, TrackHeaderBounds);
+            DrawTrackButtons(Trk, TrackHeaderBounds);
 
             // Draw borders
             _NativeRenderer->DrawRectangle(RECT_TO_RECT_F(TrackHeaderBounds), COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
@@ -1409,18 +1418,18 @@ namespace MIDILightDrawer
         for each (Track^ T in this->_Tracks)
         {
             // Calculate divider Y position
-            float SividerY = CurrentY + T->Height + this->_ScrollPosition->Y;
+            float DividerY = CurrentY + T->Height + this->_ScrollPosition->Y;
 
             // Only draw if divider is in visible range
-            if (SividerY >= 0 && SividerY <= (float)this->_Control->Height)
+            if (DividerY >= 0 && DividerY <= (float)this->_Control->Height)
             {
                 // Draw differently if this is the hover track
                 if (T == hoverTrack && !ToolAccess->IsDragging && !ToolAccess->IsSelecting)
                 {
                     // Draw a highlighted divider across the full width
                     _NativeRenderer->DrawLine(
-                        0.0f, SividerY,
-                        (float)this->_Control->Width, SividerY,
+                        0.0f, DividerY,
+                        (float)this->_Control->Width, DividerY,
                         COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight),
                         2.0f  // Thicker line for hover state
                     );
@@ -1428,7 +1437,7 @@ namespace MIDILightDrawer
                 else
                 {
                     // Draw normal divider
-                    _NativeRenderer->DrawLine(0.0f, SividerY, (float)this->_Control->Width, SividerY, COLOR_TO_COLOR_F(m_ColorTheme.MeasureLine), 1.0f);
+                    _NativeRenderer->DrawLine(0.0f, DividerY, (float)this->_Control->Width, DividerY, COLOR_TO_COLOR_F(m_ColorTheme.MeasureLine), 1.0f);
                 }
             }
 
@@ -1436,7 +1445,7 @@ namespace MIDILightDrawer
             float headerBottom = CurrentY + T->Height;
             if (headerBottom >= this->_ScrollPosition->Y && CurrentY <= this->_ScrollPosition->Y + (float)this->_Control->Height)
             {
-                _NativeRenderer->DrawLine(TRACK_HEADER_WIDTH, CurrentY, TRACK_HEADER_WIDTH, headerBottom, COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
+                _NativeRenderer->DrawLine((float)GetLeftPanelAndTrackHeaderWidth(), CurrentY, (float)GetLeftPanelAndTrackHeaderWidth(), headerBottom, COLOR_TO_COLOR_F(m_ColorTheme.TrackBorder), 1.0f);
             }
 
             CurrentY += T->Height;
@@ -1445,35 +1454,36 @@ namespace MIDILightDrawer
         return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewPointerTool()
+    void Timeline_Direct2DRenderer::DrawToolPreviewPointerTool()
     {
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
-        if(ToolAccess->SelectedBars != nullptr && ToolAccess->SelectedBars->Count > 0) {
+        if(ToolAccess->IsDragging && ToolAccess->SelectedBars->Count > 0) {
             DrawToolPreviewPointerToolMoving();
         }
+		else if (ToolAccess->IsResizing && ToolAccess->SelectedBars->Count > 0) {
+			DrawToolPreviewPointerToolResizing();
+		}
+		else if (ToolAccess->IsPasting && ToolAccess->PastePreviewBars != nullptr && ToolAccess->PastePreviewBars->Count > 0) {
+			DrawToolPreviewPointerToolPasting();
+		}
 
-        DrawToolPreviewPointerToolPasting();
-
-
-        // Draw selection rectangle if present
-        DrawSelectionRectangle(ToolAccess->SelectionRect);
-
-        return true;
+		// Draw selection rectangle if present
+		DrawSelectionRectangle(ToolAccess->SelectionRect);
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewPointerToolMoving()
+    void Timeline_Direct2DRenderer::DrawToolPreviewPointerToolMoving()
     {
         if (!_NativeRenderer) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
+            return;
         }
 
         // Calculate visible range in ticks
@@ -1491,47 +1501,84 @@ namespace MIDILightDrawer
 
 			DrawSelectedBar(Bar, TrackContentBounds);
 		}
-
-        return true;
     }
 
-    bool Timeline_Direct2DRenderer::DrawToolPreviewPointerToolPasting()
+	void Timeline_Direct2DRenderer::DrawToolPreviewPointerToolResizing()
+	{
+		if (!_NativeRenderer) {
+			return;
+		}
+
+		ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
+		if (!ToolAccess) {
+			return;
+		}
+
+		// Calculate visible range in ticks
+		int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
+		int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + this->_Control->Width);
+
+		for each (BarEvent^ Event in ToolAccess->PreviewBars)
+		{
+			if (Event->EndTick < VisibleStartTick || Event->StartTick > VisibleEndTick) {
+				continue;
+			}
+
+			System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Event->ContainingTrack);
+			TrackContentBounds.Y += this->_ScrollPosition->Y;
+
+			DrawSelectedBar(Event, TrackContentBounds);
+			DrawResizeHandle(GetBarBounds(Event, TrackContentBounds), Event == ToolAccess->HoveredBar);
+		}
+
+		for each (BarEvent^ Event in ToolAccess->SelectedBars)
+		{
+			Track^ ContainingTrack = Event->ContainingTrack;
+
+			if (ContainingTrack != nullptr)
+			{
+				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
+				TrackContentBounds.Y += this->_ScrollPosition->Y;
+
+				System::Drawing::Rectangle EventBounds = GetBarBounds(Event, TrackContentBounds);
+
+				DrawBarGlowEffect(EventBounds, System::Drawing::Color::White, 1);
+			}
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawToolPreviewPointerToolPasting()
+	{
+		if (!_NativeRenderer) {
+			return;
+		}
+
+		ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
+		if (!ToolAccess) {
+			return;
+		}
+
+		if (ToolAccess->CurrentMousePosition.X > GetLeftPanelAndTrackHeaderWidth())
+		{
+			for each (BarEvent^ PasteBar in ToolAccess->PastePreviewBars)
+			{
+				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(PasteBar->ContainingTrack);
+				TrackContentBounds.Y += this->_ScrollPosition->Y;
+
+				DrawPastePreviewBar(PasteBar, TrackContentBounds);
+			}
+		}
+	}
+
+    void Timeline_Direct2DRenderer::DrawToolPreviewDrawTool()
     {
         if (!_NativeRenderer) {
-            return false;
+            return;
         }
 
         ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
         if (!ToolAccess) {
-            return false;
-        }
-
-        if (ToolAccess->IsPasting && ToolAccess->PastePreviewBars != nullptr && ToolAccess->PastePreviewBars->Count > 0)
-        {
-            if (ToolAccess->CurrentMousePosition.X > TRACK_HEADER_WIDTH)
-            {
-                for each (BarEvent^ PasteBar in ToolAccess->PastePreviewBars)
-                {
-                    System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(PasteBar->ContainingTrack);
-                    TrackContentBounds.Y += this->_ScrollPosition->Y;
-
-                    DrawPastePreviewBar(PasteBar, TrackContentBounds);
-                }
-            }
-        }
-
-        return true;
-    }
-
-    bool Timeline_Direct2DRenderer::DrawToolPreviewDrawTool()
-    {
-        if (!_NativeRenderer) {
-            return false;
-        }
-
-        ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
-        if (!ToolAccess) {
-            return false;
+            return;
         }
 
         // Handle different draw tool modes
@@ -1550,8 +1597,6 @@ namespace MIDILightDrawer
             DrawToolPreviewDrawToolResize();
             break;
         }
-
-        return true;
     }
 
 	void Timeline_Direct2DRenderer::DrawToolPreviewDrawToolDraw()
@@ -1765,20 +1810,34 @@ namespace MIDILightDrawer
 		*/
 
         // Draw preview bars with enhanced visualization
-        for each (BarEvent^ Bar in ToolAccess->PreviewBars)
+        for each (BarEvent^ Event in ToolAccess->PreviewBars)
         {
-            Track^ ContainingTrack = Bar->ContainingTrack;
+            Track^ ContainingTrack = Event->ContainingTrack;
 
             if (ContainingTrack != nullptr)
             {
                 System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
                 TrackContentBounds.Y += this->_ScrollPosition->Y;
                 
-                //DrawGhostBar(Bar, TrackContentBounds);
-                DrawPreviewBar(Bar, ContainingTrack, Point(), BarPreviewType::Duration);
-                DrawResizeHandle(GetBarBounds(Bar, TrackContentBounds), Bar == ToolAccess->HoveredBar);
+                DrawPreviewBar(Event, ContainingTrack, Point(), BarPreviewType::Duration);
+                DrawResizeHandle(GetBarBounds(Event, TrackContentBounds), Event == ToolAccess->HoveredBar);
             }
         }
+
+		for each(BarEvent ^ Event in ToolAccess->SelectedBars)
+		{
+			Track^ ContainingTrack = Event->ContainingTrack;
+
+			if (ContainingTrack != nullptr)
+			{
+				System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(ContainingTrack);
+				TrackContentBounds.Y += this->_ScrollPosition->Y;
+
+				System::Drawing::Rectangle EventBounds = GetBarBounds(Event, TrackContentBounds);
+
+				DrawBarGlowEffect(EventBounds, System::Drawing::Color::White, 1);
+			}
+		}
 
         // Draw selection rectangle if active
         DrawSelectionRectangle(ToolAccess->SelectionRect);
@@ -1870,7 +1929,7 @@ namespace MIDILightDrawer
 
         // Save current clip region
         D2D1_RECT_F ContentArea = D2D1::RectF(
-            TRACK_HEADER_WIDTH,
+			(float)GetLeftPanelAndTrackHeaderWidth(),
             HEADER_HEIGHT,
             (float)this->_Control->Width,
             (float)this->_Control->Height
@@ -1912,7 +1971,7 @@ namespace MIDILightDrawer
 
         // Save current clip region
         D2D1_RECT_F contentArea = D2D1::RectF(
-            TRACK_HEADER_WIDTH,
+			(float)GetLeftPanelAndTrackHeaderWidth(),
             HEADER_HEIGHT,
             (float)this->_Control->Width,
             (float)this->_Control->Height
@@ -1937,6 +1996,691 @@ namespace MIDILightDrawer
         return true;
     }
 
+	void Timeline_Direct2DRenderer::DrawLeftPanelExpanded(bool beingResized)
+	{
+		// Calculate panel dimensions - full height of the widget
+		float Height = Math::Max(GetTotalTrackHeight(), (float)this->_Control->Height);
+
+		// Create the rectangle for the panel area
+		D2D1_RECT_F PanelArea = D2D1::RectF(
+			0,							// Left
+			HEADER_HEIGHT,				// Top
+			(float)_Left_Panel->Width,	// Right
+			Height						// Bottom
+		);
+
+		// Fill the panel rectangle with a color slightly darker than the header background
+		D2D1_COLOR_F PanelColor = COLOR_TO_COLOR_F(m_ColorTheme.TrackBackground);
+		// Make it slightly darker
+		//PanelColor.r = Math::Max(0.0f, PanelColor.r - 0.05f);
+		//PanelColor.g = Math::Max(0.0f, PanelColor.g - 0.05f);
+		//PanelColor.b = Math::Max(0.0f, PanelColor.b - 0.05f);
+
+		_NativeRenderer->FillRectangle(PanelArea, PanelColor);
+		_NativeRenderer->DrawRectangle(PanelArea, COLOR_TO_COLOR_F(m_ColorTheme.MeasureLine), 2.0f);
+
+		float HandleWidth = 3.0f;
+		D2D1_RECT_F HandleRect = D2D1::RectF(this->_Left_Panel->Width - HandleWidth, HEADER_HEIGHT, (float)_Left_Panel->Width, Height);
+		D2D1_COLOR_F HandleColor = COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBorder, 0.5f);
+
+		if(beingResized) {
+			HandleColor = COLOR_TO_COLOR_F(m_ColorTheme.SelectionHighlight);
+		}
+
+		_NativeRenderer->FillRectangle(HandleRect, HandleColor);
+
+		// Draw collapse/expand button at the top-right corner of the panel
+		float ButtonX = (float)(_Left_Panel->Width - PANEL_BUTTON_SIZE - PANEL_BUTTON_MARGIN);
+		DrawLeftPanelToggleButton(ButtonX, (float)PANEL_BUTTON_MARGIN, !this->_Left_Panel->IsExpanded);
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelContent()
+	{
+		if (!_NativeRenderer || !_Left_Panel) {
+			return;
+		}
+
+		const float SECTION_PADDING = 10.0f;
+		const float ROW_HEIGHT = 20.0f;
+		const float TITLE_HEIGHT = 26.0f;
+		const float TITLE_PADDING = 12.0f;
+		const float SECTION_MARGIN = 12.0f;
+		const float SECTION_HEADER_HEIGHT = 22.0f;
+
+		float Y = HEADER_HEIGHT + SECTION_PADDING;
+		float panel_width = (float)_Left_Panel->Width;
+
+		// Draw title with background
+		D2D1_RECT_F TitleBackRect = D2D1::RectF(
+			SECTION_PADDING,                 // Left
+			Y,                               // Top
+			panel_width - SECTION_PADDING,   // Right
+			Y + TITLE_HEIGHT                 // Bottom
+		);
+
+		// Create rounded rectangle for title background
+		D2D1_ROUNDED_RECT RoundedTitleRect = D2D1::RoundedRect(
+			TitleBackRect,
+			5.0f,  // Corner radius
+			5.0f
+		);
+
+		// Draw title background
+		D2D1_COLOR_F TitleBgColor = COLOR_TO_COLOR_F_A(m_ColorTheme.SelectionHighlight, 0.4f);
+		_NativeRenderer->FillRoundedRectangle(RoundedTitleRect, TitleBgColor);
+		_NativeRenderer->DrawRoundedRectangle(RoundedTitleRect, COLOR_TO_COLOR_F_A(m_ColorTheme.SelectionHighlight, 0.6f), 1.0f);
+
+		// Title text rect
+		D2D1_RECT_F TitleTextRect = D2D1::RectF(
+			TitleBackRect.left + TITLE_PADDING,   // Left (with extra padding)
+			TitleBackRect.top,                    // Top
+			TitleBackRect.right - TITLE_PADDING,  // Right
+			TitleBackRect.bottom                  // Bottom
+		);
+
+		std::wstring TitleText = L"Event Properties";
+		_NativeRenderer->DrawText(TitleText, TitleTextRect, COLOR_TO_COLOR_F(m_ColorTheme.Text), _NativeRenderer->GetLeftPanelTitleFormat());
+
+		Y += TITLE_HEIGHT + SECTION_MARGIN;
+
+		if (_Left_Panel->SelectedEvent == nullptr &&
+			(_Left_Panel->SelectedEvents == nullptr || _Left_Panel->SelectedEvents->Count == 0)) {
+			// No events selected
+			D2D1_RECT_F NoSelectionRect = D2D1::RectF(
+				SECTION_PADDING,               // Left
+				Y,                             // Top
+				panel_width - SECTION_PADDING, // Right
+				Y + ROW_HEIGHT                 // Bottom
+			);
+
+			std::wstring NoSelectionText = L"No events selected";
+			D2D1_COLOR_F GrayTextColor = D2D1::ColorF(0.7f, 0.7f, 0.7f, 1.0f);
+			_NativeRenderer->DrawText(NoSelectionText, NoSelectionRect, GrayTextColor, _NativeRenderer->GetLeftPanelTextFormat());
+
+			return;
+		}
+
+		// Multiple events selected
+		if (_Left_Panel->SelectedEvents->Count > 1) {
+			D2D1_RECT_F MultiSelectionRect = D2D1::RectF(
+				SECTION_PADDING,               // Left
+				Y,                             // Top
+				panel_width - SECTION_PADDING, // Right
+				Y + ROW_HEIGHT                 // Bottom
+			);
+
+			std::wstring MultiSelectionText = L"Multiple events selected (" +
+				std::to_wstring(_Left_Panel->SelectedEvents->Count) + L")";
+			_NativeRenderer->DrawText(MultiSelectionText, MultiSelectionRect, COLOR_TO_COLOR_F(m_ColorTheme.Text), _NativeRenderer->GetLeftPanelTextFormat());
+
+			Y += ROW_HEIGHT + TITLE_PADDING;
+
+			// We could add common properties editing for multiple selections here
+			DrawLeftPanelMultipleEventProperties(Y);
+			return;
+		}
+
+		// Single event selected - draw event properties
+		BarEvent^ event = _Left_Panel->SelectedEvent;
+		if (event != nullptr) {
+			// Draw section header for general properties
+			DrawLeftPanelSectionHeader(L"General", Y);
+			Y += SECTION_HEADER_HEIGHT + SECTION_PADDING;
+
+			// Draw general properties
+			DrawLeftPanelEventProperties(event, Y);
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelHidden()
+	{
+		DrawLeftPanelToggleButton((float)PANEL_BUTTON_MARGIN, (float)PANEL_BUTTON_MARGIN, !this->_Left_Panel->IsExpanded);
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelToggleButton(float x, float y, bool isCollapsed)
+	{
+		const float CornerRadius = 5.0f;
+
+		D2D1_RECT_F ButtonRect = D2D1::RectF(
+			(float)PANEL_BUTTON_MARGIN,
+			(float)PANEL_BUTTON_MARGIN,
+			(float)PANEL_BUTTON_MARGIN + PANEL_BUTTON_SIZE,
+			(float)PANEL_BUTTON_MARGIN + PANEL_BUTTON_SIZE
+		);
+
+		D2D1_ROUNDED_RECT RoundedRect = D2D1::RoundedRect(ButtonRect, CornerRadius, CornerRadius);
+		D2D1_COLOR_F FillColor = COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground);
+
+		// Draw button background with appropriate color based on state
+		if (!isCollapsed) {
+			FillColor = COLOR_TO_COLOR_F_A(m_ColorTheme.SelectionHighlight, 0.8f);
+		}
+
+		// Draw button background
+		_NativeRenderer->FillRoundedRectangle(RoundedRect, FillColor);
+
+		const float BarWidth	= PANEL_BUTTON_SIZE * 0.4f;
+		const float BarHeight	= 3.0f;
+		const float BarDist		= 5.0f;
+
+		for (int i = 0 ; i < 3 ; i++)
+		{
+			D2D1_RECT_F BarRect = D2D1::RectF(
+				(float)PANEL_BUTTON_MARGIN + PANEL_BUTTON_SIZE / 2 - BarWidth / 2,
+				(float)PANEL_BUTTON_MARGIN + PANEL_BUTTON_SIZE / 2 + (i - 1) * BarDist + BarHeight / 2,
+				(float)PANEL_BUTTON_MARGIN + PANEL_BUTTON_SIZE / 2 + BarWidth / 2,
+				(float)PANEL_BUTTON_MARGIN + PANEL_BUTTON_SIZE / 2 + (i - 1) * BarDist - BarHeight / 2
+			);
+			_NativeRenderer->FillRectangle(BarRect, COLOR_TO_COLOR_F(m_ColorTheme.Text));
+			
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelEventProperties(BarEvent^ event, float startY)
+	{
+		if (!_NativeRenderer || event == nullptr) {
+			return;
+		}
+
+		const float SECTION_PADDING = 10.0f;
+		const float ROW_HEIGHT = 20.0f;
+		const float ROW_SPACING = 6.0f;
+		const float SECTION_MARGIN = 14.0f;
+		const float SECTION_HEADER_HEIGHT = 22.0f;
+
+		float Y = startY;
+		float panel_width = (float)_Left_Panel->Width;
+
+		// Common Properties
+		DrawLeftPanelPropertyRow(L"Type:", GetEventTypeText(event->Type), Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		DrawLeftPanelPropertyRow(L"Start:", FormatTickPosition(event->StartTick), Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		DrawLeftPanelPropertyRow(L"End:", FormatTickPosition(event->EndTick), Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		DrawLeftPanelPropertyRow(L"Duration:", FormatTickDuration(event->Duration), Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		// Track name
+		if (event->ContainingTrack != nullptr) {
+			std::wstring trackName = ConvertString(event->ContainingTrack->Name);
+			DrawLeftPanelPropertyRow(L"Track:", trackName, Y);
+			Y += ROW_HEIGHT + ROW_SPACING;
+		}
+
+		// Add space after general properties
+		Y += SECTION_MARGIN;
+
+		// Type-specific properties
+		switch (event->Type) {
+		case BarEventType::Solid:
+			DrawLeftPanelSectionHeader(L"Solid Properties", Y);
+			Y += SECTION_HEADER_HEIGHT + SECTION_PADDING;
+			DrawLeftPanelSolidEventProperties(event, Y);
+			break;
+		case BarEventType::Fade:
+			DrawLeftPanelSectionHeader(L"Fade Properties", Y);
+			Y += SECTION_HEADER_HEIGHT + SECTION_PADDING;
+			DrawLeftPanelFadeEventProperties(event, Y);
+			break;
+		case BarEventType::Strobe:
+			DrawLeftPanelSectionHeader(L"Strobe Properties", Y);
+			Y += SECTION_HEADER_HEIGHT + SECTION_PADDING;
+			DrawLeftPanelStrobeEventProperties(event, Y);
+			break;
+		}
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelSectionHeader(const std::wstring& headerText, float Y)
+	{
+		const float SECTION_PADDING = 10.0f;
+		const float SECTION_HEADER_HEIGHT = 22.0f;
+		const float SECTION_HEADER_PADDING = 8.0f;
+		float panel_width = (float)_Left_Panel->Width;
+
+		// Draw header background with gradient and bottom border
+		D2D1_RECT_F HeaderRect = D2D1::RectF(
+			SECTION_PADDING,               // Left
+			Y,                             // Top
+			panel_width - SECTION_PADDING, // Right
+			Y + SECTION_HEADER_HEIGHT      // Bottom
+		);
+
+		// Draw gradient background
+		D2D1_COLOR_F GradientStart = COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBackground, 0.7f);
+		D2D1_COLOR_F GradientEnd = COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBorder, 0.2f);
+		_NativeRenderer->FillRectangleGradient2(HeaderRect, GradientStart, GradientEnd);
+
+		// Draw bottom border line
+		float BorderY = Y + SECTION_HEADER_HEIGHT - 1.0f;
+		_NativeRenderer->DrawLine(
+			SECTION_PADDING, BorderY,
+			panel_width - SECTION_PADDING, BorderY,
+			COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBorder, 0.5f), 1.0f);
+
+		// Draw header text
+		D2D1_RECT_F TextRect = D2D1::RectF(
+			HeaderRect.left + SECTION_HEADER_PADDING,   // Left
+			HeaderRect.top,                             // Top
+			HeaderRect.right - SECTION_HEADER_PADDING,  // Right
+			HeaderRect.bottom                           // Bottom
+		);
+
+		_NativeRenderer->DrawText(
+			headerText,
+			TextRect,
+			COLOR_TO_COLOR_F(m_ColorTheme.Text),
+			_NativeRenderer->GetLeftPanelSectionFormat()
+		);
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelPropertyRow(const std::wstring& label, const std::wstring& value, float Y)
+	{
+		const float SECTION_PADDING = 10.0f;
+		const float ROW_HEIGHT = 20.0f;
+		const float VALUE_CONTAINER_WIDTH = 120.0f;
+		const float CONTAINER_PADDING = 8.0f;
+		const float CONTAINER_CORNER_RADIUS = 4.0f;
+		float panel_width = (float)_Left_Panel->Width;
+
+		// Label - left aligned
+		D2D1_RECT_F LabelRect = D2D1::RectF(
+			SECTION_PADDING,                     // Left
+			Y,                                   // Top
+			panel_width - VALUE_CONTAINER_WIDTH - SECTION_PADDING, // Right
+			Y + ROW_HEIGHT                       // Bottom
+		);
+
+		// Value container - right aligned
+		D2D1_RECT_F ContainerRect = D2D1::RectF(
+			panel_width - VALUE_CONTAINER_WIDTH - SECTION_PADDING, // Left
+			Y + (ROW_HEIGHT - ROW_HEIGHT * 0.8f) / 2,              // Top (slightly smaller than row height)
+			panel_width - SECTION_PADDING,                         // Right
+			Y + (ROW_HEIGHT - ROW_HEIGHT * 0.8f) / 2 + ROW_HEIGHT * 0.8f // Bottom
+		);
+
+		// Create the rounded rectangle for the container
+		D2D1_ROUNDED_RECT RoundedContainerRect = D2D1::RoundedRect(
+			ContainerRect,
+			CONTAINER_CORNER_RADIUS,
+			CONTAINER_CORNER_RADIUS
+		);
+
+		// Value text rect (inside container, with padding)
+		D2D1_RECT_F ValueRect = D2D1::RectF(
+			ContainerRect.left + CONTAINER_PADDING,    // Left
+			ContainerRect.top,                         // Top (same as container)
+			ContainerRect.right - CONTAINER_PADDING,   // Right
+			ContainerRect.bottom                       // Bottom (same as container)
+		);
+
+		// Draw label
+		_NativeRenderer->DrawText(label, LabelRect, COLOR_TO_COLOR_F(m_ColorTheme.Text), _NativeRenderer->GetLeftPanelTextFormat());
+
+		// Draw container background
+		D2D1_COLOR_F ContainerColor = D2D1::ColorF(
+			m_ColorTheme.TrackBorder.R / 255.0f * 0.5f,  // Darker version of border color
+			m_ColorTheme.TrackBorder.G / 255.0f * 0.5f,
+			m_ColorTheme.TrackBorder.B / 255.0f * 0.5f,
+			0.7f  // Semi-transparent
+		);
+
+		_NativeRenderer->FillRoundedRectangle(RoundedContainerRect, ContainerColor);
+
+		// Draw container border
+		_NativeRenderer->DrawRoundedRectangle(
+			RoundedContainerRect,
+			COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBorder, 0.4f),
+			1.0f
+		);
+
+		// Draw text value inside container
+		_NativeRenderer->DrawText(
+			value,
+			ValueRect,
+			COLOR_TO_COLOR_F(m_ColorTheme.Text),
+			_NativeRenderer->GetMeasureNumberFormat()
+		);
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelColorProperty(const std::wstring& label, System::Drawing::Color color, float Y)
+	{
+		const float SECTION_PADDING			= 10.0f;
+		const float ROW_HEIGHT				= 20.0f;
+		const float VALUE_CONTAINER_WIDTH	= 120.0f;
+		const float CONTAINER_PADDING		= 8.0f;
+		const float CONTAINER_CORNER_RADIUS = 4.0f;
+		const float COLOR_SWATCH_SIZE		= 14.0f;
+		const float COLOR_SWATCH_MARGIN		= 4.0f;
+		float panel_width = (float)_Left_Panel->Width;
+
+		// Label
+		D2D1_RECT_F LabelRect = D2D1::RectF(
+			SECTION_PADDING,                                       // Left
+			Y,                                                     // Top
+			panel_width - VALUE_CONTAINER_WIDTH - SECTION_PADDING, // Right
+			Y + ROW_HEIGHT                                         // Bottom
+		);
+
+		// Value container - right aligned
+		D2D1_RECT_F ContainerRect = D2D1::RectF(
+			panel_width - VALUE_CONTAINER_WIDTH - SECTION_PADDING, // Left
+			Y + (ROW_HEIGHT - ROW_HEIGHT * 0.8f) / 2,              // Top (slightly smaller than row height)
+			panel_width - SECTION_PADDING,                         // Right
+			Y + (ROW_HEIGHT - ROW_HEIGHT * 0.8f) / 2 + ROW_HEIGHT * 0.8f // Bottom
+		);
+
+		// Create the rounded rectangle for the container
+		D2D1_ROUNDED_RECT RoundedContainerRect = D2D1::RoundedRect(
+			ContainerRect,
+			CONTAINER_CORNER_RADIUS,
+			CONTAINER_CORNER_RADIUS
+		);
+
+		// Color swatch (inside container)
+		float circleRadius = COLOR_SWATCH_SIZE / 2.0f;
+		float circleCenterX = ContainerRect.left + CONTAINER_PADDING + circleRadius;
+		float circleCenterY = ContainerRect.top + (ContainerRect.bottom - ContainerRect.top) / 2.0f;
+
+		// Create ellipse for the swatch
+		D2D1_ELLIPSE ColorSwatchEllipse = D2D1::Ellipse(
+			D2D1::Point2F(circleCenterX, circleCenterY),
+			circleRadius,
+			circleRadius
+		);
+
+		// Color swatch (inside container)
+		D2D1_RECT_F SwatchRect = D2D1::RectF(
+			ContainerRect.left + CONTAINER_PADDING,                  // Left
+			ContainerRect.top + (ContainerRect.bottom - ContainerRect.top - COLOR_SWATCH_SIZE) / 2, // Top (centered)
+			ContainerRect.left + CONTAINER_PADDING + COLOR_SWATCH_SIZE, // Right
+			ContainerRect.top + (ContainerRect.bottom - ContainerRect.top - COLOR_SWATCH_SIZE) / 2 + COLOR_SWATCH_SIZE // Bottom
+		);
+
+		// Color value text rect (inside container, next to swatch)
+		D2D1_RECT_F ColorTextRect = D2D1::RectF(
+			SwatchRect.right + COLOR_SWATCH_MARGIN,                 // Left
+			ContainerRect.top,                                      // Top
+			ContainerRect.right - CONTAINER_PADDING,                // Right
+			ContainerRect.bottom                                    // Bottom
+		);
+
+		// Draw label
+		_NativeRenderer->DrawText(
+			label,
+			LabelRect,
+			COLOR_TO_COLOR_F(m_ColorTheme.Text),
+			_NativeRenderer->GetLeftPanelTextFormat()
+		);
+
+		// Draw container background
+		D2D1_COLOR_F ContainerColor = D2D1::ColorF(
+			m_ColorTheme.TrackBorder.R / 255.0f * 0.5f,  // Darker version of border color
+			m_ColorTheme.TrackBorder.G / 255.0f * 0.5f,
+			m_ColorTheme.TrackBorder.B / 255.0f * 0.5f,
+			0.7f  // Semi-transparent
+		);
+
+		_NativeRenderer->FillRoundedRectangle(RoundedContainerRect, ContainerColor);
+
+		// Draw container border
+		_NativeRenderer->DrawRoundedRectangle(
+			RoundedContainerRect,
+			COLOR_TO_COLOR_F_A(m_ColorTheme.TrackBorder, 0.4f),
+			1.0f
+		);
+
+		// Draw color swatch
+		_NativeRenderer->FillEllipse(ColorSwatchEllipse, COLOR_TO_COLOR_F(color));
+		_NativeRenderer->DrawEllipse(ColorSwatchEllipse, D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.5f), 1.0f);
+
+		// Draw color value text
+		std::wstring colorText = L"#" +
+			ToHexString(color.R) +
+			ToHexString(color.G) +
+			ToHexString(color.B);
+
+		_NativeRenderer->DrawText(
+			colorText,
+			ColorTextRect,
+			COLOR_TO_COLOR_F(m_ColorTheme.Text),
+			_NativeRenderer->GetMeasureNumberFormat()
+		);
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelSolidEventProperties(BarEvent^ event, float startY)
+	{
+		float Y = startY;
+
+		// Draw color property
+		DrawLeftPanelColorProperty(L"Color:", event->Color, Y);
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelFadeEventProperties(BarEvent^ event, float startY)
+	{
+		if (event->FadeInfo == nullptr)
+			return;
+
+		const float ROW_HEIGHT = 20.0f;
+		const float ROW_SPACING = 4.0f;
+
+		float Y = startY;
+
+		// Fade type
+		std::wstring fadeTypeText = (event->FadeInfo->Type == FadeType::Two_Colors) ? L"Two Colors" : L"Three Colors";
+		DrawLeftPanelPropertyRow(L"Fade Type:", fadeTypeText, Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		// Quantization
+		std::wstring quantText;
+		// Try to get the friendly name from TimeSignatureLookup
+		System::String^ friendlyName;
+		if (TimeSignatures::TimeSignatureLookup->TryGetValue(event->FadeInfo->QuantizationTicks, friendlyName)) {
+			quantText = ConvertString(friendlyName);
+		}
+		else {
+			// Fallback to just the tick value if not found
+			quantText = std::to_wstring(event->FadeInfo->QuantizationTicks);
+		}
+		DrawLeftPanelPropertyRow(L"Quantization:", quantText, Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		// Easing types
+		std::wstring easeInText = GetEasingText(event->FadeInfo->EaseIn);
+		DrawLeftPanelPropertyRow(L"Ease In:", easeInText, Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		std::wstring easeOutText = GetEasingText(event->FadeInfo->EaseOut);
+		DrawLeftPanelPropertyRow(L"Ease Out:", easeOutText, Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		// Colors
+		DrawLeftPanelColorProperty(L"Start Color:", event->FadeInfo->ColorStart, Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		if (event->FadeInfo->Type == FadeType::Three_Colors) {
+			DrawLeftPanelColorProperty(L"Center Color:", event->FadeInfo->ColorCenter, Y);
+			Y += ROW_HEIGHT + ROW_SPACING;
+		}
+
+		DrawLeftPanelColorProperty(L"End Color:", event->FadeInfo->ColorEnd, Y);
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelStrobeEventProperties(BarEvent^ event, float startY)
+	{
+		if (event->StrobeInfo == nullptr)
+			return;
+
+		const float ROW_HEIGHT = 20.0f;
+		const float ROW_SPACING = 4.0f;
+
+		float Y = startY;
+
+		// Quantization
+		std::wstring quantText;
+		// Try to get the friendly name from TimeSignatureLookup
+		System::String^ friendlyName;
+		if (TimeSignatures::TimeSignatureLookup->TryGetValue(event->StrobeInfo->QuantizationTicks, friendlyName)) {
+			quantText = ConvertString(friendlyName);
+		}
+		else {
+			// Fallback to just the tick value if not found
+			quantText = std::to_wstring(event->StrobeInfo->QuantizationTicks);
+		}
+		DrawLeftPanelPropertyRow(L"Quantization:", quantText, Y);
+		Y += ROW_HEIGHT + ROW_SPACING;
+
+		// Color
+		DrawLeftPanelColorProperty(L"Strobe Color:", event->StrobeInfo->ColorStrobe, Y);
+	}
+
+	void Timeline_Direct2DRenderer::DrawLeftPanelMultipleEventProperties(float startY)
+	{
+		// To be implemented for multi-selection properties
+		// This would show common properties across all selected events
+		// For now we just show a message
+		const float SECTION_PADDING = 10.0f;
+		const float ROW_HEIGHT = 20.0f;
+		float panel_width = (float)_Left_Panel->Width;
+
+		D2D1_RECT_F TextRect = D2D1::RectF(
+			SECTION_PADDING,               // Left
+			startY,                        // Top
+			panel_width - SECTION_PADDING, // Right
+			startY + ROW_HEIGHT            // Bottom
+		);
+
+		std::wstring Text = L"Common properties editing";
+		D2D1_COLOR_F GrayTextColor = D2D1::ColorF(0.7f, 0.7f, 0.7f, 1.0f);
+		_NativeRenderer->DrawText(Text, TextRect, GrayTextColor, _NativeRenderer->GetLeftPanelTextFormat());
+	}
+
+	std::wstring Timeline_Direct2DRenderer::GetEventTypeText(BarEventType type)
+	{
+		switch (type) {
+			case BarEventType::Solid:	return L"Solid";
+			case BarEventType::Fade:	return L"Fade";
+			case BarEventType::Strobe:	return L"Strobe";
+			default:					return L"Unknown";
+		}
+	}
+
+	std::wstring Timeline_Direct2DRenderer::GetEasingText(Easing easing)
+	{
+		// Use the existing lookup dictionary from ContextMenuStrings
+		for each (System::Collections::Generic::KeyValuePair<System::String^, FadeEasing> kvp in ContextMenuStrings::FadeEasings)
+		{
+			if (kvp.Value == easing) {
+				return ConvertString(kvp.Key);
+			}
+		}
+		return L"Unknown"; // Fallback if not found
+	}
+
+	std::wstring Timeline_Direct2DRenderer::FormatTickPosition(int tick)
+	{
+		// Format: MMMMM.QQ.EE.FF
+		// MMMMM = Measure number (5 digits with leading zeros)
+		// QQ = Quarter notes (2 digits with leading zeros)
+		// EE = Eighth notes (2 digits with leading zeros)
+		// FF = Fraction of eighth note (0-100, where 100 = full eighth note)
+
+		// Find the measure containing this tick
+		int currentTick = 0;
+		int measureNumber = 1; // Measures are 1-based
+		Measure^ containingMeasure = nullptr;
+
+		for each (Measure ^ m in this->_Measures)
+		{
+			if (tick >= currentTick && tick < currentTick + m->Length) {
+				containingMeasure = m;
+				break;
+			}
+			currentTick += m->Length;
+			measureNumber++;
+		}
+
+		// If we can't find the containing measure, format as zeros
+		if (containingMeasure == nullptr) {
+			return L"00000.00.00.00";
+		}
+
+		// Calculate ticks within the measure
+		int ticksInMeasure = tick - currentTick;
+
+		// Calculate full quarter notes
+		int ticksPerQuarter = Timeline_Direct2DRenderer::TICKS_PER_QUARTER;
+		int quarterNotes = ticksInMeasure / ticksPerQuarter;
+		int remainderAfterQuarters = ticksInMeasure % ticksPerQuarter;
+
+		// Calculate full eighth notes
+		int ticksPerEighth = ticksPerQuarter / 2;
+		int eighthNotes = remainderAfterQuarters / ticksPerEighth;
+		int remainderAfterEighths = remainderAfterQuarters % ticksPerEighth;
+
+		// Calculate fraction of eighth note (0-100)
+		int fraction = (remainderAfterEighths * 100) / ticksPerEighth;
+
+		// Format the components with leading zeros
+		std::wstring formattedMeasure = std::to_wstring(measureNumber);
+		formattedMeasure = std::wstring(5 - std::min(5, (int)formattedMeasure.length()), L'0') + formattedMeasure.substr(0, 5);
+
+		std::wstring formattedQuarters = std::to_wstring(quarterNotes);
+		formattedQuarters = std::wstring(2 - std::min(2, (int)formattedQuarters.length()), L'0') + formattedQuarters.substr(0, 2);
+
+		std::wstring formattedEighths = std::to_wstring(eighthNotes);
+		formattedEighths = std::wstring(2 - std::min(2, (int)formattedEighths.length()), L'0') + formattedEighths.substr(0, 2);
+
+		std::wstring formattedFraction = std::to_wstring(fraction);
+		formattedFraction = std::wstring(2 - std::min(2, (int)formattedFraction.length()), L'0') + formattedFraction.substr(0, 2);
+
+		// Combine all components
+		return formattedMeasure + L"." + formattedQuarters + L"." + formattedEighths + L"." + formattedFraction;
+	}
+
+	std::wstring Timeline_Direct2DRenderer::FormatTickDuration(int durationTicks)
+	{
+		// Format duration in MMMMM.QQ.EE.FF format
+		// For durations, we consider MMMMM as "full measures" which may span multiple actual measures
+
+		// Get ticks per full 4/4 measure
+		int ticksPerQuarter = Timeline_Direct2DRenderer::TICKS_PER_QUARTER;
+		int ticksPerFullMeasure = ticksPerQuarter * 4; // Assuming 4/4 for duration display
+
+		// Calculate components
+		int fullMeasures = durationTicks / ticksPerFullMeasure;
+		int remainderAfterMeasures = durationTicks % ticksPerFullMeasure;
+
+		int quarterNotes = remainderAfterMeasures / ticksPerQuarter;
+		int remainderAfterQuarters = remainderAfterMeasures % ticksPerQuarter;
+
+		int ticksPerEighth = ticksPerQuarter / 2;
+		int eighthNotes = remainderAfterQuarters / ticksPerEighth;
+		int remainderAfterEighths = remainderAfterQuarters % ticksPerEighth;
+
+		// Calculate fraction of eighth note (0-100)
+		int fraction = (remainderAfterEighths * 100) / ticksPerEighth;
+
+		// Format the components with leading zeros
+		std::wstring formattedMeasures = std::to_wstring(fullMeasures);
+		formattedMeasures = std::wstring(5 - std::min(5, (int)formattedMeasures.length()), L'0') + formattedMeasures.substr(0, 5);
+
+		std::wstring formattedQuarters = std::to_wstring(quarterNotes);
+		formattedQuarters = std::wstring(2 - std::min(2, (int)formattedQuarters.length()), L'0') + formattedQuarters.substr(0, 2);
+
+		std::wstring formattedEighths = std::to_wstring(eighthNotes);
+		formattedEighths = std::wstring(2 - std::min(2, (int)formattedEighths.length()), L'0') + formattedEighths.substr(0, 2);
+
+		std::wstring formattedFraction = std::to_wstring(fraction);
+		formattedFraction = std::wstring(2 - std::min(2, (int)formattedFraction.length()), L'0') + formattedFraction.substr(0, 2);
+
+		// Combine all components
+		return formattedMeasures + L"." + formattedQuarters + L"." + formattedEighths + L"." + formattedFraction;
+	}
+
 	void Timeline_Direct2DRenderer::DrawNormalBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
 	{
 		if (!_NativeRenderer || !this->_ToolAccessDelegate) {
@@ -1953,7 +2697,7 @@ namespace MIDILightDrawer
 		}
 
 		// Add tool-specific enhancements
-		DrawToolEnhancements(BarBounds);
+		DrawToolEnhancements(bar, BarBounds);
 	}
 
 	void Timeline_Direct2DRenderer::DrawNormalBarSolid(BarEvent^ bar, System::Drawing::Rectangle barBounds)
@@ -2338,10 +3082,10 @@ namespace MIDILightDrawer
 		}
 
         // Add glow effect
-        DrawBarGlowEffect(BarBounds, m_ColorTheme.SelectionHighlight, 6); // Was 2
+        DrawBarGlowEffect(BarBounds, m_ColorTheme.SelectionHighlight, 6);
 
 		// Add tool-specific enhancements
-		DrawToolEnhancements(BarBounds);
+		DrawToolEnhancements(bar, BarBounds);
     }
 
 	void Timeline_Direct2DRenderer::DrawPastePreviewBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds)
@@ -2462,7 +3206,7 @@ namespace MIDILightDrawer
         }
     }
 
-	void Timeline_Direct2DRenderer::DrawToolEnhancements(System::Drawing::Rectangle barBounds)
+	void Timeline_Direct2DRenderer::DrawToolEnhancements(BarEvent^ bar, System::Drawing::Rectangle barBounds)
 	{
 		TimelineToolType CurrentTool = this->_ToolAccessDelegate->CurrentToolType();
 
@@ -2471,6 +3215,22 @@ namespace MIDILightDrawer
 		if (CurrentTool == TimelineToolType::Duration)
 		{
 			DrawResizeHandle(barBounds, false);
+		}
+		else if (CurrentTool == TimelineToolType::Pointer)
+		{
+			ITimelineToolAccess^ ToolAccess = this->_ToolAccessDelegate->ToolAccess();
+			if (!ToolAccess) {
+				return;
+			}
+
+			if (bar == ToolAccess->HoveredBar && ToolAccess->IsOverResizeHandle)
+			{
+				DrawResizeHandle(barBounds, false);
+			}
+			else if (ToolAccess->SelectedBars->Count > 0 && ToolAccess->SelectedBars->Contains(bar) && ToolAccess->IsOverResizeHandle)
+			{
+				DrawResizeHandle(barBounds, false);
+			}
 		}
 	}
 
@@ -2557,15 +3317,29 @@ namespace MIDILightDrawer
         return top;
     }
 
+	int Timeline_Direct2DRenderer::GetLeftPanelWidth()
+	{
+		if (this->_Left_Panel->IsExpanded) {
+			return this->_Left_Panel->Width;
+		}
+
+		return 0;
+	}
+
+	int Timeline_Direct2DRenderer::GetLeftPanelAndTrackHeaderWidth()
+	{
+		return (GetLeftPanelWidth() + TRACK_HEADER_WIDTH);
+	}
+
     float Timeline_Direct2DRenderer::GetTotalTrackHeight()
     {
-        float totalHeight = 0;
+        float TotalHeight = 0;
 
         for each (Track ^ track in this->_Tracks) {
-            totalHeight += track->Height;
+            TotalHeight += track->Height;
         }
 
-        return totalHeight;
+        return TotalHeight;
     }
 
     Track^ Timeline_Direct2DRenderer::GetTrackAtPoint(System::Drawing::Point point)
@@ -2574,16 +3348,20 @@ namespace MIDILightDrawer
 			return nullptr;
 		}
 
-        int y = HEADER_HEIGHT + this->_ScrollPosition->Y;
+		if (_Left_Panel->IsExpanded && point.X < _Left_Panel->Width) {
+			return nullptr;
+		}
+
+        int Y = HEADER_HEIGHT + this->_ScrollPosition->Y;
         for each(Track^ track in this->_Tracks)
         {
-            int height = track->Height;
+            int Height = track->Height;
 
-            if (point.Y >= y && point.Y < y + height)
+            if (point.Y >= Y && point.Y < Y + Height)
             {
                 return track;
             }
-            y += height;
+            Y += Height;
         }
 
         return nullptr;
@@ -2591,14 +3369,14 @@ namespace MIDILightDrawer
 
     Measure^ Timeline_Direct2DRenderer::GetMeasureAtTick(int tick)
     {
-        int accumulated = 0;
+        int Accumulated = 0;
         
-        for each(Measure^ measure in this->_Measures)
+        for each(Measure^ Meas in this->_Measures)
         {
-            if (tick >= accumulated && tick < accumulated + measure->Length) {
-                return measure;
+            if (tick >= Accumulated && tick < Accumulated + Meas->Length) {
+                return Meas;
             }
-            accumulated += measure->Length;
+            Accumulated += Meas->Length;
         }
 
         return nullptr;
@@ -2606,29 +3384,29 @@ namespace MIDILightDrawer
 
     BarEvent^ Timeline_Direct2DRenderer::GetBarAtPoint(System::Drawing::Point point)
     {
-        Track^ track = GetTrackAtPoint(point);
+        Track^ Trk = GetTrackAtPoint(point);
         
-        if (track == nullptr) {
+        if (Trk == nullptr) {
             return nullptr;
         }
 
         // Convert point to tick position
-        int clickTick = (int)PixelsToTicks(point.X - TRACK_HEADER_WIDTH - this->_ScrollPosition->X);
+        int ClickTick = (int)PixelsToTicks(point.X - GetLeftPanelAndTrackHeaderWidth() - this->_ScrollPosition->X);
 
         // Get track content bounds for vertical check
-        System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(track);
+        System::Drawing::Rectangle TrackContentBounds = GetTrackContentBounds(Trk);
         TrackContentBounds.Y += this->_ScrollPosition->Y;
 
         // Check each bar in the track
-        for each(BarEvent ^ bar in track->Events)
+        for each(BarEvent^ Bar in Trk->Events)
         {
             // First check if the click is within the bar's time range
-            if (clickTick >= bar->StartTick && clickTick <= bar->StartTick + bar->Duration)
+            if (ClickTick >= Bar->StartTick && ClickTick <= Bar->StartTick + Bar->Duration)
             {
                 // Then check if the click is within the track's vertical bounds
                 if (point.Y >= TrackContentBounds.Y + TRACK_PADDING && point.Y <= TrackContentBounds.Y + TrackContentBounds.Height - TRACK_PADDING)
                 {
-                    return bar;
+                    return Bar;
                 }
             }
         }
@@ -2647,6 +3425,7 @@ namespace MIDILightDrawer
     System::Drawing::Rectangle Timeline_Direct2DRenderer::GetTrackHeaderBounds(Track^ track)
     {
         System::Drawing::Rectangle Bounds = GetTrackBounds(track);
+		Bounds.X = GetLeftPanelWidth();
         Bounds.Width = TRACK_HEADER_WIDTH;
 
         return Bounds;
@@ -2654,20 +3433,21 @@ namespace MIDILightDrawer
 
     System::Drawing::Rectangle Timeline_Direct2DRenderer::GetTrackContentBounds(Track^ track)
     {
-        int top = GetTrackTop(track);
-        int height = track->Height;
+        int Top = GetTrackTop(track);
+        int Height = track->Height;
+		int LeftOffset = GetLeftPanelAndTrackHeaderWidth();
 
         return System::Drawing::Rectangle(
-            TRACK_HEADER_WIDTH,     // Left starts after header
-            top,                    // Top
-            this->_Control->Width,  // Right is full width
-            height                  // Bottom
+			LeftOffset,				// Left starts after Header and Panel
+            Top,					// Top
+            this->_Control->Width,	// Right is full width
+            Height					// Bottom
         );
     }
 
     System::Drawing::Rectangle Timeline_Direct2DRenderer::GetBarBounds(BarEvent^ bar, System::Drawing::Rectangle bounds)
     {
-        int X = (int)TicksToPixels(bar->StartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+        int X = (int)TicksToPixels(bar->StartTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth();
         int Width = (int)Math::Max(1.0f, TicksToPixels(bar->Duration)); // Ensure minimum width of 1 pixel
 
         System::Drawing::Rectangle BarBounds = System::Drawing::Rectangle(
@@ -2682,7 +3462,7 @@ namespace MIDILightDrawer
 
     System::Drawing::Rectangle Timeline_Direct2DRenderer::GetGhostBarBounds(BarEvent^ bar, System::Drawing::Rectangle bounds)
     {
-        int X = (int)TicksToPixels(bar->OriginalStartTick) + this->_ScrollPosition->X + TRACK_HEADER_WIDTH;
+        int X = (int)TicksToPixels(bar->OriginalStartTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth();
         int Width = (int)Math::Max(1.0f, TicksToPixels(bar->OriginalDuration)); // Ensure minimum width of 1 pixel
 
         System::Drawing::Rectangle BarBounds = System::Drawing::Rectangle(
@@ -2717,6 +3497,22 @@ namespace MIDILightDrawer
 
         return result;
     }
+
+	std::wstring Timeline_Direct2DRenderer::ToHexString(int value)
+	{
+		static const wchar_t* digits = L"0123456789ABCDEF";
+
+		// Ensure the value is within valid range for a color component
+		value = std::min(255, std::max(0, value));
+
+		// Convert to two-digit hex
+		wchar_t hex[3];
+		hex[0] = digits[(value >> 4) & 0xF]; // First digit
+		hex[1] = digits[value & 0xF];        // Second digit
+		hex[2] = L'\0';                      // Null terminator
+
+		return std::wstring(hex);
+	}
 
     void Timeline_Direct2DRenderer::Cleanup()
     {

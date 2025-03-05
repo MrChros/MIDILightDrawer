@@ -25,18 +25,20 @@ namespace MIDILightDrawer
 		// Pointer Tool
         property bool IsDragging { bool get(); }
         property bool IsMultiTrackSelection { bool get(); }
-        property bool IsPasting { bool get(); }
+		property bool IsResizing { bool get(); }
+		property bool IsOverResizeHandle { bool get(); }
+		property bool IsPasting { bool get(); }
         property List<BarEvent^>^ PastePreviewBars { List<BarEvent^>^ get(); }
+		property BarEvent^ HoveredBar { BarEvent^ get(); }
 
         // Draw Tool
 		property System::Drawing::Color DrawColor { System::Drawing::Color get(); }
 		property int DrawTickLength { int get(); }
 		property Track^ TargetTrack { Track^ get(); }
 		property DrawToolMode CurrentMode { DrawToolMode  get(); }
-		property bool IsResizing { bool get(); }
 
         // Erase Tool
-		property BarEvent^ HoveredBar{ BarEvent ^ get(); }
+		// All properties already covered by above definitions
 
         // Duration Tool
 		// All properties already covered by above definitions

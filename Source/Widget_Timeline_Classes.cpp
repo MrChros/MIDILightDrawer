@@ -354,4 +354,88 @@ namespace MIDILightDrawer
 			this->_StrobeInfo = strobe_info;
 		}
 	}
+
+
+	////////////////////////////
+	// Collapsible Left Panel //
+	////////////////////////////
+	Collapsible_Left_Panel::Collapsible_Left_Panel()
+	{
+		this->_Expanded = false;
+		this->_Width = Timeline_Direct2DRenderer::PANEL_DEFAULT_WIDTH;
+
+		this->_SelectedEvent = nullptr;
+		this->_SelectedEvents = gcnew List<BarEvent^>();
+		this->_ShowProperties = false;
+	}
+
+	void Collapsible_Left_Panel::ToggleExpanded()
+	{
+		this->_Expanded = !this->_Expanded;
+	}
+
+	void Collapsible_Left_Panel::UpdateSelectedEvents(List<BarEvent^>^ events)
+	{
+		_SelectedEvents = events;
+
+		if (events->Count > 0) {
+			SelectedEvent = events[0];
+		}
+	}
+
+	bool Collapsible_Left_Panel::IsExpanded::get()
+	{
+		return this->_Expanded;
+	}
+
+	void Collapsible_Left_Panel::IsExpanded::set(bool expanded)
+	{
+		this->_Expanded = expanded;
+	}
+
+	int Collapsible_Left_Panel::Width::get()
+	{
+		return this->_Width;
+	}
+
+	void Collapsible_Left_Panel::Width::set(int width)
+	{
+		this->_Width = width;
+
+		if (this->_Width < Timeline_Direct2DRenderer::PANEL_MIN_WIDTH) {
+			this->_Width = Timeline_Direct2DRenderer::PANEL_MIN_WIDTH;
+		}
+		else if (this->_Width > Timeline_Direct2DRenderer::PANEL_MAX_WIDTH) {
+			this->_Width = Timeline_Direct2DRenderer::PANEL_MAX_WIDTH;
+		}
+	}
+
+	BarEvent^ Collapsible_Left_Panel::SelectedEvent::get()
+	{
+		return this->_SelectedEvent;
+	}
+
+	void Collapsible_Left_Panel::SelectedEvent::set(BarEvent^ event)
+	{
+		_SelectedEvent = event;
+		
+		if (event != nullptr) {
+			_ShowProperties = true;
+		}
+	}
+
+	List<BarEvent^>^ Collapsible_Left_Panel::SelectedEvents::get() 
+	{ 
+		return _SelectedEvents;
+	}
+
+	bool Collapsible_Left_Panel::ShowProperties::get()
+	{
+		return this->_ShowProperties;
+	}
+
+	void Collapsible_Left_Panel::ShowProperties::set(bool value)
+	{ 
+		_ShowProperties = value; 
+	}
 }

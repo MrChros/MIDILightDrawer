@@ -16,6 +16,7 @@ Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
     m_pTrackHeaderFormat(nullptr),
     m_pTablatureFormat(nullptr),
     m_pFPSCounterFormat(nullptr),
+	m_pLeftPanelTextFormat(nullptr),
     m_resourcesValid(false)
 {
 }
@@ -331,6 +332,21 @@ IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetTrackHeaderFormat()
 IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetFPSCounterFormat()   
 {
     return m_pFPSCounterFormat;
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetLeftPanelTextFormat()
+{
+	return m_pLeftPanelTextFormat;
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetLeftPanelTitleFormat()
+{
+	return m_pLeftPanelTitleFormat;
+}
+
+IDWriteTextFormat* Timeline_Direct2DRenderer_Native::GetLeftPanelSectionFormat()
+{
+	return m_pLeftPanelSectionFormat;
 }
 
 IDWriteTextFormat* Timeline_Direct2DRenderer_Native::UpdateTablatureFormat(float fontSize)
@@ -976,6 +992,42 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
     // Set text alignment
     m_pFPSCounterFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
     m_pFPSCounterFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+
+
+	// Create Left Panel format - Text
+	hr = m_pDWriteFactory->CreateTextFormat(L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14.0f, L"en-us", &m_pLeftPanelTextFormat);
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Set text alignment
+	m_pLeftPanelTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+	m_pLeftPanelTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+
+	// Create Left Panel format - Title
+	hr = m_pDWriteFactory->CreateTextFormat(L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14.0f, L"en-us", &m_pLeftPanelTitleFormat);
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Set text alignment
+	m_pLeftPanelTitleFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	m_pLeftPanelTitleFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+
+	// Create Left Panel format - Section
+	hr = m_pDWriteFactory->CreateTextFormat(L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14.0f, L"en-us", &m_pLeftPanelSectionFormat);
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Set text alignment
+	m_pLeftPanelSectionFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+	m_pLeftPanelSectionFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 
     return true;
 }

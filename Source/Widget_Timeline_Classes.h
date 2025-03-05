@@ -325,4 +325,50 @@ namespace MIDILightDrawer
 			void set(bool value) { _IgnoreForOverlap = value; }
 		}
 	};
+
+
+	////////////////////////////
+	// Collapsible Left Panel //
+	////////////////////////////
+	public ref class Collapsible_Left_Panel
+	{
+	public:
+		Collapsible_Left_Panel();
+
+		void ToggleExpanded();
+		void UpdateSelectedEvents(List<BarEvent^>^ events);
+
+	private:
+		bool _Expanded;
+		int _Width;
+
+		BarEvent^ _SelectedEvent;
+		List<BarEvent^>^ _SelectedEvents;
+		bool _ShowProperties;
+
+	public:
+		property bool IsExpanded{
+			bool get();
+			void set(bool expanded);
+		}
+
+		property int Width {
+			int get();
+			void set(int width);
+		}
+
+		property BarEvent^ SelectedEvent {
+			BarEvent ^ get();
+			void set(BarEvent^ event);
+		}
+
+		property List<BarEvent^>^ SelectedEvents {
+			List<BarEvent^> ^ get();
+		}
+
+		property bool ShowProperties {
+			 bool get();
+			 void set(bool value);
+		}
+	};
 }

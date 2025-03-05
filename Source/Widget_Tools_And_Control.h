@@ -25,12 +25,13 @@ namespace MIDILightDrawer {
 	public:
 		Widget_Tools_And_Control(void);
 
-		void Select_Color_From_Preset(int color_index);
-		void Snapping_Up(void);
-		void Snapping_Down(void);
-		void Snap_To(int index);
-		void Length_Up(void);
-		void Length_Down(void);
+		void SelectColorFromPreset(int color_index);
+		void SetColorDirect(Color color);
+		void SnappingUp(void);
+		void SnappingDown(void);
+		void SnapTo(int index);
+		void LengthUp(void);
+		void LengthDown(void);
 		bool ColorPickerIsTyping();
 
 		Widget_Toolbar^			Get_Widget_Toolbar(void);
@@ -41,6 +42,8 @@ namespace MIDILightDrawer {
 		Widget_Fade_Options^	Get_Widget_Fade_Options(void);
 		Widget_Strobe_Options^	Get_Widget_Strobe_Options(void);
 		Widget_Bucket_Options^	Get_Widget_Bucket_Options(void);
+
+		Color					GetColorPickerSelectedColor(void);
 
 	protected:
 		~Widget_Tools_And_Control();

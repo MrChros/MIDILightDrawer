@@ -2,12 +2,12 @@
 #include "Widget_Timeline_Tools.h"
 
 #include "Control_ColorPreset.h"
-
+#include "Widget_Tools_And_Control.h"
 
 namespace MIDILightDrawer
 {
 	// Widget_Timeline Implementation
-	Widget_Timeline::Widget_Timeline()
+	Widget_Timeline::Widget_Timeline(Widget_Tools_And_Control^ toolsAndControl)
 	{
 		InitializeComponent();
 
@@ -31,22 +31,34 @@ namespace MIDILightDrawer
 		this->DoubleBuffered = false;
 		
 
-		// Initialize state
-		_CurrentTheme = Theme_Manager::Get_Instance()->GetTimelineTheme();
-		_ZoomLevel = 1.0;
+		// Initialize Members
+		_CurrentTheme	= Theme_Manager::Get_Instance()->GetTimelineTheme();
+		_Tracks			= gcnew List<Track^>();
+		_Measures		= gcnew List<Measure^>();
+		_Left_Panel		= gcnew Collapsible_Left_Panel();
+		_ZoomLevel		= 1.0;
 		_ScrollPosition = gcnew Point(0, 0);
-		_Tracks = gcnew List<Track^>();
-		_Measures = gcnew List<Measure^>();
-
 		_CommandManager = gcnew TimelineCommandManager(this);
+
+		_TrackBeingResized = nullptr;
+		_ResizeHoverTrack = nullptr;
+		_ScrollPosition = Point();
+		_ResizeStartY = 0;
+		_InitialTrackHeight = 0;
+		_IsOverPanelResizeHandle = false;
+		_IsPanelResizing = false;
+		_PanelResizeStartX = 0;
+		_InitialPanelWidth = 0;
+		
 		InitializeToolSystem();
 		InitializeContextMenu();
 
-		_D2DRenderer = gcnew Timeline_Direct2DRenderer(_Tracks, _Measures, _ZoomLevel, _ScrollPosition);
-		_D2DRenderer->SetThemeColors(_CurrentTheme.Background, _CurrentTheme.HeaderBackground, _CurrentTheme.Text, _CurrentTheme.MeasureLine, _CurrentTheme.BeatLine, _CurrentTheme.SubdivisionLine, _CurrentTheme.SelectionHighlight, _CurrentTheme.TrackBackground, _CurrentTheme.TrackBackground);
+		_D2DRenderer = gcnew Timeline_Direct2DRenderer(_Tracks, _Measures, _Left_Panel, _ZoomLevel, _ScrollPosition);
+		_D2DRenderer->SetThemeColors(_CurrentTheme.Background, _CurrentTheme.HeaderBackground, _CurrentTheme.Text, _CurrentTheme.MeasureLine, _CurrentTheme.BeatLine, _CurrentTheme.SubdivisionLine, _CurrentTheme.SelectionHighlight, _CurrentTheme.TrackBackground, _CurrentTheme.TrackBorder);
 		_D2DRenderer->SetTimelineAccess(this);
 		
 		_PerformanceMetrics	= gcnew PerformanceMetrics();
+		_Tool_And_Control = toolsAndControl;
 	}
 
 	Widget_Timeline::~Widget_Timeline()
@@ -56,9 +68,9 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::AddTrack(String^ name, int octave)
 	{
-		Track^ track = gcnew Track(name, octave);
-		track->Height = Widget_Timeline::DEFAULT_TRACK_HEIGHT;
-		_Tracks->Add(track);
+		Track^ Trk = gcnew Track(name, octave);
+		Trk->Height = Widget_Timeline::DEFAULT_TRACK_HEIGHT;
+		_Tracks->Add(Trk);
 
 		UpdateVerticalScrollBarRange();
 		Invalidate();
@@ -204,7 +216,7 @@ namespace MIDILightDrawer
 		}
 
 		// Calculate the center point of the visible area in ticks
-		int VisibleWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int VisibleWidth = Width - GetLeftPanelAndTrackHeaderWidth();
 		int CenterTick = PixelsToTicks(-_ScrollPosition->X + (VisibleWidth / 2));
 
 		// Store old zoom level and apply new zoom
@@ -295,6 +307,19 @@ namespace MIDILightDrawer
 
 		// Show the context menu
 		_ContextMenu->Show(this, location);
+	}
+
+	void Widget_Timeline::UpdateLeftPanelEventSelection(List<BarEvent^>^ selectedEvents)
+	{
+		if (_Left_Panel == nullptr) {
+			return;
+		}
+
+		_Left_Panel->UpdateSelectedEvents(selectedEvents);
+
+		if(_Left_Panel->IsExpanded) {
+			Invalidate();
+		}
 	}
 
 	void Widget_Timeline::SetCurrentTool(TimelineToolType tool)
@@ -403,7 +428,7 @@ namespace MIDILightDrawer
 		case SnappingType::Snap_Grid:
 			return SnapTickToGrid(tick);
 
-		case SnappingType::Snap_Bars:
+		case SnappingType::Snap_Events:
 		{
 			// Get the track under the mouse pointer
 			Track^ CurrentTrack = GetTrackAtPoint(mousePos);
@@ -517,7 +542,7 @@ namespace MIDILightDrawer
 		int TargetPixel = TicksToPixels(TargetTick);
 
 		// Calculate scroll position to center the measure
-		int ViewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int ViewportWidth = Width - GetLeftPanelAndTrackHeaderWidth();
 		int NewScrollX = -TargetPixel + (ViewportWidth / 2);
 
 		// Clamp scroll position to valid range
@@ -555,6 +580,15 @@ namespace MIDILightDrawer
 		}
 
 		return _Measures[measureNumber - 1]->Length;
+	}
+
+	int Widget_Timeline::GetLeftPanelAndTrackHeaderWidth()
+	{
+		if (_D2DRenderer != nullptr) {
+			return _D2DRenderer->GetLeftPanelAndTrackHeaderWidth();
+		}
+
+		return 0;
 	}
 
 	void Widget_Timeline::UpdateCursor(System::Windows::Forms::Cursor^ cursor)
@@ -1019,8 +1053,10 @@ namespace MIDILightDrawer
 			_D2DRenderer->DrawTrackHeaders();
 			_D2DRenderer->DrawTrackDividers(_ResizeHoverTrack);
 			_D2DRenderer->DrawMeasureNumbers();
+			_D2DRenderer->DrawLeftPanel(_IsOverPanelResizeHandle || _IsPanelResizing);
 
-			_D2DRenderer->DrawFPSCounter(_PerformanceMetrics->GetFPS(), _PerformanceMetrics->LastFrameTime);
+			const float FPSCounter_X_Offset = (float)(Timeline_Direct2DRenderer::PANEL_BUTTON_SIZE + Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN);
+			_D2DRenderer->DrawFPSCounter(FPSCounter_X_Offset, _PerformanceMetrics->GetFPS(), _PerformanceMetrics->LastFrameTime);
 
 			_D2DRenderer->EndDraw();
 		}
@@ -1054,6 +1090,19 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::OnMouseDown(MouseEventArgs^ e)
 	{
+		Point MousePos = Point(e->X, e->Y);
+		
+		if(IsOverPanelResizeHandle(MousePos))
+		{
+			BeginPanelResize(e->X);
+			return;
+		}
+
+		if (IsOverPanelToggleButton(MousePos)) {
+			ToggleLeftPanel();
+			return;
+		}
+
 		if (_HoveredButton.Track != nullptr)
 		{
 			switch (_HoveredButton.ButtonIndex)
@@ -1068,11 +1117,11 @@ namespace MIDILightDrawer
 					break;
 			}
 			Invalidate();
-			return;  // Don't process other mouse down logic
+			return;
 		}
 		
 		Track^ ResizeTrack = nullptr;
-		if (IsOverTrackDivider(Point(e->X, e->Y), ResizeTrack))
+		if (IsOverTrackDivider(MousePos, ResizeTrack))
 		{
 			BeginTrackResize(ResizeTrack, e->Y);
 			return;
@@ -1090,19 +1139,44 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::OnMouseMove(MouseEventArgs^ e)
 	{
-		Track^ HoverTrack = nullptr;
-		bool IsOverDivider = IsOverTrackDivider(Point(e->X, e->Y), HoverTrack);
+		Point MousePos = Point(e->X, e->Y);
+		
+		if(_IsOverPanelResizeHandle != IsOverPanelResizeHandle(MousePos)) {
+			_IsOverPanelResizeHandle = IsOverPanelResizeHandle(MousePos);
+			Invalidate();
+		}
 
-		Track^ CurrentTrack = GetTrackAtPoint(Point(e->X, e->Y));
+		if (_IsPanelResizing)
+		{
+			UpdatePanelResize(e->X);
+			return;
+		}
+
+		// Check for hovering over panel resize handle
+		if (_IsOverPanelResizeHandle)
+		{
+			this->Cursor = Cursors::SizeWE;
+			return;
+		}
+
+		if (IsOverPanelToggleButton(MousePos))
+		{
+			this->Cursor = Cursors::Hand;
+			return;
+		}
+		
+		Track^ HoverTrack = nullptr;
+		bool IsOverDivider = IsOverTrackDivider(MousePos, HoverTrack);
+
+		Track^ CurrentTrack = GetTrackAtPoint(MousePos);
 		TrackButtonId NewHoveredButton;
 		bool IsOverAnyButton = false;
 
-		if (CurrentTrack != nullptr) {
-			// Check each button
-			// Adjust number based on max buttons
+		if (CurrentTrack != nullptr)
+		{
 			for (int i = 0; i < 2; i++)	
 			{ 
-				if (IsOverTrackButton(CurrentTrack, i, Point(e->X, e->Y)))
+				if (IsOverTrackButton(CurrentTrack, i, MousePos))
 				{
 					NewHoveredButton.Track = CurrentTrack;
 					NewHoveredButton.ButtonIndex = i;
@@ -1120,15 +1194,17 @@ namespace MIDILightDrawer
 
 		if (IsOverAnyButton) {
 			this->Cursor = Cursors::Hand;
-			return;  // Don't process other mouse move logic
+			return;
 		}
 
 		if (_TrackBeingResized != nullptr)
 		{
 			// If we're actively resizing, update the track height
 			UpdateTrackResize(e->Y);
+			return;
 		}
-		else if (IsOverDivider && !_CurrentTool->IsResizing)
+
+		if (IsOverDivider && !_CurrentTool->IsResizing)
 		{
 			// Just hovering over a divider
 			if (_ResizeHoverTrack != HoverTrack)
@@ -1138,34 +1214,42 @@ namespace MIDILightDrawer
 			}
 
 			this->Cursor = Cursors::SizeNS;
+			return;
 		}
-		else
+
+		// Not over a divider
+		if (_ResizeHoverTrack != nullptr)
 		{
-			// Not over a divider
-			if (_ResizeHoverTrack != nullptr)
-			{
-				_ResizeHoverTrack = nullptr;
-				Invalidate();
-			}
+			_ResizeHoverTrack = nullptr;
+			Invalidate();
+		}
 
-			// Handle normal tool behavior
-			Control::OnMouseMove(e);
+		// Handle normal tool behavior
+		Control::OnMouseMove(e);
 
-			if (this->_CurrentTool != nullptr && this->_Measures->Count > 0)
+		if (this->_CurrentTool != nullptr && this->_Measures->Count > 0)
+		{
+			_CurrentTool->OnMouseMove(e);
+			// Only update cursor if we're not in a special state
+			if (!IsOverAnyButton && !IsOverDivider && _TrackBeingResized == nullptr)
 			{
-				_CurrentTool->OnMouseMove(e);
-				// Only update cursor if we're not in a special state
-				if (!IsOverAnyButton && !IsOverDivider && _TrackBeingResized == nullptr)
-				{
-					this->Cursor = _CurrentTool->Cursor;
-				}
+				this->Cursor = _CurrentTool->Cursor;
+				return;
 			}
 		}
+
+		this->Cursor = Cursors::Default;
 	}
 
 	void Widget_Timeline::OnMouseUp(MouseEventArgs^ e)
 	{
 		Control::OnMouseUp(e);
+
+		if (_IsPanelResizing)
+		{
+			EndPanelResize();
+			return;
+		}
 
 		if (_TrackBeingResized != nullptr) {
 			EndTrackResize();
@@ -1330,6 +1414,8 @@ namespace MIDILightDrawer
 	void Widget_Timeline::CreateContextMenuSolid()
 	{
 		CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColor);
+		_ContextMenu->Items->Add(ContextMenuStrings::Separator);
+		_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::GetColor, true, nullptr));
 	}
 
 	void Widget_Timeline::CreateContextMenuFade()
@@ -1356,12 +1442,23 @@ namespace MIDILightDrawer
 			CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColorCenter);
 		}
 		CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColorEnd);
+
+		_ContextMenu->Items->Add(ContextMenuStrings::Separator);
+
+		_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::GetColorStart, true, nullptr));
+		if (_ContextMenuBar->FadeInfo->Type == FadeType::Three_Colors)
+		{
+			_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::GetColorCenter, true, nullptr));
+		}
+		_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::GetColorEnd, true, nullptr));
 	}
 
 	void Widget_Timeline::CreateContextMenuStrobe()
 	{
 		CreateContextMenuSubChangeQuantization(_ContextMenuBar->StrobeInfo->QuantizationTicks);
 		CreateContextMenuSubChangeColor(ContextMenuStrings::ChangeColor);
+		_ContextMenu->Items->Add(ContextMenuStrings::Separator);
+		_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::GetColor, true, nullptr));
 	}
 
 	void Widget_Timeline::CreateContextMenuSubChangeColor(String^ menuTitle)
@@ -1371,9 +1468,11 @@ namespace MIDILightDrawer
 		Settings^ Settings = Settings::Get_Instance();
 		List<Color>^ PresetColors = Settings->ColorPresetsColor;
 
+		SubMenuChangeColor->DropDownItems->Add(CreateContextMenuItem(ContextMenuStrings::CurrentColor, true, Control_ColorPreset::CreateColorBitmap(this->_Tool_And_Control->GetColorPickerSelectedColor(), 20)));
+
 		for (int i = 0;i<PresetColors->Count;i++)
 		{
-			SubMenuChangeColor->DropDownItems->Add(CreateContextMenuItem("Preset Color " + (i + 1).ToString(), true, Control_ColorPreset::CreateColorBitmap(PresetColors[i], 20)));
+			SubMenuChangeColor->DropDownItems->Add(CreateContextMenuItem(ContextMenuStrings::PresetColor + " " + (i + 1).ToString(), true, Control_ColorPreset::CreateColorBitmap(PresetColors[i], 20)));
 		}
 
 		this->_ContextMenu->Items->Add(SubMenuChangeColor);
@@ -1519,6 +1618,28 @@ namespace MIDILightDrawer
 				CommandManager()->ExecuteCommand(Cmd);
 			}
 		}
+		else if (ItemText == ContextMenuStrings::GetColor)
+		{
+			this->_Tool_And_Control->SetColorDirect(_ContextMenuBar->Color);
+		}
+		else if (ItemText == ContextMenuStrings::GetColorStart)
+		{
+			if(_ContextMenuBar->FadeInfo != nullptr) {
+				this->_Tool_And_Control->SetColorDirect(_ContextMenuBar->FadeInfo->ColorStart);
+			}
+		}
+		else if (ItemText == ContextMenuStrings::GetColorCenter)
+		{
+			if (_ContextMenuBar->FadeInfo != nullptr && _ContextMenuBar->FadeInfo->Type == FadeType::Three_Colors) {
+				this->_Tool_And_Control->SetColorDirect(_ContextMenuBar->FadeInfo->ColorCenter);
+			}
+		}
+		else if (ItemText == ContextMenuStrings::GetColorEnd)
+		{
+			if (_ContextMenuBar->FadeInfo != nullptr) {
+				this->_Tool_And_Control->SetColorDirect(_ContextMenuBar->FadeInfo->ColorStart);
+			}
+		}
 		else {
 			// Drop Down Menu clicked
 			ToolStripMenuItem^ ParentItem = safe_cast<ToolStripMenuItem^>(Sender->OwnerItem);
@@ -1530,8 +1651,14 @@ namespace MIDILightDrawer
 				ParentItemText == ContextMenuStrings::ChangeColorCenter ||
 				ParentItemText == ContextMenuStrings::ChangeColorEnd)
 			{
-				int PresetIndex = Int32::Parse(ItemText->Substring(13)) - 1;
-				NewColor = Settings::Get_Instance()->ColorPresetsColor[PresetIndex];
+				
+				if (ItemText->StartsWith(ContextMenuStrings::PresetColor)) {
+					int PresetIndex = Int32::Parse(ItemText->Substring(13)) - 1;
+					NewColor = Settings::Get_Instance()->ColorPresetsColor[PresetIndex];
+				} 
+				else if (ItemText->StartsWith(ContextMenuStrings::CurrentColor)) {
+					NewColor = this->_Tool_And_Control->GetColorPickerSelectedColor();
+				}
 			}
 
 			if (ParentItemText == ContextMenuStrings::ChangeColor)
@@ -1653,7 +1780,7 @@ namespace MIDILightDrawer
 
 						FadeEasing OldEasing = _ContextMenuBar->FadeInfo->EaseIn;
 
-						ChangeFadeEasingCommand^ Cmd = gcnew ChangeFadeEasingCommand(this, _ContextMenuBar, ChangeFadeEasingCommand::EasingType::InEasing, OldEasing, NewEasing);
+						ChangeFadeEasingCommand^ Cmd = gcnew ChangeFadeEasingCommand(this, Bar, ChangeFadeEasingCommand::EasingType::InEasing, OldEasing, NewEasing);
 						CompoundCmd->AddCommand(Cmd);
 					}
 
@@ -1681,7 +1808,7 @@ namespace MIDILightDrawer
 
 						FadeEasing OldEasing = _ContextMenuBar->FadeInfo->EaseOut;
 
-						ChangeFadeEasingCommand^ Cmd = gcnew ChangeFadeEasingCommand(this, _ContextMenuBar, ChangeFadeEasingCommand::EasingType::OutEasing, OldEasing, NewEasing);
+						ChangeFadeEasingCommand^ Cmd = gcnew ChangeFadeEasingCommand(this, Bar, ChangeFadeEasingCommand::EasingType::OutEasing, OldEasing, NewEasing);
 						CompoundCmd->AddCommand(Cmd);
 					}
 
@@ -1827,30 +1954,76 @@ namespace MIDILightDrawer
 		}
 	}
 
+	void Widget_Timeline::BeginPanelResize(int mouseX)
+	{
+		_IsPanelResizing = true;
+		_PanelResizeStartX = mouseX;
+		_InitialPanelWidth = this->_Left_Panel->Width;
+
+		// Change cursor to resize cursor
+		this->Cursor = Cursors::SizeWE;
+	}
+
+	void Widget_Timeline::UpdatePanelResize(int mouseX)
+	{
+		if (_IsPanelResizing)
+		{
+			int DeltaX = mouseX - _PanelResizeStartX;
+			int NewWidth = _InitialPanelWidth + DeltaX;
+
+			// Update the panel width
+			this->_Left_Panel->Width = NewWidth;
+			Invalidate();
+		}
+	}
+
+	void Widget_Timeline::EndPanelResize()
+	{
+		_IsPanelResizing = false;
+
+		// Update cursor based on current position
+		if (IsOverPanelResizeHandle(this->PointToClient(Control::MousePosition))) {
+			this->Cursor = Cursors::SizeWE;
+		}
+		else {
+			this->Cursor = Cursors::Default;
+		}
+	}
+
+	void Widget_Timeline::ToggleLeftPanel()
+	{
+		this->_Left_Panel->ToggleExpanded();
+		Invalidate();
+	}
+
 	bool Widget_Timeline::IsOverTrackDivider(Point mousePoint, Track^% outTrack)
 	{
+		if (this->_Measures->Count == 0) {
+			return false;
+		}
+		
 		// Adjust mouse position for scroll
-		int adjustedY = mousePoint.Y - _ScrollPosition->Y;
+		int AdjustedY = mousePoint.Y - _ScrollPosition->Y;
 		outTrack = nullptr;
 
 		// Start from header height
-		int y = Timeline_Direct2DRenderer::HEADER_HEIGHT;
+		int Y = Timeline_Direct2DRenderer::HEADER_HEIGHT;
 
 		// Check each track except the last one (no divider after last track)
 		for (int i = 0; i < _Tracks->Count; i++)
 		{
-			Track^ track = _Tracks[i];
-			int height = track->Height;
-			int dividerY = y + height;
+			Track^ Trk = _Tracks[i];
+			int Height = Trk->Height;
+			int DividerY = Y + Height;
 
 			// Check if mouse is within the divider area (using adjusted Y position)
-			if (adjustedY >= dividerY - TRACK_RESIZE_HANDLE_HEIGHT && adjustedY <= dividerY + TRACK_RESIZE_HANDLE_HEIGHT)
+			if (AdjustedY >= DividerY - TRACK_RESIZE_HANDLE_HEIGHT && AdjustedY <= DividerY + TRACK_RESIZE_HANDLE_HEIGHT)
 			{
-				outTrack = track;
+				outTrack = Trk;
 				return true;
 			}
 
-			y += height;
+			Y += Height;
 		}
 
 		return false;
@@ -1858,7 +2031,7 @@ namespace MIDILightDrawer
 
 	bool Widget_Timeline::IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint)
 	{
-		if (track == nullptr) {
+		if (track == nullptr || this->_Measures->Count == 0) {
 			return false;
 		}
 
@@ -1872,6 +2045,31 @@ namespace MIDILightDrawer
 
 		Rectangle ButtonBounds = GetTrackButtonBounds(HeaderBounds, buttonIndex);
 		return ButtonBounds.Contains(mousePoint);
+	}
+
+	bool Widget_Timeline::IsOverPanelResizeHandle(Point mousePoint)
+	{
+		if (this->_Left_Panel->IsExpanded == false) {
+			return false;
+		}
+
+		// Check if point is within resize handle area
+		return (mousePoint.X >= this->_Left_Panel->Width - Timeline_Direct2DRenderer::PANEL_RESIZE_HANDLE_WIDTH &&
+				mousePoint.X <= this->_Left_Panel->Width + Timeline_Direct2DRenderer::PANEL_RESIZE_HANDLE_WIDTH && 
+				mousePoint.Y > Timeline_Direct2DRenderer::HEADER_HEIGHT);
+	}
+
+	bool Widget_Timeline::IsOverPanelToggleButton(Point mousePoint)
+	{
+		if (mousePoint.X >= Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN &&
+			mousePoint.X <= Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN + Timeline_Direct2DRenderer::PANEL_BUTTON_SIZE &&
+			mousePoint.Y >= Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN &&
+			mousePoint.Y <= Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN + Timeline_Direct2DRenderer::PANEL_BUTTON_SIZE)
+		{
+			return true;
+		}
+		
+		return false;
 	}
 
 	Rectangle Widget_Timeline::GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex)
@@ -1940,7 +2138,7 @@ namespace MIDILightDrawer
 		}
 
 		// Get position relative to content area
-		Point ContentPos = Point(referencePoint.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH, referencePoint.Y);
+		Point ContentPos = Point(referencePoint.X - GetLeftPanelAndTrackHeaderWidth(), referencePoint.Y);
 
 		// Find tick at reference point
 		int TickAtPosition = PixelsToTicks(ContentPos.X - _ScrollPosition->X);
@@ -1954,7 +2152,7 @@ namespace MIDILightDrawer
 
 		// Maintain position of reference point
 		int NewPixelPosition = TicksToPixels(TickAtPosition);
-		int PositionOffset = referencePoint.X - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int PositionOffset = referencePoint.X - GetLeftPanelAndTrackHeaderWidth();
 		_ScrollPosition->X = -(NewPixelPosition - PositionOffset);
 
 		// Ensure proper alignment
@@ -1968,7 +2166,7 @@ namespace MIDILightDrawer
 		double VirtualWidth = GetVirtualWidth();
 
 		// Calculate viewport width (excluding header)
-		int ViewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int ViewportWidth = Width - GetLeftPanelAndTrackHeaderWidth();
 
 		// Convert to scroll units
 		int TotalUnits = GetScrollUnits(VirtualWidth);
@@ -1998,7 +2196,7 @@ namespace MIDILightDrawer
 	{
 		// Calculate total width in pixels
 		double VirtualWidth = GetVirtualWidth();
-		int ViewportWidth = Width - Timeline_Direct2DRenderer::TRACK_HEADER_WIDTH;
+		int ViewportWidth = Width - GetLeftPanelAndTrackHeaderWidth();
 
 		// Calculate maximum scroll position
 		double MaxScroll;

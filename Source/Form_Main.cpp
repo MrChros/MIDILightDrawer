@@ -56,27 +56,6 @@ namespace MIDILightDrawer
 		toolsContainer->BorderStyle = BorderStyle::FixedSingle;
 
 
-		//////////////////////
-		// Timeline Section //
-		//////////////////////
-		Panel^ TimelineContainer = gcnew Panel();
-		TimelineContainer->Dock = DockStyle::Fill;
-		TimelineContainer->Padding = System::Windows::Forms::Padding(0);
-		TimelineContainer->BackColor = Theme_Manager::Get_Instance()->BackgroundLight;
-		TimelineContainer->BorderStyle = BorderStyle::FixedSingle;
-
-		this->_Timeline = gcnew Widget_Timeline();
-		this->_Timeline->Dock = System::Windows::Forms::DockStyle::Fill;
-		this->_Timeline->Name = L"timeline";
-		this->_Timeline->Theme = Theme_Manager::Get_Instance()->GetTimelineTheme();
-		this->_Timeline->CommandManager()->CommandStateChanged += gcnew TimelineCommandManager::CommandStateChangedHandler(this, &Form_Main::UpdateUndoRedoState);
-		TimelineContainer->Controls->Add(this->_Timeline);
-
-		Table_Layout_Main->Controls->Add(TimelineContainer, 0, 1);
-		Table_Layout_Main->SetColumnSpan(TimelineContainer, Table_Layout_Main->ColumnCount);
-
-
-
 		////////////////////////
 		// Tools and Controls //
 		////////////////////////
@@ -91,6 +70,26 @@ namespace MIDILightDrawer
 		// Initialize toolbar and connect events
 		this->_Toolbar = this->_Tools_And_Control->Get_Widget_Toolbar();
 		this->_Toolbar->OnToolChanged += gcnew System::EventHandler<TimelineToolType>(this, &Form_Main::Toolbar_OnToolChanged);
+
+		
+		//////////////////////
+		// Timeline Section //
+		//////////////////////
+		Panel^ TimelineContainer = gcnew Panel();
+		TimelineContainer->Dock = DockStyle::Fill;
+		TimelineContainer->Padding = System::Windows::Forms::Padding(0);
+		TimelineContainer->BackColor = Theme_Manager::Get_Instance()->BackgroundLight;
+		TimelineContainer->BorderStyle = BorderStyle::FixedSingle;
+
+		this->_Timeline = gcnew Widget_Timeline(this->_Tools_And_Control);
+		this->_Timeline->Dock = System::Windows::Forms::DockStyle::Fill;
+		this->_Timeline->Name = L"timeline";
+		this->_Timeline->Theme = Theme_Manager::Get_Instance()->GetTimelineTheme();
+		this->_Timeline->CommandManager()->CommandStateChanged += gcnew TimelineCommandManager::CommandStateChangedHandler(this, &Form_Main::UpdateUndoRedoState);
+		TimelineContainer->Controls->Add(this->_Timeline);
+
+		Table_Layout_Main->Controls->Add(TimelineContainer, 0, 1);
+		Table_Layout_Main->SetColumnSpan(TimelineContainer, Table_Layout_Main->ColumnCount);
 
 		// Initialize other tool options
 		InitializeToolOptions();
@@ -216,6 +215,7 @@ namespace MIDILightDrawer
 		// Pointer Options
 		this->_Pointer_Options = this->_Tools_And_Control->Get_Widget_Pointer_Options();
 		this->_Pointer_Options->SnappingChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Pointer_Options_OnSnappingChanged);
+		this->_Pointer_Options->QuantizationChanged += gcnew QuantizationChangedHandler(this, &Form_Main::Pointer_Options_OnQuantizationChanged);
 		
 		// Draw Options
 		this->_Draw_Options = this->_Tools_And_Control->Get_Widget_Draw_Options();
@@ -506,13 +506,13 @@ namespace MIDILightDrawer
 		{
 			System::String^ Filename = Save_Dialog_File->FileName;
 
-			String^ Error_Message = this->_Timeline->SaveBarEventsToFile(Filename);
+			String^ ErrorMessage = this->_Timeline->SaveBarEventsToFile(Filename);
 
-			if (Error_Message->Length > 0) {
-				MessageBox::Show(this, "Error:\n" + Error_Message, "Failed to save light information to file", MessageBoxButtons::OK, MessageBoxIcon::Error);
+			if (ErrorMessage == String::Empty) {
+				//MessageBox::Show(this, "Light Configuration has been successfully saved.", "Save Successful", MessageBoxButtons::OK, MessageBoxIcon::Infor
 			}
 			else {
-				MessageBox::Show(this, "Light Configuration has been successfully saved.", "Save Successful", MessageBoxButtons::OK, MessageBoxIcon::Information);
+				MessageBox::Show(this, "Error:\n" + ErrorMessage, "Failed to save light information to file", MessageBoxButtons::OK, MessageBoxIcon::Error);
 			}
 		}
 	}
@@ -532,8 +532,7 @@ namespace MIDILightDrawer
 			String^ ErrorMessage = _MIDI_Exporter->Export(Save_Dialog_File->FileName, this->_GP_Tab);
 
 			if(ErrorMessage == String::Empty) {
-				// Show success message
-				MessageBox::Show(this, "MIDI file has been successfully exported.", "Export Successful", MessageBoxButtons::OK, MessageBoxIcon::Information);
+				//MessageBox::Show(this, "MIDI file has been successfully exported.", "Export Successful", MessageBoxButtons::OK, MessageBoxIcon::Information);
 			}
 			else {
 				MessageBox::Show(this, "Error:\n" + ErrorMessage, "Failed to export MIDI file", MessageBoxButtons::OK, MessageBoxIcon::Error);
@@ -561,7 +560,7 @@ namespace MIDILightDrawer
 		int TargetIndex = safe_cast<int>(Item->Tag);
 		int CurrentIndex = _Timeline->CommandManager()->GetCurrentIndex();
 
-		for (int i = CurrentIndex; i >= TargetIndex; i--) {
+		for (int i = 0; i <= TargetIndex && i <= CurrentIndex; i++) {
 			_Timeline->Undo();
 		}
 	}
@@ -685,7 +684,7 @@ namespace MIDILightDrawer
 		for (int i = 0; i < _Menu_Edit_UndoSteps_Items->Count; i++)
 		{
 			if (i <= CurrentIndex && i < Commands->Count) {
-				_Menu_Edit_UndoSteps_Items[i]->Text = Commands[CurrentIndex - i]->GetDescription();
+				_Menu_Edit_UndoSteps_Items[i]->Text = Commands[i]->GetDescription();
 				_Menu_Edit_UndoSteps_Items[i]->Tag = i;
 				_Menu_Edit_UndoSteps_Items[i]->Visible = true;
 			}
@@ -748,6 +747,7 @@ namespace MIDILightDrawer
 
 	void Form_Main::Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e)
 	{
+		PointerTool^ Pointer_Tool	= this->_Timeline->GetPointerTool();
 		DrawTool^ Draw_Tool			= this->_Timeline->GetDrawTool();
 		DurationTool^ Duration_Tool = this->_Timeline->GetDurationTool();
 		ColorTool^ Color_Tool		= this->_Timeline->GetColorTool();
@@ -759,6 +759,8 @@ namespace MIDILightDrawer
 		case TimelineToolType::Pointer:
 			this->_Timeline->SetCurrentTool(TimelineToolType::Pointer);
 			this->_Timeline->SetToolSnapping((SnappingType)_Pointer_Options->PointerSnapping);
+			
+			Pointer_Tool->ChangeTickLength = _Pointer_Options->ResizeQuantization;
 			break;
 
 		case TimelineToolType::Draw:
@@ -768,7 +770,6 @@ namespace MIDILightDrawer
 			Draw_Tool->DrawTickLength	= _Draw_Options->DrawLength;
 			Draw_Tool->UseAutoLength	= _Draw_Options->LengthByTablature;
 			Draw_Tool->DrawColor		= _Draw_Options->SelectedColor;
-
 			break;
 
 		case TimelineToolType::Erase:
@@ -1006,20 +1007,20 @@ namespace MIDILightDrawer
 				{
 					String^ color_num = hotkey.Key->Substring(13);
 					int color_index = Int32::Parse(color_num);
-					this->_Tools_And_Control->Select_Color_From_Preset(color_index-1);
+					this->_Tools_And_Control->SelectColorFromPreset(color_index-1);
 					return true;
 				}
 
-				else if (hotkey.Key == "Length Up"						) { this->_Tools_And_Control->Length_Up();				return true; }
-				else if (hotkey.Key == "Length Down"					) { this->_Tools_And_Control->Length_Down();			return true; }
+				else if (hotkey.Key == "Length Up"						) { this->_Tools_And_Control->LengthUp();				return true; }
+				else if (hotkey.Key == "Length Down"					) { this->_Tools_And_Control->LengthDown();			return true; }
 				else if (hotkey.Key == "Draw Tool - Toggle Length Tab"	) { this->_Draw_Options->Toggle_LengthByTablature();	return true; }
 
-				else if (hotkey.Key == "Snapping Next"					) { this->_Tools_And_Control->Snapping_Up();			return true; }
-				else if (hotkey.Key == "Snapping Previous"				) { this->_Tools_And_Control->Snapping_Down();			return true; }
-				else if (hotkey.Key == "Snap To None"					) { this->_Tools_And_Control->Snap_To((int)SnappingType::Snap_None);		return true; }
-				else if (hotkey.Key == "Snap To Grid"					) { this->_Tools_And_Control->Snap_To((int)SnappingType::Snap_Grid);		return true; }
-				else if (hotkey.Key == "Snap To Bars"					) { this->_Tools_And_Control->Snap_To((int)SnappingType::Snap_Bars);		return true; }
-				else if (hotkey.Key == "Snap To Tablature"				) { this->_Tools_And_Control->Snap_To((int)SnappingType::Snap_Tablature);	return true; }
+				else if (hotkey.Key == "Snapping Next"					) { this->_Tools_And_Control->SnappingUp();			return true; }
+				else if (hotkey.Key == "Snapping Previous"				) { this->_Tools_And_Control->SnappingDown();			return true; }
+				else if (hotkey.Key == "Snap To None"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_None);		return true; }
+				else if (hotkey.Key == "Snap To Grid"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Grid);		return true; }
+				else if (hotkey.Key == "Snap To Bars"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Events);		return true; }
+				else if (hotkey.Key == "Snap To Tablature"				) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Tablature);	return true; }
 
 				else if (hotkey.Key == "Zoom In"						) { this->_TrackBar_Zoom->Move_To_Next_Value();			return true; }
 				else if (hotkey.Key == "Zoom Out"						) { this->_TrackBar_Zoom->Move_To_Previous_Value();		return true; }
@@ -1093,6 +1094,10 @@ namespace MIDILightDrawer
 			// Exit
 			e->Handled = true;
 		}
+		else if (e->KeyCode == Keys::Escape)
+		{
+			
+		}
 		else
 		{
 			Process_Hotkey(e->KeyCode);
@@ -1103,6 +1108,12 @@ namespace MIDILightDrawer
 	void Form_Main::Pointer_Options_OnSnappingChanged(int value)
 	{
 		this->_Timeline->SetToolSnapping((SnappingType)value);
+	}
+
+	void Form_Main::Pointer_Options_OnQuantizationChanged(int value)
+	{
+		PointerTool^ Pointer_Tool = this->_Timeline->GetPointerTool();
+		Pointer_Tool->ChangeTickLength = value;
 	}
 
 	void Form_Main::Draw_Options_OnSnappingChanged(int value)
@@ -1196,19 +1207,18 @@ namespace MIDILightDrawer
 
 	void Form_Main::Button_1_Click(System::Object^ sender, System::EventArgs^ e)
 	{
+#ifdef _DEBUG
 		Console::WriteLine("Button 1 Clicked");
 
-#ifdef _DEBUG
 		this->_Timeline->LogPerformanceMetrics();
 #endif
 	}
 
 	void Form_Main::Button_2_Click(System::Object^ sender, System::EventArgs^ e)
 	{
+#ifdef _DEBUG
 		Console::WriteLine("Button 2 Clicked");
 
-#ifdef _DEBUG
-		
 #endif
 	}
 }

@@ -14,6 +14,7 @@ namespace MIDILightDrawer
     ref class Measure;
     ref class Beat;
     ref class BarEvent;
+	ref class Collapsible_Left_Panel;
     
     ref class TimelineTool;
     ref class PointerTool;
@@ -21,10 +22,12 @@ namespace MIDILightDrawer
     ref class ColorTool;
     ref class DurationTool;
     
-    enum class TimelineToolType;
+	enum class BarEventType;
+	enum class TimelineToolType;
     enum class DrumNotationType;
     enum class BarPreviewType;
 	enum class LoadingStage;
+	enum class Easing;
 
     value struct TabStringInfo;
     value struct TrackButtonId;
@@ -36,18 +39,29 @@ namespace MIDILightDrawer
     public ref class Timeline_Direct2DRenderer
     {
     public:
+		// General
         static const int TICKS_PER_QUARTER				= 960;
         static const int HEADER_HEIGHT					= 60;
         static const int MIN_PIXELS_BETWEEN_GRIDLINES   = 20;
+		// Tracks
         static const int TRACK_HEADER_WIDTH				= 150;
         static const int TRACK_PADDING					= 4;
+		// Track Buttons
         static const int BUTTON_SIZE					= 24;
 		static const int BUTTON_MARGIN					= 6;
+		// Left Panel
+		static const int PANEL_DEFAULT_WIDTH			= 250;
+		static const int PANEL_MIN_WIDTH				= 230;
+		static const int PANEL_MAX_WIDTH				= 300;
+		static const int PANEL_RESIZE_HANDLE_WIDTH		= 5;
+		static const int PANEL_BUTTON_SIZE				= 40;
+		static const int PANEL_BUTTON_MARGIN			= (HEADER_HEIGHT - PANEL_BUTTON_SIZE) / 2;
+		// Rendering Spacings
         static const float FIXED_STRING_SPACING			= 12.0f;
-        static const float MIN_MEASURE_NUMBER_SPACING   = 20.0f;
-        static const float MIN_MEASURE_BEAT_SPACING     = 20.0f;
-        static const float MIN_NOTE_SPACING_PIXELS      = 10.0f;
-
+        static const float MIN_MEASURE_NUMBER_SPACING	= 20.0f;
+        static const float MIN_MEASURE_BEAT_SPACING		= 20.0f;
+        static const float MIN_NOTE_SPACING_PIXELS		= 10.0f;
+		// Zoom Level
 		static const double MIN_ZOOM_LEVEL				= 0.1;	// 1/10x zoom
 		static const double MAX_ZOOM_LEVEL				= 20.0;	// 20x zoom
 
@@ -79,7 +93,7 @@ namespace MIDILightDrawer
         };
 
     public:
-        Timeline_Direct2DRenderer(List<Track^>^ tracks, List<Measure^>^ measures, double zoomlevel, System::Drawing::Point^ scrollposition);
+        Timeline_Direct2DRenderer(List<Track^>^ tracks, List<Measure^>^ measures, Collapsible_Left_Panel^ leftPanel, double zoomlevel, System::Drawing::Point^ scrollposition);
         virtual ~Timeline_Direct2DRenderer();
 		!Timeline_Direct2DRenderer();
 
@@ -106,7 +120,8 @@ namespace MIDILightDrawer
         bool DrawMeasureNumbers();
         bool DrawTrackContent(Track^ hoverTrack);
         bool DrawToolPreview();
-        void DrawFPSCounter(double fps, double frameTimeMs);
+		void DrawFPSCounter(float x, double fps, double frameTimeMs);
+		void DrawLeftPanel(bool beingResized);
 
 
         // Sub-Methods for DrawMeasureNumbers
@@ -142,10 +157,11 @@ namespace MIDILightDrawer
 
 
         // Sub-Methods for DrawToolPreview
-        bool DrawToolPreviewPointerTool();
-        bool DrawToolPreviewPointerToolMoving();
-        bool DrawToolPreviewPointerToolPasting();
-        bool DrawToolPreviewDrawTool();
+        void DrawToolPreviewPointerTool();
+        void DrawToolPreviewPointerToolMoving();
+        void DrawToolPreviewPointerToolResizing();
+        void DrawToolPreviewPointerToolPasting();
+        void DrawToolPreviewDrawTool();
         void DrawToolPreviewDrawToolDraw();
 		void DrawToolPreviewDrawToolErase();
 		void DrawToolPreviewDrawToolMove();
@@ -157,6 +173,23 @@ namespace MIDILightDrawer
         bool DrawToolPreviewFadeTool();
         bool DrawToolPreviewStrobeTool();
 
+		// Sub-Methods for Left Panel Rendering
+		void DrawLeftPanelExpanded(bool beingResized);
+		void DrawLeftPanelContent();
+		void DrawLeftPanelHidden();
+		void DrawLeftPanelToggleButton(float x, float y, bool isCollapsed);
+		void DrawLeftPanelEventProperties(BarEvent^ event, float startY);
+		void DrawLeftPanelSectionHeader(const std::wstring& headerText, float Y);
+		void DrawLeftPanelPropertyRow(const std::wstring& label, const std::wstring& value, float Y);
+		void DrawLeftPanelColorProperty(const std::wstring& label, System::Drawing::Color color, float Y);
+		void DrawLeftPanelSolidEventProperties(BarEvent^ event, float startY);
+		void DrawLeftPanelFadeEventProperties(BarEvent^ event, float startY);
+		void DrawLeftPanelStrobeEventProperties(BarEvent^ event, float startY);
+		void DrawLeftPanelMultipleEventProperties(float startY);
+		std::wstring GetEventTypeText(BarEventType type);
+		std::wstring GetEasingText(Easing easing);
+		std::wstring FormatTickPosition(int tick);
+		std::wstring FormatTickDuration(int durationTicks);
 
         // Smaller Supporting Drawing Methods
 		void DrawNormalBar(BarEvent^ bar, System::Drawing::Rectangle trackContentBounds);
@@ -186,7 +219,7 @@ namespace MIDILightDrawer
         void DrawPastePreviewBarStrobe(BarEvent^ bar, System::Drawing::Rectangle barBounds);
         void DrawBarGlowEffect(System::Drawing::Rectangle barBounds, System::Drawing::Color glowColor, int glowLevels);
         void DrawSelectionRectangle(System::Drawing::Rectangle selectionRectangle);
-		void DrawToolEnhancements(System::Drawing::Rectangle barBounds);
+		void DrawToolEnhancements(BarEvent^ bar, System::Drawing::Rectangle barBounds);
 		void DrawResizeHandle(System::Drawing::Rectangle barBounds, bool isTargeted);
 
         // Drawing Support Methods
@@ -195,6 +228,8 @@ namespace MIDILightDrawer
         float GetSubdivisionLevel(float pixelsPerBeat);
         int GetMeasureSkipFactor(float pixelsBetweenMeasures);
         int GetTrackTop(Track^ track);
+		int GetLeftPanelWidth();
+		int GetLeftPanelAndTrackHeaderWidth();
         float GetTotalTrackHeight();
         Track^ GetTrackAtPoint(System::Drawing::Point point);
         Measure^ GetMeasureAtTick(int tick);
@@ -208,8 +243,8 @@ namespace MIDILightDrawer
 
     private:
         System::Resources::ResourceManager^ _Resources;
-        Timeline_Direct2DRenderer_Native* _NativeRenderer;  // Pointer to native renderer
-        System::IntPtr _ControlHandle;                      // Handle to the managed control
+        Timeline_Direct2DRenderer_Native* _NativeRenderer;	// Pointer to native renderer
+        System::IntPtr _ControlHandle;						// Handle to the managed control
         
         bool m_disposed;
         bool m_themeColorsCached;
@@ -217,14 +252,16 @@ namespace MIDILightDrawer
         LevelOfDetail m_LevelOfDetail;
 
         System::Windows::Forms::Control^ _Control;
-        List<Track^>^           _Tracks;
-        List<Measure^>^         _Measures;
-        float                   _ZoomLevel;
-        System::Drawing::Point^ _ScrollPosition;
-        ITimelineAccess^        _ToolAccessDelegate;
+        List<Track^>^			_Tracks;
+        List<Measure^>^			_Measures;
+		Collapsible_Left_Panel^	_Left_Panel;
+        float					_ZoomLevel;
+        System::Drawing::Point^	_ScrollPosition;
+        ITimelineAccess^		_ToolAccessDelegate;
        
 
         std::wstring ConvertString(System::String^ str);
+		std::wstring ToHexString(int value);
 
 	protected:
 		virtual void Cleanup();

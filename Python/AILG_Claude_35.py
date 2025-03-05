@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 QUARTER_NOTE_TICKS = 960
 MIDI_LOWEST_OCTAVE = -2
-AI_NAME = "Copilot"
+AI_NAME = "CLAUDE_35"   # Claude Sonnet 3.5
 
 
 class Light_Change:
@@ -80,12 +80,11 @@ def Generate_Light(song_name : str):
         Measure_Drums       : GP.Measure = Tracks["Drums"].measures[MH.number-1]
 
         
-        # Process each measure to generate Light_Change objects
-        Process_Measure(Measure_Guitar, "Guitar", Light_Changes)
-        Process_Measure(Measure_Bass, "Bass", Light_Changes)
-        Process_Measure(Measure_Bass_Drive, "Bass Drive", Light_Changes)
-        Process_Measure(Measure_Drums, "Drums", Light_Changes)
-
+        # Add Alorithm to generate Light Featues here...
+        Light_Changes.extend(process_measure_for_lights(Measure_Guitar, Current_Measure_Tick, "Guitar", MH.number))
+        Light_Changes.extend(process_measure_for_lights(Measure_Bass, Current_Measure_Tick, "Bass", MH.number))
+        Light_Changes.extend(process_measure_for_lights(Measure_Bass_Drive, Current_Measure_Tick, "Bass Drive", MH.number))
+        Light_Changes.extend(process_measure_for_lights(Measure_Drums, Current_Measure_Tick, "Drums", MH.number))
 
         Current_Measure_Tick += MH.length
 
@@ -99,37 +98,141 @@ def Generate_Light(song_name : str):
     return 0
 
 
+def get_rainbow_shift(base_hue, intensity):
+    """Generate a rainbow-shifted color based on intensity"""
+    hue = (base_hue + intensity/255) % 1.0
+    rgb = tuple(int(x * 255) for x in colorsys.hsv_to_rgb(hue, 0.9, 0.9))
+    return rgb
 
-def Process_Measure(measure: GP.Measure, track_name: str, light_changes: list[Light_Change]):
+def get_complementary_colors(base_hue):
+    """Get two complementary colors based on a base hue"""
+    hue1 = (base_hue + 0.33) % 1.0
+    hue2 = (base_hue + 0.66) % 1.0
+    rgb1 = tuple(int(x * 255) for x in colorsys.hsv_to_rgb(hue1, 1.0, 1.0))
+    rgb2 = tuple(int(x * 255) for x in colorsys.hsv_to_rgb(hue2, 1.0, 1.0))
+    return rgb1, rgb2
+
+def create_strobe_effect(start_tick, duration, track_name, color, subdivisions=4):
+    """Create a strobing effect by alternating colors"""
+    changes = []
+    sub_duration = duration // subdivisions
+    for i in range(subdivisions):
+        if i % 2 == 0:
+            changes.append(Light_Change(track_name, start_tick + i * sub_duration, 
+                                     sub_duration, color[0], color[1], color[2]))
+        else:
+            changes.append(Light_Change(track_name, start_tick + i * sub_duration, 
+                                     sub_duration, 0, 0, 0))
+    return changes
+
+def process_measure_for_lights(measure: GP.Measure, measure_start_tick: int, track_name: str, 
+                             measure_number: int) -> list[Light_Change]:
+    light_changes = []
+    base_time = measure_start_tick
+    
+    # Create different patterns based on measure number
+    pattern_type = measure_number % 4  # Cycle through 4 different patterns
+    
     for voice in measure.voices:
+        current_tick = base_time
+        
         for beat in voice.beats:
-            for note in beat.notes:
-                tick_start = beat.start  # Adjusted to use absolute `beat.start`
-                tick_duration = QUARTER_NOTE_TICKS // beat.duration.value
+            if not beat.notes:
+                current_tick += beat.duration.time
+                continue
+                
+            duration_ticks = beat.duration.time
+            avg_velocity = sum(note.velocity for note in beat.notes) / len(beat.notes)
+            intensity = avg_velocity / 127.0
+            
+            # Pattern 1: Psychedelic Rainbow Flow
+            if pattern_type == 0:
+                if track_name == "Guitar":
+                    # Create flowing rainbow effects based on note pitch
+                    avg_pitch = sum(note.value for note in beat.notes) / len(beat.notes)
+                    base_hue = (avg_pitch % 12) / 12.0
+                    rgb = get_rainbow_shift(base_hue, avg_velocity)
+                    light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
+                                                    rgb[0], rgb[1], rgb[2]))
+                
+                elif "Bass" in track_name:
+                    # Pulsing complementary colors
+                    base_hue = (current_tick / 1000.0) % 1.0
+                    rgb1, rgb2 = get_complementary_colors(base_hue)
+                    light_changes.extend(create_strobe_effect(current_tick, duration_ticks, 
+                                                            track_name, rgb1))
+                
+                elif track_name == "Drums":
+                    # Explosive burst colors on hits
+                    drum_type = beat.notes[0].string
+                    if avg_velocity > 100:  # Hard hits
+                        rgb = (255, 255, 255)  # White flash
+                    else:
+                        rgb = (int(255 * intensity), 
+                              int(150 * intensity), 
+                              int(50 * intensity))  # Orange glow
+                    light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
+                                                    rgb[0], rgb[1], rgb[2]))
+            
+            # Pattern 2: Synchronized Pulse
+            elif pattern_type == 1:
+                phase = (current_tick % 3840) / 3840.0  # Complete cycle every 4 beats
+                pulse_intensity = abs(math.sin(phase * math.pi * 2))
+                
+                if track_name == "Guitar":
+                    rgb = (int(255 * pulse_intensity), 
+                          int(100 * pulse_intensity), 
+                          int(200 * pulse_intensity))
+                elif "Bass" in track_name:
+                    rgb = (int(100 * pulse_intensity), 
+                          int(200 * pulse_intensity), 
+                          int(255 * pulse_intensity))
+                else:  # Drums
+                    rgb = (int(200 * pulse_intensity), 
+                          int(255 * pulse_intensity), 
+                          int(100 * pulse_intensity))
+                    
+                light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
+                                                rgb[0], rgb[1], rgb[2]))
+            
+            # Pattern 3: Chase Effect
+            elif pattern_type == 2:
+                chase_position = (current_tick // 240) % 4  # Divide beat into 4 positions
+                if track_name == "Guitar" and chase_position == 0:
+                    rgb = (255, 0, 0)
+                elif "Bass" in track_name and chase_position == 1:
+                    rgb = (0, 0, 255)
+                elif track_name == "Drums" and chase_position == 2:
+                    rgb = (0, 255, 0)
+                else:
+                    rgb = (0, 0, 0)
+                    
+                light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
+                                                rgb[0], rgb[1], rgb[2]))
+            
+            # Pattern 4: Harmonic Color Blend
+            else:
+                if beat.notes:
+                    note_values = [note.value for note in beat.notes]
+                    harmonic_factor = sum(note_values) % 12 / 12.0
+                    
+                    if track_name == "Guitar":
+                        rgb = tuple(int(x * 255) for x in colorsys.hsv_to_rgb(harmonic_factor, 1.0, intensity))
+                    elif "Bass" in track_name:
+                        rgb = tuple(int(x * 255) for x in colorsys.hsv_to_rgb((harmonic_factor + 0.5) % 1.0, 1.0, intensity))
+                    else:  # Drums
+                        rgb = (int(255 * intensity), 
+                              int(255 * abs(math.sin(harmonic_factor * math.pi))), 
+                              int(255 * abs(math.cos(harmonic_factor * math.pi))))
+                        
+                    light_changes.append(Light_Change(track_name, current_tick, duration_ticks, 
+                                                    rgb[0], rgb[1], rgb[2]))
+            
+            current_tick += duration_ticks
+            
+    return light_changes
 
-                # Convert realValue to color, considering harmonic context and velocity
-                red, green, blue = Pitch_To_Color(note.realValue, note.velocity, note)
-
-                # Create Light_Change
-                light_change = Light_Change(track_name, tick_start, tick_duration, red, green, blue)
-                light_changes.append(light_change)
-
-def Pitch_To_Color(realValue: int, velocity: int, note: GP.Note) -> tuple:
-    """ Convert a musical pitch (MIDI note value) to an RGB color with gradient based on velocity and harmonic context. """
-    hue = (realValue % 12) / 12.0
-    saturation = 1.0
-
-    # Adjust value based on velocity
-    value = velocity / 127.0  # Normalize velocity to range 0-1
-
-    # Harmonic context: Adjust hue slightly based on string/fret position
-    harmonic_adjustment = (note.string * note.value) % 12 / 12.0
-    hue = (hue + harmonic_adjustment) % 1.0
-
-    red, green, blue = colorsys.hsv_to_rgb(hue, saturation, value)
-    return int(red * 255), int(green * 255), int(blue * 255)
-
-
+        
 #---------------------------------------------------------------------------------------
 # Get Guitar Pro Track Object from Track Name
 def GuitarPro_Get_Track_From_Name(track_name : str, guitar_pro_track_list : list[GP.Track]) -> GP.Track:
@@ -263,7 +366,7 @@ def Write_Light_Configuration_File(filename_wo_ext : str, song : GP.Song, light_
     File.write(str(len(light_changes)) + "\n")
     
     for l in light_changes:
-        File.write(str(l.Tick_Start - QUARTER_NOTE_TICKS) + "," + str(l.Tick_Duration) + "," + str(Get_Octave_From_GuitarPro_Track_Name(l.Track_Name)) + ",")
+        File.write(str(l.Tick_Start - 960) + "," + str(l.Tick_Duration) + "," + str(Get_Octave_From_GuitarPro_Track_Name(l.Track_Name)) + ",")
         File.write(str(abs(l.Color[0])) + "," + str(abs(l.Color[1])) + "," + str(abs(l.Color[2])) + "," + str(l.Track_Name))
         File.write("\n")
     

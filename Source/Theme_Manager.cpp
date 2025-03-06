@@ -281,6 +281,17 @@ namespace MIDILightDrawer
 		}
 		*/
 
+		if(System::String::IsNullOrEmpty(button->Text) == false)
+		{ 
+			if (!_Button_Texts->ContainsKey(button)) {
+				_Button_Texts->Add(button, button->Text);
+			}
+			else {
+				_Button_Texts[button] = button->Text;
+			}
+			button->Text = "";
+		}
+
 		String^ Button_Text;
 		if (_Button_Texts->TryGetValue(button, Button_Text))
 		{

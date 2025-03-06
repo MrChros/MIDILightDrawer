@@ -19,6 +19,7 @@
 
 #include "Form_Settings_Hotkeys.h"
 #include "Form_Settings_MIDI.h"
+#include "Form_BatchAction.h"
 
 
 using namespace System;

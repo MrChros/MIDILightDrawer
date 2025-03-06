@@ -2149,7 +2149,7 @@ namespace MIDILightDrawer
 		);
 
 		D2D1_ROUNDED_RECT RoundedRect = D2D1::RoundedRect(ButtonRect, CornerRadius, CornerRadius);
-		D2D1_COLOR_F FillColor = COLOR_TO_COLOR_F(m_ColorTheme.HeaderBackground);
+		D2D1_COLOR_F FillColor = COLOR_TO_COLOR_F(m_ColorTheme.Background);
 
 		// Draw button background with appropriate color based on state
 		if (!isCollapsed) {

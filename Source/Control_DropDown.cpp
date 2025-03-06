@@ -425,18 +425,27 @@ namespace MIDILightDrawer
 		// Draw title text
 		if (!String::IsNullOrEmpty(_Title_Text))
 		{
-			Rectangle title_rect(8, 2, Width - 30, Height / 2);
-			StringFormat^ title_format = gcnew StringFormat();
-			title_format->Alignment = StringAlignment::Center;
-			title_format->LineAlignment = StringAlignment::Center;
-			g->DrawString(_Title_Text, this->Font, gcnew SolidBrush(_Title_Color), title_rect, title_format);
-		}
+			Rectangle TitleRect(8, 2, Width - 30, Height / 2);
+			StringFormat^ TitleFormat = gcnew StringFormat();
+			TitleFormat->Alignment = StringAlignment::Center;
+			TitleFormat->LineAlignment = StringAlignment::Center;
+			g->DrawString(_Title_Text, this->Font, gcnew SolidBrush(_Title_Color), TitleRect, TitleFormat);
 
-		// Draw selected item
-		if (_Selected_Index >= 0)
+			// Draw selected item
+			if (_Selected_Index >= 0)
+			{
+				Rectangle ValueRect = Rectangle(8, Height / 2, Width - 30, Height / 2);
+				Draw_Item(g, _Selected_Index, ValueRect, false, true);
+			}
+		}
+		else
 		{
-			Rectangle value_rect = Rectangle(8, Height / 2, Width - 30, Height / 2);
-			Draw_Item(g, _Selected_Index, value_rect, false, true);
+			// No title, so center the selected item vertically in entire control
+			if (_Selected_Index >= 0)
+			{
+				Rectangle value_rect = Rectangle(8, 0, Width - 30, Height);
+				Draw_Item(g, _Selected_Index, value_rect, false, true);
+			}
 		}
 
 		// Draw arrow based on _Open_Above

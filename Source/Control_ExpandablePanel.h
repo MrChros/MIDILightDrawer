@@ -53,37 +53,31 @@ namespace MIDILightDrawer
     public:
         // Properties
         property bool IsExpanded {
-            bool get() { return _IsExpanded; }
+			bool get();
         }
 
         property bool IsEnabled {
-            bool get() { return _IsEnabled; }
-            void set(bool value) {
-                _IsEnabled = value;
-                if (_ToggleSwitch != nullptr) {
-                    _ToggleSwitch->Checked = value;
-                }
-                OnEnabledChanged(EventArgs::Empty);
-            }
+			bool get();
+			void set(bool value);
         }
 
         property Panel^ ContentPanel {
-            Panel^ get() { return _ContentPanel; }
+			Panel^ get();
         }
 
         property String^ Title {
-            String^ get() { return _HeaderLabel->Text; }
-            void set(String^ value) { _HeaderLabel->Text = value; }
+			String^ get();
+			void set(String^ value);
         }
 
         property EventHandler^ ExpandToggled {
-            EventHandler^ get() { return _ExpandToggled; }
-            void set(EventHandler^ value) { _ExpandToggled = value; }
+			EventHandler^ get();
+			void set(EventHandler^ value);
         }
 
         property EventHandler^ EnabledChanged {
-            EventHandler^ get() { return _EnabledChanged; }
-            void set(EventHandler^ value) { _EnabledChanged = value; }
+			EventHandler^ get();
+			void set(EventHandler^ value);
         }
     };
 }

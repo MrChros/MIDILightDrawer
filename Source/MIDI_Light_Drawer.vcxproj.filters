@@ -159,6 +159,15 @@
     <ClInclude Include="Control_ToggleSwitch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Control_RadioButton.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Control_ScrollablePanel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dialog_ColorPicker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIDI_Light_Drawer.cpp">
@@ -291,6 +300,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Control_ToggleSwitch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Form_BatchAction_UI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Control_RadioButton.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Control_ScrollablePanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialog_ColorPicker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -10,6 +10,8 @@ using namespace System::ComponentModel;
 
 namespace MIDILightDrawer
 {
+	ref class Control_RadioButton;
+		
 	// Theme colors struct
 	public value struct ThemeColors {
 		Color Background;
@@ -33,30 +35,30 @@ namespace MIDILightDrawer
 
 	public:
 		// Primary Colors
-		property Color Background			{ Color get() { return Color::FromArgb(255, 45, 45, 48		); } }  // Lighter gray for main background 
-		property Color BackgroundAlt		{ Color get() { return Color::FromArgb(255, 37, 37, 40		); } }  // Slightly darker for contrast
-		property Color BackgroundLight		{ Color get() { return Color::FromArgb(255, 50, 50, 53		); } }  // Lighter gray for certain elements
-		property Color TimelineBackground	{ Color get() { return Color::FromArgb(255, 18, 18, 18		); } } // Keep timeline background dark
-		property Color ForegroundText		{ Color get() { return Color::FromArgb(255, 220, 220, 220	); } }      // Primary text color
+		property Color Background			{ Color get() { return Color::FromArgb(255, 45, 45, 48		); } }	// Lighter gray for main background 
+		property Color BackgroundAlt		{ Color get() { return Color::FromArgb(255, 37, 37, 40		); } }	// Slightly darker for contrast
+		property Color BackgroundLight		{ Color get() { return Color::FromArgb(255, 50, 50, 53		); } }	// Lighter gray for certain elements
+		property Color TimelineBackground	{ Color get() { return Color::FromArgb(255, 18, 18, 18		); } }	// Keep timeline background dark
+		property Color ForegroundText		{ Color get() { return Color::FromArgb(255, 220, 220, 220	); } }	// Primary text color
 
 		// Accent Colors
-		property Color AccentPrimary	{ Color get() { return Color::FromArgb(255, 65, 105, 225); } }        // Primary accent (selection, focus)
-		property Color AccentSecondary	{ Color get() { return Color::FromArgb(255, 120, 190, 255); } }     // Secondary accent
-		property Color AccentWarning	{ Color get() { return Color::FromArgb(255, 255, 165, 0); } }         // Warning/attention color
+		property Color AccentPrimary	{ Color get() { return Color::FromArgb(255, 65, 105, 225); } }			// Primary accent (selection, focus)
+		property Color AccentSecondary	{ Color get() { return Color::FromArgb(255, 120, 190, 255); } }			// Secondary accent
+		property Color AccentWarning	{ Color get() { return Color::FromArgb(255, 255, 165, 0); } }			// Warning/attention color
 
 		// Border and Line Colors
-		property Color BorderPrimary	{ Color get() { return Color::FromArgb(255, 45, 45, 45); } }          // Primary border color
-		property Color BorderStrong		{ Color get() { return Color::FromArgb(255, 90, 90, 90); } }           // Stronger border/line color
+		property Color BorderPrimary	{ Color get() { return Color::FromArgb(255, 45, 45, 45); } }			// Primary border color
+		property Color BorderStrong		{ Color get() { return Color::FromArgb(255, 90, 90, 90); } }			// Stronger border/line color
 
 		// Timeline-specific Colors
-		property Color TimelineMeasureLine		{ Color get() { return BorderStrong; } }                        // Measure line color
-		property Color TimelineBeatLine			{ Color get() { return Color::FromArgb(255, 60, 60, 60); } }       // Beat line color
-		property Color TimelineSubdivisionLine	{ Color get() { return Color::FromArgb(255, 40, 40, 40); } } // Subdivision line color
+		property Color TimelineMeasureLine		{ Color get() { return BorderStrong; } }						// Measure line color
+		property Color TimelineBeatLine			{ Color get() { return Color::FromArgb(255, 60, 60, 60); } }	// Beat line color
+		property Color TimelineSubdivisionLine	{ Color get() { return Color::FromArgb(255, 40, 40, 40); } }	// Subdivision line color
 
 		// Grid Lines (various strengths)
-		property Color GridStrong	{ Color get() { return BorderStrong; } }                                 // Strong grid lines
-		property Color GridMedium	{ Color get() { return TimelineBeatLine; } }                            // Medium grid lines
-		property Color GridWeak		{ Color get() { return TimelineSubdivisionLine; } }                       // Weak grid lines
+		property Color GridStrong	{ Color get() { return BorderStrong; } }									// Strong grid lines
+		property Color GridMedium	{ Color get() { return TimelineBeatLine; } }								// Medium grid lines
+		property Color GridWeak		{ Color get() { return TimelineSubdivisionLine; } }							// Weak grid lines
 
 		static Theme_Manager^ Get_Instance();
 
@@ -73,6 +75,9 @@ namespace MIDILightDrawer
 		void ApplyThemeToButton(Button^ button);
 		void ApplyThemeToButton(Button^ button, Color backgroundColor);
 
+		void ApplyThemeToRadioButton(Control_RadioButton^ radioButton);
+		void ApplyThemeToRadioButton(Control_RadioButton^ radioButton, Color backgroundColor);
+
 		// Apply theme to DataGridView
 		void ApplyThemeToDataGridView(DataGridView^ grid);
 
@@ -88,6 +93,8 @@ namespace MIDILightDrawer
 		void OnButtonPaint(Object^ sender, PaintEventArgs^ e);
 		void OnButtonMouseEnter(Object^ sender, EventArgs^ e);
 		void OnButtonMouseLeave(Object^ sender, EventArgs^ e);
+
+		void OnRadioButtonPaint(Object^ sender, PaintEventArgs^ e);
 
 		void OnDataGridViewScroll(Object^ sender, ScrollEventArgs^ e);
 		void OnDataGridViewPaint(Object^ sender, PaintEventArgs^ e);

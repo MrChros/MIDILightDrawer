@@ -4,14 +4,24 @@ namespace MIDILightDrawer
 {
 	Control_ColorPreset::Control_ColorPreset(void)
 	{
+		this->_ShowSetButtons = true;
+
+		Initialize_Component();
+		Load_PresetColors();
+	}
+
+	Control_ColorPreset::Control_ColorPreset(bool showSetButtons)
+	{
+		this->_ShowSetButtons = showSetButtons;
+		
 		Initialize_Component();
 		Load_PresetColors();
 	}
 
 	void Control_ColorPreset::Initialize_Component(void)
 	{
-		_Highlight_Color	= Theme_Manager::Get_Instance()->AccentPrimary;
-		_Selected_Index		= -1;
+		_HighlightColor	= Theme_Manager::Get_Instance()->AccentPrimary;
+		_SelectedIndex	= -1;
 
 		// Initialize color array
 		_Colors = gcnew array<Color>(Control_ColorPreset::COUNT_PRESET_COLORS);
@@ -20,78 +30,83 @@ namespace MIDILightDrawer
 			_Colors[i] = Color::White;
 		}
 		
-		TableLayoutPanel^ Panel = gcnew TableLayoutPanel();
-		Panel->ColumnCount	= Control_ColorPreset::COUNT_PRESET_COLORS;
-		Panel->RowCount		= 2;	// 1 row for color buttons, 1 row for set buttons
-		Panel->AutoSize		= true;
-		Panel->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
-		Panel->Dock			= DockStyle::Fill;
-		Panel->BackColor	= Color::Transparent;
-		Panel->Margin		= System::Windows::Forms::Padding(0, 0, 0, 0);
-		Panel->Padding		= System::Windows::Forms::Padding(0, 0, 0, 0);
+		TableLayoutPanel^ TableLayout = gcnew TableLayoutPanel();
+		TableLayout->ColumnCount = Control_ColorPreset::COUNT_PRESET_COLORS;
+		TableLayout->RowCount = _ShowSetButtons ? 2 : 1;	// 1 Row for Color Buttons, 1 Row for Set Buttons
+		TableLayout->AutoSize = true;
+		TableLayout->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
+		TableLayout->Dock = DockStyle::Fill;
+		TableLayout->BackColor = Color::Transparent;
+		TableLayout->Margin = System::Windows::Forms::Padding(0, 0, 0, 0);
+		TableLayout->Padding = System::Windows::Forms::Padding(0, 0, 0, 0);
 
 		// Configure columns with fixed widths
 		for (int i = 0; i < Control_ColorPreset::COUNT_PRESET_COLORS; i++) {
-			Panel->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 45));  // 40px button + 5px margin
+			TableLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 45));  // 40px button + 5px margin
 		}
 
 		// Configure rows with fixed heights
-		Panel->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 45));  // Color buttons row
-		Panel->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));  // Set buttons row
+		TableLayout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 45));  // Color buttons row
+		
+		if (_ShowSetButtons) {
+			TableLayout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));  // Set buttons row
+		}
 
 		// Initialize button arrays
-		_Color_Preset_Buttons = gcnew array<Button^>(Control_ColorPreset::COUNT_PRESET_COLORS);
-		_Set_Buttons = gcnew array<Button^>(Control_ColorPreset::COUNT_PRESET_COLORS);
+		_ColorPresetButtons = gcnew array<Button^>(Control_ColorPreset::COUNT_PRESET_COLORS);
+		
+		if (_ShowSetButtons) {
+			_SetButtons = gcnew array<Button^>(Control_ColorPreset::COUNT_PRESET_COLORS);
+		}
 
 		// Create all buttons
 		for (int i = 0; i < Control_ColorPreset::COUNT_PRESET_COLORS; i++)
 		{
 			// Color preset button
 			Button^ Color_Button = gcnew Button();
-			Color_Button->Size							= System::Drawing::Size(40, 40);
-			Color_Button->FlatStyle						= System::Windows::Forms::FlatStyle::Flat;
-			Color_Button->FlatAppearance->BorderSize	= 1;
-			Color_Button->FlatAppearance->BorderColor	= Theme_Manager::Get_Instance()->BorderPrimary;
-			Color_Button->Margin						= System::Windows::Forms::Padding(0);
-			Color_Button->Anchor						= static_cast<System::Windows::Forms::AnchorStyles>
-														   (System::Windows::Forms::AnchorStyles::Top |
-															System::Windows::Forms::AnchorStyles::Left);
-			Color_Button->BackColor						= Theme_Manager::Get_Instance()->BackgroundLight;
-			Color_Button->Tag							= i;
-			Color_Button->Click			+= gcnew EventHandler		(this, &Control_ColorPreset::Color_Preset_Button_Click);
-			Color_Button->Paint			+= gcnew PaintEventHandler	(this, &Control_ColorPreset::Color_Button_Paint);
-			Color_Button->MouseEnter	+= gcnew EventHandler		(this, &Control_ColorPreset::Button_MouseEnter);
-			Color_Button->MouseLeave	+= gcnew EventHandler		(this, &Control_ColorPreset::Button_MouseLeave);
+			Color_Button->Size = System::Drawing::Size(40, 40);
+			Color_Button->FlatStyle = System::Windows::Forms::FlatStyle::Flat;
+			Color_Button->FlatAppearance->BorderSize = 1;
+			Color_Button->FlatAppearance->BorderColor = Theme_Manager::Get_Instance()->BorderPrimary;
+			Color_Button->Margin = System::Windows::Forms::Padding(0);
+			Color_Button->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left);
+			Color_Button->BackColor	= Theme_Manager::Get_Instance()->BackgroundLight;
+			Color_Button->Tag = i;
+			Color_Button->Click += gcnew EventHandler(this, &Control_ColorPreset::Color_Preset_Button_Click);
+			Color_Button->Paint += gcnew PaintEventHandler(this, &Control_ColorPreset::Color_Button_Paint);
+			Color_Button->MouseEnter += gcnew EventHandler(this, &Control_ColorPreset::Button_MouseEnter);
+			Color_Button->MouseLeave += gcnew EventHandler(this, &Control_ColorPreset::Button_MouseLeave);
 
-			_Color_Preset_Buttons[i] = Color_Button;
+			_ColorPresetButtons[i] = Color_Button;
 			
 			UpdateButtonIcon(i, _Colors[i]);
 				
 
-			Panel->Controls->Add(Color_Button, i, 0);
+			TableLayout->Controls->Add(Color_Button, i, 0);
 
-			// Set button
-			Button^ Set_Button		= gcnew Button();
-			Set_Button->Text		= "Set";
-			Set_Button->Size		= System::Drawing::Size(40, 25);
-			Set_Button->Margin		= System::Windows::Forms::Padding(1, 3, 0, 0);
-			Set_Button->Font		= gcnew System::Drawing::Font(Set_Button->Font->FontFamily, 8.0f);
-			Set_Button->TextAlign	= ContentAlignment::MiddleCenter;
-			Set_Button->Anchor		= static_cast<System::Windows::Forms::AnchorStyles>
-									   (System::Windows::Forms::AnchorStyles::Top |
-										System::Windows::Forms::AnchorStyles::Left);
-			Set_Button->Tag			= i;
-			Theme_Manager::Get_Instance()->ApplyThemeToButton(Set_Button);
+			if (_ShowSetButtons)
+			{
+				// Set button
+				Button^ Set_Button = gcnew Button();
+				Set_Button->Text = "Set";
+				Set_Button->Size = System::Drawing::Size(40, 25);
+				Set_Button->Margin = System::Windows::Forms::Padding(1, 3, 0, 0);
+				Set_Button->Font = gcnew System::Drawing::Font(Set_Button->Font->FontFamily, 8.0f);
+				Set_Button->TextAlign = ContentAlignment::MiddleCenter;
+				Set_Button->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left);
+				Set_Button->Tag = i;
+				Theme_Manager::Get_Instance()->ApplyThemeToButton(Set_Button);
 
-			Set_Button->Click += gcnew System::EventHandler(this, &Control_ColorPreset::Set_Button_Click);
+				Set_Button->Click += gcnew System::EventHandler(this, &Control_ColorPreset::Set_Button_Click);
 
-			_Set_Buttons[i] = Set_Button;
+				_SetButtons[i] = Set_Button;
 
-			Panel->Controls->Add(Set_Button, i, 1);
+				TableLayout->Controls->Add(Set_Button, i, 1);
+			}
 		}
 
 		this->BackColor = Theme_Manager::Get_Instance()->Background;
-		this->Controls->Add(Panel);
+		this->Controls->Add(TableLayout);
 	}
 
 	void Control_ColorPreset::Save_PresetColors()
@@ -121,7 +136,7 @@ namespace MIDILightDrawer
 
 	void Control_ColorPreset::UpdateButtonIcon(int index, Color color)
 	{
-		Button^ button = _Color_Preset_Buttons[index];
+		Button^ button = _ColorPresetButtons[index];
 
 		// Update color in array
 		_Colors[index] = color;
@@ -149,11 +164,11 @@ namespace MIDILightDrawer
 		Button^ Color_Button = safe_cast<Button^>(sender);
 		int index = safe_cast<int>(Color_Button->Tag);
 
-		_Selected_Index = index;
-		_Selected_Color = _Colors[index];
+		_SelectedIndex = index;
+		_SelectedColor = _Colors[index];
 
 		// Refresh all buttons to update highlighting
-		for each (Button ^ button in _Color_Preset_Buttons) {
+		for each (Button ^ button in _ColorPresetButtons) {
 			button->Invalidate();
 		}
 
@@ -165,7 +180,7 @@ namespace MIDILightDrawer
 		Button^ Set_Button = safe_cast<Button^>(sender);
 		int index = safe_cast<int>(Set_Button->Tag);
 
-		UpdateButtonIcon(index, _Selected_Color);
+		UpdateButtonIcon(index, _SelectedColor);
 		Save_PresetColors();
 	}
 
@@ -179,11 +194,11 @@ namespace MIDILightDrawer
 		Pen^ borderPen;
 		int buttonIndex = safe_cast<int>(button->Tag);
 
-		if (buttonIndex == _Selected_Index) {
-			borderPen = gcnew Pen(_Highlight_Color, 2);
+		if (buttonIndex == _SelectedIndex) {
+			borderPen = gcnew Pen(_HighlightColor, 2);
 		}
 		else if (button->ClientRectangle.Contains(button->PointToClient(Control::MousePosition))) {
-			borderPen = gcnew Pen(Color::FromArgb(180, _Highlight_Color), 2);
+			borderPen = gcnew Pen(Color::FromArgb(180, _HighlightColor), 2);
 		}
 		else {
 			borderPen = gcnew Pen(Theme_Manager::Get_Instance()->BorderStrong);
@@ -203,6 +218,16 @@ namespace MIDILightDrawer
 	{
 		Button^ button = safe_cast<Button^>(sender);
 		button->Invalidate();
+	}
+
+	void Control_ColorPreset::OnPresetColorsChanged()
+	{
+		PresetColorsChanged(this, EventArgs::Empty);
+	}
+
+	void Control_ColorPreset::OnSelectedColorChanged()
+	{
+		SelectedColorChanged(this, EventArgs::Empty);
 	}
 
 	Drawing::Icon^ Control_ColorPreset::CreateColorIcon(Color color, int diameter)
@@ -234,38 +259,28 @@ namespace MIDILightDrawer
 
 	Color Control_ColorPreset::SelectedColor::get()
 	{ 
-		return _Selected_Color;
+		return _SelectedColor;
 	}
 
 	void Control_ColorPreset::SelectedColor::set(Color color)
 	{
-		_Selected_Color = color;
+		_SelectedColor = color;
 	}
 
 	void Control_ColorPreset::SelectedIndex::set(int index)
 	{
 		// Check if index is within valid range
-		if (index >= 0 && index < _Color_Preset_Buttons->Length)
+		if (index >= 0 && index < _ColorPresetButtons->Length)
 		{
-			_Selected_Index = index;
-			_Selected_Color = _Colors[index];
+			_SelectedIndex = index;
+			_SelectedColor = _Colors[index];
 
 			// Refresh all buttons to update highlighting
-			for each(Button ^ button in _Color_Preset_Buttons) {
+			for each(Button ^ button in _ColorPresetButtons) {
 				button->Invalidate();
 			}
 
 			OnSelectedColorChanged();
 		}
-	}
-
-	void Control_ColorPreset::OnPresetColorsChanged() 
-	{
-		PresetColorsChanged(this, EventArgs::Empty);
-	}
-
-	void Control_ColorPreset::OnSelectedColorChanged() 
-	{
-		SelectedColorChanged(this, EventArgs::Empty);
 	}
 }

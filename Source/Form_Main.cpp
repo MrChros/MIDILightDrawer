@@ -630,6 +630,8 @@ namespace MIDILightDrawer
 
 	void Form_Main::Menu_Edit_BatchAction_Click(System::Object^ sender, System::EventArgs^ e)
 	{
+		this->_Toolbar->CurrentTool = TimelineToolType::Pointer;
+		
 		Form_BatchAction^ BatchForm = gcnew Form_BatchAction(this->_Timeline);
 		BatchForm->Owner = this;
 		BatchForm->ShowDialog();

@@ -214,6 +214,11 @@ namespace MIDILightDrawer
 		Track^ Track;
 		int StartTick;
 		int DurationInTicks;
+
+		// This Information is only used for the Batch Action filtering
+		// So it is not keep up-to-date when not needed
+		// An update needs to be trigger manually
+		int MeasureIndex; 
 	};
 
 	public ref class BarEventFadeInfo
@@ -323,6 +328,11 @@ namespace MIDILightDrawer
 		property bool IgnoreForOverlap {
 			bool get() { return _IgnoreForOverlap; }
 			void set(bool value) { _IgnoreForOverlap = value; }
+		}
+
+		property int MeasureIndex {
+			int get() { return this->_Working.MeasureIndex; }
+			void set(int index) { this->_Working.MeasureIndex = index; }
 		}
 	};
 

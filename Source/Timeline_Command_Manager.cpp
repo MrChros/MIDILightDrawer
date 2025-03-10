@@ -126,6 +126,11 @@ namespace MIDILightDrawer
 		_Commands->Add(command);
 	}
 
+	int CompoundCommand::GetCommandCount()
+	{
+		return _Commands->Count;
+	}
+
 	void CompoundCommand::Execute()
 	{
 		for each (ITimelineCommand ^ command in _Commands){

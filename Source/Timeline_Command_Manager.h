@@ -68,6 +68,7 @@ namespace MIDILightDrawer
 		CompoundCommand(String^ description);
 
 		void AddCommand(ITimelineCommand^ command);
+		int GetCommandCount();
 		virtual void Execute();
 		virtual void Undo();
 		virtual String^ GetDescription();

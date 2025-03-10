@@ -1,6 +1,7 @@
 #include "Theme_Manager.h"
 
 #include "Widget_Timeline.h"
+#include "Control_RadioButton.h"
 
 namespace MIDILightDrawer
 {
@@ -104,6 +105,42 @@ namespace MIDILightDrawer
 		button->Paint += gcnew PaintEventHandler(this, &Theme_Manager::OnButtonPaint);
 		button->MouseEnter += gcnew EventHandler(this, &Theme_Manager::OnButtonMouseEnter);
 		button->MouseLeave += gcnew EventHandler(this, &Theme_Manager::OnButtonMouseLeave);
+	}
+
+	void Theme_Manager::ApplyThemeToRadioButton(Control_RadioButton^ radioButton)
+	{
+		ApplyThemeToRadioButton(radioButton, BackgroundAlt);
+	}
+
+	void Theme_Manager::ApplyThemeToRadioButton(Control_RadioButton^ radioButton, Color backgroundColor)
+	{
+		// Basic styling
+		radioButton->BackColor = backgroundColor;
+		radioButton->ForeColor = ForegroundText;
+		radioButton->FlatStyle = FlatStyle::Flat;
+		radioButton->Font = gcnew Drawing::Font("Segoe UI", 9, FontStyle::Regular);
+
+		// Border styling
+		radioButton->FlatAppearance->BorderSize = 1;
+		radioButton->FlatAppearance->BorderColor = Color::FromArgb(70, 70, 70);
+
+		// Hover and pressed states
+		radioButton->FlatAppearance->MouseOverBackColor = Color::FromArgb(
+			Math::Min(255, backgroundColor.R + 20),
+			Math::Min(255, backgroundColor.G + 20),
+			Math::Min(255, backgroundColor.B + 20)
+		);
+
+		radioButton->FlatAppearance->MouseDownBackColor = Color::FromArgb(
+			Math::Max(0, backgroundColor.R - 10),
+			Math::Max(0, backgroundColor.G - 10),
+			Math::Max(0, backgroundColor.B - 10)
+		);
+
+		// Add paint handler for consistent appearance with other buttons
+		radioButton->Paint += gcnew PaintEventHandler(this, &Theme_Manager::OnRadioButtonPaint);
+		radioButton->MouseEnter += gcnew EventHandler(this, &Theme_Manager::OnButtonMouseEnter);
+		radioButton->MouseLeave += gcnew EventHandler(this, &Theme_Manager::OnButtonMouseLeave);
 	}
 
 	void Theme_Manager::ApplyThemeToDataGridView(DataGridView^ grid)
@@ -229,38 +266,24 @@ namespace MIDILightDrawer
 
 	void Theme_Manager::OnButtonPaint(Object^ sender, PaintEventArgs^ e)
 	{
-		Button^ button = safe_cast<Button^>(sender);
-		Graphics^ g = e->Graphics;
-		Rectangle rect = button->ClientRectangle;
+		Button^ B = safe_cast<Button^>(sender);
+		Graphics^ G = e->Graphics;
+		Rectangle Rect = B->ClientRectangle;
 
-		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
-		g->InterpolationMode = Drawing2D::InterpolationMode::HighQualityBicubic;
+		G->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
+		G->InterpolationMode = Drawing2D::InterpolationMode::HighQualityBicubic;
 
-		bool isHotOrFocused = button->Focused || button->ClientRectangle.Contains(button->PointToClient(Control::MousePosition));
+		bool IsHotOrFocused = B->Focused || B->ClientRectangle.Contains(B->PointToClient(Control::MousePosition));
 
 		// Create gradient based on button's actual background color
-		Drawing2D::LinearGradientBrush^ gradientBrush;
-		if (isHotOrFocused)
+		Drawing2D::LinearGradientBrush^ GradientBrush;
+		if (IsHotOrFocused)
 		{
-			gradientBrush = gcnew Drawing2D::LinearGradientBrush(
-				rect,
-				Color::FromArgb(255, Math::Min(255, button->BackColor.R + 15),
-					Math::Min(255, button->BackColor.G + 15),
-					Math::Min(255, button->BackColor.B + 15)),
-				button->BackColor,
-				Drawing2D::LinearGradientMode::Vertical
-			);
+			GradientBrush = gcnew Drawing2D::LinearGradientBrush(Rect, Color::FromArgb(255, Math::Min(255, B->BackColor.R + 15), Math::Min(255, B->BackColor.G + 15), Math::Min(255, B->BackColor.B + 15)), B->BackColor, Drawing2D::LinearGradientMode::Vertical);
 		}
 		else
 		{
-			gradientBrush = gcnew Drawing2D::LinearGradientBrush(
-				rect,
-				Color::FromArgb(255, Math::Min(255, button->BackColor.R + 5),
-					Math::Min(255, button->BackColor.G + 5),
-					Math::Min(255, button->BackColor.B + 5)),
-				button->BackColor,
-				Drawing2D::LinearGradientMode::Vertical
-			);
+			GradientBrush = gcnew Drawing2D::LinearGradientBrush(Rect, Color::FromArgb(255, Math::Min(255, B->BackColor.R + 5), Math::Min(255, B->BackColor.G + 5), Math::Min(255, B->BackColor.B + 5)), B->BackColor, Drawing2D::LinearGradientMode::Vertical);
 		}
 
 		// Draw button background
@@ -268,8 +291,8 @@ namespace MIDILightDrawer
 		//g->FillRectangle(backgroundBrush, rect);
 		//g->FillRectangle(gradientBrush, rect);
 
-		int centerX = rect.Width / 2;
-		int centerY = rect.Height / 2;
+		int CenterX = Rect.Width / 2;
+		int CenterY = Rect.Height / 2;
 
 		// Not sure why that here is needed
 		/*
@@ -281,61 +304,61 @@ namespace MIDILightDrawer
 		}
 		*/
 
-		if(System::String::IsNullOrEmpty(button->Text) == false)
+		if(System::String::IsNullOrEmpty(B->Text) == false)
 		{ 
-			if (!_Button_Texts->ContainsKey(button)) {
-				_Button_Texts->Add(button, button->Text);
+			if (!_Button_Texts->ContainsKey(B)) {
+				_Button_Texts->Add(B, B->Text);
 			}
 			else {
-				_Button_Texts[button] = button->Text;
+				_Button_Texts[B] = B->Text;
 			}
-			button->Text = "";
+			B->Text = "";
 		}
 
 		String^ Button_Text;
-		if (_Button_Texts->TryGetValue(button, Button_Text))
+		if (_Button_Texts->TryGetValue(B, Button_Text))
 		{
 			if (Button_Text != nullptr && Button_Text->Length > 0)
 			{
 				// Measure text to center it
-				SizeF textSize = g->MeasureString(Button_Text, button->Font);
-				float textX = centerX - (textSize.Width / 2);
-				float textY = centerY - (textSize.Height / 2);
+				SizeF TextSize = G->MeasureString(Button_Text, B->Font);
+				float TextX = CenterX - (TextSize.Width / 2);
+				float TextY = CenterY - (TextSize.Height / 2);
 
-				if (button->Enabled)
+				if (B->Enabled)
 				{
 					// Draw shadow
-					g->DrawString(Button_Text, button->Font, gcnew SolidBrush(Color::FromArgb(50, 0, 0, 0)), textX + 1, textY + 1);
+					G->DrawString(Button_Text, B->Font, gcnew SolidBrush(Color::FromArgb(50, 0, 0, 0)), TextX + 1, TextY + 1);
 
 					// Draw text
-					g->DrawString(Button_Text, button->Font, gcnew SolidBrush(button->ForeColor), textX, textY);
+					G->DrawString(Button_Text, B->Font, gcnew SolidBrush(B->ForeColor), TextX, TextY);
 				}
 				else
 				{
-					g->DrawString(Button_Text, button->Font, gcnew SolidBrush(Color::FromArgb(120, button->ForeColor)), textX, textY);
+					G->DrawString(Button_Text, B->Font, gcnew SolidBrush(Color::FromArgb(120, B->ForeColor)), TextX, TextY);
 				}
 			}
 		}
 
-		Pen^ shadowPen = gcnew Pen(Color::FromArgb(20, 0, 0, 0));
-		g->DrawLine(shadowPen, 1, 1, rect.Width - 2, 1);
+		Pen^ ShadowPen = gcnew Pen(Color::FromArgb(20, 0, 0, 0));
+		G->DrawLine(ShadowPen, 1, 1, Rect.Width - 2, 1);
 
 		// Draw border
-		if (button->Focused)
+		if (B->Focused)
 		{
-			Pen^ focusPen = gcnew Pen(Color::FromArgb(180, AccentPrimary));
-			g->DrawRectangle(focusPen, 0, 0, rect.Width - 1, rect.Height - 1);
-			delete focusPen;
+			Pen^ FocusPen = gcnew Pen(Color::FromArgb(180, AccentPrimary));
+			G->DrawRectangle(FocusPen, 0, 0, Rect.Width - 1, Rect.Height - 1);
+			delete FocusPen;
 		}
 		else
 		{
-			Pen^ borderPen = gcnew Pen(button->FlatAppearance->BorderColor);
-			g->DrawRectangle(borderPen, 0, 0, rect.Width - 1, rect.Height - 1);
-			delete borderPen;
+			Pen^ BorderPen = gcnew Pen(B->FlatAppearance->BorderColor);
+			G->DrawRectangle(BorderPen, 0, 0, Rect.Width - 1, Rect.Height - 1);
+			delete BorderPen;
 		}
 
-		delete gradientBrush;
-		delete shadowPen;
+		delete GradientBrush;
+		delete ShadowPen;
 	}
 
 	void Theme_Manager::OnButtonMouseEnter(Object^ sender, EventArgs^ e)
@@ -348,6 +371,86 @@ namespace MIDILightDrawer
 	{
 		Button^ button = safe_cast<Button^>(sender);
 		button->Invalidate(); // Force repaint to remove hover effect
+	}
+
+	void Theme_Manager::OnRadioButtonPaint(Object^ sender, PaintEventArgs^ e)
+	{
+		Control_RadioButton^ RB = safe_cast<Control_RadioButton^>(sender);
+		Graphics^ G = e->Graphics;
+		Rectangle Rect = RB->ClientRectangle;
+
+		G->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
+		G->InterpolationMode = Drawing2D::InterpolationMode::HighQualityBicubic;
+
+		// Create gradient background
+		bool IsHotOrFocused = RB->Focused || RB->ClientRectangle.Contains(RB->PointToClient(Control::MousePosition));
+
+		Drawing2D::LinearGradientBrush^ GradientBrush;
+		if (IsHotOrFocused)
+		{
+			GradientBrush = gcnew Drawing2D::LinearGradientBrush(Rect, Color::FromArgb(255, Math::Min(255, RB->BackColor.R + 15), Math::Min(255, RB->BackColor.G + 15), Math::Min(255, RB->BackColor.B + 15)), RB->BackColor, Drawing2D::LinearGradientMode::Vertical);
+		}
+		else
+		{
+			GradientBrush = gcnew Drawing2D::LinearGradientBrush(Rect, Color::FromArgb(255, Math::Min(255, RB->BackColor.R + 5), Math::Min(255, RB->BackColor.G + 5), Math::Min(255, RB->BackColor.B + 5)), RB->BackColor, Drawing2D::LinearGradientMode::Vertical);
+		}
+
+		// Draw button background
+		G->FillRectangle(GradientBrush, Rect);
+
+		// Draw text centered
+		String^ Text = RB->OptionText;
+		if (!String::IsNullOrEmpty(Text))
+		{
+			int CenterX = Rect.Width / 2;
+			int CenterY = Rect.Height / 2;
+
+			SizeF TextSize = G->MeasureString(Text, RB->Font);
+			float TextX = CenterX - (TextSize.Width / 2);
+			float TextY = CenterY - (TextSize.Height / 2);
+
+			// Draw text shadow and text
+			if (RB->Enabled)
+			{
+				G->DrawString(Text, RB->Font, gcnew SolidBrush(Color::FromArgb(50, 0, 0, 0)), TextX + 1, TextY + 1);
+				G->DrawString(Text, RB->Font, gcnew SolidBrush(RB->ForeColor), TextX, TextY);
+			}
+			else
+			{
+				G->DrawString(Text, RB->Font, gcnew SolidBrush(Color::FromArgb(120, RB->ForeColor)), TextX, TextY);
+			}
+		}
+
+		// Draw tick icon if selected
+		if (RB->Selected && RB->GetTickIcon() != nullptr)
+		{
+			Image^ TickIcon = RB->GetTickIcon();
+			int Margin = 10; // Distance from left edge
+			int IconY = (Rect.Height - TickIcon->Height) / 2;
+			
+			G->DrawImage(TickIcon, Margin, IconY);
+		}
+
+		// Draw top highlight
+		Pen^ ShadowPen = gcnew Pen(Color::FromArgb(20, 0, 0, 0));
+		G->DrawLine(ShadowPen, 1, 1, Rect.Width - 2, 1);
+
+		// Draw border
+		if (RB->Focused)
+		{
+			Pen^ FocusPen = gcnew Pen(Color::FromArgb(180, AccentPrimary));
+			G->DrawRectangle(FocusPen, 0, 0, Rect.Width - 1, Rect.Height - 1);
+			delete FocusPen;
+		}
+		else
+		{
+			Pen^ BorderPen = gcnew Pen(RB->FlatAppearance->BorderColor);
+			G->DrawRectangle(BorderPen, 0, 0, Rect.Width - 1, Rect.Height - 1);
+			delete BorderPen;
+		}
+
+		delete GradientBrush;
+		delete ShadowPen;
 	}
 
 	void Theme_Manager::OnDataGridViewScroll(Object^ sender, ScrollEventArgs^ e)

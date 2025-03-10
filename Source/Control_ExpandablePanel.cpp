@@ -50,7 +50,8 @@ namespace MIDILightDrawer
 
         // Create header label
         _HeaderLabel = gcnew Label();
-        _HeaderLabel->Location = Point(36, 4);
+        _HeaderLabel->Location = Point(36, 1);
+        _HeaderLabel->Size = System::Drawing::Size(300, HEADER_HEIGHT);
         _HeaderLabel->AutoSize = true;
         _HeaderLabel->Font = gcnew System::Drawing::Font("Segoe UI Semibold", 9.0f);
         _HeaderLabel->Cursor = Cursors::Hand;
@@ -189,17 +190,12 @@ namespace MIDILightDrawer
     {
         Theme_Manager^ theme = Theme_Manager::Get_Instance();
 
-        // Apply theme to this panel
         this->BackColor = theme->Background;
 
-        // Apply theme to header panel
         _HeaderPanel->BackColor = theme->BackgroundAlt;
-
-        // Apply theme to header label
         _HeaderLabel->ForeColor = theme->ForegroundText;
         _HeaderLabel->BackColor = Color::Transparent;
 
-        // Update icon colors
         Color iconColor = theme->ForegroundText;
 
         for (int x = 0; x < _ExpandedIcon->Width; x++) {
@@ -220,10 +216,7 @@ namespace MIDILightDrawer
             }
         }
 
-        // Refresh the current icon
         _ExpandIcon->Refresh();
-
-        // Apply theme to content panel
         _ContentPanel->BackColor = theme->Background;
     }
 
@@ -237,4 +230,58 @@ namespace MIDILightDrawer
         _IsEnabled = _ToggleSwitch->Checked;
         OnEnabledChanged(EventArgs::Empty);
     }
+
+	bool Control_ExpandablePanel::IsExpanded::get() 
+	{ 
+		return _IsExpanded; 
+	}
+
+	bool Control_ExpandablePanel::IsEnabled::get() 
+	{
+		return _IsEnabled; 
+	}
+
+	void Control_ExpandablePanel::IsEnabled::set(bool value)
+	{
+		_IsEnabled = value;
+		if (_ToggleSwitch != nullptr) {
+			_ToggleSwitch->Checked = value;
+		}
+		OnEnabledChanged(EventArgs::Empty);
+	}
+
+	Panel^ Control_ExpandablePanel::ContentPanel::get()
+	{
+		return _ContentPanel; 
+	}
+
+	String^ Control_ExpandablePanel::Title::get()
+	{
+		return _HeaderLabel->Text; 
+	}
+	
+	void Control_ExpandablePanel::Title::set(String^ value)
+	{
+		_HeaderLabel->Text = value; 
+	}
+
+	EventHandler^ Control_ExpandablePanel::ExpandToggled::get()
+	{
+		return _ExpandToggled; 
+	}
+
+	void Control_ExpandablePanel::ExpandToggled::set(EventHandler^ value) 
+	{
+		_ExpandToggled = value; 
+	}
+
+	EventHandler^ Control_ExpandablePanel::EnabledChanged::get() 
+	{
+		return _EnabledChanged; 
+	}
+
+	void Control_ExpandablePanel::EnabledChanged::set(EventHandler^ value) 
+	{
+		_EnabledChanged = value; 
+	}
 }

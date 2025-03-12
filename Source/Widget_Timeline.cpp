@@ -220,7 +220,6 @@ namespace MIDILightDrawer
 		int CenterTick = PixelsToTicks(-_ScrollPosition->X + (VisibleWidth / 2));
 
 		// Store old zoom level and apply new zoom
-		double OldZoom = _ZoomLevel;
 		_ZoomLevel = newZoom;
 
 		if (_D2DRenderer != nullptr) {

@@ -48,30 +48,43 @@ namespace MIDILightDrawer
         _HeaderPanel->Anchor = static_cast<AnchorStyles>(AnchorStyles::Left | AnchorStyles::Right | AnchorStyles::Top);
         _HeaderPanel->Click += gcnew EventHandler(this, &Control_ExpandablePanel::OnHeaderClick);
 
-        // Create header label
-        _HeaderLabel = gcnew Label();
-        _HeaderLabel->Location = Point(36, 1);
-        _HeaderLabel->Size = System::Drawing::Size(300, HEADER_HEIGHT);
-        _HeaderLabel->AutoSize = true;
-        _HeaderLabel->Font = gcnew System::Drawing::Font("Segoe UI Semibold", 9.0f);
-        _HeaderLabel->Cursor = Cursors::Hand;
-        _HeaderLabel->Click += gcnew EventHandler(this, &Control_ExpandablePanel::OnHeaderClick);
+        TableLayoutPanel^ TableLayout = gcnew TableLayoutPanel();
+        TableLayout->Dock = DockStyle::Fill;
+        TableLayout->ColumnCount = 3;
+        TableLayout->RowCount = 1;
+        TableLayout->CellBorderStyle = TableLayoutPanelCellBorderStyle::None;
+
+        TableLayout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
+
+        TableLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 40));
+        TableLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
+        TableLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
 
         // Create expand/collapse icon
         _ExpandIcon = gcnew PictureBox();
-        _ExpandIcon->Size = System::Drawing::Size(20, 20);
-        _ExpandIcon->Location = Point(6, (HEADER_HEIGHT - _ExpandIcon->Height) / 2);
+        _ExpandIcon->Dock = DockStyle::Fill;
         _ExpandIcon->Cursor = Cursors::Hand;
         _ExpandIcon->Click += gcnew EventHandler(this, &Control_ExpandablePanel::OnHeaderClick);
-        _ExpandIcon->SizeMode = PictureBoxSizeMode::StretchImage;
+        _ExpandIcon->SizeMode = PictureBoxSizeMode::CenterImage;
+        TableLayout->Controls->Add(_ExpandIcon, 0, 0);
+
+        // Create header label
+        _HeaderLabel = gcnew Label();
+        _HeaderLabel->Dock = DockStyle::Fill;
+        _HeaderLabel->AutoSize = true;
+        _HeaderLabel->Font = gcnew System::Drawing::Font("Segoe UI Semibold", 9.0f);
+        _HeaderLabel->Cursor = Cursors::Hand;
+        _HeaderLabel->TextAlign = ContentAlignment::MiddleLeft;
+        _HeaderLabel->Click += gcnew EventHandler(this, &Control_ExpandablePanel::OnHeaderClick);
+        TableLayout->Controls->Add(_HeaderLabel, 1, 0);
 
         // Create toggle switch
         _ToggleSwitch = gcnew Control_ToggleSwitch();
-        _ToggleSwitch->Size = System::Drawing::Size(32, 16);
-        _ToggleSwitch->Location = Point(this->Width - 50, (HEADER_HEIGHT - _ToggleSwitch->Height) / 2);
         _ToggleSwitch->Checked = _IsEnabled;
         _ToggleSwitch->Anchor = static_cast<AnchorStyles>(AnchorStyles::Right | AnchorStyles::Top);
+        _ToggleSwitch->Margin = System::Windows::Forms::Padding(0, 2, 10, 3);
         _ToggleSwitch->CheckedChanged += gcnew EventHandler(this, &Control_ExpandablePanel::OnToggleSwitchChanged);
+        TableLayout->Controls->Add(_ToggleSwitch, 2, 0);
 
         // Create content panel
         _ContentPanel = gcnew Panel();
@@ -81,13 +94,11 @@ namespace MIDILightDrawer
         _ContentPanel->Anchor = static_cast<AnchorStyles>(AnchorStyles::Left | AnchorStyles::Right | AnchorStyles::Top);
 
         // Add controls to their parent containers
-        _HeaderPanel->Controls->Add(_HeaderLabel);
-        _HeaderPanel->Controls->Add(_ExpandIcon);
-        _HeaderPanel->Controls->Add(_ToggleSwitch);
+        _HeaderPanel->Controls->Add(TableLayout);
+
         this->Controls->Add(_HeaderPanel);
         this->Controls->Add(_ContentPanel);
     }
-
 
     void Control_ExpandablePanel::OnPaint(PaintEventArgs^ e)
     {

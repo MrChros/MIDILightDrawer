@@ -18,7 +18,6 @@ namespace MIDILightDrawer
 	String^ MIDI_Exporter::Export(String^ filename, gp_parser::Parser* tab)
 	{
 		Settings^ Settings = Settings::Get_Instance();
-		List<Settings::Octave_Entry^>^ Octave_Entries = Settings->Octave_Entries;
 
 		MIDI_Writer Writer(960);  // Use 960 ticks per quarter note
 		
@@ -36,7 +35,6 @@ namespace MIDILightDrawer
 		// Then add all the notes
 		for each (Track^ T in this->_Timeline->Tracks)
 		{
-			String^ Track_Name = T->Name;
 			int Octave = T->Octave;
 			int Octave_Note_Offset = (Octave + MIDI_Exporter::OCTAVE_OFFSET) * MIDI_Exporter::NOTES_PER_OCTAVE;
 

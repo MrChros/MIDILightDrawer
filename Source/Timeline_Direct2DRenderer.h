@@ -61,6 +61,9 @@ namespace MIDILightDrawer
         static const float MIN_MEASURE_NUMBER_SPACING	= 20.0f;
         static const float MIN_MEASURE_BEAT_SPACING		= 20.0f;
         static const float MIN_NOTE_SPACING_PIXELS		= 10.0f;
+        // Min Width for rendering Easings
+        static const int MIN_WIDTH_FOR_CURVES           = 60;   // Minimum width in pixels to draw curves
+        static const float MIN_ZOOM_FOR_CURVES          = 0.8f; // Minimum zoom level to show curves
 		// Zoom Level
 		static const double MIN_ZOOM_LEVEL				= 0.1;	// 1/10x zoom
 		static const double MAX_ZOOM_LEVEL				= 20.0;	// 20x zoom

@@ -47,7 +47,7 @@ namespace MIDILightDrawer {
 		_Tool_Icons->Add(TimelineToolType::Draw		, "Draw_White"		);
 		//_Tool_Icons->Add(TimelineToolType::Split	, "Split_White"		);
 		_Tool_Icons->Add(TimelineToolType::Erase	, "Erase_White"		);
-		_Tool_Icons->Add(TimelineToolType::Duration	, "Duration_White"	);
+		//_Tool_Icons->Add(TimelineToolType::Duration	, "Duration_White"	);
 		_Tool_Icons->Add(TimelineToolType::Color	, "Color_White"		);
 		_Tool_Icons->Add(TimelineToolType::Fade		, "Fade_White"		);
 		_Tool_Icons->Add(TimelineToolType::Strobe	, "Strobe_White"	);

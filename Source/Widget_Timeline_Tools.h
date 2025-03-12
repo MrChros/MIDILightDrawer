@@ -64,8 +64,8 @@ namespace MIDILightDrawer
 		}
 
 		property System::Windows::Forms::Cursor^ Cursor {
-			virtual System::Windows::Forms::Cursor^ get() { return _CurrentCursor; }
-			virtual void set(System::Windows::Forms::Cursor^ value);
+			System::Windows::Forms::Cursor^ get() { return _CurrentCursor; }
+			void set(System::Windows::Forms::Cursor^ value);
 		}
 
 		virtual property List<BarEvent^>^ SelectedBars {

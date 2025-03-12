@@ -286,7 +286,6 @@ namespace MIDILightDrawer
     void Control_Trackbar_Range::DrawRange(Graphics^ g)
     {
         int trackY = (this->Height - _TrackHeight) / 2;
-        int rightPadding = _ThumbSize;
 
         if (_Mode == TrackbarRangeMode::Specific)
         {

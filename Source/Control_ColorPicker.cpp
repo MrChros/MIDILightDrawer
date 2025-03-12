@@ -113,7 +113,7 @@ namespace MIDILightDrawer
 
 		// Use the smaller dimension to ensure the wheel stays circular and fits
 		int wheelSize = Math::Min(availableWidth, availableHeight);
-		_Radius_Wheel = (wheelSize / 2.0f);
+		_Radius_Wheel = ((float)wheelSize / 2.0f);
 		float innerRadius = _Radius_Wheel - RING_WIDTH; // Maintain exact 10-pixel ring width
 
 		if (wheelSize <= 0) return;
@@ -257,8 +257,8 @@ namespace MIDILightDrawer
 		_Label_Blue->Location	= Point(leftMargin, startY + 2 * (TEXT_BOX_HEIGHT + SPACING) + (TEXT_BOX_HEIGHT - _Label_Blue->Height) / 2);
 		_TextBox_Blue->Location = Point(textBoxX, startY + 2 * (TEXT_BOX_HEIGHT + SPACING));
 
-		_Label_Hex->Location	= Point(leftMargin, startY + 3.5 * (TEXT_BOX_HEIGHT + SPACING) + (TEXT_BOX_HEIGHT - _Label_Hex->Height) / 2);
-		_TextBox_Hex->Location	= Point(textBoxX, startY + 3.5 * (TEXT_BOX_HEIGHT + SPACING));
+		_Label_Hex->Location = Point(leftMargin, (int)(startY + 3.5 * (TEXT_BOX_HEIGHT + SPACING) + (TEXT_BOX_HEIGHT - _Label_Hex->Height) / 2));
+		_TextBox_Hex->Location = Point(textBoxX, (int)(startY + 3.5 * (TEXT_BOX_HEIGHT + SPACING)));
 	}
 	
 	void Control_ColorPicker::Update_Slider_Positions()

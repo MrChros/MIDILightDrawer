@@ -468,6 +468,127 @@ namespace MIDILightDrawer
         }
     }
 	
+	void Form_BatchAction::OnPickColorClick(System::Object^ sender, System::EventArgs^ e)
+	{
+		Dialog_ColorPicker^ ColorPicker = gcnew Dialog_ColorPicker();
+		ColorPicker->SelectedColor = _SelectedColor;
+
+		if (ColorPicker->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+			_SelectedColor = ColorPicker->SelectedColor;
+
+			// Update RGB trackbars to match the selected color
+			UpdateRGBTrackbarsFromColor(_SelectedColor);
+
+			// Update preview
+			UpdateColorPreview();
+
+			// Enable the color filter panel
+			_ColorFilterPanel->IsEnabled = true;
+
+			// Update affected events count
+			UpdateAffectedEventsCount();
+		}
+	}
+
+	void Form_BatchAction::OnPickMinColorClick(System::Object^ sender, System::EventArgs^ e)
+	{
+		Dialog_ColorPicker^ ColorPicker = gcnew Dialog_ColorPicker();
+		ColorPicker->SelectedColor = _MinColor;
+
+		if (ColorPicker->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+			_MinColor = ColorPicker->SelectedColor;
+
+			// Set min values on RGB trackbars
+			_TrackBar_ColorR->MinValue = _MinColor.R;
+			_TrackBar_ColorG->MinValue = _MinColor.G;
+			_TrackBar_ColorB->MinValue = _MinColor.B;
+
+			// Switch all trackbars to range mode if not already
+			if (_TrackBar_ColorR->Mode == TrackbarRangeMode::Specific) {
+				_TrackBar_ColorR->Mode = TrackbarRangeMode::Range;
+				_Button_ColorRMode->Text = CS_RANGE;
+				UpdateColorRControls();
+			}
+
+			if (_TrackBar_ColorG->Mode == TrackbarRangeMode::Specific) {
+				_TrackBar_ColorG->Mode = TrackbarRangeMode::Range;
+				_Button_ColorGMode->Text = CS_RANGE;
+				UpdateColorGControls();
+			}
+
+			if (_TrackBar_ColorB->Mode == TrackbarRangeMode::Specific) {
+				_TrackBar_ColorB->Mode = TrackbarRangeMode::Range;
+				_Button_ColorBMode->Text = CS_RANGE;
+				UpdateColorBControls();
+			}
+
+			// Update preview
+			UpdateColorPreview();
+
+			// Enable the color filter panel
+			_ColorFilterPanel->IsEnabled = true;
+
+			// Update affected events count
+			UpdateAffectedEventsCount();
+		}
+	}
+
+	void Form_BatchAction::OnPickMaxColorClick(System::Object^ sender, System::EventArgs^ e)
+	{
+		Dialog_ColorPicker^ ColorPicker = gcnew Dialog_ColorPicker();
+		ColorPicker->SelectedColor = _MaxColor;
+
+		if (ColorPicker->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+			_MaxColor = ColorPicker->SelectedColor;
+
+			// Set max values on RGB trackbars
+			_TrackBar_ColorR->MaxValue = _MaxColor.R;
+			_TrackBar_ColorG->MaxValue = _MaxColor.G;
+			_TrackBar_ColorB->MaxValue = _MaxColor.B;
+
+			// Switch all trackbars to range mode if not already
+			if (_TrackBar_ColorR->Mode == TrackbarRangeMode::Specific) {
+				_TrackBar_ColorR->Mode = TrackbarRangeMode::Range;
+				_Button_ColorRMode->Text = CS_RANGE;
+				UpdateColorRControls();
+			}
+
+			if (_TrackBar_ColorG->Mode == TrackbarRangeMode::Specific) {
+				_TrackBar_ColorG->Mode = TrackbarRangeMode::Range;
+				_Button_ColorGMode->Text = CS_RANGE;
+				UpdateColorGControls();
+			}
+
+			if (_TrackBar_ColorB->Mode == TrackbarRangeMode::Specific) {
+				_TrackBar_ColorB->Mode = TrackbarRangeMode::Range;
+				_Button_ColorBMode->Text = CS_RANGE;
+				UpdateColorBControls();
+			}
+
+			// Update preview
+			UpdateColorPreview();
+
+			// Enable the color filter panel
+			_ColorFilterPanel->IsEnabled = true;
+
+			// Update affected events count
+			UpdateAffectedEventsCount();
+		}
+	}
+
+	void Form_BatchAction::UpdateRGBTrackbarsFromColor(Color color)
+	{
+		// Update RGB trackbar values
+		_TrackBar_ColorR->Value = color.R;
+		_TrackBar_ColorG->Value = color.G;
+		_TrackBar_ColorB->Value = color.B;
+
+		// Update text box values
+		_TextBox_ColorRValue->Text = color.R.ToString();
+		_TextBox_ColorGValue->Text = color.G.ToString();
+		_TextBox_ColorBValue->Text = color.B.ToString();
+	}
+
     void Form_BatchAction::OnPickActionColorClick(System::Object^ sender, System::EventArgs^ e)
     {
         Dialog_ColorPicker^ ColorPicker = gcnew Dialog_ColorPicker();

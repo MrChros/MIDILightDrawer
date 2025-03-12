@@ -1152,6 +1152,8 @@ namespace MIDILightDrawer
 					{
 					case DrawToolMode::Draw:	UpdatePainting(MousePos);	break;
 					case DrawToolMode::Erase:	UpdateErasing(MousePos);	break;
+					case DrawToolMode::Move:	
+					case DrawToolMode::Resize:	break;
 					}
 				}
 			}
@@ -1174,6 +1176,10 @@ namespace MIDILightDrawer
 
 		case DrawToolMode::Resize:
 			FinishResizing();
+			break;
+
+		case DrawToolMode::Draw:
+		case DrawToolMode::Erase:
 			break;
 		}
 

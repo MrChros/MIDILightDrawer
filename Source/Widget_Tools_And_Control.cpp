@@ -204,6 +204,9 @@ namespace MIDILightDrawer
 			this->_Color_Picker->Enabled = true;
 			break;
 
+		case TimelineToolType::Split:
+			break;
+
 		case TimelineToolType::Pointer:
 			this->_Pointer_Options->Visible = true;
 			this->_Color_Picker->Enabled = false;
@@ -237,7 +240,7 @@ namespace MIDILightDrawer
 		//case TimelineToolType::Bucket_Fill:
 		//	this->_Bucket_Options->Visible = true;
 		//	this->_Color_Picker->Enabled = true;
-		//	break;
+			//break;
 		}
 	}
 

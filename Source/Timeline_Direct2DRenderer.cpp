@@ -483,6 +483,7 @@ namespace MIDILightDrawer
             {
             case TimelineToolType::Pointer:     DrawToolPreviewPointerTool();   break;
             case TimelineToolType::Draw:        DrawToolPreviewDrawTool();      break;
+            case TimelineToolType::Split:       break;
             case TimelineToolType::Erase:       DrawToolPreviewEraseTool();     break;
             case TimelineToolType::Duration:    DrawToolPreviewDurationTool();  break;
             case TimelineToolType::Color:       DrawToolPreviewColorTool();     break;
@@ -1251,6 +1252,9 @@ namespace MIDILightDrawer
             // Show only first beat of each measure
             return BeatPositionInMeasure == 0;
 
+        case TablatureResolution::FullDetail:
+            return true;
+
         default:
             return true;
         }
@@ -1923,7 +1927,6 @@ namespace MIDILightDrawer
             return false;
         }
 
-        Track^				TargetTrack = ToolAccess->TargetTrack;
         List<BarEvent^>^	PreviewBars = ToolAccess->PreviewBars;
         System::Drawing::Point CurrentMousePos = ToolAccess->CurrentMousePosition;
 
@@ -1965,7 +1968,6 @@ namespace MIDILightDrawer
             return false;
         }
 
-        Track^				TargetTrack = ToolAccess->TargetTrack;
         List<BarEvent^>^	PreviewBars = ToolAccess->PreviewBars;
         System::Drawing::Point CurrentMousePos = ToolAccess->CurrentMousePosition;
 
@@ -2159,6 +2161,10 @@ namespace MIDILightDrawer
 		// Draw button background
 		_NativeRenderer->FillRoundedRectangle(RoundedRect, FillColor);
 
+        if (isCollapsed) {
+            _NativeRenderer->DrawRoundedRectangle(RoundedRect, COLOR_TO_COLOR_F_A(m_ColorTheme.SelectionHighlight, 0.8f), 1.0f);
+        }
+
 		const float BarWidth	= PANEL_BUTTON_SIZE * 0.4f;
 		const float BarHeight	= 3.0f;
 		const float BarDist		= 5.0f;
@@ -2189,7 +2195,6 @@ namespace MIDILightDrawer
 		const float SECTION_HEADER_HEIGHT = 22.0f;
 
 		float Y = startY;
-		float panel_width = (float)_Left_Panel->Width;
 
 		// Common Properties
 		DrawLeftPanelPropertyRow(L"Type:", GetEventTypeText(event->Type), Y);
@@ -2735,52 +2740,57 @@ namespace MIDILightDrawer
 
         const float Padding = 4.0f;
         D2D1_RECT_F TextRect = D2D1::RectF(
-            BarRect.left + Padding,             // Left edge of text area
-            BarRect.top + Padding,              // Top edge of text area
-            BarRect.left + 40.0f,              // Right edge of text area
-            BarRect.top + 20.0f                // Bottom edge of text area
+            BarRect.left + Padding,     // Left edge of text area
+            BarRect.top + Padding,      // Top edge of text area
+            BarRect.left + 40.0f,       // Right edge of text area
+            BarRect.top + 20.0f         // Bottom edge of text area
         );
 
         // Draw text with semi-transparent white color
         D2D1_COLOR_F TextColor = D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.7f);
         _NativeRenderer->DrawText(NoteText, TextRect, TextColor, _NativeRenderer->GetMeasureNumberFormat());
 
+        bool ShouldDrawCurves = (barBounds.Width >= MIN_WIDTH_FOR_CURVES) &&
+                                (this->_ZoomLevel >= MIN_ZOOM_FOR_CURVES) &&
+                                (m_LevelOfDetail.TabResolution <= TablatureResolution::BeatLevel);
 
-        // Draw easing curve indicators
-        const float CurveHeight = barBounds.Height * 0.45f; // 45% of bar height
-        const float CurveY = barBounds.Y + (barBounds.Height - CurveHeight) / 2;
-
-        // Draw ease-in curve
-        std::vector<D2D1_POINT_2F> EaseInPoints;
-        std::vector<D2D1_POINT_2F> EaseOutPoints;
-        const int NumPoints = 20;
-        float EaseInWidth = barBounds.Width * 0.5f; // 50% of bar width
-        float EaseOutOffset = EaseInWidth;
-
-        float Y_In  = (float)(barBounds.Top + barBounds.Height / 2 + CurveHeight);
-        float Y_Out = (float)(barBounds.Top + barBounds.Height / 2);
-
-        for (int i = 0; i <= NumPoints; i++)
+        if (ShouldDrawCurves)
         {
-            float Ratio = (float)i / NumPoints;
-            float X = barBounds.X + (Ratio * EaseInWidth);
+            // Draw easing curve indicators
+            const float CurveHeight = barBounds.Height * 0.45f; // 45% of bar height
 
-            float EasedTIn  = Easings::ApplyEasing(Ratio, bar->FadeInfo->EaseIn);
-            float EasedTOut = Easings::ApplyEasing(Ratio, bar->FadeInfo->EaseOut);
+            // Draw ease-in curve
+            std::vector<D2D1_POINT_2F> EaseInPoints;
+            std::vector<D2D1_POINT_2F> EaseOutPoints;
+            const int NumPoints = 20;
+            float EaseInWidth = barBounds.Width * 0.5f; // 50% of bar width
+            float EaseOutOffset = EaseInWidth;
 
-            EaseInPoints.push_back(D2D1::Point2F(X, Y_In - CurveHeight * EasedTIn));
-            EaseOutPoints.push_back(D2D1::Point2F(X + EaseOutOffset, Y_Out - CurveHeight * EasedTOut));
-        }
+            float Y_In  = (float)(barBounds.Top + barBounds.Height / 2 + CurveHeight);
+            float Y_Out = (float)(barBounds.Top + barBounds.Height / 2);
 
-        // Draw the curves
-        D2D1_COLOR_F curveColor = D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.5f); // Semi-transparent white
-        float CurveThickness = 2.0f;
+            for (int i = 0; i <= NumPoints; i++)
+            {
+                float Ratio = (float)i / NumPoints;
+                float X = barBounds.X + (Ratio * EaseInWidth);
 
-        // Draw points as connected lines
-        for (size_t i = 1; i < EaseInPoints.size(); i++)
-        {
-            _NativeRenderer->DrawLine(EaseInPoints[i - 1].x, EaseInPoints[i - 1].y, EaseInPoints[i].x, EaseInPoints[i].y, curveColor, CurveThickness);
-            _NativeRenderer->DrawLine(EaseOutPoints[i - 1].x, EaseOutPoints[i - 1].y, EaseOutPoints[i].x, EaseOutPoints[i].y, curveColor, CurveThickness);
+                float EasedTIn  = Easings::ApplyEasing(Ratio, bar->FadeInfo->EaseIn);
+                float EasedTOut = Easings::ApplyEasing(Ratio, bar->FadeInfo->EaseOut);
+
+                EaseInPoints.push_back(D2D1::Point2F(X, Y_In - CurveHeight * EasedTIn));
+                EaseOutPoints.push_back(D2D1::Point2F(X + EaseOutOffset, Y_Out - CurveHeight * EasedTOut));
+            }
+
+            // Draw the curves
+            D2D1_COLOR_F curveColor = D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.5f); // Semi-transparent white
+            float CurveThickness = 2.0f;
+
+            // Draw points as connected lines
+            for (size_t i = 1; i < EaseInPoints.size(); i++)
+            {
+                _NativeRenderer->DrawLine(EaseInPoints[i - 1].x, EaseInPoints[i - 1].y, EaseInPoints[i].x, EaseInPoints[i].y, curveColor, CurveThickness);
+                _NativeRenderer->DrawLine(EaseOutPoints[i - 1].x, EaseOutPoints[i - 1].y, EaseOutPoints[i].x, EaseOutPoints[i].y, curveColor, CurveThickness);
+            }
         }
 	}
 

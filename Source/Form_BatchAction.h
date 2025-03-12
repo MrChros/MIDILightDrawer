@@ -138,6 +138,10 @@ namespace MIDILightDrawer
 		Label^ _Label_Color;
 		Label^ _Label_MinColor;
 		Label^ _Label_MaxColor;
+
+		Button^ _Button_PickColor;
+		Button^ _Button_PickMinColor;
+		Button^ _Button_PickMaxColor;
 		
 
 		//////////////////////////////
@@ -262,6 +266,10 @@ namespace MIDILightDrawer
         void OnColorBValueKeyDown(System::Object^ sender, KeyEventArgs^ e);
         void OnColorBMinValueKeyDown(System::Object^ sender, KeyEventArgs^ e);
         void OnColorBMaxValueKeyDown(System::Object^ sender, KeyEventArgs^ e);
+		void OnPickColorClick(System::Object^ sender, System::EventArgs^ e);
+		void OnPickMinColorClick(System::Object^ sender, System::EventArgs^ e);
+		void OnPickMaxColorClick(System::Object^ sender, System::EventArgs^ e);
+		void UpdateRGBTrackbarsFromColor(Color color);
 
         void OnPickActionColorClick(System::Object^ sender, System::EventArgs^ e);
 

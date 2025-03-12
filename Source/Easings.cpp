@@ -60,7 +60,7 @@ namespace MIDILightDrawer
 	float Easings::Ease_InOut_Quad(float x)
 	{
 		if(x <= 1.0f) {
-			return x < 0.5 ? 2 * x * x : 1 - System::Math::Pow(-2 * x + 2, 2) / 2;
+			return (float)(x < 0.5 ? 2 * x * x : 1 - System::Math::Pow(-2 * x + 2, 2) / 2);
 		}
 	
 		return 1.0f;
@@ -87,7 +87,7 @@ namespace MIDILightDrawer
 	float Easings::Ease_InOut_Cubic(float x)
 	{
 		if(x <= 1.0f) {
-			return x < 0.5 ? 4 * x * x * x : 1 - System::Math::Pow(-2 * x + 2, 3) / 2;
+			return (float)(x < 0.5 ? 4 * x * x * x : 1 - System::Math::Pow(-2 * x + 2, 3) / 2);
 		}
 	
 		return 1.0f;
@@ -115,7 +115,7 @@ namespace MIDILightDrawer
 	float Easings::Ease_InOut_Quart(float x)
 	{
 		if(x <= 1.0f) {
-			return x < 0.5 ? 8 * x * x * x * x : 1 - System::Math::Pow(-2 * x + 2, 4) / 2;
+			return (float)(x < 0.5 ? 8 * x * x * x * x : 1 - System::Math::Pow(-2 * x + 2, 4) / 2);
 		}
 	
 		return 1.0f;
@@ -143,7 +143,7 @@ namespace MIDILightDrawer
 	float Easings::Ease_InOut_Quint(float x)
 	{
 		if(x <= 1.0f) {
-			return x < 0.5 ? 16 * x * x * x * x * x : 1 - System::Math::Pow(-2 * x + 2, 5) / 2;
+			return (float)(x < 0.5 ? 16 * x * x * x * x * x : 1 - System::Math::Pow(-2 * x + 2, 5) / 2);
 		}
 	
 		return 1.0f;
@@ -171,12 +171,12 @@ namespace MIDILightDrawer
 	float Easings::Ease_InOut_Expo(float x)
 	{
 		if(x <= 1.0f) {
-			return x == 0
+			return (float)(x == 0
 				? 0
 				: x == 1
 				? 1
 				: x < 0.5 ? System::Math::Pow(2, 20 * x - 10) / 2
-				: (2 - System::Math::Pow(2, -20 * x + 10)) / 2;
+				: (2 - System::Math::Pow(2, -20 * x + 10)) / 2);
 		}
 	
 		return 1.0f;
@@ -204,9 +204,9 @@ namespace MIDILightDrawer
 	float Easings::Ease_InOut_Circ(float x)
 	{
 		if(x <= 1.0f) {
-			return x < 0.5
-				? (1 - System::Math::Sqrt(1 - System::Math::Pow(2 * x, 2))) / 2
-				: (System::Math::Sqrt(1 - System::Math::Pow(-2 * x + 2, 2)) + 1) / 2;
+			return	(float)(x < 0.5
+					? (1 - System::Math::Sqrt(1 - System::Math::Pow(2 * x, 2))) / 2
+					: (System::Math::Sqrt(1 - System::Math::Pow(-2 * x + 2, 2)) + 1) / 2);
 		}
 	
 		return 1.0f;

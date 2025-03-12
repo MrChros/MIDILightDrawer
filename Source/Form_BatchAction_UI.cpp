@@ -467,12 +467,13 @@ namespace MIDILightDrawer
 
 		_Label_FadeColorPoint = gcnew Label();
 		_Label_FadeColorPoint->Text = "Filter for Color of Fade Event:";
-		_Label_FadeColorPoint->Location = System::Drawing::Point(20, RowY + 3);
-		_Label_FadeColorPoint->AutoSize = true;
+		_Label_FadeColorPoint->Location = System::Drawing::Point(20, RowY);
+		_Label_FadeColorPoint->Size = System::Drawing::Size(180, 24);
+		_Label_FadeColorPoint->TextAlign = ContentAlignment::MiddleLeft;
 		ColorGridPanel->Controls->Add(_Label_FadeColorPoint);
 
 		_DropDown_FadeColorFilter = gcnew Control_DropDown();
-		_DropDown_FadeColorFilter->Location = System::Drawing::Point(240, RowY);
+		_DropDown_FadeColorFilter->Location = System::Drawing::Point(200, RowY);
 		_DropDown_FadeColorFilter->Size = System::Drawing::Size(150, 24);
 		_DropDown_FadeColorFilter->Set_Tile_Layout(150 - 3, 28, 1);
 		_DropDown_FadeColorFilter->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Form_BatchAction::OnFilterDropDownItemChanged);
@@ -546,6 +547,34 @@ namespace MIDILightDrawer
 		ColorGridPanel->Controls->Add(_PictureBox_Color);
 		ColorGridPanel->Controls->Add(_PictureBox_MinColor);
 		ColorGridPanel->Controls->Add(_PictureBox_MaxColor);
+
+		System::Resources::ResourceManager^ Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
+
+		_Button_PickColor = gcnew Button();
+		_Button_PickColor->Location = Point(PreviewX, PreviewY + 40);
+		_Button_PickColor->Size = System::Drawing::Size(PreviewSize, PreviewSize);
+		_Button_PickColor->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Color_Palette")));
+		_Button_PickColor->Click += gcnew System::EventHandler(this, &Form_BatchAction::OnPickColorClick);
+		ColorGridPanel->Controls->Add(_Button_PickColor);
+
+		// Add button for selecting min color range
+		_Button_PickMinColor = gcnew Button();
+		_Button_PickMinColor->Location = Point(PreviewX - PreviewSize - 10, PreviewY + 40);
+		_Button_PickMinColor->Size = System::Drawing::Size(PreviewSize, PreviewSize);
+		_Button_PickMinColor->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Color_Palette")));
+		_Button_PickMinColor->Click += gcnew System::EventHandler(this, &Form_BatchAction::OnPickMinColorClick);
+		_Button_PickMinColor->Visible = false;
+		ColorGridPanel->Controls->Add(_Button_PickMinColor);
+
+		// Add button for selecting max color range
+		_Button_PickMaxColor = gcnew Button();
+		_Button_PickMaxColor->Location = Point(PreviewX, PreviewY + 40);
+		_Button_PickMaxColor->Size = System::Drawing::Size(PreviewSize, PreviewSize);
+		_Button_PickMaxColor->Image = (cli::safe_cast<System::Drawing::Image^>(Resources->GetObject(L"Color_Palette")));
+		_Button_PickMaxColor->Click += gcnew System::EventHandler(this, &Form_BatchAction::OnPickMaxColorClick);
+		_Button_PickMaxColor->Visible = false;
+		ColorGridPanel->Controls->Add(_Button_PickMaxColor);
+
 
 		_ColorFilterPanel->ContentPanel->Height = 160;
 		_ColorFilterPanel->ContentPanel->Controls->Add(ColorGridPanel);
@@ -1213,7 +1242,10 @@ namespace MIDILightDrawer
 
 		// Apply theme to buttons using the Theme_Manager method
 		array<Button^>^ Buttons = {
-			_Button_DurationMode, _Button_ColorRMode, _Button_ColorGMode, _Button_ColorBMode, _Button_ActionColor, _Button_ReplaceColorSolid, _Button_ReplaceColorStrobe, _Button_Apply, _Button_Cancel
+			_Button_DurationMode, _Button_ColorRMode, _Button_ColorGMode, _Button_ColorBMode,
+			_Button_PickColor, _Button_PickMinColor, _Button_PickMaxColor,
+			_Button_ActionColor, _Button_ReplaceColorSolid, _Button_ReplaceColorStrobe,
+			_Button_Apply, _Button_Cancel
 		};
 
 		for each (Button ^ B in Buttons) {
@@ -1449,6 +1481,9 @@ namespace MIDILightDrawer
 			_Label_MaxColor->Visible = true;
 			_PictureBox_Color->Visible = false;
 			_Label_Color->Visible = false;
+			_Button_PickColor->Visible = false;
+			_Button_PickMinColor->Visible = true;
+			_Button_PickMaxColor->Visible = true;
 		}
 		else {
 			// All components in specific mode, show single color panel
@@ -1471,6 +1506,9 @@ namespace MIDILightDrawer
 			_Label_MaxColor->Visible = false;
 			_PictureBox_Color->Visible = true;
 			_Label_Color->Visible = true;
+			_Button_PickColor->Visible = true;
+			_Button_PickMinColor->Visible = false;
+			_Button_PickMaxColor->Visible = false;
 		}
 	}
 

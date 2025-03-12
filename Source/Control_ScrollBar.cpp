@@ -221,7 +221,6 @@ namespace MIDILightDrawer {
 		
 		if (_IsDraggingThumb)
 		{
-			int delta = e->X - _LastMousePos.X;
 			_LastMousePos = e->Location;
 
 			int newPosition = CalculateThumbPosition(e->X);

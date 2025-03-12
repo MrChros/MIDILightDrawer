@@ -788,6 +788,9 @@ namespace MIDILightDrawer
 			Draw_Tool->DrawColor		= _Draw_Options->SelectedColor;
 			break;
 
+		case TimelineToolType::Split:
+			break;
+
 		case TimelineToolType::Erase:
 			this->_Timeline->SetCurrentTool(TimelineToolType::Erase);
 			break;
@@ -1014,7 +1017,7 @@ namespace MIDILightDrawer
 				else if (hotkey.Key == "Draw Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Draw;		return true; }
 				else if (hotkey.Key == "Erase Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Erase;	return true; }
 				else if (hotkey.Key == "Color Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Color;	return true; }
-				else if (hotkey.Key == "Duration Tool") { this->_Toolbar->CurrentTool = TimelineToolType::Duration; return true; }
+				//else if (hotkey.Key == "Duration Tool") { this->_Toolbar->CurrentTool = TimelineToolType::Duration; return true; }
 				else if (hotkey.Key == "Fade Tool")		{ this->_Toolbar->CurrentTool = TimelineToolType::Fade;		return true; }
 				else if (hotkey.Key == "Strobe Tool")	{ this->_Toolbar->CurrentTool = TimelineToolType::Strobe;	return true; }
 				//else if (hotkey.Key == "Bucket Tool") { this->_Toolbar->CurrentTool = TimelineToolType::Pointer; return true; }

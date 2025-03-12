@@ -27,7 +27,7 @@ namespace MIDILightDrawer {
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Draw Tool"	, "D", "Tools"));
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Erase Tool"	, "E", "Tools"));
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Color Tool"	, "C", "Tools"));
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Duration Tool", "X", "Tools"));
+		//_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Duration Tool", "X", "Tools"));
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Fade Tool"	, "F", "Tools"));
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Strobe Tool"	, "U", "Tools"));
 		//_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Bucket Tool", "B", "Tools"));

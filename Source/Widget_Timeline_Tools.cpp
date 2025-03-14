@@ -752,7 +752,17 @@ namespace MIDILightDrawer
 		}
 
 		Rectangle TrackContentBounds = _Timeline->GetTrackContentBounds(track);
+
+		// Calculate bar start and end positions in pixels
+		int BarStartX = _Timeline->TicksToPixels(bar->StartTick) + _Timeline->ScrollPosition->X + _Timeline->GetLeftPanelAndTrackHeaderWidth();
 		int BarEndX = _Timeline->TicksToPixels(bar->StartTick + bar->Duration) + _Timeline->ScrollPosition->X + _Timeline->GetLeftPanelAndTrackHeaderWidth();
+
+		// Calculate the bar's actual width in pixels
+		int BarWidthPixels = BarEndX - BarStartX;
+
+		if (BarWidthPixels < MIN_BAR_WIDTH_FOR_RESIZE) {
+			return false; // Bar is too narrow to resize
+		}
 
 		// Check if mouse is within handle area at end of bar
 		return	mousePos.X >= BarEndX - HANDLE_WIDTH &&

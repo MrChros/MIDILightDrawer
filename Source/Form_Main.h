@@ -17,9 +17,10 @@
 #include "Widget_Timeline_Tools.h"
 #include "Widget_Timeline_Common.h"
 
-#include "Form_Settings_Hotkeys.h"
-#include "Form_Settings_MIDI.h"
 #include "Form_BatchAction.h"
+#include "Form_Light_Import.h"
+#include "Form_Settings_MIDI.h"
+#include "Form_Settings_Hotkeys.h"
 
 
 using namespace System;
@@ -86,6 +87,7 @@ namespace MIDILightDrawer
 			// Menu Callbacks
 			void Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e);
 			void Menu_File_Open_Light_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_File_Open_Light_Special_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Save_Light_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Export_MIDI_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e);

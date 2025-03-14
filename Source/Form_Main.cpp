@@ -285,6 +285,9 @@ namespace MIDILightDrawer
 		Menu_File_Open_Light->ShortcutKeys = Keys::Control | Keys::Shift | Keys::O;
 		Menu_File_Open_Light->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Open_Light_Click);
 
+		ToolStripMenuItem^ Menu_File_Open_Light_Special = gcnew ToolStripMenuItem("Open Light Information File Special...");
+		Menu_File_Open_Light_Special->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Open_Light_Special_Click);
+
 		// File -> Save Light
 		ToolStripMenuItem^ Menu_File_Save_Light = gcnew ToolStripMenuItem("Save Light Information");
 		Menu_File_Save_Light->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Save")));
@@ -305,6 +308,7 @@ namespace MIDILightDrawer
 		// Build File menu
 		Menu_File->DropDownItems->Add(Menu_File_Open_GP);
 		Menu_File->DropDownItems->Add(Menu_File_Open_Light);
+		Menu_File->DropDownItems->Add(Menu_File_Open_Light_Special);
 		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Save_Light);
 		Menu_File->DropDownItems->Add(Menu_File_Export_MIDI);
@@ -495,6 +499,124 @@ namespace MIDILightDrawer
 
 			if (Error_Message->Length > 0) {
 				MessageBox::Show(this, "Error:\n" + Error_Message,  "Failed to load light information file", MessageBoxButtons::OK,	MessageBoxIcon::Error);
+			}
+		}
+	}
+
+	void Form_Main::Menu_File_Open_Light_Special_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		OpenFileDialog^ Open_Dialog_File = gcnew OpenFileDialog();
+		Open_Dialog_File->InitialDirectory = ".";
+		Open_Dialog_File->Filter = "Light Information Files (*.light)|*.light|All Files (*.*)|*.*";
+		Open_Dialog_File->RestoreDirectory = true;
+
+		if (Open_Dialog_File->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+		{
+			System::String^ Filename = Open_Dialog_File->FileName;
+
+			// Get the tracks from the light file
+			List<LightTrackInfo^>^ AvailableTracks = Widget_Timeline::GetTracksFromLightFile(Filename);
+
+			if (AvailableTracks->Count == 0) {
+				MessageBox::Show(this, "No valid tracks found in the selected file.", "Import Light Information", MessageBoxButtons::OK, MessageBoxIcon::Information);
+				return;
+			}
+
+			// Show the import dialog
+			Form_Light_Import^ ImportForm = gcnew Form_Light_Import(AvailableTracks);
+			ImportForm->Owner = this;
+
+			if (ImportForm->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+			{
+				List<LightTrackInfo^>^ SelectedTracks = ImportForm->SelectedTracks;
+
+				if (SelectedTracks->Count == 0) {
+					MessageBox::Show(this, "No tracks were selected for import.", "Import Light Information", MessageBoxButtons::OK, MessageBoxIcon::Information);
+					return;
+				}
+
+				// Create dictionary mapping track names to existing tracks
+				Dictionary<String^, Track^>^ TrackMap = gcnew Dictionary<String^, Track^>();
+				for each (Track ^ T in this->_Timeline->Tracks) {
+					TrackMap[T->Name] = T;
+				}
+
+				// Clear events from all tracks that will be imported
+				for each (LightTrackInfo ^ TrackInfo in SelectedTracks) {
+					if (TrackMap->ContainsKey(TrackInfo->Name)) {
+						TrackMap[TrackInfo->Name]->Events->Clear();
+					}
+				}
+
+				// Import the selected tracks and their events
+				for each (LightTrackInfo ^ TrackInfo in SelectedTracks) {
+					// Find or create track
+					Track^ TargetTrack = nullptr;
+
+					if (TrackMap->ContainsKey(TrackInfo->Name)) {
+						TargetTrack = TrackMap[TrackInfo->Name];
+					}
+					else {
+						// Create a new track if it doesn't exist
+						// Use a default octave of 4 (can be changed later in MIDI settings)
+						this->_Timeline->AddTrack(TrackInfo->Name, 4);
+						TargetTrack = this->_Timeline->Tracks[this->_Timeline->Tracks->Count - 1];
+						TrackMap[TrackInfo->Name] = TargetTrack; // Add to map
+					}
+
+					// Import events
+					for each (BarEvent^ Event in TrackInfo->Events) {
+						// We need to make a copy with the correct track reference
+						switch (Event->Type) {
+						case BarEventType::Solid:
+							TargetTrack->AddBar(Event->StartTick, Event->Duration, Event->Color);
+							break;
+
+						case BarEventType::Fade:
+							if (Event->FadeInfo != nullptr) {
+								BarEventFadeInfo^ FadeInfo;
+
+								if (Event->FadeInfo->Type == FadeType::Two_Colors) {
+									FadeInfo = gcnew BarEventFadeInfo(
+										Event->FadeInfo->QuantizationTicks,
+										Event->FadeInfo->ColorStart,
+										Event->FadeInfo->ColorEnd,
+										Event->FadeInfo->EaseIn,
+										Event->FadeInfo->EaseOut);
+								}
+								else {
+									FadeInfo = gcnew BarEventFadeInfo(
+										Event->FadeInfo->QuantizationTicks,
+										Event->FadeInfo->ColorStart,
+										Event->FadeInfo->ColorCenter,
+										Event->FadeInfo->ColorEnd,
+										Event->FadeInfo->EaseIn,
+										Event->FadeInfo->EaseOut);
+								}
+
+								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, Event->StartTick, Event->Duration, FadeInfo));
+							}
+							break;
+
+						case BarEventType::Strobe:
+							if (Event->StrobeInfo != nullptr) {
+								BarEventStrobeInfo^ StrobeInfo = gcnew BarEventStrobeInfo(
+									Event->StrobeInfo->QuantizationTicks,
+									Event->StrobeInfo->ColorStrobe);
+
+								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, Event->StartTick, Event->Duration, StrobeInfo));
+							}
+							break;
+						}
+					}
+				}
+
+				// Sort events in each track
+				for each (Track ^ T in this->_Timeline->Tracks) {
+					T->Events->Sort(Track::barComparer);
+				}
+
+				this->_Timeline->Invalidate();
 			}
 		}
 	}

@@ -135,6 +135,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Control_CheckedListBox.h" />
     <ClInclude Include="Control_ColorPicker.h" />
     <ClInclude Include="Control_ColorPreset.h" />
     <ClInclude Include="Control_ColorSlider.h" />
@@ -154,6 +155,7 @@
     <ClInclude Include="Dialog_ColorPicker.h" />
     <ClInclude Include="Easings.h" />
     <ClInclude Include="Form_BatchAction.h" />
+    <ClInclude Include="Form_Light_Import.h" />
     <ClInclude Include="Form_Loading.h" />
     <ClInclude Include="Form_Main.h" />
     <ClInclude Include="Form_Settings_Hotkeys.h" />
@@ -188,6 +190,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp" />
+    <ClCompile Include="Control_CheckedListBox.cpp" />
     <ClCompile Include="Control_ColorPicker.cpp" />
     <ClCompile Include="Control_ColorPreset.cpp" />
     <ClCompile Include="Control_ColorSlider.cpp" />
@@ -206,6 +209,7 @@
     <ClCompile Include="Easings.cpp" />
     <ClCompile Include="Form_BatchAction.cpp" />
     <ClCompile Include="Form_BatchAction_UI.cpp" />
+    <ClCompile Include="Form_Light_Import.cpp" />
     <ClCompile Include="Form_Loading.cpp" />
     <ClCompile Include="Form_Settings_Hotkeys.cpp" />
     <ClCompile Include="Form_Settings_MIDI.cpp" />
@@ -233,6 +237,7 @@
     <ClCompile Include="Widget_Tab_Info.cpp" />
     <ClCompile Include="Widget_Timeline.cpp" />
     <ClCompile Include="Widget_Timeline_Classes.cpp" />
+    <ClCompile Include="Widget_Timeline_Light_File.cpp" />
     <ClCompile Include="Widget_Timeline_Tools.cpp" />
     <ClCompile Include="Widget_Tools_And_Control.cpp" />
     <ClCompile Include="Widget_Draw_Options.cpp" />

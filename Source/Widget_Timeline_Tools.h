@@ -193,6 +193,7 @@ namespace MIDILightDrawer
 		Dictionary<BarEvent^, int>^ _OriginalLengths;
 
 		static const int HANDLE_WIDTH = 5;
+		static const int MIN_BAR_WIDTH_FOR_RESIZE = HANDLE_WIDTH * 3;
 		static const int MIN_LENGTH_TICKS = 120;	// Minimum 1/32 note
 
 	public:

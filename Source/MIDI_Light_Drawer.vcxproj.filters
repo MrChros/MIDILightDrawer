@@ -168,6 +168,12 @@
     <ClInclude Include="Dialog_ColorPicker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Form_Light_Import.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Control_CheckedListBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIDI_Light_Drawer.cpp">
@@ -312,6 +318,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Dialog_ColorPicker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Form_Light_Import.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Widget_Timeline_Light_File.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Control_CheckedListBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -29,6 +29,7 @@ namespace MIDILightDrawer
 	ref class FadeTool;
 	ref class StrobeTool;
 	ref class Widget_Tools_And_Control;
+	ref class LightTrackInfo;
 	enum class TimelineToolType;
 
 	public ref class Widget_Timeline : public UserControl, public ITimelineAccess {
@@ -110,8 +111,14 @@ namespace MIDILightDrawer
 		Measure^ GetMeasureAtTick(int tick);
 		BarEvent^ GetBarAtPoint(Point p);
 
+		// Non-static methods for backward compatibility
 		String^ SaveBarEventsToFile(String^ filePath);
 		String^ LoadBarEventsFromFile(String^ filePath);
+
+		// Static methods for file operations -> all in Widget_Timeline_Light_File.cpp
+		static String^ SaveBarEventsToFile(String^ filePath, List<Track^>^ tracks, List<Measure^>^ measures);
+		static String^ LoadBarEventsFromFile(String^ filePath, List<Track^>^ tracks, List<Measure^>^ measures, Dictionary<String^, Track^>^ trackMap);
+		static List<LightTrackInfo^>^ GetTracksFromLightFile(String^ filePath);
 
 		void LogPerformanceMetrics();
 

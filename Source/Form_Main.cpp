@@ -8,7 +8,6 @@ using namespace System::Runtime::InteropServices;
 
 namespace MIDILightDrawer
 {
-
 	Form_Main::Form_Main(void)
 	{
 		// Basic form setup with modern styling
@@ -406,10 +405,17 @@ namespace MIDILightDrawer
 		Menu_Settings_Midi->ShortcutKeys = Keys::Control | Keys::M;
 		Menu_Settings_Midi->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Settings_Midi_Click);
 
+		// Settings -> Device
+		ToolStripMenuItem^ Menu_Settings_Device = gcnew ToolStripMenuItem("Device Configuration");
+		//Menu_Settings_Device->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Midi_Settings")));
+		//Menu_Settings_Device->ShortcutKeys = Keys::Control | Keys::M;
+		Menu_Settings_Device->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Settings_Device_Click);
+
 		// Build Settings menu
 		Menu_Settings->DropDownItems->Add(Menu_Settings_Hotkeys);
 		Menu_Settings->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_Settings->DropDownItems->Add(Menu_Settings_Midi);
+		Menu_Settings->DropDownItems->Add(Menu_Settings_Device);
 
 		ToolStripLabel^ Label_Version = gcnew ToolStripLabel();
 		Label_Version->Text = "v" + VERSION_BUILD_STRING;
@@ -761,16 +767,23 @@ namespace MIDILightDrawer
 
 	void Form_Main::Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		Form_Settings_Hotkeys^ hotkeyForm = gcnew Form_Settings_Hotkeys();
-		hotkeyForm->Owner = this;
-		hotkeyForm->ShowDialog();
+		Form_Settings_Hotkeys^ Hotkey_Form = gcnew Form_Settings_Hotkeys();
+		Hotkey_Form->Owner = this;
+		Hotkey_Form->ShowDialog();
 	}
 
 	void Form_Main::Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		Form_Settings_MIDI^ midiForm = gcnew Form_Settings_MIDI();
-		midiForm->On_Settings_Accepted += gcnew On_Settings_Accepted_Handler(this, &Form_Main::SettingsMIDI_On_Settings_Accepted);
-		midiForm->ShowDialog();
+		Form_Settings_MIDI^ Midi_Form = gcnew Form_Settings_MIDI();
+		Midi_Form->On_Settings_Accepted += gcnew On_Settings_Accepted_Handler(this, &Form_Main::SettingsMIDI_On_Settings_Accepted);
+		Midi_Form->ShowDialog();
+	}
+
+	void Form_Main::Menu_Settings_Device_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		Form_Device_Configuration^ Device_Form = gcnew Form_Device_Configuration();
+		Device_Form->On_Device_Settings_Changed += gcnew On_Device_Settings_Changed_Handler(this, &Form_Main::SettingsDevice_On_Settings_Changed);
+		Device_Form->ShowDialog();
 	}
 
 	void Form_Main::Form_Main_FormClosing(System::Object^ sender, System::Windows::Forms::FormClosingEventArgs^ e)
@@ -1062,6 +1075,11 @@ namespace MIDILightDrawer
 		}
 
 		UpdateUndoRedoState();
+	}
+
+	void Form_Main::SettingsDevice_On_Settings_Changed()
+	{
+		
 	}
 
 	void Form_Main::DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
@@ -1363,6 +1381,8 @@ namespace MIDILightDrawer
 #endif
 	}
 }
+
+
 
 
 

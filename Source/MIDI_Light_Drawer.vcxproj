@@ -152,17 +152,25 @@
     <ClInclude Include="Control_Trackbar_Range.h" />
     <ClInclude Include="Control_Trackbar_Zoom.h" />
     <ClInclude Include="Custom_Color_Table.h" />
+    <ClInclude Include="Device_Manager.h" />
+    <ClInclude Include="Device_Manager_Audio_Enumerator.h" />
     <ClInclude Include="Dialog_ColorPicker.h" />
     <ClInclude Include="Easings.h" />
     <ClInclude Include="Form_BatchAction.h" />
+    <ClInclude Include="Form_Device_Configuration.h" />
     <ClInclude Include="Form_Light_Import.h" />
     <ClInclude Include="Form_Loading.h" />
     <ClInclude Include="Form_Main.h" />
+    <ClInclude Include="Form_MIDI_Log.h" />
     <ClInclude Include="Form_Settings_Hotkeys.h" />
     <ClInclude Include="Form_Settings_MIDI.h" />
     <ClInclude Include="Hotkey_Manager.h" />
+    <ClInclude Include="MIDI_Event_Raster.h" />
     <ClInclude Include="MIDI_Exporter.h" />
     <ClInclude Include="MIDI_Writer.h" />
+    <ClInclude Include="Playback_Audio_Engine.h" />
+    <ClInclude Include="Playback_Manager.h" />
+    <ClInclude Include="Playback_MIDI_Engine.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="gp_parser.h" />
     <ClInclude Include="Resource.h" />
@@ -205,17 +213,31 @@
     <ClCompile Include="Control_ToggleSwitch.cpp" />
     <ClCompile Include="Control_Trackbar_Range.cpp" />
     <ClCompile Include="Control_Trackbar_Zoom.cpp" />
+    <ClCompile Include="Device_Manager.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="Device_Manager_Audio_Enumerator.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
     <ClCompile Include="Dialog_ColorPicker.cpp" />
     <ClCompile Include="Easings.cpp" />
     <ClCompile Include="Form_BatchAction.cpp" />
     <ClCompile Include="Form_BatchAction_UI.cpp" />
+    <ClCompile Include="Form_Device_Configuration.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</CompileAsManaged>
+    </ClCompile>
     <ClCompile Include="Form_Light_Import.cpp" />
     <ClCompile Include="Form_Loading.cpp" />
+    <ClCompile Include="Form_MIDI_Log.cpp" />
     <ClCompile Include="Form_Settings_Hotkeys.cpp" />
     <ClCompile Include="Form_Settings_MIDI.cpp" />
     <ClCompile Include="Hotkey_Manager.cpp" />
+    <ClCompile Include="MIDI_Event_Raster.cpp" />
     <ClCompile Include="MIDI_Exporter.cpp" />
     <ClCompile Include="MIDI_Writer.cpp" />
+    <ClCompile Include="Playback_Audio_Engine.cpp" />
+    <ClCompile Include="Playback_Manager.cpp" />
+    <ClCompile Include="Playback_MIDI_Engine.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Form_Main.cpp" />
     <ClCompile Include="gp_parser.cpp">

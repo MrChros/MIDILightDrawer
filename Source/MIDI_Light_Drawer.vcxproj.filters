@@ -174,6 +174,30 @@
     <ClInclude Include="Control_CheckedListBox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MIDI_Event_Raster.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Playback_Manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Playback_MIDI_Engine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Playback_Audio_Engine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Device_Manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Form_Device_Configuration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Form_MIDI_Log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Device_Manager_Audio_Enumerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIDI_Light_Drawer.cpp">
@@ -327,6 +351,30 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Control_CheckedListBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MIDI_Event_Raster.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Playback_Manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Playback_MIDI_Engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Playback_Audio_Engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Device_Manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Form_Device_Configuration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Form_MIDI_Log.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Device_Manager_Audio_Enumerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

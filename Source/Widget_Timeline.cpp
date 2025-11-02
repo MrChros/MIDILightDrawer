@@ -83,12 +83,12 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::AddMeasure(int numerator, int denominator, int tempo, String^ marker_text)
 	{
-		int startTick = TotalTicks;
-		Measure^ newMeasure = gcnew Measure(startTick, numerator, denominator, tempo, marker_text);
-		_Measures->Add(newMeasure);
+		int Start_Tick = TotalTicks;
+		Measure^ New_Measure = gcnew Measure(Start_Tick, numerator, denominator, tempo, marker_text);
+		_Measures->Add(New_Measure);
 
-		for each (Track ^ track in _Tracks) {
-			track->Measures->Add(gcnew TrackMeasure(newMeasure, track));
+		for each (Track ^ T in _Tracks) {
+			T->Measures->Add(gcnew TrackMeasure(New_Measure, T));
 		}
 
 		UpdateDrawingForMeasures();

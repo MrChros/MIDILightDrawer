@@ -316,7 +316,7 @@ namespace MIDILightDrawer
 	void Form_Settings_Hotkeys::Grid_Hotkeys_RowPostPaint(Object^ sender, DataGridViewRowPostPaintEventArgs^ e) {
 		Image^ icon = safe_cast<Image^>(_Grid_Hotkeys->Rows[e->RowIndex]->HeaderCell->Tag);
 		if (icon != nullptr) {
-			Rectangle rect = Rectangle(
+			System::Drawing::Rectangle rect = System::Drawing::Rectangle(
 				e->RowBounds.X + 20,
 				e->RowBounds.Y + 2,  // Small vertical adjustment for centering
 				16,

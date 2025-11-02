@@ -6,6 +6,7 @@
 #include "Settings.h"
 #include "MIDI_Writer.h"
 #include "Widget_Timeline.h"
+#include "MIDI_Event_Raster.h"
 
 using namespace System;
 using namespace System::Drawing;
@@ -22,11 +23,11 @@ namespace MIDILightDrawer
 		};
 	
 	public:
-		static const int OCTAVE_OFFSET		= 2;
-		static const int NOTES_PER_OCTAVE	= 12;
+		
 		
 	private:
 		Widget_Timeline^ _Timeline;
+		MIDI_Event_Raster^ _Raster;
 
 		int _AdditionalOffset;
 		int _LastEndTick;
@@ -41,12 +42,6 @@ namespace MIDILightDrawer
 		std::string ConvertToStdString(System::String^ input_string);
 
 	private:
-		void RasterBarSolid(List<RasteredEvent>^ rasteredEvents, BarEvent^ bar);
-		void RasterBarFade(List<RasteredEvent>^ rasteredEvents, BarEvent^ bar);
-		void RasterBarStrobe(List<RasteredEvent>^ rasteredEvents, BarEvent^ bar);
-
-		void WriteEventToMIDI(MIDI_Writer* writer, int tick_start, int tick_length, Color color, int octave_note_offset);
-
-		void ToggleAdditionalOffset();
-	};
+		void WriteEventToMIDI(MIDI_Writer* writer, Export_Rastered_Event event, int octave_note_offset);
+ 	};
 }

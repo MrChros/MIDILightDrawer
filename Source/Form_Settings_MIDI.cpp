@@ -18,17 +18,17 @@ namespace MIDILightDrawer
 	{
 		_Note_Names = gcnew array<Note_Entry>{
 			Note_Entry("C", 0),
-				Note_Entry("C#", 1),
-				Note_Entry("D", 2),
-				Note_Entry("D#", 3),
-				Note_Entry("E", 4),
-				Note_Entry("F", 5),
-				Note_Entry("F#", 6),
-				Note_Entry("G", 7),
-				Note_Entry("G#", 8),
-				Note_Entry("A", 9),
-				Note_Entry("A#", 10),
-				Note_Entry("B", 11)
+			Note_Entry("C#", 1),
+			Note_Entry("D", 2),
+			Note_Entry("D#", 3),
+			Note_Entry("E", 4),
+			Note_Entry("F", 5),
+			Note_Entry("F#", 6),
+			Note_Entry("G", 7),
+			Note_Entry("G#", 8),
+			Note_Entry("A", 9),
+			Note_Entry("A#", 10),
+			Note_Entry("B", 11)
 		};
 	}
 

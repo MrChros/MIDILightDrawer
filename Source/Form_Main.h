@@ -21,6 +21,7 @@
 #include "Form_Light_Import.h"
 #include "Form_Settings_MIDI.h"
 #include "Form_Settings_Hotkeys.h"
+#include "Form_Device_Configuration.h"
 
 
 using namespace System;
@@ -100,6 +101,7 @@ namespace MIDILightDrawer
 			void Menu_Edit_BatchAction_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Settings_Device_Click(System::Object^ sender, System::EventArgs^ e);
 
 			// Form Callbacks
 			void Form_Main_FormClosing(System::Object^ sender, System::Windows::Forms::FormClosingEventArgs^ e);
@@ -114,6 +116,7 @@ namespace MIDILightDrawer
 			// Control and Widget Callbacks
 			void Toolbar_OnToolChanged(System::Object^ sender, TimelineToolType e);
 			void SettingsMIDI_On_Settings_Accepted();
+			void SettingsDevice_On_Settings_Changed();
 			void DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void DropDown_View_Marker_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void TrackBar_Zoom_OnValue_Changed(System::Object^ sender, Track_Bar_Value_Changed_Event_Args^ e);

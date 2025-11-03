@@ -31,10 +31,10 @@ namespace MIDILightDrawer
 		_Main_Layout->RowCount = 4;
 		_Main_Layout->Dock = DockStyle::Fill;
 		_Main_Layout->Padding = System::Windows::Forms::Padding(10);
-		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::AutoSize));
-		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::AutoSize));
-		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100));
-		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::AutoSize));
+		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 33));
+		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 33));
+		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 33));
+		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 40));
 
 		// MIDI Output Group Box
 		_Group_Box_MIDI_Output = gcnew Control_GroupBox();
@@ -46,6 +46,8 @@ namespace MIDILightDrawer
 		_MIDI_Layout->ColumnCount = 3;
 		_MIDI_Layout->RowCount = 2;
 		_MIDI_Layout->Dock = DockStyle::Fill;
+		_MIDI_Layout->BackColor = Color::Transparent;
+		_MIDI_Layout->Padding = System::Windows::Forms::Padding(0, 10, 0, 0);
 		_MIDI_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::AutoSize));
 		_MIDI_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
 		_MIDI_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::AutoSize));
@@ -63,6 +65,7 @@ namespace MIDILightDrawer
 		_Button_Refresh_MIDI->Text = "Refresh";
 		_Button_Refresh_MIDI->AutoSize = true;
 		_Button_Refresh_MIDI->Click += gcnew EventHandler(this, &Form_Device_Configuration::Button_Refresh_MIDI_Click);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Refresh_MIDI);
 
 		_Label_MIDI_Channel = gcnew Label();
 		_Label_MIDI_Channel->Text = "Channel:";
@@ -91,6 +94,8 @@ namespace MIDILightDrawer
 		_Audio_Layout->ColumnCount = 3;
 		_Audio_Layout->RowCount = 2;
 		_Audio_Layout->Dock = DockStyle::Fill;
+		_Audio_Layout->BackColor = Color::Transparent;
+		_Audio_Layout->Padding = System::Windows::Forms::Padding(0, 10, 0, 0);
 		_Audio_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::AutoSize));
 		_Audio_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
 		_Audio_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::AutoSize));
@@ -108,6 +113,7 @@ namespace MIDILightDrawer
 		_Button_Refresh_Audio->Text = "Refresh";
 		_Button_Refresh_Audio->AutoSize = true;
 		_Button_Refresh_Audio->Click += gcnew EventHandler(this, &Form_Device_Configuration::Button_Refresh_Audio_Click);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Refresh_Audio);
 
 		_Label_Buffer_Size = gcnew Label();
 		_Label_Buffer_Size->Text = "Buffer Size:";
@@ -140,17 +146,20 @@ namespace MIDILightDrawer
 		_Button_OK->Text = "OK";
 		_Button_OK->Size = System::Drawing::Size(80, 30);
 		_Button_OK->Click += gcnew EventHandler(this, &Form_Device_Configuration::Button_OK_Click);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_OK);
 
 		_Button_Apply = gcnew Button();
 		_Button_Apply->Text = "Apply";
 		_Button_Apply->Size = System::Drawing::Size(80, 30);
 		_Button_Apply->Click += gcnew EventHandler(this, &Form_Device_Configuration::Button_Apply_Click);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Apply);
 
 		_Button_Cancel = gcnew Button();
 		_Button_Cancel->Text = "Cancel";
 		_Button_Cancel->Size = System::Drawing::Size(80, 30);
 		_Button_Cancel->DialogResult = System::Windows::Forms::DialogResult::Cancel;
 		_Button_Cancel->Click += gcnew EventHandler(this, &Form_Device_Configuration::Button_Cancel_Click);
+		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Cancel);
 
 		Button_Panel->Controls->Add(_Button_OK, 1, 0);
 		Button_Panel->Controls->Add(_Button_Apply, 2, 0);

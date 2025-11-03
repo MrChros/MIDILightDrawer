@@ -153,7 +153,8 @@
     <ClInclude Include="Control_Trackbar_Zoom.h" />
     <ClInclude Include="Custom_Color_Table.h" />
     <ClInclude Include="Device_Manager.h" />
-    <ClInclude Include="Device_Manager_Audio_Enumerator.h" />
+    <ClInclude Include="Device_Manager_Audio_Native.h" />
+    <ClInclude Include="Device_Manager_MIDI_Native.h" />
     <ClInclude Include="Dialog_ColorPicker.h" />
     <ClInclude Include="Easings.h" />
     <ClInclude Include="Form_BatchAction.h" />
@@ -216,9 +217,10 @@
     <ClCompile Include="Device_Manager.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</CompileAsManaged>
     </ClCompile>
-    <ClCompile Include="Device_Manager_Audio_Enumerator.cpp">
+    <ClCompile Include="Device_Manager_Audio_Native.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
     </ClCompile>
+    <ClCompile Include="Device_Manager_MIDI_Native.cpp" />
     <ClCompile Include="Dialog_ColorPicker.cpp" />
     <ClCompile Include="Easings.cpp" />
     <ClCompile Include="Form_BatchAction.cpp" />

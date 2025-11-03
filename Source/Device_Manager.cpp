@@ -18,19 +18,56 @@ namespace MIDILightDrawer
 	void Device_Manager::Enumerate_MIDI_Devices()
 	{
 		_MIDI_Devices->Clear();
-		Enumerate_MIDI_Devices_Internal();
+
+		int Count = 0;
+		auto* Native_Devices = Device_Manager_MIDI_Native::Enumerate_MIDI_Devices(Count);
+
+		if (Native_Devices)
+		{
+			for (int i = 0; i < Count; ++i)
+			{
+				if (Native_Devices[i].Is_Available)
+				{
+					MIDI_Device_Info^ Info = gcnew MIDI_Device_Info();
+					Info->Device_ID = Native_Devices[i].Device_ID;
+					Info->Device_Name = gcnew String(Native_Devices[i].Device_Name);
+					Info->Is_Available = Native_Devices[i].Is_Available;
+					_MIDI_Devices->Add(Info);
+				}
+			}
+
+			Device_Manager_MIDI_Native::Free_Device_List(Native_Devices, Count);
+		}
 	}
 
 	void Device_Manager::Enumerate_Audio_Devices()
 	{
-		//_Audio_Devices = Device_Manager_Audio_Enumerator::Enumerate_Audio_Devices();
+		_Audio_Devices->Clear();
+
+		int Count = 0;
+		auto* Native_Devices = Device_Manager_Audio_Native::Enumerate_Audio_Devices(Count);
+
+		if (Native_Devices)
+		{
+			for (int i = 0; i < Count; ++i)
+			{
+				Audio_Device_Info^ Info = gcnew Audio_Device_Info();
+				Info->Device_ID = gcnew String(Native_Devices[i].Device_ID);
+				Info->Device_Name = gcnew String(Native_Devices[i].Device_Name);
+				Info->Is_Default = Native_Devices[i].Is_Default;
+				Info->Is_Available = Native_Devices[i].Is_Available;
+				_Audio_Devices->Add(Info);
+			}
+
+			Device_Manager_Audio_Native::Free_Device_List(Native_Devices, Count);
+		}
 	}
 
 	List<MIDI_Device_Info^>^ Device_Manager::Get_MIDI_Devices()
 	{
 		return _MIDI_Devices;
 	}
-	
+
 	List<Audio_Device_Info^>^ Device_Manager::Get_Audio_Devices()
 	{
 		return _Audio_Devices;
@@ -58,24 +95,20 @@ namespace MIDILightDrawer
 
 	int Device_Manager::Get_Default_MIDI_Device_ID()
 	{
-		// Return first available MIDI device as default
 		if (_MIDI_Devices->Count > 0) {
 			return _MIDI_Devices[0]->Device_ID;
 		}
-
 		return -1;
 	}
 
 	String^ Device_Manager::Get_Default_Audio_Device_ID()
 	{
-		// Find device marked as default
 		for each (Audio_Device_Info ^ Device in _Audio_Devices)
 		{
 			if (Device->Is_Default)
 				return Device->Device_ID;
 		}
 
-		// Return first available if no default found
 		if (_Audio_Devices->Count > 0)
 			return _Audio_Devices[0]->Device_ID;
 
@@ -101,28 +134,5 @@ namespace MIDILightDrawer
 				return Device->Device_Name;
 		}
 		return nullptr;
-	}
-
-	void Device_Manager::Enumerate_MIDI_Devices_Internal()
-	{
-		/*
-		UINT Num_Devices = midiOutGetNumDevs();
-
-		for (UINT i = 0; i < Num_Devices; ++i)
-		{
-			MIDIOUTCAPS Caps;
-			MMRESULT Result = midiOutGetDevCaps(i, &Caps, sizeof(MIDIOUTCAPS));
-
-			if (Result == MMSYSERR_NOERROR)
-			{
-				MIDI_Device_Info^ Info = gcnew MIDI_Device_Info();
-				Info->Device_ID = static_cast<int>(i);
-				Info->Device_Name = gcnew String(Caps.szPname);
-				Info->Is_Available = true;
-
-				_MIDI_Devices->Add(Info);
-			}
-		}
-		*/
 	}
 }

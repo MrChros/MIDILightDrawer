@@ -63,6 +63,7 @@ namespace MIDILightDrawer
 
 		_Notes_Layout = gcnew System::Windows::Forms::TableLayoutPanel();
 		_Notes_Layout->Dock = System::Windows::Forms::DockStyle::Fill;
+		_Notes_Layout->BackColor = Color::Transparent;
 		_Notes_Layout->ColumnCount = 3;
 		_Notes_Layout->RowCount = 4;
 		_Notes_Layout->RowStyles->Add(gcnew System::Windows::Forms::RowStyle(System::Windows::Forms::SizeType::Absolute, 35));
@@ -158,6 +159,7 @@ namespace MIDILightDrawer
 
 		_Octaves_Layout = gcnew System::Windows::Forms::TableLayoutPanel();
 		_Octaves_Layout->Dock = System::Windows::Forms::DockStyle::Fill;
+		_Octaves_Layout->BackColor = Color::Transparent;
 		_Group_Box_Octaves->Controls->Add(_Octaves_Layout);
 		_Main_Layout->Controls->Add(_Group_Box_Octaves, 0, 1);
 

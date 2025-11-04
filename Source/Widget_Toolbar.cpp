@@ -10,7 +10,8 @@ namespace MIDILightDrawer {
 		InitializeComponent();
 	}
 
-	void Widget_Toolbar::InitializeComponent() {
+	void Widget_Toolbar::InitializeComponent()
+	{
 		// Basic control setup
 		this->AutoSize = true;
 		this->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;

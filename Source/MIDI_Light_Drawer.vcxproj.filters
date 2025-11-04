@@ -195,7 +195,19 @@
     <ClInclude Include="Form_MIDI_Log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Device_Manager_Audio_Enumerator.h">
+    <ClInclude Include="Device_Manager_Audio_Native.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Device_Manager_MIDI_Native.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Playback_MIDI_Engine_Native.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Playback_Audio_Engine_Native.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget_Transport_Controls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -374,7 +386,19 @@
     <ClCompile Include="Form_MIDI_Log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Device_Manager_Audio_Enumerator.cpp">
+    <ClCompile Include="Device_Manager_Audio_Native.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Device_Manager_MIDI_Native.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Playback_MIDI_Engine_Native.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Playback_Audio_Engine_Native.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Widget_Transport_Controls.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

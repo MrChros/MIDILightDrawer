@@ -25,6 +25,7 @@ namespace MIDILightDrawer
 		Table_Layout_Main->ColumnCount = 2;
 		Table_Layout_Main->Dock = DockStyle::Fill;
 		Table_Layout_Main->Padding = System::Windows::Forms::Padding(5);
+		Table_Layout_Main->BackColor = Color::Transparent;
 
 		// Configure row styles
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 45));	// Row for combo and color button

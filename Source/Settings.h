@@ -37,6 +37,12 @@ namespace MIDILightDrawer
 
 		List<String^>^ _ColorPresets;
 
+		// Playback Device Settings Members
+		String^ _Selected_MIDI_Output_Device;
+		int _Global_MIDI_Output_Channel;
+		String^ _Selected_Audio_Output_Device;
+		int _Audio_Buffer_Size;
+
 		Settings();
 		void Load_Defaults();
 		void Load_From_File();
@@ -93,6 +99,31 @@ namespace MIDILightDrawer
 		property List<Color>^ ColorPresetsColor
 		{
 			List<Color>^ get();
+		}
+
+		// Playback Device Settings Properties
+		property String^ Selected_MIDI_Output_Device
+		{
+			String^ get();
+			void set(String^ value);
+		}
+
+		property int Global_MIDI_Output_Channel
+		{
+			int get();
+			void set(int value);
+		}
+
+		property String^ Selected_Audio_Output_Device
+		{
+			String^ get();
+			void set(String^ value);
+		}
+
+		property int Audio_Buffer_Size
+		{
+			int get();
+			void set(int value);
 		}
 	};
 }

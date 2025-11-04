@@ -16,12 +16,14 @@ namespace MIDILightDrawer
 
 	bool Playback_Audio_Engine::Initialize(String^ device_id, int buffer_size_samples)
 	{
-		if (!device_id) {
-			return false;
+		const wchar_t* Device_ID_Native = nullptr;
+
+		if (device_id && device_id->Length > 0) {
+			pin_ptr<const wchar_t> Device_ID_Pin = PtrToStringChars(device_id);
+			Device_ID_Native = Device_ID_Pin;
 		}
 
-		pin_ptr<const wchar_t> Device_ID_Pin = PtrToStringChars(device_id);
-		_Is_Initialized = Playback_Audio_Engine_Native::Initialize(Device_ID_Pin, buffer_size_samples);
+		_Is_Initialized = Playback_Audio_Engine_Native::Initialize(Device_ID_Native, buffer_size_samples);
 		return _Is_Initialized;
 	}
 
@@ -92,5 +94,15 @@ namespace MIDILightDrawer
 	bool Playback_Audio_Engine::Is_Audio_Loaded()
 	{
 		return Playback_Audio_Engine_Native::Is_Audio_Loaded();
+	}
+
+	void Playback_Audio_Engine::Set_MIDI_Position_Us(int64_t position_us)
+	{
+		Playback_Audio_Engine_Native::Set_MIDI_Position_Us(position_us);
+	}
+
+	void Playback_Audio_Engine::Enable_MIDI_Sync(bool enable)
+	{
+		Playback_Audio_Engine_Native::Enable_MIDI_Sync(enable);
 	}
 }

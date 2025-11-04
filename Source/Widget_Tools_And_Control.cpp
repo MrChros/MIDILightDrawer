@@ -9,24 +9,33 @@ namespace MIDILightDrawer
 		Table_Layout_Main->Dock = DockStyle::Fill;
 
 		Table_Layout_Main->RowCount = 2;
-		Table_Layout_Main->ColumnCount = 3;
+		Table_Layout_Main->ColumnCount = 4;
 
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 60));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 800));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
 
 
+		// Create and add toolbar
 		this->_Toolbar = gcnew Widget_Toolbar();
 		this->_Toolbar->Dock = DockStyle::Fill;
 		this->_Toolbar->OnToolChanged += gcnew System::EventHandler<TimelineToolType>(this, &Widget_Tools_And_Control::Toolbar_OnToolChanged);
 		Table_Layout_Main->Controls->Add(this->_Toolbar, 0, 0);
 
 
+		// Create and add transport controls
+		this->_Transport_Controls = gcnew Widget_Transport_Controls();
+		this->_Transport_Controls->Dock = DockStyle::Fill;
+		Table_Layout_Main->Controls->Add(this->_Transport_Controls, 1, 0);
+
+
+		// Create and add color picker
 		this->_Color_Picker = gcnew Control_ColorPicker();
 		this->_Color_Picker->Dock = DockStyle::Fill;
-		Table_Layout_Main->Controls->Add(this->_Color_Picker, 1, 0);
+		Table_Layout_Main->Controls->Add(this->_Color_Picker, 2, 0);
 		Table_Layout_Main->SetRowSpan(this->_Color_Picker, 2);
 
 
@@ -38,6 +47,7 @@ namespace MIDILightDrawer
 		this->_Options_Container->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
 		this->_Options_Container->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
 		Table_Layout_Main->Controls->Add(this->_Options_Container, 0, 1);
+		Table_Layout_Main->SetColumnSpan(this->_Options_Container, 2);
 
 
 		this->_Pointer_Options = gcnew Widget_Pointer_Options();
@@ -138,6 +148,11 @@ namespace MIDILightDrawer
 	Widget_Toolbar^ Widget_Tools_And_Control::Get_Widget_Toolbar(void)
 	{
 		return this->_Toolbar;
+	}
+
+	Widget_Transport_Controls^ Widget_Tools_And_Control::Get_Widget_Transport_Controls(void)
+	{
+		return this->_Transport_Controls;
 	}
 
 	Widget_Pointer_Options^	Widget_Tools_And_Control::Get_Widget_Pointer_Options(void)

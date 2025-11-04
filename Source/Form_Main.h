@@ -7,6 +7,7 @@
 #include "Settings.h"
 #include "MIDI_Exporter.h"
 #include "Hotkey_Manager.h"
+#include "Playback_Manager.h"
 
 #include "Control_DropDown.h"
 #include "Control_Trackbar_Zoom.h"
@@ -60,6 +61,7 @@ namespace MIDILightDrawer
 			gp_parser::Parser*					_GP_Tab;
 			Widget_Tab_Info^					_Tab_Info;
 			Widget_Tools_And_Control^			_Tools_And_Control;
+			Widget_Transport_Controls^			_Transport_Controls;
 
 			Control_DropDown^					_DropDown_Track_Height;
 			Control_DropDown^					_DropDown_Marker;
@@ -77,6 +79,9 @@ namespace MIDILightDrawer
 
 			MIDI_Exporter^						_MIDI_Exporter;
 
+			Playback_Manager^					_Playback_Manager;
+			System::Windows::Forms::Timer^		_Playback_Update_Timer;
+
 			Dictionary<String^, Keys>^			_Active_Hotkeys;
 
 			// Internal Setup Methods
@@ -84,6 +89,8 @@ namespace MIDILightDrawer
 			void InitializeToolOptions();
 			void InitializeMainMenu();
 			void InitializeDebugButtons();
+			void Initialize_Playback_System();
+			void Shutdown_Playback_System();
 
 			// Menu Callbacks
 			void Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e);
@@ -126,6 +133,9 @@ namespace MIDILightDrawer
 			bool Process_Hotkey(System::Windows::Forms::Keys key_code);
 			void Register_Hotkey_Handlers();
 			void Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e);
+
+			// Playback Timer Callback
+			void Playback_Update_Timer_Tick(Object ^ sender, EventArgs ^ e);
 
 			void Pointer_Options_OnSnappingChanged(int value);
 			void Pointer_Options_OnQuantizationChanged(int value);

@@ -70,6 +70,9 @@ namespace MIDILightDrawer
 		this->_Toolbar = this->_Tools_And_Control->Get_Widget_Toolbar();
 		this->_Toolbar->OnToolChanged += gcnew System::EventHandler<TimelineToolType>(this, &Form_Main::Toolbar_OnToolChanged);
 
+		// Get transport controls reference
+		this->_Transport_Controls = this->_Tools_And_Control->Get_Widget_Transport_Controls();
+
 		
 		//////////////////////
 		// Timeline Section //
@@ -129,15 +132,19 @@ namespace MIDILightDrawer
 		Initialize_Hotkeys();
 		SettingsMIDI_On_Settings_Accepted();
 
-	#ifdef _DEBUG
-
-	#endif
-
+		// Initialize playback system
+		Initialize_Playback_System();
 	}
 
 	Form_Main::~Form_Main()
 	{
+		if (_Playback_Update_Timer != nullptr)
+		{
+			_Playback_Update_Timer->Stop();
+			delete _Playback_Update_Timer;
+		}
 
+		Shutdown_Playback_System();
 	}
 
 	void Form_Main::InitializeBottomControls(Panel^ container)
@@ -457,6 +464,74 @@ namespace MIDILightDrawer
 			this->_Menu_Strip->Items->Add(Menu_Debug_Test1);
 			this->_Menu_Strip->Items->Add(Menu_Debug_Test2);
 	#endif
+	}
+
+	void Form_Main::Initialize_Playback_System()
+	{
+		try
+		{
+			// Create Playback_Manager
+			this->_Playback_Manager = gcnew Playback_Manager();
+
+			Device_Manager^ Devices = gcnew Device_Manager();
+			Devices->Enumerate_All_Devices();
+
+			// Get device settings from Settings
+			Settings^ Config = Settings::Get_Instance();
+			String^ MIDI_Device_Name = Config->Selected_MIDI_Output_Device;
+			int MIDI_Device_ID = Devices->Find_MIDI_Device_By_Name(MIDI_Device_Name);
+			int MIDI_Channel = Config->Global_MIDI_Output_Channel;
+			String^ Audio_Device_Name = Config->Selected_Audio_Output_Device;
+			String^ Audio_Device_ID = Devices->Find_Audio_Device_By_Name(Audio_Device_Name);
+			int Buffer_Size = Config->Audio_Buffer_Size;
+
+			// Initialize MIDI engine if device is configured
+			if (!String::IsNullOrEmpty(MIDI_Device_Name))
+			{
+				// Note: Device ID would need to be resolved from device name
+				// For now, using default device (ID 0)
+				if (!_Playback_Manager->Initialize_MIDI(MIDI_Device_ID))
+				{
+					Console::WriteLine("Warning: Failed to initialize MIDI playback");
+				}
+			}
+
+			// Initialize Audio engine if device is configured
+			if (!String::IsNullOrEmpty(Audio_Device_Name))
+			{
+				if (!_Playback_Manager->Initialize_Audio(Audio_Device_ID, Buffer_Size))
+				{
+					Console::WriteLine("Warning: Failed to initialize audio playback");
+				}
+			}
+
+			// Connect transport controls to playback manager
+			if (_Transport_Controls != nullptr)
+			{
+				_Transport_Controls->Set_Playback_Manager(_Playback_Manager);
+			}
+
+			// Create and start update timer
+			this->_Playback_Update_Timer = gcnew System::Windows::Forms::Timer();
+			this->_Playback_Update_Timer->Interval = 16; // ~60 FPS
+			this->_Playback_Update_Timer->Tick += gcnew EventHandler(this, &Form_Main::Playback_Update_Timer_Tick);
+			this->_Playback_Update_Timer->Start();
+		}
+		catch (Exception^ Ex)
+		{
+			Console::WriteLine("Error initializing playback system: " + Ex->Message);
+		}
+	}
+
+	void Form_Main::Shutdown_Playback_System()
+	{
+		if (_Playback_Manager != nullptr)
+		{
+			_Playback_Manager->Stop();
+			_Playback_Manager->Cleanup();
+			delete _Playback_Manager;
+			_Playback_Manager = nullptr;
+		}
 	}
 
 	void Form_Main::Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e)
@@ -1079,7 +1154,7 @@ namespace MIDILightDrawer
 
 	void Form_Main::SettingsDevice_On_Settings_Changed()
 	{
-		
+		Initialize_Playback_System();
 	}
 
 	void Form_Main::DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
@@ -1262,6 +1337,29 @@ namespace MIDILightDrawer
 			Process_Hotkey(e->KeyCode);
 			e->Handled = true;
 		}
+	}
+
+	void Form_Main::Playback_Update_Timer_Tick(Object^ sender, EventArgs^ e)
+	{
+		if (_Playback_Manager == nullptr)
+			return;
+
+		// Update transport control state
+		if (_Transport_Controls != nullptr)
+		{
+			bool Is_Playing = _Playback_Manager->Is_Playing();
+			_Transport_Controls->Update_State(Is_Playing);
+		}
+
+		// Get current playback position
+		double Current_Position_Ms = _Playback_Manager->Get_Current_Position_Ms();
+
+		// TODO: Update timeline playback cursor position
+		// This will need a method added to Widget_Timeline to set the playback cursor position
+		// Example: _Timeline->Set_Playback_Position_Ms(Current_Position_Ms);
+
+		// TODO: Handle auto-scroll if playback cursor goes off-screen
+		// This would also need support in the timeline widget
 	}
 
 	void Form_Main::Pointer_Options_OnSnappingChanged(int value)

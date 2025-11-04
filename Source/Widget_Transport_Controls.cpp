@@ -202,8 +202,9 @@ namespace MIDILightDrawer
 
 	void Widget_Transport_Controls::On_Seek_Timer_Tick(Object^ sender, EventArgs^ e)
 	{
-		if (!_Playback_Manager)
+		if (!_Playback_Manager) {
 			return;
+		}
 
 		double Current_Position = _Playback_Manager->Get_Current_Position_Ms();
 		double Seek_Amount = 500.0; // Seek 500ms per tick
@@ -220,8 +221,9 @@ namespace MIDILightDrawer
 		{
 			double Duration = _Playback_Manager->Get_Audio_Duration_Ms();
 			double New_Position = Current_Position + Seek_Amount;
-			if (Duration > 0.0 && New_Position > Duration)
+			if (Duration > 0.0 && New_Position > Duration) {
 				New_Position = Duration;
+			}
 			_Playback_Manager->Seek_To_Position(New_Position);
 		}
 	}
@@ -240,7 +242,7 @@ namespace MIDILightDrawer
 
 	void Widget_Transport_Controls::Set_Playback_Manager(Playback_Manager^ playback_manager)
 	{
-		_Playback_Manager = playback_manager;
+		this->_Playback_Manager = playback_manager;
 	}
 
 	void Widget_Transport_Controls::Update_State(bool is_playing)

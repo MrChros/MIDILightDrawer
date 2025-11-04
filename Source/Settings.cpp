@@ -13,7 +13,7 @@ namespace MIDILightDrawer
 		Name = name;
 		Octave_Number = octave;
 	}
-	
+
 
 	//////////////////////
 	// Settings Private //
@@ -33,9 +33,9 @@ namespace MIDILightDrawer
 	void Settings::Load_Defaults()
 	{
 		// Add default note assignments
-		_MIDI_Note_Red		= 0;	// C
-		_MIDI_Note_Green	= 2;	// D
-		_MIDI_Note_Blue		= 4;	// E
+		_MIDI_Note_Red = 0;	// C
+		_MIDI_Note_Green = 2;	// D
+		_MIDI_Note_Blue = 4;	// E
 
 		_MIDI_Export_Anti_Flicker = false;
 
@@ -54,6 +54,12 @@ namespace MIDILightDrawer
 		_ColorPresets[6] = "0,255,255";		// Aqua
 		_ColorPresets[7] = "127,127,127";	// Gray
 		_ColorPresets[8] = "0,0,0";			// Black
+
+		// Playback device defaults
+		_Selected_MIDI_Output_Device = "";  // Empty string means use first available device
+		_Global_MIDI_Output_Channel = 1;     // Default to MIDI channel 1
+		_Selected_Audio_Output_Device = ""; // Empty string means use system default
+		_Audio_Buffer_Size = 1024;           // Default buffer size
 	}
 
 	void Settings::Load_From_File()
@@ -79,13 +85,16 @@ namespace MIDILightDrawer
 		// Serialize hotkey bindings
 		sb->AppendLine("  \"HotkeyBindings\": {");
 		auto bindings = Hotkey_Manager::Instance->Get_All_Bindings();
-		for each(KeyValuePair<String^, String^> pair in bindings) {
-			sb->AppendLine(String::Format("    \"{0}\": \"{1}\",",
+		bool First_Binding = true;
+		for each (KeyValuePair<String^, String^> pair in bindings) {
+			if (!First_Binding) {
+				sb->AppendLine(",");
+			}
+			sb->Append(String::Format("    \"{0}\": \"{1}\"",
 				pair.Key->Replace("\"", "\\\""),
 				pair.Value->Replace("\"", "\\\"")));
+			First_Binding = false;
 		}
-		// Remove the last comma and close the hotkey bindings object
-		sb->Length = sb->Length - 3;
 		sb->AppendLine("");
 		sb->AppendLine("  },");
 
@@ -93,7 +102,15 @@ namespace MIDILightDrawer
 		sb->AppendLine(String::Format("  \"MidiNoteRed\": {0},", _MIDI_Note_Red));
 		sb->AppendLine(String::Format("  \"MidiNoteGreen\": {0},", _MIDI_Note_Green));
 		sb->AppendLine(String::Format("  \"MidiNoteBlue\": {0},", _MIDI_Note_Blue));
-		sb->AppendLine(String::Format("  \"MidiExportAntiFlicker\": {0}", _MIDI_Export_Anti_Flicker ? "true" : "false"));
+		sb->AppendLine(String::Format("  \"MidiExportAntiFlicker\": {0},", _MIDI_Export_Anti_Flicker ? "true" : "false"));
+
+		// Add playback device settings
+		sb->AppendLine(String::Format("  \"SelectedMidiOutputDevice\": \"{0}\",",
+			_Selected_MIDI_Output_Device->Replace("\"", "\\\"")));
+		sb->AppendLine(String::Format("  \"GlobalMidiOutputChannel\": {0},", _Global_MIDI_Output_Channel));
+		sb->AppendLine(String::Format("  \"SelectedAudioOutputDevice\": \"{0}\",",
+			_Selected_Audio_Output_Device->Replace("\"", "\\\"")));
+		sb->AppendLine(String::Format("  \"AudioBufferSize\": {0},", _Audio_Buffer_Size));
 
 		// Add octave entries
 		sb->AppendLine("  \"OctaveEntries\": [");
@@ -104,8 +121,9 @@ namespace MIDILightDrawer
 				entry->Octave_Number,
 				i < _Octave_Entries->Count - 1 ? "," : ""));
 		}
-		sb->AppendLine("  ]");
+		sb->AppendLine("  ],");
 
+		// Add color presets
 		sb->AppendLine("  \"ColorPresets\": [");
 		for (int i = 0; i < _ColorPresets->Count; i++) {
 			sb->AppendLine(String::Format("    \"{0}\"{1}",
@@ -113,8 +131,6 @@ namespace MIDILightDrawer
 				i < _ColorPresets->Count - 1 ? "," : ""));
 		}
 		sb->AppendLine("  ]");
-
-
 
 		// Close JSON object
 		sb->AppendLine("}");
@@ -137,7 +153,7 @@ namespace MIDILightDrawer
 			bool inColorPresets = false;
 			_ColorPresets->Clear();
 
-			for each(String ^ line in lines) {
+			for each (String ^ line in lines) {
 				String^ currentLine = line->Trim();
 
 				// Skip empty lines and brackets
@@ -152,6 +168,7 @@ namespace MIDILightDrawer
 
 				if (currentLine == "]" || currentLine == "],") {
 					inOctaveEntries = false;
+					inColorPresets = false;
 					continue;
 				}
 
@@ -160,6 +177,7 @@ namespace MIDILightDrawer
 					String^ octaveStr = currentLine->Split(':')[2]->Trim(L'}', L' ', L',');
 					int octave = Int32::Parse(octaveStr);
 					_Octave_Entries->Add(gcnew Octave_Entry(name, octave));
+					continue;
 				}
 
 				// Remove trailing commas and any remaining whitespace
@@ -172,60 +190,61 @@ namespace MIDILightDrawer
 					continue;
 				}
 
-				// End of hotkey bindings section
-				if (currentLine == "}" || currentLine == "},") {
-					inHotkeyBindings = false;
+				if (currentLine == "}") {
+					if (inHotkeyBindings) {
+						inHotkeyBindings = false;
+					}
 					continue;
 				}
 
 				// Parse hotkey bindings
-				if (inHotkeyBindings) {
-					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
-					if (parts->Length == 2) {
-						String^ key = parts[0]->Trim()->Trim(L'"', L' ');
-						String^ value = parts[1]->Trim()->Trim(L'"', L' ', L',');
-						if (!String::IsNullOrEmpty(key)) {
-							hotkeyBindings->Add(key, value);
-						}
-					}
-					continue;
-				}
-
-				// Parse MIDI note settings
-				if (currentLine->StartsWith("\"MidiNoteRed\"")) {
-					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
-					if (parts->Length == 2) {
-						_MIDI_Note_Red = Int32::Parse(parts[1]->Trim(L',', L' '));
-					}
-				}
-				else if (currentLine->StartsWith("\"MidiNoteGreen\"")) {
-					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
-					if (parts->Length == 2) {
-						_MIDI_Note_Green = Int32::Parse(parts[1]->Trim(L',', L' '));
-					}
-				}
-				else if (currentLine->StartsWith("\"MidiNoteBlue\"")) {
-					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
-					if (parts->Length == 2) {
-						_MIDI_Note_Blue = Int32::Parse(parts[1]->Trim(L',', L' '));
-					}
-				}
-				else if (currentLine->StartsWith("\"MidiExportAntiFlicker\"")) {
-					array<String^>^ parts = currentLine->Split(gcnew array<wchar_t> { ':' });
-					if (parts->Length == 2) {
-						String^ value = parts[1]->Trim(L',', L' ');
-						_MIDI_Export_Anti_Flicker = value->ToLower() == "true";
+				if (inHotkeyBindings && currentLine->Contains(":")) {
+					array<String^>^ parts = currentLine->Split(':');
+					if (parts->Length >= 2) {
+						String^ key = parts[0]->Trim()->Trim('"');
+						String^ value = parts[1]->Trim()->Trim('"');
+						hotkeyBindings[key] = value;
 					}
 				}
 
-				// Parse Color Preset settings
+				// Parse MIDI settings
+				if (currentLine->StartsWith("\"MidiNoteRed\":")) {
+					String^ valueStr = currentLine->Split(':')[1]->Trim();
+					_MIDI_Note_Red = Int32::Parse(valueStr);
+				}
+				else if (currentLine->StartsWith("\"MidiNoteGreen\":")) {
+					String^ valueStr = currentLine->Split(':')[1]->Trim();
+					_MIDI_Note_Green = Int32::Parse(valueStr);
+				}
+				else if (currentLine->StartsWith("\"MidiNoteBlue\":")) {
+					String^ valueStr = currentLine->Split(':')[1]->Trim();
+					_MIDI_Note_Blue = Int32::Parse(valueStr);
+				}
+				else if (currentLine->StartsWith("\"MidiExportAntiFlicker\":")) {
+					String^ valueStr = currentLine->Split(':')[1]->Trim();
+					_MIDI_Export_Anti_Flicker = (valueStr == "true");
+				}
+				// Parse playback device settings
+				else if (currentLine->StartsWith("\"SelectedMidiOutputDevice\":")) {
+					String^ valueStr = currentLine->Split(gcnew array<Char> {':'}, 2)[1]->Trim()->Trim('"');
+					_Selected_MIDI_Output_Device = valueStr;
+				}
+				else if (currentLine->StartsWith("\"GlobalMidiOutputChannel\":")) {
+					String^ valueStr = currentLine->Split(':')[1]->Trim();
+					_Global_MIDI_Output_Channel = Int32::Parse(valueStr);
+				}
+				else if (currentLine->StartsWith("\"SelectedAudioOutputDevice\":")) {
+					String^ valueStr = currentLine->Split(gcnew array<Char> {':'}, 2)[1]->Trim()->Trim('"');
+					_Selected_Audio_Output_Device = valueStr;
+				}
+				else if (currentLine->StartsWith("\"AudioBufferSize\":")) {
+					String^ valueStr = currentLine->Split(':')[1]->Trim();
+					_Audio_Buffer_Size = Int32::Parse(valueStr);
+				}
+
+				// Check for Color Preset settings
 				if (currentLine == "\"ColorPresets\": [") {
 					inColorPresets = true;
-					continue;
-				}
-
-				if (currentLine == "]" || currentLine == "],") {
-					inColorPresets = false;
 					continue;
 				}
 
@@ -299,7 +318,7 @@ namespace MIDILightDrawer
 	// Settings Properties //
 	/////////////////////////
 	int Settings::MIDI_Note_Red::get()
-	{ 
+	{
 		return _MIDI_Note_Red;
 	}
 
@@ -331,9 +350,9 @@ namespace MIDILightDrawer
 		Save_To_File();
 	}
 
-	bool Settings::MIDI_Export_Anti_Flicker::get() 
-	{ 
-		return _MIDI_Export_Anti_Flicker; 
+	bool Settings::MIDI_Export_Anti_Flicker::get()
+	{
+		return _MIDI_Export_Anti_Flicker;
 	}
 
 	void Settings::MIDI_Export_Anti_Flicker::set(bool value)
@@ -343,7 +362,7 @@ namespace MIDILightDrawer
 	}
 
 	List<Settings::Octave_Entry^>^ Settings::Octave_Entries::get()
-	{ 
+	{
 		return _Octave_Entries;
 	}
 
@@ -358,17 +377,17 @@ namespace MIDILightDrawer
 		return _ColorPresets;
 	}
 
-	void Settings::ColorPresetsString::set(List<String^>^ value) 
+	void Settings::ColorPresetsString::set(List<String^>^ value)
 	{
 		_ColorPresets = value;
 		Save_To_File();
 	}
 
-	List<Color>^ Settings::ColorPresetsColor::get() 
+	List<Color>^ Settings::ColorPresetsColor::get()
 	{
 		List<Color>^ Colors = gcnew List<Color>();
 
-		for each (String^ ColorStr in _ColorPresets) 
+		for each (String ^ ColorStr in _ColorPresets)
 		{
 			array<String^>^ Parts = ColorStr->Split(',');
 
@@ -383,5 +402,58 @@ namespace MIDILightDrawer
 		}
 
 		return Colors;
+	}
+
+	// Playback Device Settings Properties
+	String^ Settings::Selected_MIDI_Output_Device::get()
+	{
+		return _Selected_MIDI_Output_Device;
+	}
+
+	void Settings::Selected_MIDI_Output_Device::set(String^ value)
+	{
+		_Selected_MIDI_Output_Device = value;
+		Save_To_File();
+	}
+
+	int Settings::Global_MIDI_Output_Channel::get()
+	{
+		return _Global_MIDI_Output_Channel;
+	}
+
+	void Settings::Global_MIDI_Output_Channel::set(int value)
+	{
+		if (value < 1 || value > 16)
+			throw gcnew ArgumentOutOfRangeException("value", "MIDI channel must be between 1 and 16");
+
+		_Global_MIDI_Output_Channel = value;
+		Save_To_File();
+	}
+
+	String^ Settings::Selected_Audio_Output_Device::get()
+	{
+		return _Selected_Audio_Output_Device;
+	}
+
+	void Settings::Selected_Audio_Output_Device::set(String^ value)
+	{
+		_Selected_Audio_Output_Device = value;
+		Save_To_File();
+	}
+
+	int Settings::Audio_Buffer_Size::get()
+	{
+		return _Audio_Buffer_Size;
+	}
+
+	void Settings::Audio_Buffer_Size::set(int value)
+	{
+		// Validate that buffer size is a power of 2 and within reasonable range
+		if (value < 64 || value > 8192 || (value & (value - 1)) != 0) {
+			throw gcnew ArgumentOutOfRangeException("value", "Audio buffer size must be a power of 2 between 64 and 8192");
+		}
+
+		_Audio_Buffer_Size = value;
+		Save_To_File();
 	}
 }

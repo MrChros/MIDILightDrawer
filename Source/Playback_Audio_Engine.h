@@ -28,6 +28,9 @@ namespace MIDILightDrawer
 		double Get_Audio_Duration_Ms();
 		bool Is_Playing();
 		bool Is_Audio_Loaded();
+
+		// Sync with MIDI master clock
+		void Set_MIDI_Position_Us(int64_t position_us);
+		void Enable_MIDI_Sync(bool enable);
 	};
 }
-

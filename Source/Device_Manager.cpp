@@ -80,6 +80,7 @@ namespace MIDILightDrawer
 			if (Device->Device_Name == device_name)
 				return Device->Device_ID;
 		}
+
 		return -1;
 	}
 
@@ -90,6 +91,7 @@ namespace MIDILightDrawer
 			if (Device->Device_Name == device_name)
 				return Device->Device_ID;
 		}
+
 		return nullptr;
 	}
 

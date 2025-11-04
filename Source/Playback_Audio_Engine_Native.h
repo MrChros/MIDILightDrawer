@@ -1,20 +1,38 @@
 #pragma once
 
+#include <thread>
+#include <atomic>
+#include <mutex>
+
 namespace MIDILightDrawer
 {
 	class Playback_Audio_Engine_Native
 	{
 	private:
 		static bool _Is_Initialized;
-		static bool _Is_Playing;
-		static void* _Audio_Client;
-		static void* _Render_Client;
-		static float* _Audio_Buffer;
-		static int _Buffer_Size_Samples;
+		static std::atomic<bool> _Is_Playing;
+		static void* _Audio_Client;          // IAudioClient*
+		static void* _Render_Client;         // IAudioRenderClient*
+		static void* _Audio_Event;           // HANDLE for event-driven mode
+		static float* _Audio_Buffer;         // Decoded PCM buffer (interleaved)
+		static int _Buffer_Size_Samples;     // WASAPI buffer size
 		static int _Sample_Rate;
 		static int _Num_Channels;
-		static double _Current_Position_Ms;
+		static std::atomic<double> _Current_Position_Ms;
 		static double _Audio_Duration_Ms;
+
+		// Threading
+		static std::thread* _Audio_Thread;
+		static std::atomic<bool> _Should_Stop;
+		static std::mutex _Buffer_Mutex;
+
+		// Audio buffer management
+		static int64_t _Total_Audio_Samples;       // Total samples in file (per channel)
+		static int64_t _Current_Sample_Position;   // Current playback position (in samples)
+
+		// Sync with MIDI master clock
+		static std::atomic<int64_t> _MIDI_Position_Us;  // MIDI position for sync
+		static bool _Sync_To_MIDI;                      // Enable MIDI sync
 
 	public:
 		static bool Initialize(const wchar_t* device_id, int buffer_size_samples);
@@ -30,6 +48,17 @@ namespace MIDILightDrawer
 		static double Get_Audio_Duration_Ms();
 		static bool Is_Playing();
 		static bool Is_Audio_Loaded();
+
+		// Sync with MIDI master clock
+		static void Set_MIDI_Position_Us(int64_t position_us);
+		static void Enable_MIDI_Sync(bool enable);
+
+	private:
+		// Thread function
+		static void Audio_Playback_Thread_Function();
+
+		// Helper functions
+		static bool Initialize_WASAPI(const wchar_t* device_id, int buffer_size_samples);
+		static void Cleanup_WASAPI();
 	};
 }
-

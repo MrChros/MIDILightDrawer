@@ -19,7 +19,7 @@ namespace MIDILightDrawer
 		MIDI_Event_Info() : Timestamp_Ms(0), Track(0), Channel(0), Command(0), Data1(0), Data2(0) {
 		}
 	};
-	
+
 	ref class Playback_MIDI_Engine
 	{
 	private:
@@ -34,6 +34,14 @@ namespace MIDILightDrawer
 		bool Send_Event(MIDI_Event_Info^ event);
 		bool Send_All_Notes_Off(int channel);
 		bool Is_Device_Open();
+
+		// Threading methods
+		bool Start_Playback();
+		bool Stop_Playback();
+		void Queue_Event(MIDI_Event_Info^ event);
+		void Clear_Event_Queue();
+		double Get_Current_Position_Ms();
+		void Set_Current_Position_Ms(double position_ms);
+		bool Is_Playing();
 	};
 }
-

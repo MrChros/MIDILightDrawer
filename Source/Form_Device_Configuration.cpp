@@ -185,22 +185,101 @@ namespace MIDILightDrawer
 	{
 		Settings^ Current_Settings = Settings::Get_Instance();
 
-		// TODO: Load from Settings
-		// Select MIDI device
-		// Select MIDI channel
-		// Select Audio device
-		// Select Buffer size
+		// Load MIDI device
+		String^ Selected_MIDI_Device = Current_Settings->Selected_MIDI_Output_Device;
+		if (Selected_MIDI_Device && Selected_MIDI_Device->Length > 0)
+		{
+			int Device_Index = _Combo_Box_MIDI_Device->FindStringExact(Selected_MIDI_Device);
+			if (Device_Index >= 0)
+			{
+				_Combo_Box_MIDI_Device->SelectedIndex = Device_Index;
+			}
+			else if (_Combo_Box_MIDI_Device->Items->Count > 0)
+			{
+				_Combo_Box_MIDI_Device->SelectedIndex = 0;
+			}
+		}
+		else if (_Combo_Box_MIDI_Device->Items->Count > 0)
+		{
+			_Combo_Box_MIDI_Device->SelectedIndex = 0;
+		}
+
+		// Load MIDI channel (1-16)
+		int Channel = Current_Settings->Global_MIDI_Output_Channel;
+		if (Channel >= 1 && Channel <= 16)
+		{
+			_Combo_Box_MIDI_Channel->SelectedIndex = Channel - 1; // Index is 0-based
+		}
+		else
+		{
+			_Combo_Box_MIDI_Channel->SelectedIndex = 0; // Default to channel 1
+		}
+
+		// Load Audio device
+		String^ Selected_Audio_Device = Current_Settings->Selected_Audio_Output_Device;
+		if (Selected_Audio_Device && Selected_Audio_Device->Length > 0)
+		{
+			int Device_Index = _Combo_Box_Audio_Device->FindStringExact(Selected_Audio_Device);
+			if (Device_Index >= 0)
+			{
+				_Combo_Box_Audio_Device->SelectedIndex = Device_Index;
+			}
+			else if (_Combo_Box_Audio_Device->Items->Count > 0)
+			{
+				_Combo_Box_Audio_Device->SelectedIndex = 0;
+			}
+		}
+		else if (_Combo_Box_Audio_Device->Items->Count > 0)
+		{
+			_Combo_Box_Audio_Device->SelectedIndex = 0;
+		}
+
+		// Load Buffer size
+		int Buffer_Size = Current_Settings->Audio_Buffer_Size;
+		String^ Buffer_Text = String::Format("{0} samples", Buffer_Size);
+		int Buffer_Index = _Combo_Box_Buffer_Size->FindStringExact(Buffer_Text);
+		if (Buffer_Index >= 0)
+		{
+			_Combo_Box_Buffer_Size->SelectedIndex = Buffer_Index;
+		}
+		else
+		{
+			_Combo_Box_Buffer_Size->SelectedIndex = 2; // Default to 1024
+		}
 	}
 
 	void Form_Device_Configuration::Save_Settings()
 	{
 		Settings^ Current_Settings = Settings::Get_Instance();
 
-		// TODO: Save to Settings
 		// Save selected MIDI device
-		// Save selected MIDI channel
+		if (_Combo_Box_MIDI_Device->SelectedIndex >= 0)
+		{
+			Current_Settings->Selected_MIDI_Output_Device =
+				_Combo_Box_MIDI_Device->SelectedItem->ToString();
+		}
+
+		// Save selected MIDI channel (convert from 0-based index to 1-based channel)
+		if (_Combo_Box_MIDI_Channel->SelectedIndex >= 0)
+		{
+			Current_Settings->Global_MIDI_Output_Channel =
+				_Combo_Box_MIDI_Channel->SelectedIndex + 1;
+		}
+
 		// Save selected Audio device
-		// Save selected buffer size
+		if (_Combo_Box_Audio_Device->SelectedIndex >= 0)
+		{
+			Current_Settings->Selected_Audio_Output_Device =
+				_Combo_Box_Audio_Device->SelectedItem->ToString();
+		}
+
+		// Save selected buffer size (extract number from "XXX samples" text)
+		if (_Combo_Box_Buffer_Size->SelectedIndex >= 0)
+		{
+			String^ Buffer_Text = _Combo_Box_Buffer_Size->SelectedItem->ToString();
+			String^ Number_Part = Buffer_Text->Split(' ')[0];
+			Current_Settings->Audio_Buffer_Size = Int32::Parse(Number_Part);
+		}
 
 		Current_Settings->Save_To_File();
 

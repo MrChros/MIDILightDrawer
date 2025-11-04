@@ -167,11 +167,17 @@ namespace MIDILightDrawer
 		int _Octave;
 		List<BarEvent^>^ _Events;
 		bool _IsSelected;
+		bool _Is_Muted;
+		bool _Is_Soloed;
 
 	public:
 		property String^ Name {
 			String^ get() { return _Name; }
 			void set(String^ value) { _Name = value; }
+		}
+
+		property int Octave {
+			int get() { return _Octave; }
 		}
 
 		property List<BarEvent^>^ Events {
@@ -183,8 +189,14 @@ namespace MIDILightDrawer
 			void set(bool value) { _IsSelected = value; }
 		}
 
-		property int Octave {
-			int get() { return _Octave; }
+		property bool IsMuted {
+			bool get() { return _Is_Muted; }
+			void set(bool value) { _Is_Muted = value; }
+		}
+
+		property bool IsSoloed {
+			bool get() { return _Is_Soloed; }
+			void set(bool value) { _Is_Soloed = value; }
 		}
 
 		property List<TrackMeasure^>^ Measures;
@@ -198,6 +210,10 @@ namespace MIDILightDrawer
 		void AddBar(int startTick, int length, Color color);
 		void AddBar(BarEvent^ bar);
 		void RemoveBar(BarEvent^ bar);
+
+		void ToggleMute();
+		void ToggleSolo();
+		bool ShouldPlayInPlayback(bool any_track_soloed);
 
 		static int CompareBarEvents(BarEvent^ a, BarEvent^ b);
 		static Comparison<BarEvent^>^ barComparer = gcnew Comparison<BarEvent^>(&Track::CompareBarEvents);

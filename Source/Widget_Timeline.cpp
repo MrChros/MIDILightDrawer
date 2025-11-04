@@ -790,10 +790,16 @@ namespace MIDILightDrawer
 		{
 			switch (_HoveredButton.ButtonIndex)
 			{
-				case 0: // Tablature toggle button
+				case 0: // Mute toggle button
+					_HoveredButton.Track->ToggleMute();
+					break;
+				case 1: // Solo toggle button
+					_HoveredButton.Track->ToggleSolo();
+					break;
+				case 2: // Tablature toggle button
 					_HoveredButton.Track->ShowTablature = !_HoveredButton.Track->ShowTablature;
 					break;
-				case 1: // Notation toggle button (only for drum tracks)
+				case 3: // Notation toggle button (only for drum tracks)
 					if (_HoveredButton.Track->IsDrumTrack) {
 						_HoveredButton.Track->ShowAsStandardNotation = !_HoveredButton.Track->ShowAsStandardNotation;
 					}
@@ -857,7 +863,7 @@ namespace MIDILightDrawer
 
 		if (CurrentTrack != nullptr)
 		{
-			for (int i = 0; i < 2; i++)	
+			for (int i = 0; i < 4; i++)	
 			{ 
 				if (IsOverTrackButton(CurrentTrack, i, MousePos))
 				{
@@ -1718,9 +1724,11 @@ namespace MIDILightDrawer
 			return false;
 		}
 
-		if (buttonIndex == 1) {
+		if (buttonIndex == 3) {
 			// Notation button only exists for drum tracks
-			if (!track->IsDrumTrack) return false;
+			if (!track->IsDrumTrack) {
+				return false;
+			}
 		}
 
 		Rectangle HeaderBounds = GetTrackHeaderBounds(track);

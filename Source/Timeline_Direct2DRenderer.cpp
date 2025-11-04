@@ -1324,12 +1324,14 @@ namespace MIDILightDrawer
     {
         TrackButtonId HoveredButton = this->_ToolAccessDelegate->HoverButton();
 
-        DrawTrackButtonText(trackHeaderBounds, 0, "T", track->ShowTablature, track == HoveredButton.Track && HoveredButton.ButtonIndex == 0, m_ColorTheme.HeaderBackground, m_ColorTheme.Text);
+        DrawTrackButtonText(trackHeaderBounds, 0, "M", track->IsMuted		, track == HoveredButton.Track && HoveredButton.ButtonIndex == 0, Color::FromArgb(MUTED_OVERLAY_COLOR), m_ColorTheme.Text);
+        DrawTrackButtonText(trackHeaderBounds, 1, "S", track->IsSoloed		, track == HoveredButton.Track && HoveredButton.ButtonIndex == 1, Color::FromArgb(SOLOED_OVERLAY_COLOR), m_ColorTheme.Text);
+        DrawTrackButtonText(trackHeaderBounds, 2, "T", track->ShowTablature	, track == HoveredButton.Track && HoveredButton.ButtonIndex == 2, m_ColorTheme.HeaderBackground, m_ColorTheme.Text);
 
         if (track->IsDrumTrack)
         {
             System::Drawing::Image^ Image_Note = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Note_White")));
-            DrawTrackButtonIcon(trackHeaderBounds, 1, Image_Note, track->ShowAsStandardNotation, track == HoveredButton.Track && HoveredButton.ButtonIndex == 1, m_ColorTheme.HeaderBackground, m_ColorTheme.Text);
+            DrawTrackButtonIcon(trackHeaderBounds, 3, Image_Note, track->ShowAsStandardNotation, track == HoveredButton.Track && HoveredButton.ButtonIndex == 3, m_ColorTheme.HeaderBackground, m_ColorTheme.Text);
         }
         return true;
     }

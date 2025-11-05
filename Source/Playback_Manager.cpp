@@ -7,9 +7,8 @@ namespace MIDILightDrawer
 		_MIDI_Engine = gcnew Playback_MIDI_Engine();
 		_Audio_Engine = gcnew Playback_Audio_Engine();
 		_Current_State = Playback_State::Stopped;
-		_Current_Position_Ms = 0.0;
+		_Playback_Position_ms = 0.0;
 		_Playback_Speed = 1.0;
-		_Playback_Cursor_Position_Ms = 0.0;
 	}
 
 	Playback_Manager::~Playback_Manager()
@@ -64,16 +63,12 @@ namespace MIDILightDrawer
 
 		bool Success = true;
 
-		if (_Current_State == Playback_State::Stopped) {
-			_Current_Position_Ms = _Playback_Cursor_Position_Ms;
-		}
-
 		// Set MIDI engine position before starting
-		_MIDI_Engine->Set_Current_Position_Ms(_Current_Position_Ms);
+		_MIDI_Engine->Set_Current_Position_Ms(_Playback_Position_ms);
 
 		// Set audio engine position (if loaded)
 		if (Is_Audio_Loaded()) {
-			_Audio_Engine->Seek_To_Position(_Current_Position_Ms);
+			_Audio_Engine->Seek_To_Position(_Playback_Position_ms);
 		}
 
 		// Start MIDI playback thread (MIDI is the master clock)
@@ -113,10 +108,11 @@ namespace MIDILightDrawer
 			Success &= _Audio_Engine->Pause_Playback();
 
 		// Update position from MIDI engine (master clock)
-		_Current_Position_Ms = _MIDI_Engine->Get_Current_Position_Ms();
+		_Playback_Position_ms = _MIDI_Engine->Get_Current_Position_Ms();
 
-		if (Success)
+		if (Success) {
 			_Current_State = Playback_State::Paused;
+		}
 
 		return Success;
 	}
@@ -138,10 +134,10 @@ namespace MIDILightDrawer
 		_MIDI_Engine->Clear_Event_Queue();
 
 		// Stop audio if loaded
-		if (Is_Audio_Loaded())
+		if (Is_Audio_Loaded()) {
 			Success &= _Audio_Engine->Stop_Playback();
+		}
 
-		_Current_Position_Ms = 0.0;
 		_Current_State = Playback_State::Stopped;
 
 		return Success;
@@ -167,7 +163,7 @@ namespace MIDILightDrawer
 		_MIDI_Engine->Clear_Event_Queue();
 
 		// Update position
-		_Current_Position_Ms = position_ms;
+		_Playback_Position_ms = position_ms;
 		_MIDI_Engine->Set_Current_Position_Ms(position_ms);
 
 		// Seek audio if loaded
@@ -193,7 +189,7 @@ namespace MIDILightDrawer
 		return _Current_State;
 	}
 
-	double Playback_Manager::Get_Current_Position_Ms()
+	double Playback_Manager::Get_Playback_Position_ms()
 	{
 		// Get position from MIDI engine if playing (it's the master clock)
 		if (_Current_State == Playback_State::Playing)
@@ -210,7 +206,12 @@ namespace MIDILightDrawer
 		}
 
 		// Otherwise use stored position
-		return _Current_Position_Ms;
+		return _Playback_Position_ms;
+	}
+
+	void Playback_Manager::Set_Playback_Position_ms(double position_ms)
+	{
+		_Playback_Position_ms = position_ms;
 	}
 
 	double Playback_Manager::Get_Audio_Duration_Ms()
@@ -223,20 +224,11 @@ namespace MIDILightDrawer
 		return _Current_State == Playback_State::Playing;
 	}
 
-	void Playback_Manager::Set_Playback_Cursor_Position_Ms(double position_ms)
-	{
-		_Playback_Cursor_Position_Ms = position_ms;
-	}
-
-	double Playback_Manager::Get_Playback_Cursor_Position_Ms()
-	{
-		return _Playback_Cursor_Position_Ms;
-	}
-
 	void Playback_Manager::Set_Playback_Speed(double speed)
 	{
-		if (speed > 0.0)
+		if (speed > 0.0) {
 			_Playback_Speed = speed;
+		}
 	}
 
 	double Playback_Manager::Get_Playback_Speed()

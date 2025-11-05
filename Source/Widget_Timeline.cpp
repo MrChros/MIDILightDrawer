@@ -87,7 +87,7 @@ namespace MIDILightDrawer
 	void Widget_Timeline::AddMeasure(int numerator, int denominator, int tempo, String^ marker_text)
 	{
 		int Start_Tick = this->TotalTicks;
-		int Start_Time_ms = this->TotalTime_ms;
+		double Start_Time_ms = this->TotalTime_ms;
 		Measure^ New_Measure = gcnew Measure(Start_Tick, Start_Time_ms, numerator, denominator, tempo, marker_text);
 		_Measures->Add(New_Measure);
 
@@ -334,7 +334,7 @@ namespace MIDILightDrawer
 	{
 		// Update playback manager if available
 		if (_Playback_Manager != nullptr) {
-			_Playback_Manager->Set_Playback_Cursor_Position_Ms(position_ms);
+			_Playback_Manager->Set_Playback_Position_ms(position_ms);
 		}
 
 		// Trigger redraw
@@ -344,7 +344,8 @@ namespace MIDILightDrawer
 	double Widget_Timeline::GetPlaybackCursorPosition()
 	{
 		if (_Playback_Manager != nullptr) {
-			return _Playback_Manager->Get_Playback_Cursor_Position_Ms();
+			double Time = _Playback_Manager->Get_Playback_Position_ms();
+			return Time;
 		}
 
 		return 0.0;
@@ -388,20 +389,37 @@ namespace MIDILightDrawer
 		// Check if cursor is too far right
 		if (Cursor_Screen_X > (Visible_Width - Scroll_Margin_Right))
 		{
-			// Scroll right to keep cursor visible
-			int New_Scroll_X = -(Cursor_Pixels - (Visible_Width - Scroll_Margin_Right - 50));
-			this->_ScrollPosition = Point(New_Scroll_X, this->_ScrollPosition->Y);
-			this->Invalidate();
+			// Jump forward by almost a full viewport, placing cursor at left margin
+			// New scroll position: show content starting from (Cursor_Pixels - Scroll_Margin_Left)
+			int New_Scroll_X = -(Cursor_Pixels - Scroll_Margin_Left);
+
+			// Convert to scroll units and update scrollbar
+			int New_Scroll_Units = GetScrollUnits(-New_Scroll_X);
+			_HScrollBar->Value = Math::Max(_HScrollBar->Minimum, Math::Min(New_Scroll_Units, _HScrollBar->Maximum - _HScrollBar->LargeChange + 1));
+
+			// Trigger the scroll event handler
+			OnScroll(_HScrollBar, gcnew ScrollEventArgs(ScrollEventType::ThumbPosition, _HScrollBar->Value));
 		}
-		// Check if cursor is too far left (when rewinding)
+		// Check if cursor is too far left (when rewinding) - need to scroll backward
 		else if (Cursor_Screen_X < Scroll_Margin_Left)
 		{
-			// Scroll left to keep cursor visible
-			int New_Scroll_X = -(Cursor_Pixels - Scroll_Margin_Left);
+			// Jump backward by almost a full viewport, placing cursor at right side minus margin
+			// New scroll position: show content so cursor appears at (Visible_Width - Scroll_Margin_Right)
+			int New_Scroll_X = -(Cursor_Pixels - (Visible_Width - Scroll_Margin_Right));
+
+			// Don't scroll past the beginning
 			if (New_Scroll_X > 0) {
-				New_Scroll_X = 0;  // Don't scroll past the beginning
+				New_Scroll_X = 0;
 			}
-			this->_ScrollPosition = Point(New_Scroll_X, this->_ScrollPosition->Y);
+
+			// Convert to scroll units and update scrollbar
+			int New_Scroll_Units = GetScrollUnits(-New_Scroll_X);
+			_HScrollBar->Value = Math::Max(_HScrollBar->Minimum, Math::Min(New_Scroll_Units, _HScrollBar->Maximum - _HScrollBar->LargeChange + 1));
+
+			// Trigger the scroll event handler
+			OnScroll(_HScrollBar, gcnew ScrollEventArgs(ScrollEventType::ThumbPosition, _HScrollBar->Value));
+		}
+		else {
 			this->Invalidate();
 		}
 	}
@@ -853,7 +871,7 @@ namespace MIDILightDrawer
 			_D2DRenderer->DrawTrackHeaders();
 			_D2DRenderer->DrawTrackDividers(_ResizeHoverTrack);
 			_D2DRenderer->DrawMeasureNumbers();
-			if(this->_ShowPlaybackCursor && _Playback_Manager) _D2DRenderer->DrawPlaybackCursor(MillisecondsToTicks(_Playback_Manager->Get_Playback_Cursor_Position_Ms()));
+			if(this->_ShowPlaybackCursor && _Playback_Manager) _D2DRenderer->DrawPlaybackCursor(MillisecondsToTicks(_Playback_Manager->Get_Playback_Position_ms()));
 			_D2DRenderer->DrawLeftPanel(_IsOverPanelResizeHandle || _IsPanelResizing);
 
 			const float FPSCounter_X_Offset = (float)(Timeline_Direct2DRenderer::PANEL_BUTTON_SIZE + Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN);
@@ -1098,22 +1116,17 @@ namespace MIDILightDrawer
 			SetZoomLevelAtPoint(newZoom, Point(e->X, e->Y));
 		}
 		else if (Control::ModifierKeys == Keys::Shift) {
-			int scrollUnits = e->Delta > 0 ? -1 : 1;
-			int newValue = Math::Min(Math::Max(_HScrollBar->Value + scrollUnits,
-				_HScrollBar->Minimum),
-				_HScrollBar->Maximum - _HScrollBar->LargeChange + 1);
-			_HScrollBar->Value = newValue;
-			OnScroll(_HScrollBar, gcnew ScrollEventArgs(ScrollEventType::ThumbPosition, newValue));
+			int ScrollUnits = e->Delta > 0 ? -1 : 1;
+			int NewValue = Math::Min(Math::Max(_HScrollBar->Value + ScrollUnits, _HScrollBar->Minimum), _HScrollBar->Maximum - _HScrollBar->LargeChange + 1);
+			_HScrollBar->Value = NewValue;
+			OnScroll(_HScrollBar, gcnew ScrollEventArgs(ScrollEventType::ThumbPosition, NewValue));
 		}
 		else
 		{
-			int scrollUnits = e->Delta > 0 ? -_VScrollBar->SmallChange : _VScrollBar->SmallChange;
-			int newValue = Math::Min(Math::Max(
-				_VScrollBar->Value + scrollUnits,
-				_VScrollBar->Minimum),
-				_VScrollBar->Maximum - _VScrollBar->LargeChange + 1);
-			_VScrollBar->Value = newValue;
-			OnVerticalScroll(_VScrollBar, gcnew ScrollEventArgs(ScrollEventType::ThumbPosition, newValue));
+			int ScrollUnits = e->Delta > 0 ? -_VScrollBar->SmallChange : _VScrollBar->SmallChange;
+			int NewValue = Math::Min(Math::Max(_VScrollBar->Value + ScrollUnits, _VScrollBar->Minimum), _VScrollBar->Maximum - _VScrollBar->LargeChange + 1);
+			_VScrollBar->Value = NewValue;
+			OnVerticalScroll(_VScrollBar, gcnew ScrollEventArgs(ScrollEventType::ThumbPosition, NewValue));
 		}
 	}
 
@@ -1915,7 +1928,7 @@ namespace MIDILightDrawer
 
 		// Set cursor position
 		if(_Playback_Manager) {
-			_Playback_Manager->Set_Playback_Cursor_Position_Ms(Position_Ms);
+			_Playback_Manager->Set_Playback_Position_ms(Position_Ms);
 			Invalidate();
 		}
 	}

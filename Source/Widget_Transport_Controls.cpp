@@ -9,6 +9,8 @@ namespace MIDILightDrawer
 		_Playback_Manager = nullptr;
 		_Is_Rewinding = false;
 		_Is_Fast_Forwarding = false;
+		_Moved_To_Start = false;
+		_Moved_To_End = false;
 		_Is_Playing = false;
 
 		Initialize_Components();
@@ -119,6 +121,7 @@ namespace MIDILightDrawer
 		if (_Playback_Manager)
 		{
 			_Playback_Manager->Seek_To_Position(0.0);
+			_Moved_To_Start = true;
 		}
 	}
 
@@ -194,6 +197,7 @@ namespace MIDILightDrawer
 			if (Duration > 0.0)
 			{
 				_Playback_Manager->Seek_To_Position(Duration);
+				_Moved_To_End = true;
 			}
 		}
 	}
@@ -204,7 +208,7 @@ namespace MIDILightDrawer
 			return;
 		}
 
-		double Current_Position = _Playback_Manager->Get_Current_Position_Ms();
+		double Current_Position = _Playback_Manager->Get_Playback_Position_ms();
 		double Seek_Amount = 500.0; // Seek 500ms per tick
 
 		if (_Is_Rewinding)
@@ -247,5 +251,38 @@ namespace MIDILightDrawer
 	{
 		_Is_Playing = is_playing;
 		Update_Play_Pause_Button();
+	}
+
+	bool Widget_Transport_Controls::Is_Playing::get()
+	{
+		return _Is_Playing;
+	}
+
+	bool Widget_Transport_Controls::Is_Rewinding::get()
+	{
+		return _Is_Rewinding;
+	}
+
+	bool Widget_Transport_Controls::Is_Fast_Forwarding::get()
+	{
+		return _Is_Fast_Forwarding;
+	}
+
+	bool Widget_Transport_Controls::Moved_To_Start::get()
+	{
+		bool Return_Value = _Moved_To_Start;
+
+		_Moved_To_Start = false;
+
+		return Return_Value;
+	}
+
+	bool Widget_Transport_Controls::Moved_To_End::get()
+	{
+		bool Return_Value = _Moved_To_End;
+
+		_Moved_To_End = false;
+
+		return Return_Value;
 	}
 }

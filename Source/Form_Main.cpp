@@ -1342,30 +1342,27 @@ namespace MIDILightDrawer
 
 	void Form_Main::Playback_Update_Timer_Tick(Object^ sender, EventArgs^ e)
 	{
-		if (_Playback_Manager == nullptr) {
+		if (_Playback_Manager == nullptr || _Transport_Controls == nullptr) {
 			return;
 		}
 
-		// Update transport control state
-		if (_Transport_Controls != nullptr)
-		{
-			bool Is_Playing = _Playback_Manager->Is_Playing();
-			_Transport_Controls->Update_State(Is_Playing);
-		}
+		_Transport_Controls->Update_State(_Playback_Manager->Is_Playing());
 
-		// Get current playback position
-		double Current_Position_Ms = _Playback_Manager->Get_Current_Position_Ms();
-
-		if (_Playback_Manager->Is_Playing())
-		{
+		if (_Transport_Controls->Is_Playing) {
 			this->_Timeline->AutoScrollForPlayback();
 		}
-		// TODO: Update timeline playback cursor position
-		// This will need a method added to Widget_Timeline to set the playback cursor position
-		// Example: _Timeline->Set_Playback_Position_Ms(Current_Position_Ms);
-
-		// TODO: Handle auto-scroll if playback cursor goes off-screen
-		// This would also need support in the timeline widget
+		else if (_Transport_Controls->Is_Rewinding) {
+			this->_Timeline->AutoScrollForPlayback();
+		}
+		else if (_Transport_Controls->Is_Fast_Forwarding) {
+			this->_Timeline->AutoScrollForPlayback();
+		}
+		else if (_Transport_Controls->Moved_To_Start) {
+			this->_Timeline->AutoScrollForPlayback();
+		}
+		else if (_Transport_Controls->Moved_To_End) {
+			this->_Timeline->AutoScrollForPlayback();
+		}
 	}
 
 	void Form_Main::Pointer_Options_OnSnappingChanged(int value)

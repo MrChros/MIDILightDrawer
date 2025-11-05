@@ -23,6 +23,8 @@ namespace MIDILightDrawer
 		// Rewind/Fast Forward state
 		bool _Is_Rewinding;
 		bool _Is_Fast_Forwarding;
+		bool _Moved_To_Start;
+		bool _Moved_To_End;
 		Timer^ _Seek_Timer;
 
 		// Visual state
@@ -53,5 +55,26 @@ namespace MIDILightDrawer
 
 		// Button appearance
 		void Update_Play_Pause_Button();
+
+	public:
+		property bool Is_Playing {
+			bool get();
+		}
+
+		property bool Is_Rewinding {
+			bool get();
+		}
+
+		property bool Is_Fast_Forwarding {
+			bool get();
+		}
+
+		property bool Moved_To_Start {
+			bool get();
+		}
+
+		property bool Moved_To_End {
+			bool get();
+		}
 	};
 }

@@ -20,9 +20,8 @@ namespace MIDILightDrawer
 		Playback_MIDI_Engine^ _MIDI_Engine;
 		Playback_Audio_Engine^ _Audio_Engine;
 		Playback_State _Current_State;
-		double _Current_Position_Ms;
+		double _Playback_Position_ms;
 		double _Playback_Speed;
-		double _Playback_Cursor_Position_Ms;
 
 	public:
 		Playback_Manager();
@@ -46,11 +45,10 @@ namespace MIDILightDrawer
 
 		// State queries
 		Playback_State Get_State();
-		double Get_Current_Position_Ms();
+		double Get_Playback_Position_ms();
+		void Set_Playback_Position_ms(double position_ms);
 		double Get_Audio_Duration_Ms();
 		bool Is_Playing();
-		void Set_Playback_Cursor_Position_Ms(double position_ms);
-		double Get_Playback_Cursor_Position_Ms();
 
 		// Playback speed
 		void Set_Playback_Speed(double speed);

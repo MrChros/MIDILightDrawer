@@ -40,6 +40,9 @@ namespace MIDILightDrawer
 		_ScrollPosition = gcnew Point(0, 0);
 		_CommandManager = gcnew TimelineCommandManager(this);
 
+		_Playback_Manager = nullptr;
+		_ShowPlaybackCursor = true;
+		
 		_TrackBeingResized = nullptr;
 		_ResizeHoverTrack = nullptr;
 		_ScrollPosition = Point();
@@ -83,8 +86,9 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::AddMeasure(int numerator, int denominator, int tempo, String^ marker_text)
 	{
-		int Start_Tick = TotalTicks;
-		Measure^ New_Measure = gcnew Measure(Start_Tick, numerator, denominator, tempo, marker_text);
+		int Start_Tick = this->TotalTicks;
+		int Start_Time_ms = this->TotalTime_ms;
+		Measure^ New_Measure = gcnew Measure(Start_Tick, Start_Time_ms, numerator, denominator, tempo, marker_text);
 		_Measures->Add(New_Measure);
 
 		for each (Track ^ T in _Tracks) {
@@ -253,9 +257,9 @@ namespace MIDILightDrawer
 
 		track->Height = height;
 
-		int totalHeight = Timeline_Direct2DRenderer::HEADER_HEIGHT;
+		int TotalHeight = Timeline_Direct2DRenderer::HEADER_HEIGHT;
 		for each (Track ^ t in _Tracks) {
-			totalHeight += t->Height;
+			TotalHeight += t->Height;
 		}
 
 		// Update scrollbars and bounds
@@ -264,9 +268,9 @@ namespace MIDILightDrawer
 
 		// Ensure current scroll position is still valid
 		int viewportHeight = Height - Timeline_Direct2DRenderer::HEADER_HEIGHT - _HScrollBar->Height;
-		if (-_ScrollPosition->Y + viewportHeight > totalHeight)
+		if (-_ScrollPosition->Y + viewportHeight > TotalHeight)
 		{
-			_ScrollPosition->Y = Math::Min(0, -(totalHeight - viewportHeight));
+			_ScrollPosition->Y = Math::Min(0, -(TotalHeight - viewportHeight));
 			_VScrollBar->Value = -_ScrollPosition->Y;
 		}
 
@@ -318,6 +322,87 @@ namespace MIDILightDrawer
 
 		if(_Left_Panel->IsExpanded) {
 			Invalidate();
+		}
+	}
+
+	void Widget_Timeline::SetPlaybackManager(Playback_Manager^ playback_manager)
+	{
+		_Playback_Manager = playback_manager;
+	}
+
+	void Widget_Timeline::SetPlaybackCursorPosition(double position_ms)
+	{
+		// Update playback manager if available
+		if (_Playback_Manager != nullptr) {
+			_Playback_Manager->Set_Playback_Cursor_Position_Ms(position_ms);
+		}
+
+		// Trigger redraw
+		this->Invalidate();
+	}
+
+	double Widget_Timeline::GetPlaybackCursorPosition()
+	{
+		if (_Playback_Manager != nullptr) {
+			return _Playback_Manager->Get_Playback_Cursor_Position_Ms();
+		}
+
+		return 0.0;
+	}
+
+	void Widget_Timeline::SetShowPlaybackCursor(bool show)
+	{
+		_ShowPlaybackCursor = show;
+
+		this->Invalidate();
+	}
+
+	void Widget_Timeline::AutoScrollForPlayback()
+	{
+		if (_Playback_Manager == nullptr) {
+			return;
+		}
+
+		// Get cursor position in milliseconds
+		double Cursor_Position_Ms = GetPlaybackCursorPosition();
+
+		// Convert to ticks
+		int Cursor_Ticks = MillisecondsToTicks(Cursor_Position_Ms);
+
+		// Convert to pixels
+		int Cursor_Pixels = TicksToPixels(Cursor_Ticks);
+
+		// Get current scroll position
+		int Current_Scroll_X = ScrollPosition->X;
+
+		// Get visible width (excluding left panel)
+		int Visible_Width = this->Width - GetLeftPanelAndTrackHeaderWidth();
+
+		// Calculate cursor position on screen
+		int Cursor_Screen_X = Cursor_Pixels + Current_Scroll_X;
+
+		// Define scroll margins (when cursor gets within this distance from edge, scroll)
+		const int Scroll_Margin_Right = 100;  // pixels from right edge
+		const int Scroll_Margin_Left = 50;    // pixels from left edge
+
+		// Check if cursor is too far right
+		if (Cursor_Screen_X > (Visible_Width - Scroll_Margin_Right))
+		{
+			// Scroll right to keep cursor visible
+			int New_Scroll_X = -(Cursor_Pixels - (Visible_Width - Scroll_Margin_Right - 50));
+			this->_ScrollPosition = Point(New_Scroll_X, this->_ScrollPosition->Y);
+			this->Invalidate();
+		}
+		// Check if cursor is too far left (when rewinding)
+		else if (Cursor_Screen_X < Scroll_Margin_Left)
+		{
+			// Scroll left to keep cursor visible
+			int New_Scroll_X = -(Cursor_Pixels - Scroll_Margin_Left);
+			if (New_Scroll_X > 0) {
+				New_Scroll_X = 0;  // Don't scroll past the beginning
+			}
+			this->_ScrollPosition = Point(New_Scroll_X, this->_ScrollPosition->Y);
+			this->Invalidate();
 		}
 	}
 
@@ -636,6 +721,38 @@ namespace MIDILightDrawer
 		return (int)Math::Round(this->_D2DRenderer->PixelsToTicks(pixels));
 	}
 
+	double Widget_Timeline::TicksToMilliseconds(int ticks)
+	{
+		Measure^ M = this->GetMeasureAtTick(ticks);
+		if (M == nullptr) {
+			return 0.0;
+		}
+
+		int TicksLeft = ticks - M->StartTick;
+
+		return M->StartTime_ms + (double)TicksLeft * M->Length_Per_Tick_ms;
+	}
+
+	int Widget_Timeline::MillisecondsToTicks(double milliseconds)
+	{
+		Measure^ Target_Measure = nullptr;
+
+		for each (Measure^ M in _Measures)
+		{
+			if (M->StartTime_ms + M->Length_ms > milliseconds){
+				Target_Measure = M;
+			}
+		}
+
+		if (Target_Measure == nullptr) {
+			return 0;
+		}
+
+		double Time_Left_ms = milliseconds - Target_Measure->StartTime_ms;
+
+		return (int)Math::Round(Target_Measure->StartTick + Time_Left_ms / Target_Measure->Length_Per_Tick_ms);
+	}
+
 	Track^ Widget_Timeline::GetTrackAtPoint(Point p)
 	{
 		if (_D2DRenderer == nullptr) {
@@ -736,6 +853,7 @@ namespace MIDILightDrawer
 			_D2DRenderer->DrawTrackHeaders();
 			_D2DRenderer->DrawTrackDividers(_ResizeHoverTrack);
 			_D2DRenderer->DrawMeasureNumbers();
+			if(this->_ShowPlaybackCursor && _Playback_Manager) _D2DRenderer->DrawPlaybackCursor(MillisecondsToTicks(_Playback_Manager->Get_Playback_Cursor_Position_Ms()));
 			_D2DRenderer->DrawLeftPanel(_IsOverPanelResizeHandle || _IsPanelResizing);
 
 			const float FPSCounter_X_Offset = (float)(Timeline_Direct2DRenderer::PANEL_BUTTON_SIZE + Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN);
@@ -775,18 +893,23 @@ namespace MIDILightDrawer
 	{
 		Point MousePos = Point(e->X, e->Y);
 		
-		if(IsOverPanelResizeHandle(MousePos))
+		if(e->Button == Windows::Forms::MouseButtons::Left && IsOverPanelResizeHandle(MousePos))
 		{
 			BeginPanelResize(e->X);
 			return;
 		}
 
-		if (IsOverPanelToggleButton(MousePos)) {
+		if (e->Button == Windows::Forms::MouseButtons::Left && IsOverPanelToggleButton(MousePos)) {
 			ToggleLeftPanel();
 			return;
 		}
 
-		if (_HoveredButton.Track != nullptr)
+		if (e->Button == Windows::Forms::MouseButtons::Left && IsInCursorClickArea(MousePos)) {
+			HandleCursorPositionClick(MousePos);
+			return;
+		}
+
+		if (e->Button == Windows::Forms::MouseButtons::Left && _HoveredButton.Track != nullptr)
 		{
 			switch (_HoveredButton.ButtonIndex)
 			{
@@ -810,7 +933,7 @@ namespace MIDILightDrawer
 		}
 		
 		Track^ ResizeTrack = nullptr;
-		if (IsOverTrackDivider(MousePos, ResizeTrack))
+		if (e->Button == Windows::Forms::MouseButtons::Left && IsOverTrackDivider(MousePos, ResizeTrack))
 		{
 			BeginTrackResize(ResizeTrack, e->Y);
 			return;
@@ -1763,6 +1886,40 @@ namespace MIDILightDrawer
 		return false;
 	}
 
+	bool Widget_Timeline::IsInCursorClickArea(Point mouse_pos)
+	{
+		// Cursor click area is above the first track
+		int Left_Panel_Width = GetLeftPanelAndTrackHeaderWidth();
+
+		if (mouse_pos.X <= Left_Panel_Width) {
+			return false;  // Inside left panel
+		}
+
+		// Click area is above first track (in the ruler/measure area)
+		return (mouse_pos.Y < Timeline_Direct2DRenderer::HEADER_HEIGHT);
+	}
+
+	void Widget_Timeline::HandleCursorPositionClick(Point mouse_pos)
+	{
+		// Convert pixel position to milliseconds
+		int Left_Panel_Width = GetLeftPanelAndTrackHeaderWidth();
+		int Timeline_X = mouse_pos.X - Left_Panel_Width - _ScrollPosition->X;
+
+		if (Timeline_X < 0) {
+			Timeline_X = 0;
+		}
+
+		// Convert to ticks then to milliseconds
+		int Tick_Position = PixelsToTicks(Timeline_X);
+		double Position_Ms = TicksToMilliseconds(Tick_Position);
+
+		// Set cursor position
+		if(_Playback_Manager) {
+			_Playback_Manager->Set_Playback_Cursor_Position_Ms(Position_Ms);
+			Invalidate();
+		}
+	}
+
 	Rectangle Widget_Timeline::GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex)
 	{
 		return Rectangle(
@@ -2012,6 +2169,18 @@ namespace MIDILightDrawer
 		}
 
 		return TotalTicks;
+	}
+
+	double Widget_Timeline::TotalTime_ms::get()
+	{
+		double Total_Time_ms = 0.0;
+
+		for each(Measure ^ M in _Measures)
+		{
+			Total_Time_ms += M->Length_ms;
+		}
+
+		return Total_Time_ms;
 	}
 
 	TimelineToolType Widget_Timeline::CurrentTool::get()

@@ -60,10 +60,6 @@ namespace MIDILightDrawer
 		for each (Button ^ Btn in gcnew array<Button^>{_Button_Move_To_Start, _Button_Rewind, _Button_Play_Pause, _Button_Fast_Forward, _Button_Move_To_End })
 		{
 			Theme_Manager::Get_Instance()->ApplyThemeToButton(Btn);
-			//Btn->BackColor = Button_Color;
-			//Btn->ForeColor = Text_Color;
-			//Btn->FlatStyle = FlatStyle::Flat;
-			//Btn->Font = gcnew System::Drawing::Font("Segoe UI", 10, FontStyle::Bold);
 		}
 
 		// Initialize seek timer
@@ -150,8 +146,9 @@ namespace MIDILightDrawer
 
 	void Widget_Transport_Controls::On_Play_Pause_Click(Object^ sender, EventArgs^ e)
 	{
-		if (!_Playback_Manager)
+		if (!_Playback_Manager) {
 			return;
+		}
 
 		if (_Playback_Manager->Is_Playing())
 		{
@@ -169,8 +166,9 @@ namespace MIDILightDrawer
 
 	void Widget_Transport_Controls::On_Fast_Forward_Mouse_Down(Object^ sender, MouseEventArgs^ e)
 	{
-		if (!_Playback_Manager)
+		if (!_Playback_Manager) {
 			return;
+		}
 
 		_Is_Fast_Forwarding = true;
 		_Playback_Manager->Set_Playback_Speed(2.0); // Fast forward at 2x speed

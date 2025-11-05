@@ -125,6 +125,7 @@ namespace MIDILightDrawer
         bool DrawTrackBackground();
         bool DrawMeasureNumbers();
         bool DrawTrackContent(Track^ hoverTrack);
+		bool DrawPlaybackCursor(int tickPosition);
         bool DrawToolPreview();
 		void DrawFPSCounter(float x, double fps, double frameTimeMs);
 		void DrawLeftPanel(bool beingResized);

@@ -14,7 +14,7 @@ namespace MIDILightDrawer
 		Paused
 	};
 
-	ref class Playback_Manager
+	public ref class Playback_Manager
 	{
 	private:
 		Playback_MIDI_Engine^ _MIDI_Engine;
@@ -22,6 +22,7 @@ namespace MIDILightDrawer
 		Playback_State _Current_State;
 		double _Current_Position_Ms;
 		double _Playback_Speed;
+		double _Playback_Cursor_Position_Ms;
 
 	public:
 		Playback_Manager();
@@ -48,6 +49,8 @@ namespace MIDILightDrawer
 		double Get_Current_Position_Ms();
 		double Get_Audio_Duration_Ms();
 		bool Is_Playing();
+		void Set_Playback_Cursor_Position_Ms(double position_ms);
+		double Get_Playback_Cursor_Position_Ms();
 
 		// Playback speed
 		void Set_Playback_Speed(double speed);

@@ -472,6 +472,7 @@ namespace MIDILightDrawer
 		{
 			// Create Playback_Manager
 			this->_Playback_Manager = gcnew Playback_Manager();
+			this->_Timeline->SetPlaybackManager(this->_Playback_Manager);
 
 			Device_Manager^ Devices = gcnew Device_Manager();
 			Devices->Enumerate_All_Devices();
@@ -1341,8 +1342,9 @@ namespace MIDILightDrawer
 
 	void Form_Main::Playback_Update_Timer_Tick(Object^ sender, EventArgs^ e)
 	{
-		if (_Playback_Manager == nullptr)
+		if (_Playback_Manager == nullptr) {
 			return;
+		}
 
 		// Update transport control state
 		if (_Transport_Controls != nullptr)
@@ -1354,6 +1356,10 @@ namespace MIDILightDrawer
 		// Get current playback position
 		double Current_Position_Ms = _Playback_Manager->Get_Current_Position_Ms();
 
+		if (_Playback_Manager->Is_Playing())
+		{
+			this->_Timeline->AutoScrollForPlayback();
+		}
 		// TODO: Update timeline playback cursor position
 		// This will need a method added to Widget_Timeline to set the playback cursor position
 		// Example: _Timeline->Set_Playback_Position_Ms(Current_Position_Ms);

@@ -313,7 +313,7 @@ namespace MIDILightDrawer
 
         // Create the rectangle for the tracks area
         D2D1_RECT_F tracksArea = D2D1::RectF(
-			(float)GetLeftPanelWidth(),			// Left
+			(float)GetLeftPanelWidth(),		// Left
             HEADER_HEIGHT,					// Top
             (float)this->_Control->Width,	// Right
             (float)this->_Control->Height	// Bottom
@@ -458,6 +458,22 @@ namespace MIDILightDrawer
 
         return true;
     }
+
+	bool Timeline_Direct2DRenderer::DrawPlaybackCursor(int tickPosition)
+	{
+		if (!_NativeRenderer) {
+			return false;
+		}
+
+		// Convert tick position to pixels
+		float X = TicksToPixels(tickPosition) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth();
+
+		if (X >= GetLeftPanelAndTrackHeaderWidth() && X <= (float)this->_Control->Width)
+		{
+			D2D1_COLOR_F CursorColor = D2D1::ColorF(1.0f, 1.0f, 1.0f, 1.0);
+			_NativeRenderer->DrawLine(X, 0, X, (float)this->_Control->Height, CursorColor, 2);
+		}
+	}
 
     bool Timeline_Direct2DRenderer::DrawToolPreview()
     {

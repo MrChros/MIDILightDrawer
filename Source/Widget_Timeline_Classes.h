@@ -84,9 +84,12 @@ namespace MIDILightDrawer
 		property int		Numerator;
 		property int		Denominator;
 		property int		Tempo;
+		property double		StartTime_ms;
+		property double		Length_ms;
+		property double		Length_Per_Tick_ms;
 		property String^	Marker_Text;
 
-		Measure(int startTick, int num, int denom, int tempo, String^ marker_text);
+		Measure(int startTick, double startTime_ms, int num, int denom, int tempo, String^ marker_text);
 
 		virtual String^ ToString() override;
 	};
@@ -125,14 +128,14 @@ namespace MIDILightDrawer
 	{
 	public:
 		// Constructor that calls base constructor
-		TrackMeasure(int startTick, int num, int denom, String^ marker_text, Track^ track) : Measure(startTick, num, denom, 0, marker_text)
+		TrackMeasure(int startTick, int num, int denom, String^ marker_text, Track^ track) : Measure(startTick, 0.0, num, denom, 0, marker_text)
 		{
 			Track = track;
 			Beats = gcnew List<Beat^>();
 		}
 
 		// Additional constructor that creates from existing measure
-		TrackMeasure(Measure^ measure, Track^ track) : Measure(measure->StartTick, measure->Numerator, measure->Denominator, 0, measure->Marker_Text)
+		TrackMeasure(Measure^ measure, Track^ track) : Measure(measure->StartTick, 0.0, measure->Numerator, measure->Denominator, 0, measure->Marker_Text)
 		{
 			Track = track;
 			Beats = gcnew List<Beat^>();

@@ -9,6 +9,7 @@ using namespace System::Collections::Generic;
 #include "Settings.h"
 #include "Form_Loading.h"
 #include "Theme_Manager.h"
+#include "Playback_Manager.h"
 #include "Widget_Timeline_Common.h"
 #include "Widget_Timeline_Classes.h"
 #include "Timeline_Tool_Interface.h"
@@ -74,6 +75,13 @@ namespace MIDILightDrawer
 		void ShowContextMenu(BarEvent^ bar, Point location);
 		void UpdateLeftPanelEventSelection(List<BarEvent^>^ selectedEvents);
 
+		// Playback Methods
+		void SetPlaybackManager(Playback_Manager^ playback_manager);
+		void SetPlaybackCursorPosition(double position_ms);
+		double GetPlaybackCursorPosition();
+		void SetShowPlaybackCursor(bool show);
+		void AutoScrollForPlayback();
+
 		// Tools Setter & Getter
 		void SetCurrentTool(TimelineToolType tool);
 		PointerTool^ GetPointerTool();
@@ -103,6 +111,8 @@ namespace MIDILightDrawer
 
 		int  TicksToPixels(int ticks);
 		int  PixelsToTicks(int pixels);
+		double TicksToMilliseconds(int ticks);
+		int MillisecondsToTicks(double milliseconds);
 		
 		Track^ GetTrackAtPoint(Point p);
 		Rectangle GetTrackBounds(Track^ track);
@@ -145,6 +155,7 @@ namespace MIDILightDrawer
 		Collapsible_Left_Panel^		_Left_Panel;
 		PerformanceMetrics^			_PerformanceMetrics;
 		Widget_Tools_And_Control^	_Tool_And_Control;
+		Playback_Manager^			_Playback_Manager;
 		
 		ThemeColors		_CurrentTheme;
 		TrackButtonId	_HoveredButton;
@@ -175,6 +186,7 @@ namespace MIDILightDrawer
 		int _InitialPanelWidth;
 
 		double _ZoomLevel;
+		bool _ShowPlaybackCursor;
 
 		// Tools
 		TimelineToolType _CurrentToolType;
@@ -214,6 +226,8 @@ namespace MIDILightDrawer
 		bool IsOverTrackButton(Track^ track, int buttonIndex, Point mousePoint);
 		bool IsOverPanelResizeHandle(Point mousePoint);
 		bool IsOverPanelToggleButton(Point mousePoint);
+		bool IsInCursorClickArea(Point mouse_pos);
+		void HandleCursorPositionClick(Point mouse_pos);
 		Rectangle GetTrackButtonBounds(Rectangle headerBounds, int buttonIndex);
 		Rectangle CalculateBarBounds(BarEvent^ bar, Rectangle bounds);
 
@@ -249,6 +263,10 @@ namespace MIDILightDrawer
 
 		property int TotalTicks {
 			int get();
+		}
+
+		property double TotalTime_ms{
+			double get();
 		}
 
 		property TimelineToolType CurrentTool {

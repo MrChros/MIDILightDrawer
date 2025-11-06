@@ -28,6 +28,8 @@ namespace MIDILightDrawer
 		double _Playback_Position_ms;
 		double _Playback_Speed;
 
+		System::Object^ _State_Lock;
+
 	public:
 		Playback_Manager(Widget_Timeline^ timeline);
 		~Playback_Manager();

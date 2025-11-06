@@ -10,6 +10,7 @@ using namespace System::Drawing;
 #include "Control_ColorPicker.h"
 
 #include "Widget_Toolbar.h"
+#include "Widget_Tab_Info.h"
 #include "Widget_Pointer_Options.h"
 #include "Widget_Draw_Options.h"
 #include "Widget_Length_Options.h"
@@ -26,7 +27,8 @@ namespace MIDILightDrawer {
 	{
 	private:
 		Widget_Toolbar^				_Toolbar;
-		Widget_Transport_Controls^	_Transport_Controls;
+		Widget_Tab_Info^			_Tab_Info;
+		//Widget_Transport_Controls^	_Transport_Controls;
 
 		Control_ColorPicker^		_Color_Picker;
 		TableLayoutPanel^			_Options_Container;
@@ -52,7 +54,7 @@ namespace MIDILightDrawer {
 		bool ColorPickerIsTyping();
 
 		Widget_Toolbar^				Get_Widget_Toolbar(void);
-		Widget_Transport_Controls^	Get_Widget_Transport_Controls(void);
+		Widget_Tab_Info^			Get_Widget_Tab_Info(void);
 		Widget_Pointer_Options^		Get_Widget_Pointer_Options(void);
 		Widget_Draw_Options^		Get_Widget_Draw_Options(void);
 		Widget_Length_Options^		Get_Widget_Length_Options(void);

@@ -27,19 +27,19 @@ namespace MIDILightDrawer
 		}
 	}
 
-	bool Playback_MIDI_Engine::Send_Event(MIDI_Event_Info^ event)
+	bool Playback_MIDI_Engine::Send_Event(Playback_MIDI_Event^ event)
 	{
 		if (!event) {
 			return false;
 		}
 
 		Playback_MIDI_Engine_Native::MIDI_Event Native_Event;
-		Native_Event.Timestamp_Ms = event->Timestamp_Ms;
-		Native_Event.Track = event->Track;
-		Native_Event.Channel = event->Channel;
-		Native_Event.Command = event->Command;
-		Native_Event.Data1 = event->Data1;
-		Native_Event.Data2 = event->Data2;
+		Native_Event.Timestamp_Ms = event->Timestamp_ms;
+		Native_Event.Track = event->Timeline_Track_ID;
+		Native_Event.Channel = event->MIDI_Channel;
+		Native_Event.Command = event->MIDI_Command;
+		Native_Event.Data1 = event->MIDI_Data1;
+		Native_Event.Data2 = event->MIDI_Data2;
 
 		return Playback_MIDI_Engine_Native::Send_MIDI_Event(Native_Event);
 	}
@@ -68,21 +68,28 @@ namespace MIDILightDrawer
 		return Playback_MIDI_Engine_Native::Stop_Playback_Thread();
 	}
 
-	void Playback_MIDI_Engine::Queue_Event(MIDI_Event_Info^ event)
+	void Playback_MIDI_Engine::Queue_Event(Playback_MIDI_Event^ event)
 	{
 		if (!event) {
 			return;
 		}
 
 		Playback_MIDI_Engine_Native::MIDI_Event Native_Event;
-		Native_Event.Timestamp_Ms = event->Timestamp_Ms;
-		Native_Event.Track = event->Track;
-		Native_Event.Channel = event->Channel;
-		Native_Event.Command = event->Command;
-		Native_Event.Data1 = event->Data1;
-		Native_Event.Data2 = event->Data2;
+		Native_Event.Timestamp_Ms = event->Timestamp_ms;
+		Native_Event.Track = event->Timeline_Track_ID;
+		Native_Event.Channel = event->MIDI_Channel;
+		Native_Event.Command = event->MIDI_Command;
+		Native_Event.Data1 = event->MIDI_Data1;
+		Native_Event.Data2 = event->MIDI_Data2;
 
 		Playback_MIDI_Engine_Native::Queue_MIDI_Event(Native_Event);
+	}
+
+	void Playback_MIDI_Engine::Queue_Events(List<Playback_MIDI_Event^>^ events)
+	{
+		for each(Playback_MIDI_Event ^ Event in events) {
+			this->Queue_Event(Event);
+		}
 	}
 
 	void Playback_MIDI_Engine::Clear_Event_Queue()

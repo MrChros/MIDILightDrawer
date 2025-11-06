@@ -1,10 +1,6 @@
 #include "MIDI_Event_Raster.h"
 
-namespace MIDILightDrawer
-{
-
-}
-#include "MIDI_Event_Raster.h"
+#include "Playback_MIDI_Engine.h"
 
 namespace MIDILightDrawer
 {
@@ -110,9 +106,9 @@ namespace MIDILightDrawer
 		return (samples * 1000000) / sample_rate;
 	}
 
-	List<Export_Rastered_Event>^ MIDI_Event_Raster::Raster_Bar_For_Export(BarEvent^ bar)
+	List<Export_MIDI_Event>^ MIDI_Event_Raster::Raster_Bar_For_Export(BarEvent^ bar)
 	{
-		List<Export_Rastered_Event>^ RasteredEvents = gcnew List<Export_Rastered_Event>();
+		List<Export_MIDI_Event>^ RasteredEvents = gcnew List<Export_MIDI_Event>();
 
 		switch (bar->Type)
 		{
@@ -124,9 +120,9 @@ namespace MIDILightDrawer
 		return RasteredEvents;
 	}
 
-	List<Export_Rastered_Event>^ MIDI_Event_Raster::Raster_Track_For_Export(Track^ track)
+	List<Export_MIDI_Event>^ MIDI_Event_Raster::Raster_Track_For_Export(Track^ track)
 	{
-		List<Export_Rastered_Event>^ AllRasteredEvents = gcnew List<Export_Rastered_Event>();
+		List<Export_MIDI_Event>^ AllRasteredEvents = gcnew List<Export_MIDI_Event>();
 
 		// Reset anti-flicker state for new track
 		this->_Additional_Offset = 0;
@@ -146,7 +142,7 @@ namespace MIDILightDrawer
 				_Next_Start_Tick = -1;
 			}
 
-			List<Export_Rastered_Event>^ BarEvents = Raster_Bar_For_Export(Bar);
+			List<Export_MIDI_Event>^ BarEvents = Raster_Bar_For_Export(Bar);
 			AllRasteredEvents->AddRange(BarEvents);
 
 			if (BarEvents->Count > 0)
@@ -159,20 +155,15 @@ namespace MIDILightDrawer
 		return AllRasteredEvents;
 	}
 
-	List<Playback_Rastered_Event>^ MIDI_Event_Raster::Raster_Bar_For_Playback(
-		BarEvent^ bar,
-		int track_index,
-		uint8_t midi_channel,
-		int octave_note_offset,
-		bool use_anti_flicker)
+	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Raster_Bar_For_Playback(BarEvent^ bar, int track_index, uint8_t midi_channel, int octave_note_offset, bool use_anti_flicker)
 	{
-		List<Playback_Rastered_Event>^ PlaybackEvents = gcnew List<Playback_Rastered_Event>();
+		List<Playback_MIDI_Event^>^ PlaybackEvents = gcnew List<Playback_MIDI_Event^>();
 
 		// First raster to export format
-		List<Export_Rastered_Event>^ ExportEvents = Raster_Bar_For_Export(bar);
+		List<Export_MIDI_Event>^ ExportEvents = Raster_Bar_For_Export(bar);
 
 		// Then convert to playback format
-		for each (Export_Rastered_Event ExportEvent in ExportEvents)
+		for each (Export_MIDI_Event ExportEvent in ExportEvents)
 		{
 			Color_To_MIDI_Events(PlaybackEvents, ExportEvent.Color, ExportEvent.TickStart, ExportEvent.TickLength, track_index, midi_channel, octave_note_offset);
 		}
@@ -180,9 +171,9 @@ namespace MIDILightDrawer
 		return PlaybackEvents;
 	}
 
-	List<Playback_Rastered_Event>^ MIDI_Event_Raster::Raster_Track_For_Playback(Track^ track, int track_index, uint8_t midi_channel, bool use_anti_flicker)
+	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Raster_Track_For_Playback(Track^ track, int track_index, uint8_t midi_channel, bool use_anti_flicker)
 	{
-		List<Playback_Rastered_Event>^ AllPlaybackEvents = gcnew List<Playback_Rastered_Event>();
+		List<Playback_MIDI_Event^>^ AllPlaybackEvents = gcnew List<Playback_MIDI_Event^>();
 
 		// Reset anti-flicker state
 		this->_Additional_Offset = 0;
@@ -204,7 +195,7 @@ namespace MIDILightDrawer
 				this->_Next_Start_Tick = -1;
 			}
 
-			List<Playback_Rastered_Event>^ BarEvents = Raster_Bar_For_Playback(
+			List<Playback_MIDI_Event^>^ BarEvents = Raster_Bar_For_Playback(
 				Bar,
 				track_index,
 				midi_channel,
@@ -224,9 +215,9 @@ namespace MIDILightDrawer
 		return AllPlaybackEvents;
 	}
 
-	List<Playback_Rastered_Event>^ MIDI_Event_Raster::Raster_Timeline_For_Playback(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel)
+	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Raster_Timeline_For_Playback(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel)
 	{
-		List<Playback_Rastered_Event>^ AllEvents = gcnew List<Playback_Rastered_Event>();
+		List<Playback_MIDI_Event^>^ AllEvents = gcnew List<Playback_MIDI_Event^>();
 
 		for (int i = 0; i < tracks->Count; i++)
 		{
@@ -235,19 +226,19 @@ namespace MIDILightDrawer
 				continue;
 			}
 
-			List<Playback_Rastered_Event>^ TrackEvents = Raster_Track_For_Playback(tracks[i], i, global_midi_channel, true); // use_anti_flicker
+			List<Playback_MIDI_Event^>^ TrackEvents = Raster_Track_For_Playback(tracks[i], i, global_midi_channel, true); // use_anti_flicker
 			AllEvents->AddRange(TrackEvents);
 		}
 
 		// Sort by timestamp for sequential playback
-		AllEvents->Sort(gcnew Comparison<Playback_Rastered_Event>(&MIDI_Event_Raster::Compare_Events_By_Timestamp));
+		AllEvents->Sort(gcnew Comparison<Playback_MIDI_Event^>(&MIDI_Event_Raster::Compare_Events_By_Timestamp));
 
 		return AllEvents;
 	}
 
-	void MIDI_Event_Raster::RasterBarSolid(List<Export_Rastered_Event>^ rastered_events, BarEvent^ bar)
+	void MIDI_Event_Raster::RasterBarSolid(List<Export_MIDI_Event>^ rastered_events, BarEvent^ bar)
 	{
-		Export_Rastered_Event Event;
+		Export_MIDI_Event Event;
 		Event.TickStart = bar->StartTick;
 		Event.TickLength = bar->Duration;
 		Event.Color = bar->Color;
@@ -255,7 +246,7 @@ namespace MIDILightDrawer
 		rastered_events->Add(Event);
 	}
 
-	void MIDI_Event_Raster::RasterBarFade(List<Export_Rastered_Event>^ rastered_events, BarEvent^ bar)
+	void MIDI_Event_Raster::RasterBarFade(List<Export_MIDI_Event>^ rastered_events, BarEvent^ bar)
 	{
 		int Tick_Start = bar->StartTick;
 		int Tick_Length = bar->Duration;
@@ -318,7 +309,7 @@ namespace MIDILightDrawer
 			int BarTickStart = Tick_Start + (i * bar->FadeInfo->QuantizationTicks);
 			int BarTickDuration = bar->FadeInfo->QuantizationTicks;
 
-			Export_Rastered_Event Event;
+			Export_MIDI_Event Event;
 			Event.TickStart = BarTickStart;
 			Event.TickLength = BarTickDuration;
 			Event.Color = BarColor;
@@ -327,7 +318,7 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void MIDI_Event_Raster::RasterBarStrobe(List<Export_Rastered_Event>^ rastered_events, BarEvent^ bar)
+	void MIDI_Event_Raster::RasterBarStrobe(List<Export_MIDI_Event>^ rastered_events, BarEvent^ bar)
 	{
 		int Tick_Start = bar->StartTick;
 		int Tick_Length = bar->Duration;
@@ -340,7 +331,7 @@ namespace MIDILightDrawer
 			int BarTickStart = Tick_Start + (i * 2 * bar->StrobeInfo->QuantizationTicks);
 			int BarTickDuration = bar->StrobeInfo->QuantizationTicks;
 
-			Export_Rastered_Event Event;
+			Export_MIDI_Event Event;
 			Event.TickStart = BarTickStart;
 			Event.TickLength = BarTickDuration;
 			Event.Color = bar->Color;
@@ -349,7 +340,7 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void MIDI_Event_Raster::Color_To_MIDI_Events(List<Playback_Rastered_Event>^ output, Color color, int tick_start, int tick_length, int track_index, uint8_t midi_channel, int octave_note_offset)
+	void MIDI_Event_Raster::Color_To_MIDI_Events(List<Playback_MIDI_Event^>^ output, Color color, int tick_start, int tick_length, int track_index, uint8_t midi_channel, int octave_note_offset)
 	{
 		Settings^ Settings = Settings::Get_Instance();
 
@@ -375,76 +366,85 @@ namespace MIDILightDrawer
 		uint8_t ValueBlue = (color.B >> 1);
 
 		// Convert tick times to microseconds
-		uint64_t TimestampStartUs = Convert_Tick_To_Microseconds(tick_start);
-		uint64_t TimestampEndUs = Convert_Tick_To_Microseconds(tick_start + AppliedTickLength);
+		double Timestamp_Start_ms = (double)Convert_Tick_To_Microseconds(tick_start) / 1000.0;
+		double Timestamp_End_ms = (double)Convert_Tick_To_Microseconds(tick_start + AppliedTickLength) / 1000.0;;
 
 		// Create Note On events for each color channel
 		if (ValueRed > 0)
 		{
-			Playback_Rastered_Event NoteOn;
-			NoteOn.Timestamp_us = TimestampStartUs;
-			NoteOn.MIDI_Channel = midi_channel;
-			NoteOn.MIDI_Command = 0x90;  // Note On
-			NoteOn.Data1 = octave_note_offset + Settings->MIDI_Note_Red;
-			NoteOn.Data2 = ValueRed;
-			NoteOn.Track_Index = track_index;
-			NoteOn.Original_Tick = tick_start;
+			Playback_MIDI_Event^ NoteOn = gcnew Playback_MIDI_Event();
+			NoteOn->Timestamp_ms = Timestamp_Start_ms;
+			NoteOn->Start_Tick = tick_start;
+			NoteOn->Timeline_Track_ID = track_index;
+			NoteOn->MIDI_Channel = midi_channel;
+			NoteOn->MIDI_Command = 0x90;  // Note On
+			NoteOn->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Red;
+			NoteOn->MIDI_Data2 = ValueRed;
+			
 			output->Add(NoteOn);
 
-			Playback_Rastered_Event NoteOff;
-			NoteOff.Timestamp_us = TimestampEndUs;
-			NoteOff.MIDI_Channel = midi_channel;
-			NoteOff.MIDI_Command = 0x80;  // Note Off
-			NoteOff.Data1 = octave_note_offset + Settings->MIDI_Note_Red;
-			NoteOff.Data2 = 0;
-			NoteOff.Track_Index = track_index;
-			NoteOff.Original_Tick = tick_start + AppliedTickLength;
+
+			Playback_MIDI_Event^ NoteOff = gcnew Playback_MIDI_Event();
+			NoteOff->Timestamp_ms = Timestamp_End_ms;
+			NoteOff->Start_Tick = tick_start + AppliedTickLength;
+			NoteOff->Timeline_Track_ID = track_index;
+			NoteOff->MIDI_Channel = midi_channel;
+			NoteOff->MIDI_Command = 0x80;  // Note Off
+			NoteOff->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Red;
+			NoteOff->MIDI_Data2 = 0;
+			
 			output->Add(NoteOff);
 		}
 
 		if (ValueGreen > 0)
 		{
-			Playback_Rastered_Event NoteOn;
-			NoteOn.Timestamp_us = TimestampStartUs;
-			NoteOn.MIDI_Channel = midi_channel;
-			NoteOn.MIDI_Command = 0x90;  // Note On
-			NoteOn.Data1 = octave_note_offset + Settings->MIDI_Note_Green;
-			NoteOn.Data2 = ValueGreen;
-			NoteOn.Track_Index = track_index;
-			NoteOn.Original_Tick = tick_start;
+			Playback_MIDI_Event^ NoteOn = gcnew Playback_MIDI_Event();
+			NoteOn->Timestamp_ms = Timestamp_Start_ms;
+			NoteOn->Start_Tick = tick_start;
+			NoteOn->Timeline_Track_ID = track_index;
+			NoteOn->MIDI_Channel = midi_channel;
+			NoteOn->MIDI_Command = 0x90;  // Note On
+			NoteOn->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Green;
+			NoteOn->MIDI_Data2 = ValueGreen;
+			
 			output->Add(NoteOn);
 
-			Playback_Rastered_Event NoteOff;
-			NoteOff.Timestamp_us = TimestampEndUs;
-			NoteOff.MIDI_Channel = midi_channel;
-			NoteOff.MIDI_Command = 0x80;  // Note Off
-			NoteOff.Data1 = octave_note_offset + Settings->MIDI_Note_Green;
-			NoteOff.Data2 = 0;
-			NoteOff.Track_Index = track_index;
-			NoteOff.Original_Tick = tick_start + AppliedTickLength;
+
+			Playback_MIDI_Event^ NoteOff = gcnew Playback_MIDI_Event();
+			NoteOff->Timestamp_ms = Timestamp_End_ms;
+			NoteOff->Start_Tick = tick_start + AppliedTickLength;
+			NoteOff->MIDI_Channel = midi_channel;
+			NoteOff->MIDI_Command = 0x80;  // Note Off
+			NoteOff->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Green;
+			NoteOff->MIDI_Data2 = 0;
+			NoteOff->Timeline_Track_ID = track_index;
+			
 			output->Add(NoteOff);
 		}
 
 		if (ValueBlue > 0)
 		{
-			Playback_Rastered_Event NoteOn;
-			NoteOn.Timestamp_us = TimestampStartUs;
-			NoteOn.MIDI_Channel = midi_channel;
-			NoteOn.MIDI_Command = 0x90;  // Note On
-			NoteOn.Data1 = octave_note_offset + Settings->MIDI_Note_Blue;
-			NoteOn.Data2 = ValueBlue;
-			NoteOn.Track_Index = track_index;
-			NoteOn.Original_Tick = tick_start;
+			Playback_MIDI_Event^ NoteOn = gcnew Playback_MIDI_Event();
+			NoteOn->Timestamp_ms = Timestamp_Start_ms;
+			NoteOn->Start_Tick = tick_start;
+			NoteOn->Timeline_Track_ID = track_index;
+			NoteOn->MIDI_Channel = midi_channel;
+			NoteOn->MIDI_Command = 0x90;  // Note On
+			NoteOn->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Blue;
+			NoteOn->MIDI_Data2 = ValueBlue;
+			
 			output->Add(NoteOn);
 
-			Playback_Rastered_Event NoteOff;
-			NoteOff.Timestamp_us = TimestampEndUs;
-			NoteOff.MIDI_Channel = midi_channel;
-			NoteOff.MIDI_Command = 0x80;  // Note Off
-			NoteOff.Data1 = octave_note_offset + Settings->MIDI_Note_Blue;
-			NoteOff.Data2 = 0;
-			NoteOff.Track_Index = track_index;
-			NoteOff.Original_Tick = tick_start + AppliedTickLength;
+
+			Playback_MIDI_Event^ NoteOff = gcnew Playback_MIDI_Event();
+			NoteOff->Timestamp_ms = Timestamp_End_ms;
+			NoteOff->Start_Tick = tick_start + AppliedTickLength;
+			NoteOff->Timeline_Track_ID = track_index;
+			NoteOff->MIDI_Channel = midi_channel;
+			NoteOff->MIDI_Command = 0x80;  // Note Off
+			NoteOff->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Blue;
+			NoteOff->MIDI_Data2 = 0;
+
 			output->Add(NoteOff);
 		}
 	}
@@ -490,12 +490,12 @@ namespace MIDILightDrawer
 		return this->_Tempo_Map[0];
 	}
 
-	int MIDI_Event_Raster::Compare_Events_By_Timestamp(Playback_Rastered_Event a, Playback_Rastered_Event b)
+	int MIDI_Event_Raster::Compare_Events_By_Timestamp(Playback_MIDI_Event^ a, Playback_MIDI_Event^ b)
 	{
-		if (a.Timestamp_us < b.Timestamp_us) {
+		if (a->Timestamp_ms < b->Timestamp_ms) {
 			return -1;
 		}
-		else if (a.Timestamp_us > b.Timestamp_us) {
+		else if (a->Timestamp_ms > b->Timestamp_ms) {
 			return 1;
 		}
 		else {

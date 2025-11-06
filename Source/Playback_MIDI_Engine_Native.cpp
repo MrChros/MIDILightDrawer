@@ -48,12 +48,6 @@ namespace MIDILightDrawer
 
 		if (_MIDI_Handle)
 		{
-			// Send all notes off on all channels before closing
-			for (int i = 0; i < 16; ++i)
-			{
-				Send_All_Notes_Off(i);
-			}
-
 			midiOutClose((HMIDIOUT)_MIDI_Handle);
 			_MIDI_Handle = nullptr;
 		}
@@ -234,11 +228,6 @@ namespace MIDILightDrawer
 
 			// Sleep for 1ms - balance between precision and CPU usage
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-
-		// Thread cleanup: Send all notes off
-		for (int i = 0; i < 16; ++i) {
-			Send_All_Notes_Off(i);
 		}
 	}
 }

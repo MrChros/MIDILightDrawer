@@ -13,8 +13,8 @@ namespace MIDILightDrawer
 
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 60));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 350));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 450));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
 
@@ -26,10 +26,11 @@ namespace MIDILightDrawer
 		Table_Layout_Main->Controls->Add(this->_Toolbar, 0, 0);
 
 
-		// Create and add transport controls
-		this->_Transport_Controls = gcnew Widget_Transport_Controls();
-		this->_Transport_Controls->Dock = DockStyle::Fill;
-		Table_Layout_Main->Controls->Add(this->_Transport_Controls, 1, 0);
+		// Create and add Tab Info Widget
+		this->_Tab_Info = gcnew Widget_Tab_Info();
+		this->_Tab_Info->Dock = DockStyle::Fill;
+		this->_Tab_Info->Margin = System::Windows::Forms::Padding(0, 10, 0, 0);
+		Table_Layout_Main->Controls->Add(this->_Tab_Info, 1, 0);
 
 
 		// Create and add color picker
@@ -150,9 +151,9 @@ namespace MIDILightDrawer
 		return this->_Toolbar;
 	}
 
-	Widget_Transport_Controls^ Widget_Tools_And_Control::Get_Widget_Transport_Controls(void)
+	Widget_Tab_Info^ Widget_Tools_And_Control::Get_Widget_Tab_Info(void)
 	{
-		return this->_Transport_Controls;
+		return this->_Tab_Info;
 	}
 
 	Widget_Pointer_Options^	Widget_Tools_And_Control::Get_Widget_Pointer_Options(void)

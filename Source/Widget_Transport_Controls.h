@@ -11,6 +11,8 @@ namespace MIDILightDrawer
 	public ref class Widget_Transport_Controls : public UserControl
 	{
 	private:
+		System::Resources::ResourceManager^ _Resources;
+
 		Playback_Manager^ _Playback_Manager;
 
 		// Buttons
@@ -27,9 +29,6 @@ namespace MIDILightDrawer
 		bool _Moved_To_End;
 		Timer^ _Seek_Timer;
 
-		// Visual state
-		bool _Is_Playing;
-
 	public:
 		Widget_Transport_Controls();
 
@@ -38,7 +37,6 @@ namespace MIDILightDrawer
 
 	private:
 		void Initialize_Components();
-		void Setup_Layout();
 		void Attach_Event_Handlers();
 
 		// Button event handlers

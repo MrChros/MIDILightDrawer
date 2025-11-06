@@ -7,6 +7,9 @@ using namespace System;
 
 namespace MIDILightDrawer
 {
+	// Forward Declaration
+	ref class Widget_Timeline;
+	
 	public enum class Playback_State
 	{
 		Stopped,
@@ -17,6 +20,8 @@ namespace MIDILightDrawer
 	public ref class Playback_Manager
 	{
 	private:
+		Widget_Timeline^ _Timeline;
+
 		Playback_MIDI_Engine^ _MIDI_Engine;
 		Playback_Audio_Engine^ _Audio_Engine;
 		Playback_State _Current_State;
@@ -24,7 +29,7 @@ namespace MIDILightDrawer
 		double _Playback_Speed;
 
 	public:
-		Playback_Manager();
+		Playback_Manager(Widget_Timeline^ timeline);
 		~Playback_Manager();
 
 		// Initialization
@@ -55,7 +60,7 @@ namespace MIDILightDrawer
 		double Get_Playback_Speed();
 
 		// MIDI control
-		bool Send_MIDI_Event(MIDI_Event_Info^ event);
+		bool Send_MIDI_Event(Playback_MIDI_Event^ event);
 		bool Send_All_Notes_Off();
 	};
 }

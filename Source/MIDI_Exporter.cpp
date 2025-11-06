@@ -42,10 +42,10 @@ namespace MIDILightDrawer
 			int Octave = T->Octave;
 			int Octave_Note_Offset = (Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
 
-			List<Export_Rastered_Event>^ RasteredEvents = _Raster->Raster_Track_For_Export(T);
+			List<Export_MIDI_Event>^ RasteredEvents = _Raster->Raster_Track_For_Export(T);
 
 			// Write all rastered events to MIDI file
-			for each (Export_Rastered_Event E in RasteredEvents)
+			for each (Export_MIDI_Event E in RasteredEvents)
 			{
 				WriteEventToMIDI(&Writer, E, Octave_Note_Offset);
 			}
@@ -76,7 +76,7 @@ namespace MIDILightDrawer
 		return Standard_String;
 	}
 
-	void MIDI_Exporter::WriteEventToMIDI(MIDI_Writer* writer, Export_Rastered_Event event, int octave_note_offset)
+	void MIDI_Exporter::WriteEventToMIDI(MIDI_Writer* writer, Export_MIDI_Event event, int octave_note_offset)
 	{
 		Settings^ Settings = Settings::Get_Instance();
 

@@ -10,7 +10,7 @@ namespace MIDILightDrawer
 		Table_Layout_Main->RowCount = 2;
 		Table_Layout_Main->ColumnCount = 2;
 
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 400));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 300));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
 	
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 50.0));

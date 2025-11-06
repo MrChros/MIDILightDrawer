@@ -42,6 +42,6 @@ namespace MIDILightDrawer
 		std::string ConvertToStdString(System::String^ input_string);
 
 	private:
-		void WriteEventToMIDI(MIDI_Writer* writer, Export_Rastered_Event event, int octave_note_offset);
+		void WriteEventToMIDI(MIDI_Writer* writer, Export_MIDI_Event event, int octave_note_offset);
  	};
 }

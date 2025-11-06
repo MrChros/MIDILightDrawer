@@ -871,7 +871,7 @@ namespace MIDILightDrawer
 			_D2DRenderer->DrawTrackHeaders();
 			_D2DRenderer->DrawTrackDividers(_ResizeHoverTrack);
 			_D2DRenderer->DrawMeasureNumbers();
-			if(this->_ShowPlaybackCursor && _Playback_Manager) _D2DRenderer->DrawPlaybackCursor(MillisecondsToTicks(_Playback_Manager->Get_Playback_Position_ms()));
+			if(this->_ShowPlaybackCursor && _Playback_Manager && _Measures->Count > 0) _D2DRenderer->DrawPlaybackCursor(MillisecondsToTicks(_Playback_Manager->Get_Playback_Position_ms()));
 			_D2DRenderer->DrawLeftPanel(_IsOverPanelResizeHandle || _IsPanelResizing);
 
 			const float FPSCounter_X_Offset = (float)(Timeline_Direct2DRenderer::PANEL_BUTTON_SIZE + Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN);
@@ -2162,9 +2162,35 @@ namespace MIDILightDrawer
 		_CurrentTheme = value;
 	}
 
-	List<Track^>^ Widget_Timeline::Tracks:: get()
+	List<Track^>^ Widget_Timeline::Tracks::get()
 	{
 		return _Tracks;
+	}
+
+	List<int>^ Widget_Timeline::TrackNumbersMuted::get()
+	{
+		List<int>^ TracksMuted = gcnew List<int>;
+
+		for(int i=0;i < _Tracks->Count ; i++) {
+			if (_Tracks[i]->IsMuted) {
+				TracksMuted->Add(i);
+			}
+		}
+
+		return TracksMuted;
+	}
+
+	List<int>^ Widget_Timeline::TrackNumbersSoloed::get()
+	{
+		List<int>^ TracksSoloed = gcnew List<int>;
+
+		for (int i = 0;i < _Tracks->Count; i++) {
+			if (_Tracks[i]->IsSoloed) {
+				TracksSoloed->Add(i);
+			}
+		}
+
+		return TracksSoloed;
 	}
 	
 	List<Measure^>^ Widget_Timeline::Measures::get()

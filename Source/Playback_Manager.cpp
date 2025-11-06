@@ -1,9 +1,14 @@
 #include "Playback_Manager.h"
 
+#include "Settings.h"
+#include "MIDI_Event_Raster.h"
+
 namespace MIDILightDrawer
 {
-	Playback_Manager::Playback_Manager()
+	Playback_Manager::Playback_Manager(Widget_Timeline^ timeline)
 	{
+		_Timeline = timeline;
+		
 		_MIDI_Engine = gcnew Playback_MIDI_Engine();
 		_Audio_Engine = gcnew Playback_Audio_Engine();
 		_Current_State = Playback_State::Stopped;
@@ -61,6 +66,13 @@ namespace MIDILightDrawer
 			return true;
 		}
 
+		MIDI_Event_Raster^ MIDI_Raster = gcnew MIDI_Event_Raster();
+		MIDI_Raster->Initialize_Tempo_Map(_Timeline->Measures);
+
+		List<Playback_MIDI_Event^>^ Events = MIDI_Raster->Raster_Timeline_For_Playback(_Timeline->Tracks, _Timeline->TrackNumbersMuted, _Timeline->TrackNumbersSoloed, Settings::Get_Instance()->Global_MIDI_Output_Channel);
+		_MIDI_Engine->Clear_Event_Queue();
+		_MIDI_Engine->Queue_Events(Events);
+
 		bool Success = true;
 
 		// Set MIDI engine position before starting
@@ -77,11 +89,13 @@ namespace MIDILightDrawer
 		// Start audio if loaded
 		if (Is_Audio_Loaded())
 		{
-			if (_Current_State == Playback_State::Paused)
+			if (_Current_State == Playback_State::Paused) {
 				Success &= _Audio_Engine->Resume_Playback();
-			else
+			}
+			else {
 				Success &= _Audio_Engine->Start_Playback();
-		}
+			}
+		} 
 
 		if (Success) {
 			_Current_State = Playback_State::Playing;
@@ -92,8 +106,9 @@ namespace MIDILightDrawer
 
 	bool Playback_Manager::Pause()
 	{
-		if (_Current_State != Playback_State::Playing)
+		if (_Current_State != Playback_State::Playing) {
 			return false;
+		}
 
 		bool Success = true;
 
@@ -101,7 +116,7 @@ namespace MIDILightDrawer
 		Success &= _MIDI_Engine->Stop_Playback();
 
 		// Send all notes off for MIDI
-		Send_All_Notes_Off();
+		//Send_All_Notes_Off();
 
 		// Pause audio if loaded
 		if (Is_Audio_Loaded())
@@ -128,7 +143,7 @@ namespace MIDILightDrawer
 		Success &= _MIDI_Engine->Stop_Playback();
 
 		// Send all notes off for MIDI
-		Send_All_Notes_Off();
+		//Send_All_Notes_Off();
 
 		// Clear any queued MIDI events
 		_MIDI_Engine->Clear_Event_Queue();
@@ -157,7 +172,7 @@ namespace MIDILightDrawer
 		}
 
 		// Send all notes off before seeking
-		Send_All_Notes_Off();
+		//Send_All_Notes_Off();
 
 		// Clear event queue
 		_MIDI_Engine->Clear_Event_Queue();
@@ -236,7 +251,7 @@ namespace MIDILightDrawer
 		return _Playback_Speed;
 	}
 
-	bool Playback_Manager::Send_MIDI_Event(MIDI_Event_Info^ event)
+	bool Playback_Manager::Send_MIDI_Event(Playback_MIDI_Event^ event)
 	{
 		return _MIDI_Engine->Send_Event(event);
 	}

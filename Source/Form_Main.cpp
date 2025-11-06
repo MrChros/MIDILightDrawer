@@ -71,7 +71,7 @@ namespace MIDILightDrawer
 		this->_Toolbar->OnToolChanged += gcnew System::EventHandler<TimelineToolType>(this, &Form_Main::Toolbar_OnToolChanged);
 
 		// Get transport controls reference
-		this->_Transport_Controls = this->_Tools_And_Control->Get_Widget_Transport_Controls();
+		this->_Tab_Info = this->_Tools_And_Control->Get_Widget_Tab_Info();
 
 		
 		//////////////////////
@@ -149,22 +149,24 @@ namespace MIDILightDrawer
 
 	void Form_Main::InitializeBottomControls(Panel^ container)
 	{
-		TableLayoutPanel^ bottomLayout = gcnew TableLayoutPanel();
-		bottomLayout->Dock = DockStyle::Fill;
-		bottomLayout->ColumnCount = 4;
-		bottomLayout->RowCount = 1;
+		TableLayoutPanel^ BottomLayout = gcnew TableLayoutPanel();
+		BottomLayout->Dock = DockStyle::Fill;
+		BottomLayout->ColumnCount = 5;
+		BottomLayout->RowCount = 1;
 
 		// Configure column styles
-		bottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
-		bottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
-		bottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 270));
-		bottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
+		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
+		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 300));
+		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
+		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 270));
+		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
 
-		bottomLayout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.f));
+		BottomLayout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.f));
 
-		// Create the Tablature Info Widget
-		this->_Tab_Info = gcnew Widget_Tab_Info();
-		this->_Tab_Info->Dock = DockStyle::Fill;
+
+		// Create Transport Controls
+		this->_Transport_Controls = gcnew Widget_Transport_Controls();
+		this->_Transport_Controls->Dock = DockStyle::Fill;
 
 
 		// Track Preset Widget
@@ -193,8 +195,8 @@ namespace MIDILightDrawer
 		this->_DropDown_Marker->Item_Selected += gcnew Control_DropDown_Item_Selected_Event_Handler(this, &Form_Main::DropDown_View_Marker_OnItem_Selected);
 
 		// Configure zoom control with container for right alignment
-		Panel^ zoomPanel = gcnew Panel();
-		zoomPanel->Dock			= DockStyle::Fill;
+		Panel^ ZoomPanel = gcnew Panel();
+		ZoomPanel->Dock	= DockStyle::Fill;
 
 		array<double>^ Zoom_Values = { 0.1, 0.25, 0.5, 0.75, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 		_TrackBar_Zoom = gcnew Control_TrackBar_Zoom();
@@ -205,15 +207,15 @@ namespace MIDILightDrawer
 		_TrackBar_Zoom->Value = 1;
 
 		// Add zoom control to its container
-		zoomPanel->Controls->Add(_TrackBar_Zoom);
+		ZoomPanel->Controls->Add(_TrackBar_Zoom);
 
 		// Add controls to layout with margins
-		bottomLayout->Controls->Add(this->_Tab_Info				, 0, 0);
-		bottomLayout->Controls->Add(this->_DropDown_Track_Height, 1, 0);
-		bottomLayout->Controls->Add(this->_DropDown_Marker		, 2, 0);
-		bottomLayout->Controls->Add(zoomPanel					, 3, 0);
+		BottomLayout->Controls->Add(this->_Transport_Controls	, 1, 0);
+		BottomLayout->Controls->Add(this->_DropDown_Track_Height, 2, 0);
+		BottomLayout->Controls->Add(this->_DropDown_Marker		, 3, 0);
+		BottomLayout->Controls->Add(ZoomPanel					, 4, 0);
 
-		container->Controls->Add(bottomLayout);
+		container->Controls->Add(BottomLayout);
 	}
 
 	void Form_Main::InitializeToolOptions()
@@ -471,7 +473,7 @@ namespace MIDILightDrawer
 		try
 		{
 			// Create Playback_Manager
-			this->_Playback_Manager = gcnew Playback_Manager();
+			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline);
 			this->_Timeline->SetPlaybackManager(this->_Playback_Manager);
 
 			Device_Manager^ Devices = gcnew Device_Manager();
@@ -1149,6 +1151,8 @@ namespace MIDILightDrawer
 				this->_Timeline->Tracks[i]->Name = Settings->Octave_Entries[i]->Name;
 			}
 		}
+
+
 
 		UpdateUndoRedoState();
 	}

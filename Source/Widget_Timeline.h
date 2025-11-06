@@ -257,6 +257,14 @@ namespace MIDILightDrawer
 			List<Track^> ^ get();
 		}
 
+		property List<int>^ TrackNumbersMuted {
+			List<int> ^ get();
+		}
+
+		property List<int>^ TrackNumbersSoloed {
+			List<int> ^ get();
+		}
+
 		property List<Measure^>^ Measures {
 			List<Measure^> ^ get();
 		}

@@ -9,6 +9,7 @@ namespace MIDILightDrawer
 {
 	// Forward Declaration
 	ref class Widget_Timeline;
+	ref class Playback_Event_Queue_Manager;
 	
 	public enum class Playback_State
 	{
@@ -24,6 +25,8 @@ namespace MIDILightDrawer
 
 		Playback_MIDI_Engine^ _MIDI_Engine;
 		Playback_Audio_Engine^ _Audio_Engine;
+		Playback_Event_Queue_Manager^ _Event_Queue_Manager;
+
 		Playback_State _Current_State;
 		double _Playback_Position_ms;
 		double _Playback_Speed;
@@ -49,6 +52,9 @@ namespace MIDILightDrawer
 		bool Pause();
 		bool Stop();
 		bool Seek_To_Position(double position_ms);
+
+		void On_Track_Mute_Changed(int track_index, bool is_muted);
+		void On_Track_Solo_Changed(int track_index, bool is_soloed);
 
 		// State queries
 		Playback_State Get_State();

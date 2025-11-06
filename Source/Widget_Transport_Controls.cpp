@@ -220,6 +220,63 @@ namespace MIDILightDrawer
 		Update_Play_Pause_Button();
 	}
 
+	void Widget_Transport_Controls::Trigger_Play_Pause()
+	{
+		On_Play_Pause_Click(nullptr, EventArgs::Empty);
+	}
+
+	void Widget_Transport_Controls::Trigger_Move_To_Start()
+	{
+		On_Move_To_Start_Click(nullptr, EventArgs::Empty);
+	}
+
+	void Widget_Transport_Controls::Trigger_Move_To_End()
+	{
+		On_Move_To_End_Click(nullptr, EventArgs::Empty);
+	}
+
+	void Widget_Transport_Controls::Trigger_Rewind_Start()
+	{
+		if (!_Playback_Manager) {
+			return;
+		}
+
+		_Is_Rewinding = true;
+		_Playback_Manager->Set_Playback_Speed(-2.0);
+		_Seek_Timer->Start();
+	}
+
+	void Widget_Transport_Controls::Trigger_Rewind_Stop()
+	{
+		_Is_Rewinding = false;
+		_Seek_Timer->Stop();
+
+		if (_Playback_Manager) {
+			_Playback_Manager->Set_Playback_Speed(1.0);
+		}
+	}
+
+	void Widget_Transport_Controls::Trigger_Fast_Forward_Start()
+	{
+		if (!_Playback_Manager) {
+			return;
+		}
+
+		_Is_Fast_Forwarding = true;
+		_Playback_Manager->Set_Playback_Speed(2.0);
+		_Seek_Timer->Start();
+	}
+
+	void Widget_Transport_Controls::Trigger_Fast_Forward_Stop()
+	{
+		_Is_Fast_Forwarding = false;
+		_Seek_Timer->Stop();
+
+		if (_Playback_Manager) {
+			_Playback_Manager->Set_Playback_Speed(1.0);
+		}
+	}
+
 	bool Widget_Transport_Controls::Is_Playing::get()
 	{
 		return _Playback_Manager->Is_Playing();

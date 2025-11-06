@@ -163,20 +163,25 @@ namespace MIDILightDrawer
 
 	public ref class Track {
 	public:
-		Track(String^ trackName, int octave);
+		Track(String^ trackName, int trackIndex, int octave);
 
 	private:
 		String^ _Name;
+		int _Index;
 		int _Octave;
 		List<BarEvent^>^ _Events;
 		bool _IsSelected;
-		bool _Is_Muted;
-		bool _Is_Soloed;
+		bool _IsMuted;
+		bool _IsSoloed;
 
 	public:
 		property String^ Name {
 			String^ get() { return _Name; }
 			void set(String^ value) { _Name = value; }
+		}
+
+		property int Index {
+			int get() { return _Index; }
 		}
 
 		property int Octave {
@@ -193,13 +198,13 @@ namespace MIDILightDrawer
 		}
 
 		property bool IsMuted {
-			bool get() { return _Is_Muted; }
-			void set(bool value) { _Is_Muted = value; }
+			bool get() { return _IsMuted; }
+			void set(bool value) { _IsMuted = value; }
 		}
 
 		property bool IsSoloed {
-			bool get() { return _Is_Soloed; }
-			void set(bool value) { _Is_Soloed = value; }
+			bool get() { return _IsSoloed; }
+			void set(bool value) { _IsSoloed = value; }
 		}
 
 		property List<TrackMeasure^>^ Measures;

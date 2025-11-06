@@ -385,7 +385,7 @@ namespace MIDILightDrawer
 					}
 
 					// Create a temporary track just for the bar
-					Track^ tempTrack = gcnew Track(TrackName, 4);
+					Track^ tempTrack = gcnew Track(TrackName, 0, 4);
 					bar = gcnew BarEvent(tempTrack, StartTick, Length, Color::FromArgb(R, G, B));
 				}
 				else {
@@ -402,7 +402,7 @@ namespace MIDILightDrawer
 					TrackName = Parts[Parts->Length - 2];
 
 					// Create a temporary track just for the bar
-					Track^ tempTrack = gcnew Track(TrackName, 4);
+					Track^ tempTrack = gcnew Track(TrackName, 0, 4);
 
 					switch (static_cast<BarEventType>(EventType))
 					{

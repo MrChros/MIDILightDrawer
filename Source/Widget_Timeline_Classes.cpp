@@ -129,14 +129,15 @@ namespace MIDILightDrawer
 	///////////
 	// Track //
 	///////////	
-	Track::Track(String^ trackName, int octave)
+	Track::Track(String^ trackName, int trackIndex, int octave)
 	{
 		this->_Name						= trackName;
+		this->_Index					= trackIndex;
 		this->_Octave					= octave;
 		this->_Events					= gcnew List<BarEvent^>();
 		this->_IsSelected				= false;
-		this->_Is_Muted					= false;
-		this->_Is_Soloed				= false;
+		this->_IsMuted					= false;
+		this->_IsSoloed				= false;
 		this->Measures					= gcnew List<TrackMeasure^>();
 		this->ShowTablature				= true;
 		this->IsDrumTrack				= false;
@@ -169,24 +170,24 @@ namespace MIDILightDrawer
 
 	void Track::ToggleMute()
 	{
-		_Is_Muted = !_Is_Muted;
+		_IsMuted = !_IsMuted;
 	}
 
 	void Track::ToggleSolo()
 	{
-		_Is_Soloed = !_Is_Soloed;
+		_IsSoloed = !_IsSoloed;
 	}
 	
 	bool Track::ShouldPlayInPlayback(bool any_track_soloed)
 	{
 		// If muted, never play
-		if (_Is_Muted) {
+		if (_IsMuted) {
 			return false;
 		}
 
 		// If any track is soloed, only play if this track is soloed
 		if (any_track_soloed) {
-			return _Is_Soloed;
+			return _IsSoloed;
 		}
 
 		// No solos active, play all unmuted tracks

@@ -35,6 +35,14 @@ namespace MIDILightDrawer
 		void Set_Playback_Manager(Playback_Manager^ playback_manager);
 		void Update_State(bool is_playing);
 
+		void Trigger_Play_Pause();
+		void Trigger_Move_To_Start();
+		void Trigger_Move_To_End();
+		void Trigger_Rewind_Start();
+		void Trigger_Rewind_Stop();
+		void Trigger_Fast_Forward_Start();
+		void Trigger_Fast_Forward_Stop();
+
 	private:
 		void Initialize_Components();
 		void Attach_Event_Handlers();

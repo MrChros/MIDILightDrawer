@@ -1,7 +1,34 @@
 #include "Playback_MIDI_Engine.h"
+#include "Playback_Event_Queue_Manager.h"
 
 namespace MIDILightDrawer
 {
+	ref class Engine_Callback_Helper {
+	public:
+		static Playback_MIDI_Engine^ Instance = nullptr;
+	};
+
+	void Native_Event_Sent_Callback(const Playback_MIDI_Engine_Native::MIDI_Event& event)
+	{
+		// Get the managed instance
+		Playback_MIDI_Engine^ Managed_Instance = Engine_Callback_Helper::Instance;
+
+		if (Managed_Instance != nullptr && Managed_Instance->_Event_Queue_Manager != nullptr)
+		{
+			// Convert native event to managed
+			Playback_MIDI_Event^ Managed_Event = gcnew Playback_MIDI_Event();
+			Managed_Event->Timestamp_ms = event.Timestamp_Ms;
+			Managed_Event->Timeline_Track_ID = event.Track;
+			Managed_Event->MIDI_Channel = event.Channel;
+			Managed_Event->MIDI_Command = event.Command;
+			Managed_Event->MIDI_Data1 = event.Data1;
+			Managed_Event->MIDI_Data2 = event.Data2;
+
+			// Notify queue manager
+			Managed_Instance->_Event_Queue_Manager->On_Event_Sent(Managed_Event);
+		}
+	}
+	
 	Playback_MIDI_Engine::Playback_MIDI_Engine()
 	{
 		_Is_Initialized = false;
@@ -10,6 +37,19 @@ namespace MIDILightDrawer
 	Playback_MIDI_Engine::~Playback_MIDI_Engine()
 	{
 		Cleanup();
+
+		if (Engine_Callback_Helper::Instance == this) {
+			Engine_Callback_Helper::Instance = nullptr;
+		}
+	}
+
+	void Playback_MIDI_Engine::Set_Event_Queue_Manager(Playback_Event_Queue_Manager^ manager)
+	{
+		_Event_Queue_Manager = manager;
+		Engine_Callback_Helper::Instance = this;
+
+		// Set native callback
+		Playback_MIDI_Engine_Native::Set_Event_Sent_Callback(&Native_Event_Sent_Callback);
 	}
 
 	bool Playback_MIDI_Engine::Initialize(int device_id)

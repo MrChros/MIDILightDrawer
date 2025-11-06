@@ -3,6 +3,7 @@
 
 #include "Settings.h"
 #include "MIDI_Event_Raster.h"
+#include "Playback_Event_Queue_Manager.h"
 
 namespace MIDILightDrawer
 {
@@ -12,11 +13,16 @@ namespace MIDILightDrawer
 		
 		_MIDI_Engine = gcnew Playback_MIDI_Engine();
 		_Audio_Engine = gcnew Playback_Audio_Engine();
+
+		_Event_Queue_Manager = gcnew Playback_Event_Queue_Manager(_MIDI_Engine);
+		_MIDI_Engine->Set_Event_Queue_Manager(_Event_Queue_Manager);
+
 		_Current_State = Playback_State::Stopped;
 		_Playback_Position_ms = 0.0;
 		_Playback_Speed = 1.0;
 
 		_State_Lock = gcnew Object();
+		_Event_Queue_Manager->Invalidate_Cache();
 	}
 
 	Playback_Manager::~Playback_Manager()
@@ -72,12 +78,23 @@ namespace MIDILightDrawer
 				return true;
 			}
 
+			List<int>^ Muted_Tracks = _Timeline->TrackNumbersMuted;
+			List<int>^ Soloed_Tracks = _Timeline->TrackNumbersSoloed;
+
+			if (!_Event_Queue_Manager->Is_Cache_Valid())
+			{
+				bool Success = _Event_Queue_Manager->Raster_And_Cache_Events(_Timeline->Tracks, _Timeline->Measures, Muted_Tracks, Soloed_Tracks, Settings::Get_Instance()->Global_MIDI_Output_Channel);
+
+				if (!Success) {
+					return false;
+				}
+			}
+
+			_MIDI_Engine->Clear_Event_Queue();
+			_Event_Queue_Manager->Queue_All_Cached_Events();
+
 			MIDI_Event_Raster^ MIDI_Raster = gcnew MIDI_Event_Raster();
 			MIDI_Raster->Initialize_Tempo_Map(_Timeline->Measures);
-
-			List<Playback_MIDI_Event^>^ Events = MIDI_Raster->Raster_Timeline_For_Playback(_Timeline->Tracks, _Timeline->TrackNumbersMuted, _Timeline->TrackNumbersSoloed, Settings::Get_Instance()->Global_MIDI_Output_Channel);
-			_MIDI_Engine->Clear_Event_Queue();
-			_MIDI_Engine->Queue_Events(Events);
 
 			bool Success = true;
 
@@ -125,11 +142,12 @@ namespace MIDILightDrawer
 
 			bool Success = true;
 
+			// Send Note Off for all active notes FIRST
+			_Event_Queue_Manager->Send_All_Active_Notes_Off();
+			_Event_Queue_Manager->Invalidate_Cache();
+
 			// Stop MIDI playback thread
 			Success &= _MIDI_Engine->Stop_Playback();
-
-			// Send all notes off for MIDI
-			//Send_All_Notes_Off();
 
 			// Pause audio if loaded
 			if (Is_Audio_Loaded())
@@ -160,11 +178,11 @@ namespace MIDILightDrawer
 
 			bool Success = true;
 
+			// Send Note Off for all active notes FIRST
+			_Event_Queue_Manager->Send_All_Active_Notes_Off();
+
 			// Stop MIDI playback thread
 			Success &= _MIDI_Engine->Stop_Playback();
-
-			// Send all notes off for MIDI
-			//Send_All_Notes_Off();
 
 			// Clear any queued MIDI events
 			_MIDI_Engine->Clear_Event_Queue();
@@ -222,6 +240,40 @@ namespace MIDILightDrawer
 		}
 
 		return true;
+	}
+
+	void Playback_Manager::On_Track_Mute_Changed(int track_index, bool is_muted)
+	{
+		if (_Timeline && track_index < _Timeline->Tracks->Count)
+		{
+			_Timeline->Tracks[track_index]->IsMuted = is_muted;
+		}
+
+		if (_Current_State == Playback_State::Playing)
+		{
+			double Current_Pos = Get_Playback_Position_ms();
+			List<int>^ Muted = _Timeline->TrackNumbersMuted;
+			List<int>^ Soloed = _Timeline->TrackNumbersSoloed;
+
+			_Event_Queue_Manager->Update_Track_State_During_Playback(Current_Pos, Muted, Soloed);
+		}
+	}
+
+	void Playback_Manager::On_Track_Solo_Changed(int track_index, bool is_soloed)
+	{
+		if (_Timeline && track_index < _Timeline->Tracks->Count)
+		{
+			_Timeline->Tracks[track_index]->IsSoloed = is_soloed;
+		}
+
+		if (_Current_State == Playback_State::Playing)
+		{
+			double Current_Pos = Get_Playback_Position_ms();
+			List<int>^ Muted = _Timeline->TrackNumbersMuted;
+			List<int>^ Soloed = _Timeline->TrackNumbersSoloed;
+
+			_Event_Queue_Manager->Update_Track_State_During_Playback(Current_Pos, Muted, Soloed);
+		}
 	}
 
 	Playback_State Playback_Manager::Get_State()

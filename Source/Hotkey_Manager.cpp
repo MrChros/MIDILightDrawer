@@ -48,13 +48,26 @@ namespace MIDILightDrawer {
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Snap To Bars"					, "", "Editing"));
 		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Snap To Tablature"			, "", "Editing"));
 
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Zoom In", "", "View"));
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Zoom Out", "", "View"));
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Zoom Reset", "", "View"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Zoom In",					"", "View"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Zoom Out",				"", "View"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Zoom Reset",				"", "View"));
 
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Track Height Increase", "", "View"));
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Track Height Decrease", "", "View"));
-		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Track Height Reset", "", "View"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Track Height Increase",	"", "View"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Track Height Decrease",	"", "View"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Track Height Reset",		"", "View"));
+
+		// Transport Controls
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Play Pause",			"Space",	"Playback"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Move To Start",		"NumPad0",	"Playback"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Move To End",			"",			"Playback"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Rewind",				"Subtract", "Playback"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Fast Forward",		"Add",		"Playback"));
+
+		// Track Mute/Solo
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Mute All",			"", "Playback"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Unmute All",			"", "Playback"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Solo All",			"", "Playback"));
+		_Hotkey_Definitions->Add(gcnew Hotkey_Definition("Unsolo All",			"", "Playback"));
 	}
 
 	Hotkey_Manager^ Hotkey_Manager::Instance::get()

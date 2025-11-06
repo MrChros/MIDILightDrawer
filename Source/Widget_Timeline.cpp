@@ -71,7 +71,7 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::AddTrack(String^ name, int octave)
 	{
-		Track^ Trk = gcnew Track(name, octave);
+		Track^ Trk = gcnew Track(name, this->_Tracks->Count ,octave);
 		Trk->Height = Widget_Timeline::DEFAULT_TRACK_HEIGHT;
 		_Tracks->Add(Trk);
 
@@ -323,6 +323,50 @@ namespace MIDILightDrawer
 		if(_Left_Panel->IsExpanded) {
 			Invalidate();
 		}
+	}
+
+	void Widget_Timeline::Mute_All_Tracks()
+	{
+		for each (Track ^ Trk in _Tracks)
+		{
+			if (!Trk->IsMuted) {
+				Trk->ToggleMute();
+			}
+		}
+		Invalidate();
+	}
+
+	void Widget_Timeline::Unmute_All_Tracks()
+	{
+		for each (Track ^ Trk in _Tracks)
+		{
+			if (Trk->IsMuted) {
+				Trk->ToggleMute();
+			}
+		}
+		Invalidate();
+	}
+
+	void Widget_Timeline::Solo_All_Tracks()
+	{
+		for each (Track ^ Trk in _Tracks)
+		{
+			if (!Trk->IsSoloed) {
+				Trk->ToggleSolo();
+			}
+		}
+		Invalidate();
+	}
+
+	void Widget_Timeline::Unsolo_All_Tracks()
+	{
+		for each (Track ^ Trk in _Tracks)
+		{
+			if (Trk->IsSoloed) {
+				Trk->ToggleSolo();
+			}
+		}
+		Invalidate();
 	}
 
 	void Widget_Timeline::SetPlaybackManager(Playback_Manager^ playback_manager)
@@ -933,9 +977,15 @@ namespace MIDILightDrawer
 			{
 				case 0: // Mute toggle button
 					_HoveredButton.Track->ToggleMute();
+					if (_Playback_Manager) {
+						_Playback_Manager->On_Track_Mute_Changed(_HoveredButton.Track->Index, _HoveredButton.Track->IsMuted);
+					}
 					break;
 				case 1: // Solo toggle button
 					_HoveredButton.Track->ToggleSolo();
+					if (_Playback_Manager) {
+						_Playback_Manager->On_Track_Solo_Changed(_HoveredButton.Track->Index, _HoveredButton.Track->IsSoloed);
+					}
 					break;
 				case 2: // Tablature toggle button
 					_HoveredButton.Track->ShowTablature = !_HoveredButton.Track->ShowTablature;

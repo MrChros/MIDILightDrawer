@@ -1211,6 +1211,13 @@ namespace MIDILightDrawer
 		}
 	}
 
+	void Form_Main::Register_Hotkey_Handlers()
+	{
+		this->KeyDown += gcnew System::Windows::Forms::KeyEventHandler(this, &Form_Main::Form_KeyDown);
+		this->KeyUp += gcnew System::Windows::Forms::KeyEventHandler(this, &Form_Main::Form_KeyUp);
+		this->KeyPreview = true;
+	}
+
 	bool Form_Main::Process_Hotkey(System::Windows::Forms::Keys key_code)
 	{
 		if (this->_Tools_And_Control->ColorPickerIsTyping()) {
@@ -1268,16 +1275,23 @@ namespace MIDILightDrawer
 				else if (hotkey.Key == "Track Height Increase"			) { this->_DropDown_Track_Height->Select_Next();		return true; }
 				else if (hotkey.Key == "Track Height Decrease"			) { this->_DropDown_Track_Height->Select_Previous();	return true; }
 				else if (hotkey.Key == "Track Height Reset"				) { this->_DropDown_Track_Height->Selected_Index = 1;	return true; }
+
+				// Transport Controls
+				else if (hotkey.Key == "Play Pause"		) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Play_Pause();			return true; } }
+				else if (hotkey.Key == "Move To Start"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Move_To_Start();			return true; } }
+				else if (hotkey.Key == "Move To End"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Move_To_End();			return true; } }
+				else if (hotkey.Key == "Rewind"			) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Rewind_Start();			return true; } }
+				else if (hotkey.Key == "Fast Forward"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Fast_Forward_Start();	return true; } }
+
+				// Track Mute/Solo
+				else if (hotkey.Key == "Mute All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Mute_All_Tracks();	return true; } }
+				else if (hotkey.Key == "Unmute All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Unmute_All_Tracks(); return true; } }
+				else if (hotkey.Key == "Solo All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Solo_All_Tracks();	return true; } }
+				else if (hotkey.Key == "Unsolo All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Unsolo_All_Tracks(); return true; } }
 			}
 		}
 
 		return false;
-	}
-
-	void Form_Main::Register_Hotkey_Handlers()
-	{
-		this->KeyDown += gcnew System::Windows::Forms::KeyEventHandler(this, &Form_Main::Form_KeyDown);
-		this->KeyPreview = true;
 	}
 
 	void Form_Main::Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e)
@@ -1341,6 +1355,41 @@ namespace MIDILightDrawer
 		{
 			Process_Hotkey(e->KeyCode);
 			e->Handled = true;
+		}
+	}
+
+	void Form_Main::Form_KeyUp(Object^ sender, System::Windows::Forms::KeyEventArgs^ e)
+	{
+		// Get current key with modifiers
+		Keys currentKey = e->KeyCode;
+		if (e->Control) {
+			currentKey = currentKey | Keys::Control;
+		}
+		if (e->Shift) {
+			currentKey = currentKey | Keys::Shift;
+		}
+		if (e->Alt) {
+			currentKey = currentKey | Keys::Alt;
+		}
+
+		// Check if Rewind or Fast Forward key was released
+		for each (KeyValuePair<String^, System::Windows::Forms::Keys> hotkey in _Active_Hotkeys)
+		{
+			if (currentKey == hotkey.Value)
+			{
+				if (hotkey.Key == "Rewind")
+				{
+					if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Rewind_Stop(); }
+					e->Handled = true;
+					return;
+				}
+				else if (hotkey.Key == "Fast Forward")
+				{
+					if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Fast_Forward_Stop(); }
+					e->Handled = true;
+					return;
+				}
+			}
 		}
 	}
 

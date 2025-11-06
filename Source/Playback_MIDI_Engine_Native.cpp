@@ -13,6 +13,7 @@ namespace MIDILightDrawer
 	// Static member initialization
 	void* Playback_MIDI_Engine_Native::_MIDI_Handle = nullptr;
 	bool Playback_MIDI_Engine_Native::_Is_Initialized = false;
+	void (*Playback_MIDI_Engine_Native::_Event_Sent_Callback)(const MIDI_Event&) = nullptr;
 
 	// Threading members initialization
 	std::thread* Playback_MIDI_Engine_Native::_Midi_Thread = nullptr;
@@ -53,6 +54,11 @@ namespace MIDILightDrawer
 		}
 
 		_Is_Initialized = false;
+	}
+
+	void Playback_MIDI_Engine_Native::Set_Event_Sent_Callback(void (*callback)(const MIDI_Event&))
+	{
+		_Event_Sent_Callback = callback;
 	}
 
 	bool Playback_MIDI_Engine_Native::Send_MIDI_Event(const MIDI_Event& event)
@@ -214,6 +220,11 @@ namespace MIDILightDrawer
 					{
 						// Send the MIDI event
 						Send_MIDI_Event(Next_Event.Event);
+
+						// Notify callback for note tracking
+						if (_Event_Sent_Callback != nullptr) {
+							_Event_Sent_Callback(Next_Event.Event);
+						}
 
 						// Remove from queue
 						_Event_Queue.erase(_Event_Queue.begin());

@@ -75,6 +75,11 @@ namespace MIDILightDrawer
 		void ShowContextMenu(BarEvent^ bar, Point location);
 		void UpdateLeftPanelEventSelection(List<BarEvent^>^ selectedEvents);
 
+		void Mute_All_Tracks();
+		void Unmute_All_Tracks();
+		void Solo_All_Tracks();
+		void Unsolo_All_Tracks();
+
 		// Playback Methods
 		void SetPlaybackManager(Playback_Manager^ playback_manager);
 		void SetPlaybackCursorPosition(double position_ms);

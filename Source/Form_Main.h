@@ -130,9 +130,10 @@ namespace MIDILightDrawer
 
 			// Hotkey Members
 			void Initialize_Hotkeys();
-			bool Process_Hotkey(System::Windows::Forms::Keys key_code);
 			void Register_Hotkey_Handlers();
+			bool Process_Hotkey(System::Windows::Forms::Keys key_code);
 			void Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e);
+			void Form_KeyUp(Object^ sender, System::Windows::Forms::KeyEventArgs^ e);
 
 			// Playback Timer Callback
 			void Playback_Update_Timer_Tick(Object ^ sender, EventArgs ^ e);

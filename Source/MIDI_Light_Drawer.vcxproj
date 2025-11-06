@@ -171,6 +171,7 @@
     <ClInclude Include="MIDI_Writer.h" />
     <ClInclude Include="Playback_Audio_Engine.h" />
     <ClInclude Include="Playback_Audio_Engine_Native.h" />
+    <ClInclude Include="Playback_Event_Queue_Manager.h" />
     <ClInclude Include="Playback_Manager.h" />
     <ClInclude Include="Playback_MIDI_Engine.h" />
     <ClInclude Include="Playback_MIDI_Engine_Native.h" />
@@ -242,6 +243,7 @@
     <ClCompile Include="MIDI_Writer.cpp" />
     <ClCompile Include="Playback_Audio_Engine.cpp" />
     <ClCompile Include="Playback_Audio_Engine_Native.cpp" />
+    <ClCompile Include="Playback_Event_Queue_Manager.cpp" />
     <ClCompile Include="Playback_Manager.cpp" />
     <ClCompile Include="Playback_MIDI_Engine.cpp" />
     <ClCompile Include="Playback_MIDI_Engine_Native.cpp" />

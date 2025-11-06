@@ -47,6 +47,7 @@ namespace MIDILightDrawer
 	public:
 		static bool Initialize(int device_id);
 		static void Cleanup();
+		static void Set_Event_Sent_Callback(void (*callback)(const MIDI_Event&));
 		static bool Send_MIDI_Event(const MIDI_Event& event);
 		static bool Send_All_Notes_Off(int channel);
 		static bool Is_Device_Open();
@@ -63,5 +64,6 @@ namespace MIDILightDrawer
 	private:
 		// Thread function
 		static void MIDI_Playback_Thread_Function();
+		static void (*_Event_Sent_Callback)(const MIDI_Event&);
 	};
 }

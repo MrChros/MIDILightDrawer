@@ -107,15 +107,13 @@ namespace MIDILightDrawer
 		}
 	}
 
-	bool Playback_Event_Queue_Manager::Queue_All_Cached_Events()
+	bool Playback_Event_Queue_Manager::Queue_All_Cached_Events(double start_position_ms)
 	{
-		if (!_Cache_Valid || !_MIDI_Engine)
-		{
+		if (!_Cache_Valid || !_MIDI_Engine) {
 			return false;
 		}
 
-		if (_Filtered_Events->Count == 0)
-		{
+		if (_Filtered_Events->Count == 0) {
 			// No events to queue (empty timeline or all tracks muted)
 			return true;
 		}
@@ -125,8 +123,14 @@ namespace MIDILightDrawer
 			// Clear any existing events in the MIDI engine
 			_MIDI_Engine->Clear_Event_Queue();
 
-			// Queue all filtered events to the MIDI engine
-			_MIDI_Engine->Queue_Events(_Filtered_Events);
+			// Only queue events that occur at or after the start position
+			for each (Playback_MIDI_Event ^ Event in _Filtered_Events)
+			{
+				if (Event->Timestamp_ms >= start_position_ms)
+				{
+					_MIDI_Engine->Queue_Event(Event);
+				}
+			}
 			return true;
 		}
 		catch (...)

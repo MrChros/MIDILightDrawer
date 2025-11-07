@@ -13,6 +13,7 @@ namespace MIDILightDrawer
 		_Is_Fast_Forwarding = false;
 		_Moved_To_Start = false;
 		_Moved_To_End = false;
+		_Was_Playing_Before_Seek = false;
 
 		Initialize_Components();
 		Attach_Event_Handlers();
@@ -105,8 +106,16 @@ namespace MIDILightDrawer
 
 	void Widget_Transport_Controls::On_Rewind_Mouse_Down(Object^ sender, MouseEventArgs^ e)
 	{
-		if (!_Playback_Manager) {
+		if (!_Playback_Manager || _Is_Rewinding) {
 			return;
+		}
+
+		// Remember if we were playing
+		_Was_Playing_Before_Seek = _Playback_Manager->Is_Playing();
+
+		// Pause playback if playing
+		if (_Was_Playing_Before_Seek) {
+			_Playback_Manager->Pause();
 		}
 
 		_Is_Rewinding = true;
@@ -119,9 +128,15 @@ namespace MIDILightDrawer
 		_Is_Rewinding = false;
 		_Seek_Timer->Stop();
 
-		if (_Playback_Manager)
-		{
+		if (_Playback_Manager) {
 			_Playback_Manager->Set_Playback_Speed(1.0);
+		}
+
+		// Resume playback if we were playing before
+		if (_Playback_Manager && _Was_Playing_Before_Seek)
+		{
+			_Playback_Manager->Play();
+			_Was_Playing_Before_Seek = false;
 		}
 	}
 
@@ -143,8 +158,16 @@ namespace MIDILightDrawer
 
 	void Widget_Transport_Controls::On_Fast_Forward_Mouse_Down(Object^ sender, MouseEventArgs^ e)
 	{
-		if (!_Playback_Manager) {
+		if (!_Playback_Manager || _Is_Fast_Forwarding) {
 			return;
+		}
+
+		// Remember if we were playing
+		_Was_Playing_Before_Seek = _Playback_Manager->Is_Playing();
+
+		// Pause playback if playing
+		if (_Was_Playing_Before_Seek) {
+			_Playback_Manager->Pause();
 		}
 
 		_Is_Fast_Forwarding = true;
@@ -159,6 +182,13 @@ namespace MIDILightDrawer
 
 		if (_Playback_Manager) {
 			_Playback_Manager->Set_Playback_Speed(1.0);
+		}
+
+		// Resume playback if we were playing before
+		if (_Playback_Manager && _Was_Playing_Before_Seek)
+		{
+			_Playback_Manager->Play();
+			_Was_Playing_Before_Seek = false;
 		}
 	}
 
@@ -237,44 +267,22 @@ namespace MIDILightDrawer
 
 	void Widget_Transport_Controls::Trigger_Rewind_Start()
 	{
-		if (!_Playback_Manager) {
-			return;
-		}
-
-		_Is_Rewinding = true;
-		_Playback_Manager->Set_Playback_Speed(-2.0);
-		_Seek_Timer->Start();
+		On_Rewind_Mouse_Down(this, gcnew MouseEventArgs(System::Windows::Forms::MouseButtons::Right, 0, 0, 0, 0));
 	}
 
 	void Widget_Transport_Controls::Trigger_Rewind_Stop()
 	{
-		_Is_Rewinding = false;
-		_Seek_Timer->Stop();
-
-		if (_Playback_Manager) {
-			_Playback_Manager->Set_Playback_Speed(1.0);
-		}
+		On_Rewind_Mouse_Up(this, gcnew MouseEventArgs(System::Windows::Forms::MouseButtons::Right, 0, 0, 0, 0));
 	}
 
 	void Widget_Transport_Controls::Trigger_Fast_Forward_Start()
 	{
-		if (!_Playback_Manager) {
-			return;
-		}
-
-		_Is_Fast_Forwarding = true;
-		_Playback_Manager->Set_Playback_Speed(2.0);
-		_Seek_Timer->Start();
+		On_Fast_Forward_Mouse_Down(this, gcnew MouseEventArgs(System::Windows::Forms::MouseButtons::Right, 0, 0, 0, 0));
 	}
 
 	void Widget_Transport_Controls::Trigger_Fast_Forward_Stop()
 	{
-		_Is_Fast_Forwarding = false;
-		_Seek_Timer->Stop();
-
-		if (_Playback_Manager) {
-			_Playback_Manager->Set_Playback_Speed(1.0);
-		}
+		On_Fast_Forward_Mouse_Up(this, gcnew MouseEventArgs(System::Windows::Forms::MouseButtons::Right, 0, 0, 0, 0));
 	}
 
 	bool Widget_Transport_Controls::Is_Playing::get()

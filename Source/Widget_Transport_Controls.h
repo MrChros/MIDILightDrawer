@@ -27,6 +27,7 @@ namespace MIDILightDrawer
 		bool _Is_Fast_Forwarding;
 		bool _Moved_To_Start;
 		bool _Moved_To_End;
+		bool _Was_Playing_Before_Seek;
 		Timer^ _Seek_Timer;
 
 	public:

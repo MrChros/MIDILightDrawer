@@ -91,7 +91,7 @@ namespace MIDILightDrawer
 			}
 
 			_MIDI_Engine->Clear_Event_Queue();
-			_Event_Queue_Manager->Queue_All_Cached_Events();
+			_Event_Queue_Manager->Queue_All_Cached_Events(_Playback_Position_ms);
 
 			MIDI_Event_Raster^ MIDI_Raster = gcnew MIDI_Event_Raster();
 			MIDI_Raster->Initialize_Tempo_Map(_Timeline->Measures);

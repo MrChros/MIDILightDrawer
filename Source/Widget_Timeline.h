@@ -31,6 +31,7 @@ namespace MIDILightDrawer
 	ref class StrobeTool;
 	ref class Widget_Tools_And_Control;
 	ref class LightTrackInfo;
+	ref class MIDI_Event_Raster;
 	enum class TimelineToolType;
 
 	public ref class Widget_Timeline : public UserControl, public ITimelineAccess {
@@ -51,7 +52,7 @@ namespace MIDILightDrawer
 		~Widget_Timeline();
 
 		// Adding methods
-		void AddTrack(String^ name, int octave);
+		void AddTrack(String^ name, int octave, MIDI_Event_Raster^ midi_event_raster);
 		void AddMeasure(int numerator, int denominator, int tempo);
 		void AddMeasure(int numerator, int denominator, int tempo, String^ marker_text);
 		Beat^ AddBeat(Track^ track, int measureIndex, int startTick, int durationInTicks, bool is_dotted);
@@ -85,7 +86,7 @@ namespace MIDILightDrawer
 		void SetPlaybackCursorPosition(double position_ms);
 		double GetPlaybackCursorPosition();
 		void SetShowPlaybackCursor(bool show);
-		void AutoScrollForPlayback();
+		void AutoScrollForPlayback(bool doaAutoScroll);
 
 		// Tools Setter & Getter
 		void SetCurrentTool(TimelineToolType tool);

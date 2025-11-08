@@ -473,6 +473,8 @@ namespace MIDILightDrawer
 			D2D1_COLOR_F CursorColor = D2D1::ColorF(1.0f, 1.0f, 1.0f, 1.0);
 			_NativeRenderer->DrawLine(X, 0, X, (float)this->_Control->Height, CursorColor, 2);
 		}
+
+		return true;
 	}
 
     bool Timeline_Direct2DRenderer::DrawToolPreview()
@@ -3331,18 +3333,18 @@ namespace MIDILightDrawer
 
     int Timeline_Direct2DRenderer::GetTrackTop(Track^ track)
     {
-        int top = HEADER_HEIGHT;
+        int Top = HEADER_HEIGHT;
 
-        for each (Track ^ t in this->_Tracks)
+        for each (Track^ Tr in this->_Tracks)
         {
-            if (t == track) {
+            if (Tr == track) {
                 break;
             }
 
-            top += t->Height;
+            Top += Tr->Height;
         }
 
-        return top;
+        return Top;
     }
 
 	int Timeline_Direct2DRenderer::GetLeftPanelWidth()

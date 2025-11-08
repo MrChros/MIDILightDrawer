@@ -1,14 +1,12 @@
 #include "Playback_Event_Queue_Manager.h"
 #include "Widget_Timeline.h"
 
-#include <cliext/hash_set>
-
 namespace MIDILightDrawer
 {
-	Playback_Event_Queue_Manager::Playback_Event_Queue_Manager(Playback_MIDI_Engine^ midi_engine)
+	Playback_Event_Queue_Manager::Playback_Event_Queue_Manager(Playback_MIDI_Engine^ midi_engine, MIDI_Event_Raster^ midi_event_raster)
 	{
 		_MIDI_Engine = midi_engine;
-		_Raster = gcnew MIDI_Event_Raster();
+		_MIDI_Event_Raster = midi_event_raster;
 		_Unfiltered_Events = gcnew List<Playback_MIDI_Event^>();
 		_Filtered_Events = gcnew List<Playback_MIDI_Event^>();
 		_Current_Muted_Tracks = gcnew List<int>();
@@ -42,23 +40,20 @@ namespace MIDILightDrawer
 			_Timeline_Measures = measures;
 			_Global_MIDI_Channel = global_midi_channel;
 
-			// Initialize tempo map for tick-to-time conversion
-			_Raster->Initialize_Tempo_Map(measures);
-
 			// Raster ALL tracks WITHOUT filtering (pass empty lists)
 			// This allows us to filter dynamically during playback
 			List<int>^ Empty_Muted = gcnew List<int>();
 			List<int>^ Empty_Soloed = gcnew List<int>();
 
-			List<Playback_MIDI_Event^>^ Rastered_Events = _Raster->Raster_Timeline_For_Playback(
+			//List<Playback_MIDI_Event^>^ Rastered_Events = _MIDI_Event_Raster->Raster_Timeline_For_Playback(
+			List<Playback_MIDI_Event^>^ Rastered_Events = _MIDI_Event_Raster->Get_Timeline_PreRastered_Playback_Events(
 				tracks,
 				Empty_Muted,    // Don't filter during rastering
 				Empty_Soloed,   // We'll filter later
 				global_midi_channel
 			);
 
-			if (!Rastered_Events)
-			{
+			if (!Rastered_Events) {
 				return false;
 			}
 
@@ -124,7 +119,7 @@ namespace MIDILightDrawer
 			_MIDI_Engine->Clear_Event_Queue();
 
 			// Only queue events that occur at or after the start position
-			for each (Playback_MIDI_Event ^ Event in _Filtered_Events)
+			for each (Playback_MIDI_Event^ Event in _Filtered_Events)
 			{
 				if (Event->Timestamp_ms >= start_position_ms)
 				{

@@ -153,10 +153,10 @@ namespace MIDILightDrawer
 		_Event_Queue.push_back(Scheduled);
 
 		// Keep queue sorted by execution time
-		std::sort(_Event_Queue.begin(), _Event_Queue.end(),
-			[](const Scheduled_MIDI_Event& a, const Scheduled_MIDI_Event& b) {
-				return a.Execute_Time_Us < b.Execute_Time_Us;
-			});
+		//std::sort(_Event_Queue.begin(), _Event_Queue.end(),
+		//	[](const Scheduled_MIDI_Event& a, const Scheduled_MIDI_Event& b) {
+		//		return a.Execute_Time_Us < b.Execute_Time_Us;
+		//	});
 	}
 
 	void Playback_MIDI_Engine_Native::Clear_Event_Queue()

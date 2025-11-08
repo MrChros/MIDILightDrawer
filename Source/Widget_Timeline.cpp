@@ -3,6 +3,7 @@
 
 #include "Control_ColorPreset.h"
 #include "Widget_Tools_And_Control.h"
+#include "MIDI_Event_Raster.h"
 
 namespace MIDILightDrawer
 {
@@ -69,9 +70,9 @@ namespace MIDILightDrawer
 		delete _PerformanceMetrics;
 	}
 
-	void Widget_Timeline::AddTrack(String^ name, int octave)
+	void Widget_Timeline::AddTrack(String^ name, int octave, MIDI_Event_Raster^ midi_event_raster)
 	{
-		Track^ Trk = gcnew Track(name, this->_Tracks->Count ,octave);
+		Track^ Trk = gcnew Track(name, this->_Tracks->Count, octave, midi_event_raster);
 		Trk->Height = Widget_Timeline::DEFAULT_TRACK_HEIGHT;
 		_Tracks->Add(Trk);
 
@@ -402,54 +403,45 @@ namespace MIDILightDrawer
 		this->Invalidate();
 	}
 
-	void Widget_Timeline::AutoScrollForPlayback()
+	void Widget_Timeline::AutoScrollForPlayback(bool doaAutoScroll)
 	{
 		if (_Playback_Manager == nullptr) {
 			return;
 		}
 
-		// Get cursor position in milliseconds
 		double Cursor_Position_Ms = GetPlaybackCursorPosition();
 
-		// Convert to ticks
-		int Cursor_Ticks = MillisecondsToTicks(Cursor_Position_Ms);
+		int Cursor_Position_Ticks	= MillisecondsToTicks(Cursor_Position_Ms);
+		int Cursor_Position_Pixels	= TicksToPixels(Cursor_Position_Ticks);
 
-		// Convert to pixels
-		int Cursor_Pixels = TicksToPixels(Cursor_Ticks);
-
-		// Get current scroll position
 		int Current_Scroll_X = ScrollPosition->X;
-
-		// Get visible width (excluding left panel)
 		int Visible_Width = this->Width - GetLeftPanelAndTrackHeaderWidth();
-
-		// Calculate cursor position on screen
-		int Cursor_Screen_X = Cursor_Pixels + Current_Scroll_X;
+		int Cursor_Screen_X = Cursor_Position_Pixels + Current_Scroll_X;
 
 		// Define scroll margins (when cursor gets within this distance from edge, scroll)
-		const int Scroll_Margin_Right = 100;  // pixels from right edge
-		const int Scroll_Margin_Left = 50;    // pixels from left edge
+		const int Scroll_Margin_Right = 100;	// Pixels from right edge
+		const int Scroll_Margin_Left = 50;		// Pixels from left edge
 
 		// Check if cursor is too far right
-		if (Cursor_Screen_X > (Visible_Width - Scroll_Margin_Right))
+		if (Cursor_Screen_X > (Visible_Width - Scroll_Margin_Right) && doaAutoScroll)
 		{
 			// Jump forward by almost a full viewport, placing cursor at left margin
 			// New scroll position: show content starting from (Cursor_Pixels - Scroll_Margin_Left)
-			int New_Scroll_X = -(Cursor_Pixels - Scroll_Margin_Left);
+			int New_Scroll_X = Cursor_Position_Pixels - Scroll_Margin_Left*2;
 
 			// Convert to scroll units and update scrollbar
-			int New_Scroll_Units = GetScrollUnits(-New_Scroll_X);
+			int New_Scroll_Units = GetScrollUnits(New_Scroll_X);
 			_HScrollBar->Value = Math::Max(_HScrollBar->Minimum, Math::Min(New_Scroll_Units, _HScrollBar->Maximum - _HScrollBar->LargeChange + 1));
 
 			// Trigger the scroll event handler
 			OnScroll(_HScrollBar, gcnew ScrollEventArgs(ScrollEventType::ThumbPosition, _HScrollBar->Value));
 		}
 		// Check if cursor is too far left (when rewinding) - need to scroll backward
-		else if (Cursor_Screen_X < Scroll_Margin_Left)
+		else if (Cursor_Screen_X < Scroll_Margin_Left && doaAutoScroll)
 		{
 			// Jump backward by almost a full viewport, placing cursor at right side minus margin
 			// New scroll position: show content so cursor appears at (Visible_Width - Scroll_Margin_Right)
-			int New_Scroll_X = -(Cursor_Pixels - (Visible_Width - Scroll_Margin_Right));
+			int New_Scroll_X = -(Cursor_Position_Pixels - (Visible_Width - Scroll_Margin_Right));
 
 			// Don't scroll past the beginning
 			if (New_Scroll_X > 0) {

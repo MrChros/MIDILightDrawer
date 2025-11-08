@@ -7,14 +7,15 @@
 
 namespace MIDILightDrawer
 {
-	Playback_Manager::Playback_Manager(Widget_Timeline^ timeline)
+	Playback_Manager::Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster)
 	{
 		_Timeline = timeline;
+		_MIDI_Event_Raster = midi_event_raster;
 		
 		_MIDI_Engine = gcnew Playback_MIDI_Engine();
 		_Audio_Engine = gcnew Playback_Audio_Engine();
 
-		_Event_Queue_Manager = gcnew Playback_Event_Queue_Manager(_MIDI_Engine);
+		_Event_Queue_Manager = gcnew Playback_Event_Queue_Manager(_MIDI_Engine, _MIDI_Event_Raster);
 		_MIDI_Engine->Set_Event_Queue_Manager(_Event_Queue_Manager);
 
 		_Current_State = Playback_State::Stopped;
@@ -92,9 +93,6 @@ namespace MIDILightDrawer
 
 			_MIDI_Engine->Clear_Event_Queue();
 			_Event_Queue_Manager->Queue_All_Cached_Events(_Playback_Position_ms);
-
-			MIDI_Event_Raster^ MIDI_Raster = gcnew MIDI_Event_Raster();
-			MIDI_Raster->Initialize_Tempo_Map(_Timeline->Measures);
 
 			bool Success = true;
 

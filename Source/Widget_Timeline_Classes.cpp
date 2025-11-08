@@ -1,6 +1,9 @@
 #include "Widget_Timeline_Classes.h"
 #include "Widget_Timeline.h"
 
+#include "Settings.h"
+#include "MIDI_Event_Raster.h"
+
 namespace MIDILightDrawer
 {
 	//////////////////////////////
@@ -131,17 +134,36 @@ namespace MIDILightDrawer
 	///////////	
 	Track::Track(String^ trackName, int trackIndex, int octave)
 	{
-		this->_Name						= trackName;
-		this->_Index					= trackIndex;
-		this->_Octave					= octave;
-		this->_Events					= gcnew List<BarEvent^>();
-		this->_IsSelected				= false;
-		this->_IsMuted					= false;
-		this->_IsSoloed				= false;
-		this->Measures					= gcnew List<TrackMeasure^>();
-		this->ShowTablature				= true;
-		this->IsDrumTrack				= false;
-		this->ShowAsStandardNotation	= true;
+		this->_MIDI_Event_Raster = nullptr;
+
+		this->_Name = trackName;
+		this->_Index = trackIndex;
+		this->_Octave = octave;
+		this->_Events = gcnew List<BarEvent^>();
+		this->_IsSelected = false;
+		this->_IsMuted = false;
+		this->_IsSoloed = false;
+		this->Measures = gcnew List<TrackMeasure^>();
+		this->ShowTablature = true;
+		this->IsDrumTrack = false;
+		this->ShowAsStandardNotation = true;
+	}
+
+	Track::Track(String^ trackName, int trackIndex, int octave, MIDI_Event_Raster^ midi_event_raster)
+	{
+		this->_MIDI_Event_Raster = midi_event_raster;
+		
+		this->_Name = trackName;
+		this->_Index = trackIndex;
+		this->_Octave = octave;
+		this->_Events = gcnew List<BarEvent^>();
+		this->_IsSelected = false;
+		this->_IsMuted = false;
+		this->_IsSoloed = false;
+		this->Measures = gcnew List<TrackMeasure^>();
+		this->ShowTablature = true;
+		this->IsDrumTrack = false;
+		this->ShowAsStandardNotation = true;
 	}
 
 	void Track::AddBar(int startTick, int length, Color color)
@@ -274,6 +296,8 @@ namespace MIDILightDrawer
 		this->_StrobeInfo = nullptr;
 
 		this->_IgnoreForOverlap = false;
+
+		PreRasterMIDIEvents();
 	}
 
 	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventFadeInfo^ fade_info)
@@ -298,6 +322,8 @@ namespace MIDILightDrawer
 		this->_StrobeInfo = nullptr;
 
 		this->_IgnoreForOverlap = false;
+
+		PreRasterMIDIEvents();
 	}
 
 	BarEvent::BarEvent(Track^ track, int start_tick, int duration_in_ticks, BarEventStrobeInfo^ strobe_info)
@@ -321,6 +347,8 @@ namespace MIDILightDrawer
 		}
 
 		this->_IgnoreForOverlap = false;
+
+		PreRasterMIDIEvents();
 	}
 
 	void BarEvent::BasicInfoCopyWorkingToOriginal()
@@ -335,6 +363,27 @@ namespace MIDILightDrawer
 		this->_Working.StartTick		= this->_Original.StartTick;
 		this->_Working.DurationInTicks	= this->_Original.DurationInTicks;
 		this->_Working.Track			= this->_Original.Track;
+
+		PreRasterMIDIEvents();
+	}
+
+	void BarEvent::PreRasterMIDIEvents()
+	{
+		if (this->ContainingTrack == nullptr || this->ContainingTrack->Event_Raster == nullptr) {
+			this->_Playback_Rastered_Events = gcnew List<Playback_MIDI_Event^>;
+			return;
+		}
+
+		MIDI_Event_Raster^ MIDI_Event_Raster = this->ContainingTrack->Event_Raster;
+
+		this->_Playback_Rastered_Events = MIDI_Event_Raster->Raster_Bar_For_Playback(this, this->ContainingTrack->Index, Settings::Get_Instance()->Global_MIDI_Output_Channel, this->ContainingTrack->Octave, Settings::Get_Instance()->MIDI_Export_Anti_Flicker);
+	}
+
+	void BarEvent::ContainingTrack::set(Track^ track)
+	{
+		_Working.Track = track;
+
+		PreRasterMIDIEvents();
 	}
 
 	void BarEvent::StartTick::set(int value)
@@ -343,6 +392,8 @@ namespace MIDILightDrawer
 			value = 0;
 		}
 		_Working.StartTick = value;
+
+		PreRasterMIDIEvents();
 	}
 
 	void BarEvent::Duration::set(int value)
@@ -350,6 +401,8 @@ namespace MIDILightDrawer
 		if(value > 0) {
 			_Working.DurationInTicks = value;
 		}
+
+		PreRasterMIDIEvents();
 	}
 
 	System::Drawing::Color BarEvent::Color::get()
@@ -369,6 +422,8 @@ namespace MIDILightDrawer
 		else {
 			this->_Color = color;
 		}
+
+		PreRasterMIDIEvents();
 	}
 		
 
@@ -377,6 +432,8 @@ namespace MIDILightDrawer
 		if (fade_info != nullptr)
 		{
 			this->_FadeInfo = fade_info;
+
+			PreRasterMIDIEvents();
 		}
 	}
 
@@ -385,6 +442,8 @@ namespace MIDILightDrawer
 		if (strobe_info != nullptr)
 		{
 			this->_StrobeInfo = strobe_info;
+
+			PreRasterMIDIEvents();
 		}
 	}
 

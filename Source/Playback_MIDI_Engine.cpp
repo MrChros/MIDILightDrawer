@@ -114,15 +114,12 @@ namespace MIDILightDrawer
 			return;
 		}
 
-		Playback_MIDI_Engine_Native::MIDI_Event Native_Event;
-		Native_Event.Timestamp_Ms = event->Timestamp_ms;
-		Native_Event.Track = event->Timeline_Track_ID;
-		Native_Event.Channel = event->MIDI_Channel;
-		Native_Event.Command = event->MIDI_Command;
-		Native_Event.Data1 = event->MIDI_Data1;
-		Native_Event.Data2 = event->MIDI_Data2;
+		Playback_MIDI_Engine_Native::Queue_MIDI_Event(Playback_MIDI_Engine::MIDI_Playback_Event_To_Native(event));
+	}
 
-		Playback_MIDI_Engine_Native::Queue_MIDI_Event(Native_Event);
+	void Playback_MIDI_Engine::Queue_Event(Playback_MIDI_Engine_Native::MIDI_Event event)
+	{
+		Playback_MIDI_Engine_Native::Queue_MIDI_Event(event);
 	}
 
 	void Playback_MIDI_Engine::Queue_Events(List<Playback_MIDI_Event^>^ events)
@@ -152,5 +149,18 @@ namespace MIDILightDrawer
 	bool Playback_MIDI_Engine::Is_Playing()
 	{
 		return Playback_MIDI_Engine_Native::Is_Playing_Threaded();
+	}
+
+	Playback_MIDI_Engine_Native::MIDI_Event Playback_MIDI_Engine::MIDI_Playback_Event_To_Native(Playback_MIDI_Event^ event)
+	{
+		Playback_MIDI_Engine_Native::MIDI_Event Native_Event;
+		Native_Event.Timestamp_Ms = event->Timestamp_ms;
+		Native_Event.Track = event->Timeline_Track_ID;
+		Native_Event.Channel = event->MIDI_Channel;
+		Native_Event.Command = event->MIDI_Command;
+		Native_Event.Data1 = event->MIDI_Data1;
+		Native_Event.Data2 = event->MIDI_Data2;
+
+		return Native_Event;
 	}
 }

@@ -35,7 +35,7 @@ namespace MIDILightDrawer
 		bool _Cache_Valid;
 
 		Playback_MIDI_Engine^ _MIDI_Engine;
-		MIDI_Event_Raster^ _Raster;
+		MIDI_Event_Raster^ _MIDI_Event_Raster;
 
 		// Track filtering state
 		List<int>^ _Current_Muted_Tracks;
@@ -51,7 +51,7 @@ namespace MIDILightDrawer
 		Object^ _Active_Notes_Lock;
 
 	public:
-		Playback_Event_Queue_Manager(Playback_MIDI_Engine^ midi_engine);
+		Playback_Event_Queue_Manager(Playback_MIDI_Engine^ midi_engine, MIDI_Event_Raster^ midi_event_raster);
 		~Playback_Event_Queue_Manager();
 
 		bool Raster_And_Cache_Events(List<Track^>^ tracks, List<Measure^>^ measures, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel);

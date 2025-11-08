@@ -4,96 +4,13 @@
 
 namespace MIDILightDrawer
 {
-	MIDI_Event_Raster::MIDI_Event_Raster()
+	MIDI_Event_Raster::MIDI_Event_Raster(Widget_Timeline^ timeline)
 	{
-		this->_Tempo_Map = gcnew List<Tempo_Change>();
-		this->_Additional_Offset	= 0;
-		this->_Last_End_Tick		= -1;
-		this->_Next_Start_Tick		= -1;
-		this->_Last_Color			= Color();
-	}
-
-	void MIDI_Event_Raster::Initialize_Tempo_Map(List<Measure^>^ measures)
-	{
-		const uint64_t MICROSECONDS_PER_MINUTE = 60000000;
-
-		this->_Tempo_Map->Clear();
-
-		int CurrentTick = 0;
-		for each (Measure ^ M in measures)
-		{
-			Tempo_Change TC;
-			TC.Tick_Position = CurrentTick;
-			TC.Tempo_BPM = M->Tempo;
-			TC.us_Per_Tick = (double)MICROSECONDS_PER_MINUTE / (M->Tempo * TICKS_PER_QUARTER);
-
-			this->_Tempo_Map->Add(TC);
-
-			CurrentTick += M->Length;
-		}
-	}
-
-	uint64_t MIDI_Event_Raster::Convert_Tick_To_Microseconds(int tick)
-	{
-		if (this->_Tempo_Map->Count == 0) {
-			return 0;
-		}
-
-		uint64_t CumulativeTime = 0;
-
-		for (int i = 0; i < this->_Tempo_Map->Count; i++)
-		{
-			Tempo_Change CurrentTempo = this->_Tempo_Map[i];
-
-			// If this is the last tempo change, or if tick is before next tempo change
-			if (i == this->_Tempo_Map->Count - 1 || tick < this->_Tempo_Map[i + 1].Tick_Position)
-			{
-				int RemainingTicks = tick - CurrentTempo.Tick_Position;
-				CumulativeTime += (uint64_t)(RemainingTicks * CurrentTempo.us_Per_Tick);
-				break;
-			}
-
-			// Add time for this complete tempo section
-			int SectionTicks = this->_Tempo_Map[i + 1].Tick_Position - CurrentTempo.Tick_Position;
-			CumulativeTime += (uint64_t)(SectionTicks * CurrentTempo.us_Per_Tick);
-		}
-
-		return CumulativeTime;
-	}
-
-	int MIDI_Event_Raster::Convert_Microseconds_To_Tick(uint64_t microseconds)
-	{
-		if (this->_Tempo_Map->Count == 0) {
-			return 0;
-		}
-
-		uint64_t RemainingTime = microseconds;
-
-		for (int i = 0; i < this->_Tempo_Map->Count; i++)
-		{
-			Tempo_Change CurrentTempo = this->_Tempo_Map[i];
-
-			if (i == this->_Tempo_Map->Count - 1)
-			{
-				// Last tempo section - use remaining time
-				return CurrentTempo.Tick_Position + (int)(RemainingTime / CurrentTempo.us_Per_Tick);
-			}
-
-			// Calculate duration of this tempo section
-			Tempo_Change NextTempo = this->_Tempo_Map[i + 1];
-			int SectionTicks = NextTempo.Tick_Position - CurrentTempo.Tick_Position;
-			uint64_t SectionMicroseconds = (uint64_t)(SectionTicks * CurrentTempo.us_Per_Tick);
-
-			if (RemainingTime < SectionMicroseconds)
-			{
-				// Target time is in this section
-				return CurrentTempo.Tick_Position + (int)(RemainingTime / CurrentTempo.us_Per_Tick);
-			}
-
-			RemainingTime -= SectionMicroseconds;
-		}
-
-		return 0;
+		this->_Timeline = timeline;
+		this->_Additional_Offset = 0;
+		this->_Last_End_Tick = -1;
+		this->_Next_Start_Tick = -1;
+		this->_Last_Color = Color();
 	}
 
 	uint64_t MIDI_Event_Raster::Convert_Microseconds_To_Samples(uint64_t microseconds, uint32_t sample_rate)
@@ -153,6 +70,27 @@ namespace MIDILightDrawer
 		}
 
 		return AllRasteredEvents;
+	}
+
+	List<Export_MIDI_Track>^ MIDI_Event_Raster::Raster_Timeline_For_Export()
+	{
+		List<Export_MIDI_Track>^ Timeline_Export_Events = gcnew List<Export_MIDI_Track>;
+		
+		for each(Track ^ T in this->_Timeline->Tracks)
+		{
+			int Octave = T->Octave;
+			int Octave_Note_Offset = (Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
+
+			List<Export_MIDI_Event>^ RasteredEvents = this->Raster_Track_For_Export(T);
+
+			Export_MIDI_Track Export_Track;
+			Export_Track.Track = T;
+			Export_Track.Events = RasteredEvents;
+
+			Timeline_Export_Events->Add(Export_Track);
+		}
+
+		return Timeline_Export_Events;
 	}
 
 	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Raster_Bar_For_Playback(BarEvent^ bar, int track_index, uint8_t midi_channel, int octave_note_offset, bool use_anti_flicker)
@@ -227,6 +165,34 @@ namespace MIDILightDrawer
 			}
 
 			List<Playback_MIDI_Event^>^ TrackEvents = Raster_Track_For_Playback(tracks[i], i, global_midi_channel, true); // use_anti_flicker
+			AllEvents->AddRange(TrackEvents);
+		}
+
+		// Sort by timestamp for sequential playback
+		AllEvents->Sort(gcnew Comparison<Playback_MIDI_Event^>(&MIDI_Event_Raster::Compare_Events_By_Timestamp));
+
+		return AllEvents;
+	}
+
+	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Get_Timeline_PreRastered_Playback_Events(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel)
+	{
+		List<Playback_MIDI_Event^>^ AllEvents = gcnew List<Playback_MIDI_Event^>();
+
+		for (int i = 0; i < tracks->Count; i++)
+		{
+			// Check if track should play based on mute/solo
+			if (!Should_Track_Play(i, muted_tracks, soloed_tracks)) {
+				continue;
+			}
+
+			List<Playback_MIDI_Event^>^ TrackEvents = gcnew List<Playback_MIDI_Event^>();
+
+			for each(BarEvent ^ E in tracks[i]->Events) {
+				List<Playback_MIDI_Event^>^ BarEvents = E->Playback_Rastered_Events;
+
+				TrackEvents->AddRange(BarEvents);
+			}
+
 			AllEvents->AddRange(TrackEvents);
 		}
 
@@ -366,8 +332,8 @@ namespace MIDILightDrawer
 		uint8_t ValueBlue = (color.B >> 1);
 
 		// Convert tick times to microseconds
-		double Timestamp_Start_ms = (double)Convert_Tick_To_Microseconds(tick_start) / 1000.0;
-		double Timestamp_End_ms = (double)Convert_Tick_To_Microseconds(tick_start + AppliedTickLength) / 1000.0;;
+		double Timestamp_Start_ms	= _Timeline->TicksToMilliseconds(tick_start);
+		double Timestamp_End_ms		= _Timeline->TicksToMilliseconds(tick_start + AppliedTickLength);
 
 		// Create Note On events for each color channel
 		if (ValueRed > 0)
@@ -467,27 +433,6 @@ namespace MIDILightDrawer
 		}
 
 		return true;
-	}
-
-	Tempo_Change MIDI_Event_Raster::Get_Tempo_At_Tick(int tick)
-	{
-		if (this->_Tempo_Map->Count == 0)
-		{
-			Tempo_Change DefaultTempo;
-			DefaultTempo.Tick_Position = 0;
-			DefaultTempo.Tempo_BPM = 120;
-			DefaultTempo.us_Per_Tick = (60000000.0 / 120) / TICKS_PER_QUARTER;
-			return DefaultTempo;
-		}
-
-		// Find the tempo change at or before this tick
-		for (int i = this->_Tempo_Map->Count - 1; i >= 0; i--)
-		{
-			if (this->_Tempo_Map[i].Tick_Position <= tick)
-				return this->_Tempo_Map[i];
-		}
-
-		return this->_Tempo_Map[0];
 	}
 
 	int MIDI_Event_Raster::Compare_Events_By_Timestamp(Playback_MIDI_Event^ a, Playback_MIDI_Event^ b)

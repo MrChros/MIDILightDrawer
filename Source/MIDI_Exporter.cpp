@@ -5,10 +5,9 @@
 
 namespace MIDILightDrawer
 {
-	MIDI_Exporter::MIDI_Exporter(Widget_Timeline^ timeline)
+	MIDI_Exporter::MIDI_Exporter(MIDI_Event_Raster^ midi_event_raster)
 	{
-		this->_Timeline = timeline;
-		this->_Raster = gcnew MIDI_Event_Raster();
+		this->_MIDI_Event_Raster = midi_event_raster;
 
 		_AdditionalOffset	= 0;
 		_LastEndTick		= -1;
@@ -33,21 +32,17 @@ namespace MIDILightDrawer
 			Writer.Add_Measure(MH->timeSignature.numerator, MH->timeSignature.denominator.value, MH->tempo.value);
 		}
 
-		// Initialize tempo map from timeline measures
-		_Raster->Initialize_Tempo_Map(this->_Timeline->Measures);
+		List<Export_MIDI_Track>^ Timeline_Export_Events = _MIDI_Event_Raster->Raster_Timeline_For_Export();
 
-		// Then add all the notes
-		for each (Track^ T in this->_Timeline->Tracks)
+		for each(Export_MIDI_Track EMT in Timeline_Export_Events)
 		{
-			int Octave = T->Octave;
+			int Octave = EMT.Track->Octave;
 			int Octave_Note_Offset = (Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
 
-			List<Export_MIDI_Event>^ RasteredEvents = _Raster->Raster_Track_For_Export(T);
-
 			// Write all rastered events to MIDI file
-			for each (Export_MIDI_Event E in RasteredEvents)
+			for each(Export_MIDI_Event EME in EMT.Events)
 			{
-				WriteEventToMIDI(&Writer, E, Octave_Note_Offset);
+				WriteEventToMIDI(&Writer, EME, Octave_Note_Offset);
 			}
 		}
 

@@ -46,10 +46,13 @@ namespace MIDILightDrawer
 		bool Start_Playback();
 		bool Stop_Playback();
 		void Queue_Event(Playback_MIDI_Event^ event);
+		void Queue_Event(Playback_MIDI_Engine_Native::MIDI_Event event);
 		void Queue_Events(List<Playback_MIDI_Event^>^ events);
 		void Clear_Event_Queue();
 		double Get_Current_Position_Ms();
 		void Set_Current_Position_Ms(double position_ms);
 		bool Is_Playing();
+
+		static Playback_MIDI_Engine_Native::MIDI_Event MIDI_Playback_Event_To_Native(Playback_MIDI_Event^ event);
 	};
 }

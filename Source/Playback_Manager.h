@@ -9,6 +9,7 @@ namespace MIDILightDrawer
 {
 	// Forward Declaration
 	ref class Widget_Timeline;
+	ref class MIDI_Event_Raster;
 	ref class Playback_Event_Queue_Manager;
 	
 	public enum class Playback_State
@@ -22,6 +23,7 @@ namespace MIDILightDrawer
 	{
 	private:
 		Widget_Timeline^ _Timeline;
+		MIDI_Event_Raster^ _MIDI_Event_Raster;
 
 		Playback_MIDI_Engine^ _MIDI_Engine;
 		Playback_Audio_Engine^ _Audio_Engine;
@@ -34,7 +36,7 @@ namespace MIDILightDrawer
 		System::Object^ _State_Lock;
 
 	public:
-		Playback_Manager(Widget_Timeline^ timeline);
+		Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster);
 		~Playback_Manager();
 
 		// Initialization

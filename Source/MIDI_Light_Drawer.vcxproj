@@ -144,6 +144,7 @@
     <ClInclude Include="Control_ExpandablePanel.h" />
     <ClInclude Include="Control_FadePreview.h" />
     <ClInclude Include="Control_GroupBox.h" />
+    <ClInclude Include="Control_Label.h" />
     <ClInclude Include="Control_ProgressBar.h" />
     <ClInclude Include="Control_RadioButton.h" />
     <ClInclude Include="Control_ScrollablePanel.h" />

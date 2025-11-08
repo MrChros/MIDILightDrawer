@@ -767,8 +767,8 @@ namespace MIDILightDrawer
 		// Check if mouse is within handle area at end of bar
 		return	mousePos.X >= BarEndX - HANDLE_WIDTH &&
 				mousePos.X <= BarEndX + HANDLE_WIDTH &&
-				mousePos.Y >= TrackContentBounds.Y + Timeline_Direct2DRenderer::TRACK_PADDING &&
-				mousePos.Y <= TrackContentBounds.Bottom - Timeline_Direct2DRenderer::TRACK_PADDING;
+				mousePos.Y - _Timeline->ScrollPosition->Y >= TrackContentBounds.Top + Timeline_Direct2DRenderer::TRACK_PADDING &&
+				mousePos.Y - _Timeline->ScrollPosition->Y <= TrackContentBounds.Bottom - Timeline_Direct2DRenderer::TRACK_PADDING;
 	}
 
 	void PointerTool::StoreOriginalLengths()
@@ -1369,8 +1369,7 @@ namespace MIDILightDrawer
 
 		// Check if mouse is within handle area
 		bool IsInXRange = mousePos.X >= BarEndX - HANDLE_WIDTH && mousePos.X <= BarEndX + HANDLE_WIDTH;
-
-		bool IsInYRange = mousePos.Y >= TrackContentBounds.Y + Timeline_Direct2DRenderer::TRACK_PADDING && mousePos.Y <= TrackContentBounds.Bottom - Timeline_Direct2DRenderer::TRACK_PADDING;
+		bool IsInYRange = mousePos.Y - _Timeline->ScrollPosition->Y >= TrackContentBounds.Y + Timeline_Direct2DRenderer::TRACK_PADDING && mousePos.Y - _Timeline->ScrollPosition->Y <= TrackContentBounds.Bottom - Timeline_Direct2DRenderer::TRACK_PADDING;
 
 		return IsInXRange && IsInYRange;
 	}

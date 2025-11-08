@@ -117,7 +117,8 @@ namespace MIDILightDrawer
 		///////////////////
 		// MIDI Exporter //
 		///////////////////
-		_MIDI_Exporter = gcnew MIDI_Exporter(this->_Timeline);
+		_MIDI_Event_Raster = gcnew MIDI_Event_Raster(this->_Timeline);
+		_MIDI_Exporter = gcnew MIDI_Exporter(this->_MIDI_Event_Raster);
 
 
 		// Initialize menu
@@ -151,12 +152,11 @@ namespace MIDILightDrawer
 	{
 		TableLayoutPanel^ BottomLayout = gcnew TableLayoutPanel();
 		BottomLayout->Dock = DockStyle::Fill;
-		BottomLayout->ColumnCount = 5;
+		BottomLayout->ColumnCount = 4;
 		BottomLayout->RowCount = 1;
 
 		// Configure column styles
 		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
-		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 300));
 		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
 		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 270));
 		BottomLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 170));
@@ -210,10 +210,10 @@ namespace MIDILightDrawer
 		ZoomPanel->Controls->Add(_TrackBar_Zoom);
 
 		// Add controls to layout with margins
-		BottomLayout->Controls->Add(this->_Transport_Controls	, 1, 0);
-		BottomLayout->Controls->Add(this->_DropDown_Track_Height, 2, 0);
-		BottomLayout->Controls->Add(this->_DropDown_Marker		, 3, 0);
-		BottomLayout->Controls->Add(ZoomPanel					, 4, 0);
+		BottomLayout->Controls->Add(this->_Transport_Controls	, 0, 0);
+		BottomLayout->Controls->Add(this->_DropDown_Track_Height, 1, 0);
+		BottomLayout->Controls->Add(this->_DropDown_Marker		, 2, 0);
+		BottomLayout->Controls->Add(ZoomPanel					, 3, 0);
 
 		container->Controls->Add(BottomLayout);
 	}
@@ -473,7 +473,7 @@ namespace MIDILightDrawer
 		try
 		{
 			// Create Playback_Manager
-			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline);
+			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline, this->_MIDI_Event_Raster);
 			this->_Timeline->SetPlaybackManager(this->_Playback_Manager);
 
 			Device_Manager^ Devices = gcnew Device_Manager();
@@ -643,7 +643,7 @@ namespace MIDILightDrawer
 					else {
 						// Create a new track if it doesn't exist
 						// Use a default octave of 4 (can be changed later in MIDI settings)
-						this->_Timeline->AddTrack(TrackInfo->Name, 4);
+						this->_Timeline->AddTrack(TrackInfo->Name, 4, this->_MIDI_Event_Raster);
 						TargetTrack = this->_Timeline->Tracks[this->_Timeline->Tracks->Count - 1];
 						TrackMap[TrackInfo->Name] = TargetTrack; // Add to map
 					}
@@ -1056,7 +1056,7 @@ namespace MIDILightDrawer
 
 			for (int i = 0;i < Settings->Octave_Entries->Count;i++)
 			{
-				this->_Timeline->AddTrack(Settings->Octave_Entries[i]->Name, Settings->Octave_Entries[i]->Octave_Number);
+				this->_Timeline->AddTrack(Settings->Octave_Entries[i]->Name, Settings->Octave_Entries[i]->Octave_Number, this->_MIDI_Event_Raster);
 			}
 
 			if (this->_GP_Tab != NULL)
@@ -1395,26 +1395,17 @@ namespace MIDILightDrawer
 
 	void Form_Main::Playback_Update_Timer_Tick(Object^ sender, EventArgs^ e)
 	{
-		if (_Playback_Manager == nullptr || _Transport_Controls == nullptr) {
+		if (this->_Timeline == nullptr || this->_Transport_Controls == nullptr) {
 			return;
 		}
 
-		_Transport_Controls->Update_State(_Playback_Manager->Is_Playing());
-
-		if (_Transport_Controls->Is_Playing) {
-			this->_Timeline->AutoScrollForPlayback();
-		}
-		else if (_Transport_Controls->Is_Rewinding) {
-			this->_Timeline->AutoScrollForPlayback();
-		}
-		else if (_Transport_Controls->Is_Fast_Forwarding) {
-			this->_Timeline->AutoScrollForPlayback();
-		}
-		else if (_Transport_Controls->Moved_To_Start) {
-			this->_Timeline->AutoScrollForPlayback();
-		}
-		else if (_Transport_Controls->Moved_To_End) {
-			this->_Timeline->AutoScrollForPlayback();
+		if (_Transport_Controls->Is_Playing			||
+			_Transport_Controls->Is_Rewinding		||
+			_Transport_Controls->Is_Fast_Forwarding ||
+			_Transport_Controls->Moved_To_Start		||
+			_Transport_Controls->Moved_To_End)
+		{
+			this->_Timeline->AutoScrollForPlayback(_Transport_Controls->AutoScroll_Enabled);
 		}
 	}
 

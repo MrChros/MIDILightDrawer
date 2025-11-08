@@ -10,6 +10,10 @@ using namespace System::Collections::Generic;
 
 namespace MIDILightDrawer
 {
+	// Forward Declaration
+	ref class MIDI_Event_Raster;
+	ref struct Playback_MIDI_Event;
+	
 	//////////////////////////////
 	// General Type Definitions //
 	//////////////////////////////
@@ -164,8 +168,11 @@ namespace MIDILightDrawer
 	public ref class Track {
 	public:
 		Track(String^ trackName, int trackIndex, int octave);
+		Track(String^ trackName, int trackIndex, int octave, MIDI_Event_Raster^ midi_event_raster);
 
 	private:
+		MIDI_Event_Raster^ _MIDI_Event_Raster;
+
 		String^ _Name;
 		int _Index;
 		int _Octave;
@@ -175,6 +182,10 @@ namespace MIDILightDrawer
 		bool _IsSoloed;
 
 	public:
+		property MIDI_Event_Raster^ Event_Raster {
+			MIDI_Event_Raster^ get() { return _MIDI_Event_Raster; }
+		}
+
 		property String^ Name {
 			String^ get() { return _Name; }
 			void set(String^ value) { _Name = value; }
@@ -225,8 +236,6 @@ namespace MIDILightDrawer
 
 		static int CompareBarEvents(BarEvent^ a, BarEvent^ b);
 		static Comparison<BarEvent^>^ barComparer = gcnew Comparison<BarEvent^>(&Track::CompareBarEvents);
-
-	
 	};
 
 
@@ -295,6 +304,11 @@ namespace MIDILightDrawer
 
 		bool _IgnoreForOverlap;
 
+		List<Playback_MIDI_Event^>^ _Playback_Rastered_Events;
+
+	private:
+		void PreRasterMIDIEvents();
+
 	public:
 		property BarEventType Type {
 			BarEventType get() { return _Type; }
@@ -302,7 +316,7 @@ namespace MIDILightDrawer
 
 		property Track^ ContainingTrack {
 			Track^ get() { return _Working.Track; }
-			void set(Track^ track) { _Working.Track = track; }
+			void set(Track^ track);
 		}
 
 		property int StartTick {
@@ -357,6 +371,10 @@ namespace MIDILightDrawer
 		property int MeasureIndex {
 			int get() { return this->_Working.MeasureIndex; }
 			void set(int index) { this->_Working.MeasureIndex = index; }
+		}
+
+		property List<Playback_MIDI_Event^>^ Playback_Rastered_Events{
+			List<Playback_MIDI_Event^>^ get() { return _Playback_Rastered_Events; }
 		}
 	};
 

@@ -14,6 +14,9 @@ namespace MIDILightDrawer
 		_Moved_To_Start = false;
 		_Moved_To_End = false;
 		_Was_Playing_Before_Seek = false;
+		_AutoScroll_Enabled = false;
+		_Current_Time_ms = 0;
+		_Last_Time_ms = -1;
 
 		Initialize_Components();
 		Attach_Event_Handlers();
@@ -23,15 +26,22 @@ namespace MIDILightDrawer
 	{
 		TableLayoutPanel^ Layout = gcnew TableLayoutPanel();
 		Layout->Dock = DockStyle::Fill;
-		Layout->ColumnCount = 5;
+		Layout->ColumnCount = 9;
 		Layout->RowCount = 1;
+
+		const int BUTTON = 50;
+		const int SPACER = 30;
 
 		// Configure column styles
 		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
-		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
-		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
-		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
-		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 200));	// Time
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Auto Follow
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, SPACER));
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Move to Start
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Rewind
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Play/Pause
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Fast-Forward
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Move to End
 		
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.f));
 
@@ -41,25 +51,35 @@ namespace MIDILightDrawer
 		_Button_Play_Pause = gcnew Button();
 		_Button_Fast_Forward = gcnew Button();
 		_Button_Move_To_End = gcnew Button();
+		_Button_AutoScroll = gcnew Button();
 
-		_Button_Move_To_Start->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_MoveToStart_24")));
-		_Button_Rewind->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_Rewind_24")));
-		_Button_Play_Pause->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_Play_24")));
-		_Button_Fast_Forward->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_FastForward_24")));
-		_Button_Move_To_End->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_MoveToEnd_24")));
+		_Button_Move_To_Start->Image	= (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_MoveToStart_24")));
+		_Button_Rewind->Image			= (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_Rewind_24"		)));
+		_Button_Play_Pause->Image		= (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_Play_24"		)));
+		_Button_Fast_Forward->Image		= (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_FastForward_24")));
+		_Button_Move_To_End->Image		= (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_MoveToEnd_24"	)));
+		_Button_AutoScroll->Image		= (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject("Transport_Controls_AutoScroll_24"	)));
 
+		Drawing::Font^ Label_Font = gcnew Drawing::Font("Segoe UI Bold", 14.0f);
+		_Label_Time = gcnew Control_Label();
+		_Label_Time->Dock = DockStyle::Fill;
+		_Label_Time->TextAlign = ContentAlignment::MiddleCenter;
+		_Label_Time->ForeColor = Color::White;
+		_Label_Time->BackColor = Color::Transparent;
+		_Label_Time->Font = Label_Font;
 
 		// Set tooltips
 		ToolTip^ Tooltip = gcnew ToolTip();
-		Tooltip->SetToolTip(_Button_Move_To_Start,	"Move to Start");
-		Tooltip->SetToolTip(_Button_Rewind,			"Rewind");
-		Tooltip->SetToolTip(_Button_Play_Pause,		"Play/Pause");
-		Tooltip->SetToolTip(_Button_Fast_Forward,	"Fast Forward");
-		Tooltip->SetToolTip(_Button_Move_To_End,	"Move to End");
+		Tooltip->SetToolTip(_Button_Move_To_Start	, "Move to Start");
+		Tooltip->SetToolTip(_Button_Rewind			, "Rewind");
+		Tooltip->SetToolTip(_Button_Play_Pause		, "Play/Pause");
+		Tooltip->SetToolTip(_Button_Fast_Forward	, "Fast Forward");
+		Tooltip->SetToolTip(_Button_Move_To_End		, "Move to End");
+		Tooltip->SetToolTip(_Button_AutoScroll		, "Toggle Auto Scroll");
 
 		this->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 
-		for each (Button ^ Btn in gcnew array<Button^>{_Button_Move_To_Start, _Button_Rewind, _Button_Play_Pause, _Button_Fast_Forward, _Button_Move_To_End })
+		for each (Button ^ Btn in gcnew array<Button^>{_Button_Move_To_Start, _Button_Rewind, _Button_Play_Pause, _Button_Fast_Forward, _Button_Move_To_End, _Button_AutoScroll })
 		{
 			Btn->Dock = DockStyle::Fill;
 			Btn->ImageAlign = ContentAlignment::MiddleCenter;
@@ -74,14 +94,22 @@ namespace MIDILightDrawer
 		_Seek_Timer->Interval = 100; // 100ms interval for seeking
 		_Seek_Timer->Tick += gcnew EventHandler(this, &Widget_Transport_Controls::On_Seek_Timer_Tick);
 
+		_Update_Time_Timer = gcnew Timer();
+		_Update_Time_Timer->Interval = 100;
+		_Update_Time_Timer->Tick += gcnew EventHandler(this, &Widget_Transport_Controls::On_Update_Time_Timer_Tick);
+
 		// Add controls
-		Layout->Controls->Add(_Button_Move_To_Start	, 0, 0);
-		Layout->Controls->Add(_Button_Rewind		, 1, 0);
-		Layout->Controls->Add(_Button_Play_Pause	, 2, 0);
-		Layout->Controls->Add(_Button_Fast_Forward	, 3, 0);
-		Layout->Controls->Add(_Button_Move_To_End	, 4, 0);
+		Layout->Controls->Add(_Label_Time			, 1, 0);
+		Layout->Controls->Add(_Button_AutoScroll, 3-1, 0);
+		Layout->Controls->Add(_Button_Move_To_Start	, 5-1, 0);
+		Layout->Controls->Add(_Button_Rewind		, 6-1, 0);
+		Layout->Controls->Add(_Button_Play_Pause	, 7-1, 0);
+		Layout->Controls->Add(_Button_Fast_Forward	, 8-1, 0);
+		Layout->Controls->Add(_Button_Move_To_End	, 9-1, 0);
 
 		this->Controls->Add(Layout);
+
+		_Update_Time_Timer->Start();
 	}
 
 	void Widget_Transport_Controls::Attach_Event_Handlers()
@@ -93,6 +121,7 @@ namespace MIDILightDrawer
 		_Button_Fast_Forward->MouseDown += gcnew MouseEventHandler	(this, &Widget_Transport_Controls::On_Fast_Forward_Mouse_Down);
 		_Button_Fast_Forward->MouseUp	+= gcnew MouseEventHandler	(this, &Widget_Transport_Controls::On_Fast_Forward_Mouse_Up);
 		_Button_Move_To_End->Click		+= gcnew EventHandler		(this, &Widget_Transport_Controls::On_Move_To_End_Click);
+		_Button_AutoScroll->Click		+= gcnew EventHandler		(this, &Widget_Transport_Controls::On_AutoScroll_Click);
 	}
 
 	void Widget_Transport_Controls::On_Move_To_Start_Click(Object^ sender, EventArgs^ e)
@@ -204,6 +233,18 @@ namespace MIDILightDrawer
 		}
 	}
 
+	void Widget_Transport_Controls::On_AutoScroll_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		_AutoScroll_Enabled = !_AutoScroll_Enabled;
+
+		if (_AutoScroll_Enabled) {
+			_Button_AutoScroll->BackColor = Theme_Manager::Get_Instance()->AccentPrimary;
+		}
+		else {
+			_Button_AutoScroll->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
+		}
+	}
+
 	void Widget_Transport_Controls::On_Seek_Timer_Tick(Object^ sender, EventArgs^ e)
 	{
 		if (!_Playback_Manager) {
@@ -227,6 +268,27 @@ namespace MIDILightDrawer
 				New_Position = Duration;
 			}
 			_Playback_Manager->Seek_To_Position(New_Position);
+		}
+	}
+
+	void Widget_Transport_Controls::On_Update_Time_Timer_Tick(Object^ sender, EventArgs^ e)
+	{
+		if (!_Playback_Manager) {
+			return;
+		}
+
+		Int64 _Current_Time_ms = (Int64)_Playback_Manager->Get_Playback_Position_ms();
+		
+		if (_Current_Time_ms != _Last_Time_ms) {
+			_Last_Time_ms = _Current_Time_ms;
+			Int64 Time_ms = _Current_Time_ms;
+			String^ String_Min = (Time_ms / 60000).ToString(L"D")->PadLeft(2, L'0');
+			Time_ms %= 60000;
+			String^ String_Sec = (Time_ms / 1000).ToString(L"D")->PadLeft(2, L'0');
+			Time_ms %= 1000;
+			String^ String_MSec = Time_ms.ToString(L"D")->PadLeft(3, L'0');
+
+			_Label_Time->Text = String_Min + ":" + String_Sec + ":" + String_MSec;
 		}
 	}
 
@@ -317,4 +379,10 @@ namespace MIDILightDrawer
 
 		return Return_Value;
 	}
+
+	bool Widget_Transport_Controls::AutoScroll_Enabled::get()
+	{
+		return _AutoScroll_Enabled;
+	}
 }
+

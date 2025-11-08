@@ -26,8 +26,7 @@ namespace MIDILightDrawer
 		
 		
 	private:
-		Widget_Timeline^ _Timeline;
-		MIDI_Event_Raster^ _Raster;
+		MIDI_Event_Raster^ _MIDI_Event_Raster;
 
 		int _AdditionalOffset;
 		int _LastEndTick;
@@ -35,7 +34,7 @@ namespace MIDILightDrawer
 		Color _LastColor;
 
 	public:
-		MIDI_Exporter(Widget_Timeline^ timeline);
+		MIDI_Exporter(MIDI_Event_Raster^ midi_event_raster);
 
 		String^ Export(String^ filename, gp_parser::Parser* tab);
 

@@ -6,6 +6,7 @@
 #include "gp_parser.h"
 #include "Settings.h"
 #include "MIDI_Exporter.h"
+#include "MIDI_Event_Raster.h"
 #include "Hotkey_Manager.h"
 #include "Playback_Manager.h"
 
@@ -78,6 +79,7 @@ namespace MIDILightDrawer
 			Widget_Bucket_Options^				_Bucket_Options;
 
 			MIDI_Exporter^						_MIDI_Exporter;
+			MIDI_Event_Raster^					_MIDI_Event_Raster;
 
 			Playback_Manager^					_Playback_Manager;
 			System::Windows::Forms::Timer^		_Playback_Update_Timer;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Control_Label.h"
+
 using namespace System;
 using namespace System::Windows::Forms;
 using namespace System::Drawing;
@@ -21,6 +23,9 @@ namespace MIDILightDrawer
 		Button^ _Button_Play_Pause;
 		Button^ _Button_Fast_Forward;
 		Button^ _Button_Move_To_End;
+		Button^ _Button_AutoScroll;
+
+		Control_Label^ _Label_Time;
 
 		// Rewind/Fast Forward state
 		bool _Is_Rewinding;
@@ -28,7 +33,11 @@ namespace MIDILightDrawer
 		bool _Moved_To_Start;
 		bool _Moved_To_End;
 		bool _Was_Playing_Before_Seek;
+		bool _AutoScroll_Enabled;
+		Int64 _Current_Time_ms;
+		Int64 _Last_Time_ms;
 		Timer^ _Seek_Timer;
+		Timer^ _Update_Time_Timer;
 
 	public:
 		Widget_Transport_Controls();
@@ -56,9 +65,11 @@ namespace MIDILightDrawer
 		void On_Fast_Forward_Mouse_Down(Object^ sender, MouseEventArgs^ e);
 		void On_Fast_Forward_Mouse_Up(Object^ sender, MouseEventArgs^ e);
 		void On_Move_To_End_Click(Object^ sender, EventArgs^ e);
+		void On_AutoScroll_Click(System::Object^ sender, System::EventArgs^ e);
 
-		// Seek timer
+		// Timer Callbacks
 		void On_Seek_Timer_Tick(Object^ sender, EventArgs^ e);
+		void On_Update_Time_Timer_Tick(Object^ sender, EventArgs^ e);
 
 		// Button appearance
 		void Update_Play_Pause_Button();
@@ -81,6 +92,10 @@ namespace MIDILightDrawer
 		}
 
 		property bool Moved_To_End {
+			bool get();
+		}
+
+		property bool AutoScroll_Enabled {
 			bool get();
 		}
 	};

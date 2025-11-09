@@ -9,6 +9,10 @@ namespace MIDILightDrawer {
 
 	class MIDI_Writer
 	{
+	public:
+		static const uint8_t MIDI_EVENT_NOTE_ON = 0x90;
+		static const uint8_t MIDI_EVENT_NOTE_OF = 0x80;
+
 	private:
 		struct Measure
 		{
@@ -57,6 +61,13 @@ namespace MIDILightDrawer {
 
 		void Add_Measure(uint8_t numerator, uint8_t denominator, uint32_t tempo_bpm);
 		void Add_Note(uint32_t start_tick, uint32_t length_ticks, uint8_t channel, uint8_t note, uint8_t velocity);
+
+		// Individual MIDI event methods for unified rastering
+		void Add_Note_On(uint32_t tick, uint8_t channel, uint8_t note, uint8_t velocity);
+		void Add_Note_Off(uint32_t tick, uint8_t channel, uint8_t note);
+		void Add_Control_Change(uint32_t tick, uint8_t channel, uint8_t controller, uint8_t value);
+		void Add_Program_Change(uint32_t tick, uint8_t channel, uint8_t program);
+
 		bool Save_To_File(const std::string& filename);
 		void Set_Debug_Mode(bool debug) { _DebugMode = debug; }
 	};

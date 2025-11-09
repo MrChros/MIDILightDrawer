@@ -12,6 +12,16 @@ namespace MIDILightDrawer
 	ref class Widget_Timeline;
 	ref struct Playback_MIDI_Event;
 	
+	public ref struct Export_MIDI_Color_Note
+	{
+		int TickStart;			// Start position in MIDI ticks
+		int TickLength;			// Duration in MIDI ticks
+		int TickEnd;			// End position in MIDI ticks
+		uint8_t Color_Value;
+		bool Has_Offset;
+		bool Is_Direct_Follower;
+	};
+	
 	public value struct Export_MIDI_Event
 	{
 		int TickStart;			// Start position in MIDI ticks
@@ -19,18 +29,14 @@ namespace MIDILightDrawer
 		Color Color;			// RGB color to convert to MIDI notes
 	};
 
-	public value struct Export_MIDI_Track
+	public ref struct Export_MIDI_Track
 	{
 		Track^ Track;
 		List<Export_MIDI_Event>^ Events;
-	};
 
-	// Stores tempo information for tick-to-time conversion
-	public value struct Tempo_Change
-	{
-		int Tick_Position;		// Absolute tick where tempo changes
-		uint32_t Tempo_BPM;		// Tempo in beats per minute
-		double us_Per_Tick;		// Calculated microseconds per tick at this tempo
+		List<Export_MIDI_Color_Note^>^ Notes_Red;
+		List<Export_MIDI_Color_Note^>^ Notes_Green;
+		List<Export_MIDI_Color_Note^>^ Notes_Blue;
 	};
 
 	public ref class MIDI_Event_Raster
@@ -55,12 +61,12 @@ namespace MIDILightDrawer
 		uint64_t Convert_Samples_To_Microseconds(uint64_t samples, uint32_t sample_rate);
 
 		List<Export_MIDI_Event>^ Raster_Bar_For_Export(BarEvent^ bar);
-		List<Export_MIDI_Event>^ Raster_Track_For_Export(Track^ track);
-		List<Export_MIDI_Track>^ Raster_Timeline_For_Export();
+		Export_MIDI_Track^ Raster_Track_For_Export(Track^ track);
+		List<Export_MIDI_Track^>^ Raster_Timeline_For_Export();
 
 		List<Playback_MIDI_Event^>^ Raster_Bar_For_Playback(BarEvent^ bar, int track_index, uint8_t midi_channel, int octave_note_offset, bool use_anti_flicker);
 		List<Playback_MIDI_Event^>^ Raster_Track_For_Playback(Track^ track, int track_index, uint8_t midi_channel, bool use_anti_flicker);
-		List<Playback_MIDI_Event^>^ Raster_Timeline_For_Playback(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel);
+		List<Playback_MIDI_Event^>^ Raster_Timeline_For_Playback();
 
 		List<Playback_MIDI_Event^>^ Get_Timeline_PreRastered_Playback_Events(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel);
 

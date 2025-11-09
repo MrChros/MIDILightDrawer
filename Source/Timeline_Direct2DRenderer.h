@@ -69,7 +69,7 @@ namespace MIDILightDrawer
 		static const double MAX_ZOOM_LEVEL				= 20.0;	// 20x zoom
 		// Track overlay colors
 		static const unsigned int MUTED_OVERLAY_COLOR	= 0x40FF0000; // Red, 25% alpha
-		static const unsigned int SOLOED_OVERLAY_COLOR	= 0x40FFFF00; // Yellow, 25% alpha
+		static const unsigned int SOLOED_OVERLAY_COLOR	= 0x40DBB14E; // Yellow, 25% alpha
 
         value struct CachedThemeColors {
             System::Drawing::Color Background;
@@ -143,7 +143,8 @@ namespace MIDILightDrawer
 
 
         // Sub-Methods for DrawTrackContent - DrawTrackEvents and DrawTrackTablature
-        void DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType);
+		void DrawTrackMuteSolo(Track^ track, System::Drawing::Rectangle trackContentBounds);
+		void DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType);
         bool DrawTrackTablature(Track^ track, System::Drawing::Rectangle trackContentBounds);
         bool DrawTrackTablatureDrum(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
         bool DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);

@@ -45,13 +45,13 @@ namespace MIDILightDrawer
 			List<int>^ Empty_Muted = gcnew List<int>();
 			List<int>^ Empty_Soloed = gcnew List<int>();
 
-			//List<Playback_MIDI_Event^>^ Rastered_Events = _MIDI_Event_Raster->Raster_Timeline_For_Playback(
-			List<Playback_MIDI_Event^>^ Rastered_Events = _MIDI_Event_Raster->Get_Timeline_PreRastered_Playback_Events(
-				tracks,
-				Empty_Muted,    // Don't filter during rastering
-				Empty_Soloed,   // We'll filter later
-				global_midi_channel
-			);
+			List<Playback_MIDI_Event^>^ Rastered_Events = _MIDI_Event_Raster->Raster_Timeline_For_Playback();
+			//List<Playback_MIDI_Event^>^ Rastered_Events = _MIDI_Event_Raster->Get_Timeline_PreRastered_Playback_Events(
+			//	tracks,
+			//	Empty_Muted,    // Don't filter during rastering
+			//	Empty_Soloed,   // We'll filter later
+			//	global_midi_channel
+			//);
 
 			if (!Rastered_Events) {
 				return false;

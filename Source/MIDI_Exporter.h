@@ -10,21 +10,15 @@
 
 using namespace System;
 using namespace System::Drawing;
+using namespace System::Collections::Generic;
 
 namespace MIDILightDrawer
 {
+	// Forward Declaration
+	ref struct Playback_MIDI_Event;
+	
 	public ref class MIDI_Exporter
 	{
-		value struct RasteredEvent
-		{
-			int TickStart;
-			int TickLength;
-			Color Color;
-		};
-	
-	public:
-		
-		
 	private:
 		MIDI_Event_Raster^ _MIDI_Event_Raster;
 

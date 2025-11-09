@@ -14,7 +14,7 @@ namespace MIDILightDrawer
 			this->DoubleBuffered = true;
 			this->SetStyle(ControlStyles::OptimizedDoubleBuffer |
 				ControlStyles::AllPaintingInWmPaint |
-				ControlStyles::UserPaint, true);
+				ControlStyles::ResizeRedraw, true);
 		}
 	};
 }

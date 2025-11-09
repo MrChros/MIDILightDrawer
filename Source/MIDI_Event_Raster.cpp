@@ -37,57 +37,104 @@ namespace MIDILightDrawer
 		return RasteredEvents;
 	}
 
-	List<Export_MIDI_Event>^ MIDI_Event_Raster::Raster_Track_For_Export(Track^ track)
+	Export_MIDI_Track^ MIDI_Event_Raster::Raster_Track_For_Export(Track^ track)
 	{
-		List<Export_MIDI_Event>^ AllRasteredEvents = gcnew List<Export_MIDI_Event>();
-
-		// Reset anti-flicker state for new track
-		this->_Additional_Offset = 0;
-		this->_Last_End_Tick = -1;
-		this->_Next_Start_Tick = -1;
-		this->_Last_Color = Color();
+		List<Export_MIDI_Event>^ AllRasteredEvents	= gcnew List<Export_MIDI_Event>();
+		List<Export_MIDI_Color_Note^>^ Notes_Red	= gcnew List<Export_MIDI_Color_Note^>();
+		List<Export_MIDI_Color_Note^>^ Notes_Green	= gcnew List<Export_MIDI_Color_Note^>();
+		List<Export_MIDI_Color_Note^>^ Notes_Blue	= gcnew List<Export_MIDI_Color_Note^>();
 
 		for (int i = 0; i < track->Events->Count; i++)
 		{
 			BarEvent^ Bar = track->Events[i];
 
-			// Determine next start tick for anti-flicker
-			if (i < track->Events->Count - 1) {
-				_Next_Start_Tick = track->Events[i + 1]->StartTick;
-			}
-			else {
-				_Next_Start_Tick = -1;
-			}
-
 			List<Export_MIDI_Event>^ BarEvents = Raster_Bar_For_Export(Bar);
-			AllRasteredEvents->AddRange(BarEvents);
 
-			if (BarEvents->Count > 0)
+			Measure^ M = _Timeline->GetMeasureAtTick(Bar->StartTick);
+
+			for each (Export_MIDI_Event E in BarEvents)
 			{
-				_Last_End_Tick = BarEvents[BarEvents->Count - 1].TickStart + BarEvents[BarEvents->Count - 1].TickLength;
-				_Last_Color = BarEvents[BarEvents->Count - 1].Color;
+				uint8_t Value_Red	= (E.Color.R >> 1);
+				uint8_t Value_Green = (E.Color.G >> 1);
+				uint8_t Value_Blue	= (E.Color.B >> 1);
+
+				if (Value_Red > 0)
+				{
+					Export_MIDI_Color_Note^ Note_Event = gcnew Export_MIDI_Color_Note();
+					Note_Event->TickStart	= E.TickStart;
+					Note_Event->TickLength	= E.TickLength;
+					Note_Event->TickEnd		= E.TickStart + E.TickLength;
+					Note_Event->Color_Value	= Value_Red;
+					Note_Event->Has_Offset	= false;
+					Note_Event->Is_Direct_Follower = false;
+
+					if (Notes_Red->Count > 0 && Notes_Red[Notes_Red->Count - 1]->TickEnd == Note_Event->TickStart) {
+						Note_Event->Has_Offset = !Notes_Red[Notes_Red->Count - 1]->Has_Offset;
+						Note_Event->Is_Direct_Follower = true;
+					}
+
+					Notes_Red->Add(Note_Event);
+				}
+
+				if (Value_Green > 0)
+				{
+					Export_MIDI_Color_Note^ Note_Event = gcnew Export_MIDI_Color_Note();
+					Note_Event->TickStart = E.TickStart;
+					Note_Event->TickLength = E.TickLength;
+					Note_Event->TickEnd = E.TickStart + E.TickLength;
+					Note_Event->Color_Value = Value_Green;
+					Note_Event->Has_Offset = false;
+					Note_Event->Is_Direct_Follower = false;
+
+					if (Notes_Green->Count > 0 && Notes_Green[Notes_Green->Count - 1]->TickEnd == Note_Event->TickStart) {
+						Note_Event->Has_Offset = !Notes_Green[Notes_Green->Count - 1]->Has_Offset;
+						Note_Event->Is_Direct_Follower = true;
+					}
+
+					Notes_Green->Add(Note_Event);
+				}
+
+				if (Value_Blue > 0)
+				{
+					Export_MIDI_Color_Note^ Note_Event = gcnew Export_MIDI_Color_Note();
+					Note_Event->TickStart = E.TickStart;
+					Note_Event->TickLength = E.TickLength;
+					Note_Event->TickEnd = E.TickStart + E.TickLength;
+					Note_Event->Color_Value = Value_Blue;
+					Note_Event->Has_Offset = false;
+					Note_Event->Is_Direct_Follower = false;
+
+					if (Notes_Blue->Count > 0 && Notes_Blue[Notes_Blue->Count - 1]->TickEnd == Note_Event->TickStart) {
+						Note_Event->Has_Offset = !Notes_Blue[Notes_Blue->Count - 1]->Has_Offset;
+						Note_Event->Is_Direct_Follower = true;
+					}
+
+					Notes_Blue->Add(Note_Event);
+				}
+
+				Console::WriteLine("#Measure {0}: {1}, {2}, {3}", M->Number, Value_Red, Value_Green, Value_Blue);
 			}
+
+			AllRasteredEvents->AddRange(BarEvents);
 		}
 
-		return AllRasteredEvents;
+		Export_MIDI_Track^ Export_Track = gcnew Export_MIDI_Track();
+		Export_Track->Track			= track;
+		Export_Track->Events		= AllRasteredEvents;
+		Export_Track->Notes_Red		= Notes_Red;
+		Export_Track->Notes_Green	= Notes_Green;
+		Export_Track->Notes_Blue	= Notes_Blue;
+
+		return Export_Track;
 	}
 
-	List<Export_MIDI_Track>^ MIDI_Event_Raster::Raster_Timeline_For_Export()
+	List<Export_MIDI_Track^>^ MIDI_Event_Raster::Raster_Timeline_For_Export()
 	{
-		List<Export_MIDI_Track>^ Timeline_Export_Events = gcnew List<Export_MIDI_Track>;
+		List<Export_MIDI_Track^>^ Timeline_Export_Events = gcnew List<Export_MIDI_Track^>;
 		
 		for each(Track ^ T in this->_Timeline->Tracks)
 		{
-			int Octave = T->Octave;
-			int Octave_Note_Offset = (Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
-
-			List<Export_MIDI_Event>^ RasteredEvents = this->Raster_Track_For_Export(T);
-
-			Export_MIDI_Track Export_Track;
-			Export_Track.Track = T;
-			Export_Track.Events = RasteredEvents;
-
-			Timeline_Export_Events->Add(Export_Track);
+			Timeline_Export_Events->Add(this->Raster_Track_For_Export(T));
 		}
 
 		return Timeline_Export_Events;
@@ -133,13 +180,7 @@ namespace MIDILightDrawer
 				this->_Next_Start_Tick = -1;
 			}
 
-			List<Playback_MIDI_Event^>^ BarEvents = Raster_Bar_For_Playback(
-				Bar,
-				track_index,
-				midi_channel,
-				OctaveNoteOffset,
-				use_anti_flicker
-			);
+			List<Playback_MIDI_Event^>^ BarEvents = Raster_Bar_For_Playback(Bar, track_index, midi_channel, OctaveNoteOffset, use_anti_flicker);
 
 			AllPlaybackEvents->AddRange(BarEvents);
 
@@ -153,18 +194,22 @@ namespace MIDILightDrawer
 		return AllPlaybackEvents;
 	}
 
-	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Raster_Timeline_For_Playback(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel)
+	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Raster_Timeline_For_Playback()
 	{
+		List<int>^ Muted_Tracks = _Timeline->TrackNumbersMuted;
+		List<int>^ Soloed_Tracks = _Timeline->TrackNumbersSoloed;
+		uint8_t Global_MIDI_Channel = Settings::Get_Instance()->Global_MIDI_Output_Channel;
+		
 		List<Playback_MIDI_Event^>^ AllEvents = gcnew List<Playback_MIDI_Event^>();
 
-		for (int i = 0; i < tracks->Count; i++)
+		for (int i = 0; i < _Timeline->Tracks->Count; i++)
 		{
 			// Check if track should play based on mute/solo
-			if (!Should_Track_Play(i, muted_tracks, soloed_tracks)) {
+			if (!Should_Track_Play(i, Muted_Tracks, Soloed_Tracks)) {
 				continue;
 			}
 
-			List<Playback_MIDI_Event^>^ TrackEvents = Raster_Track_For_Playback(tracks[i], i, global_midi_channel, true); // use_anti_flicker
+			List<Playback_MIDI_Event^>^ TrackEvents = Raster_Track_For_Playback(_Timeline->Tracks[i], i, Global_MIDI_Channel, true); // use_anti_flicker
 			AllEvents->AddRange(TrackEvents);
 		}
 

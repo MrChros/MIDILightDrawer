@@ -23,8 +23,7 @@ namespace MIDILightDrawer
 			std::cout << "  Length: " << static_cast<int>(event._data2) << "\n";
 			std::cout << "  Data: ";
 			for (uint8_t byte : event._meta_data) {
-				std::cout << std::hex << std::setw(2) << std::setfill('0')
-					<< static_cast<int>(byte) << " ";
+				std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
 			}
 			std::cout << std::dec << "\n";
 		}
@@ -37,8 +36,8 @@ namespace MIDILightDrawer
 
 	void MIDI_Writer::Initialize_Track() {
 		// Add track name
-		std::vector<uint8_t> track_name = { 'M', 'a', 'i', 'n', ' ', 'T', 'r', 'a', 'c', 'k' };
-		_Events.emplace_back(0, 0xFF, 0x03, track_name);
+		std::vector<uint8_t> Track_Name = { 'M', 'a', 'i', 'n', ' ', 'T', 'r', 'a', 'c', 'k' };
+		_Events.emplace_back(0, 0xFF, 0x03, Track_Name);
 	}
 
 	void MIDI_Writer::Add_Time_Signature_Event(uint32_t tick, uint8_t numerator, uint8_t denominator) {
@@ -106,6 +105,47 @@ namespace MIDILightDrawer
 		_Events.emplace_back(start_tick + length_ticks, 0x80 | channel_masked, note, 0);
 	}
 
+	void MIDI_Writer::Add_Note_On(uint32_t tick, uint8_t channel, uint8_t note, uint8_t velocity)
+	{
+		uint8_t Channel_Masked = channel & 0x0F;
+		_Events.emplace_back(tick, 0x90 | Channel_Masked, note, velocity);
+
+		if (_DebugMode) {
+			std::cout << "Added Note On at tick " << tick << ": Ch=" << static_cast<int>(Channel_Masked + 1) << " Note=" << static_cast<int>(note) << " Vel=" << static_cast<int>(velocity) << "\n";
+		}
+	}
+
+	void MIDI_Writer::Add_Note_Off(uint32_t tick, uint8_t channel, uint8_t note)
+	{
+		uint8_t channel_masked = channel & 0x0F;
+		_Events.emplace_back(tick, 0x80 | channel_masked, note, 0);
+
+		if (_DebugMode) {
+			std::cout << "Added Note Off at tick " << tick << ": Ch=" << static_cast<int>(channel_masked + 1) << " Note=" << static_cast<int>(note) << "\n";
+		}
+	}
+
+	void MIDI_Writer::Add_Control_Change(uint32_t tick, uint8_t channel, uint8_t controller, uint8_t value)
+	{
+		uint8_t channel_masked = channel & 0x0F;
+		_Events.emplace_back(tick, 0xB0 | channel_masked, controller, value);
+
+		if (_DebugMode) {
+			std::cout << "Added Control Change at tick " << tick << ": Ch=" << static_cast<int>(channel_masked + 1) << " CC=" << static_cast<int>(controller) << " Val=" << static_cast<int>(value) << "\n";
+		}
+	}
+
+	void MIDI_Writer::Add_Program_Change(uint32_t tick, uint8_t channel, uint8_t program)
+	{
+		uint8_t channel_masked = channel & 0x0F;
+		// Program Change only has one data byte (data2 is unused, set to 0)
+		_Events.emplace_back(tick, 0xC0 | channel_masked, program, 0);
+
+		if (_DebugMode) {
+			std::cout << "Added Program Change at tick " << tick << ": Ch=" << static_cast<int>(channel_masked + 1) << " Program=" << static_cast<int>(program) << "\n";
+		}
+	}
+
 	void MIDI_Writer::Write_Var_Len(std::ofstream& file, uint32_t value)
 	{
 		uint32_t buffer = value & 0x7F;
@@ -117,10 +157,12 @@ namespace MIDILightDrawer
 
 		while (true) {
 			file.put(buffer & 0xFF);
-			if (buffer & 0x80)
+			if (buffer & 0x80) {
 				buffer >>= 8;
-			else
+			}
+			else {
 				break;
+			}
 		}
 	}
 

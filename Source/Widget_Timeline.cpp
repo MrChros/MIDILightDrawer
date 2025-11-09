@@ -89,7 +89,7 @@ namespace MIDILightDrawer
 	{
 		int Start_Tick = this->TotalTicks;
 		double Start_Time_ms = this->TotalTime_ms;
-		Measure^ New_Measure = gcnew Measure(Start_Tick, Start_Time_ms, numerator, denominator, tempo, marker_text);
+		Measure^ New_Measure = gcnew Measure(this->_Measures->Count, Start_Tick, Start_Time_ms, numerator, denominator, tempo, marker_text);
 		_Measures->Add(New_Measure);
 
 		for each (Track ^ T in _Tracks) {
@@ -874,7 +874,11 @@ namespace MIDILightDrawer
 			TrackMap[Trk->Name] = Trk;
 		}
 
-		return LoadBarEventsFromFile(filePath, _Tracks, _Measures, TrackMap);
+		String^ Return_Message = LoadBarEventsFromFile(filePath, _Tracks, _Measures, TrackMap);
+
+		this->Invalidate();
+
+		return Return_Message;
 	}
 
 	void Widget_Timeline::LogPerformanceMetrics()

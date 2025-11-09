@@ -65,8 +65,9 @@ namespace MIDILightDrawer
 	/////////////
 	// Measure //
 	/////////////
-	Measure::Measure(int startTick, double startTime_ms, int num, int denom, int tempo, String^ marker_text)
+	Measure::Measure(int number, int startTick, double startTime_ms, int num, int denom, int tempo, String^ marker_text)
 	{
+		Number = number;
 		StartTick = startTick;
 		Numerator = num;
 		Denominator = denom;
@@ -376,7 +377,8 @@ namespace MIDILightDrawer
 
 		MIDI_Event_Raster^ MIDI_Event_Raster = this->ContainingTrack->Event_Raster;
 
-		this->_Playback_Rastered_Events = MIDI_Event_Raster->Raster_Bar_For_Playback(this, this->ContainingTrack->Index, Settings::Get_Instance()->Global_MIDI_Output_Channel, this->ContainingTrack->Octave, Settings::Get_Instance()->MIDI_Export_Anti_Flicker);
+		int Octave_Note_Offset = (this->ContainingTrack->Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
+		this->_Playback_Rastered_Events = MIDI_Event_Raster->Raster_Bar_For_Playback(this, this->ContainingTrack->Index, Settings::Get_Instance()->Global_MIDI_Output_Channel, Octave_Note_Offset, Settings::Get_Instance()->MIDI_Export_Anti_Flicker);
 	}
 
 	void BarEvent::ContainingTrack::set(Track^ track)

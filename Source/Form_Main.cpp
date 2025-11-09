@@ -1518,10 +1518,334 @@ namespace MIDILightDrawer
 #endif
 	}
 
+	// Add this implementation to Form_Main.cpp in the Button_2_Click method
+
 	void Form_Main::Button_2_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 #ifdef _DEBUG
-		Console::WriteLine("Button 2 Clicked");
+		Console::WriteLine("Button 2 Clicked - Exporting MIDI Event Comparison CSV");
+
+		// Check if timeline has tracks
+		if (this->_Timeline->Tracks->Count == 0)
+		{
+			MessageBox::Show("No tracks available to export.", "Export Error", MessageBoxButtons::OK, MessageBoxIcon::Warning);
+			return;
+		}
+
+		// Ask user for save location
+		SaveFileDialog^ Save_Dialog = gcnew SaveFileDialog();
+		Save_Dialog->Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
+		Save_Dialog->DefaultExt = "csv";
+		Save_Dialog->FileName = "midi_event_comparison.csv";
+		Save_Dialog->Title = "Export MIDI Event Comparison";
+
+		if (Save_Dialog->ShowDialog() != System::Windows::Forms::DialogResult::OK)
+		{
+			return;
+		}
+
+		try
+		{
+			/*
+			System::IO::StreamWriter^ Writer = gcnew System::IO::StreamWriter(Save_Dialog->FileName, false, System::Text::Encoding::UTF8);
+
+			// Write header information
+			Writer->WriteLine("MIDI Event Rastering Comparison");
+			Writer->WriteLine("Generated: {0}", DateTime::Now.ToString("yyyy-MM-dd HH:mm:ss"));
+			//Writer->WriteLine("Project: " + (this->_Timeline->ParserInstance ? "Loaded" : "No GP5 file"));
+			Writer->WriteLine();
+
+			// Get settings
+			Settings^ Settings = Settings::Get_Instance();
+			uint8_t Global_MIDI_Channel = Settings->Global_MIDI_Output_Channel;
+
+			// Process each track
+			for (int Track_Index = 0; Track_Index < this->_Timeline->Tracks->Count; Track_Index++)
+			{
+				Track^ Current_Track = this->_Timeline->Tracks[Track_Index];
+
+				Writer->WriteLine("========================================");
+				Writer->WriteLine("Track {0}: Index {1}, Octave {2}", Track_Index, Current_Track->Index, Current_Track->Octave);
+				Writer->WriteLine("========================================");
+				Writer->WriteLine();
+
+				// Calculate octave offset
+				int Octave_Note_Offset = (Current_Track->Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
+
+				// Get all three rastering methods
+				Export_MIDI_Track^ Export_Events = this->_MIDI_Event_Raster->Raster_Track_For_Export(Current_Track);
+				List<Playback_MIDI_Event^>^ Playback_Events = this->_MIDI_Event_Raster->Raster_Track_For_Playback(
+					Current_Track,
+					Track_Index,
+					Global_MIDI_Channel,
+					true // use_anti_flicker
+				);
+
+				// Get pre-rastered events from BarEvents
+				List<Playback_MIDI_Event^>^ PreRastered_Events = gcnew List<Playback_MIDI_Event^>();
+				for each (BarEvent ^ Bar in Current_Track->Events)
+				{
+					PreRastered_Events->AddRange(Bar->Playback_Rastered_Events);
+				}
+
+				// Write summary
+				Writer->WriteLine("Summary");
+				Writer->WriteLine("Export Events Count: Red {0}, Green {1} Blue {2]", Export_Events->Notes_Red->Count, Export_Events->Notes_Green->Count, Export_Events->Notes_Blue->Count);
+				Writer->WriteLine("Playback Events Count: {0}", Playback_Events->Count);
+				Writer->WriteLine("PreRastered Events Count: {0}", PreRastered_Events->Count);
+				Writer->WriteLine();
+
+				// Write detailed comparison table header
+				Writer->WriteLine("Event Index,Bar Index,Export Tick Start,Export Tick Length,Export Color R,Export Color G,Export Color B,Playback Timestamp (ms),Playback Tick,Playback Track ID,Playback Channel,Playback Command,Playback Data1 (Note),Playback Data2 (Velocity),PreRastered Timestamp (ms),PreRastered Tick,PreRastered Track ID,PreRastered Channel,PreRastered Command,PreRastered Data1 (Note),PreRastered Data2 (Velocity),Match Status,Notes");
+
+				// Determine maximum number of events to iterate
+				int Max_Export_Events = Export_Events->Count;
+				int Max_Playback_Events = Playback_Events->Count;
+				int Max_PreRastered_Events = PreRastered_Events->Count;
+
+				// Since Export events are at bar level and Playback/PreRastered are note events,
+				// we need to convert Export events to playback format for comparison
+				List<Playback_MIDI_Event^>^ Export_As_Playback = gcnew List<Playback_MIDI_Event^>();
+
+				for each (Export_MIDI_Event Export_Event in Export_Events)
+				{
+					uint8_t Value_Red = (Export_Event.Color.R >> 1);
+					uint8_t Value_Green = (Export_Event.Color.G >> 1);
+					uint8_t Value_Blue = (Export_Event.Color.B >> 1);
+
+					double Timestamp_Start_ms = this->_Timeline->TicksToMilliseconds(Export_Event.TickStart);
+					double Timestamp_End_ms = this->_Timeline->TicksToMilliseconds(Export_Event.TickStart + Export_Event.TickLength);
+
+					// Red channel
+					if (Value_Red > 0)
+					{
+						Playback_MIDI_Event^ Note_On = gcnew Playback_MIDI_Event();
+						Note_On->Timestamp_ms = Timestamp_Start_ms;
+						Note_On->Start_Tick = Export_Event.TickStart;
+						Note_On->Timeline_Track_ID = Track_Index;
+						Note_On->MIDI_Channel = Global_MIDI_Channel;
+						Note_On->MIDI_Command = 0x90;
+						Note_On->MIDI_Data1 = Octave_Note_Offset + Settings::Get_Instance()->MIDI_Note_Red;
+						Note_On->MIDI_Data2 = Value_Red;
+						Export_As_Playback->Add(Note_On);
+
+						Playback_MIDI_Event^ Note_Off = gcnew Playback_MIDI_Event();
+						Note_Off->Timestamp_ms = Timestamp_End_ms;
+						Note_Off->Start_Tick = Export_Event.TickStart + Export_Event.TickLength;
+						Note_Off->Timeline_Track_ID = Track_Index;
+						Note_Off->MIDI_Channel = Global_MIDI_Channel;
+						Note_Off->MIDI_Command = 0x80;
+						Note_Off->MIDI_Data1 = Octave_Note_Offset + Settings::Get_Instance()->MIDI_Note_Red;
+						Note_Off->MIDI_Data2 = 0;
+						Export_As_Playback->Add(Note_Off);
+					}
+
+					// Green channel
+					if (Value_Green > 0)
+					{
+						Playback_MIDI_Event^ Note_On = gcnew Playback_MIDI_Event();
+						Note_On->Timestamp_ms = Timestamp_Start_ms;
+						Note_On->Start_Tick = Export_Event.TickStart;
+						Note_On->Timeline_Track_ID = Track_Index;
+						Note_On->MIDI_Channel = Global_MIDI_Channel;
+						Note_On->MIDI_Command = 0x90;
+						Note_On->MIDI_Data1 = Octave_Note_Offset + Settings::Get_Instance()->MIDI_Note_Green;
+						Note_On->MIDI_Data2 = Value_Green;
+						Export_As_Playback->Add(Note_On);
+
+						Playback_MIDI_Event^ Note_Off = gcnew Playback_MIDI_Event();
+						Note_Off->Timestamp_ms = Timestamp_End_ms;
+						Note_Off->Start_Tick = Export_Event.TickStart + Export_Event.TickLength;
+						Note_Off->Timeline_Track_ID = Track_Index;
+						Note_Off->MIDI_Channel = Global_MIDI_Channel;
+						Note_Off->MIDI_Command = 0x80;
+						Note_Off->MIDI_Data1 = Octave_Note_Offset + Settings::Get_Instance()->MIDI_Note_Green;
+						Note_Off->MIDI_Data2 = 0;
+						Export_As_Playback->Add(Note_Off);
+					}
+
+					// Blue channel
+					if (Value_Blue > 0)
+					{
+						Playback_MIDI_Event^ Note_On = gcnew Playback_MIDI_Event();
+						Note_On->Timestamp_ms = Timestamp_Start_ms;
+						Note_On->Start_Tick = Export_Event.TickStart;
+						Note_On->Timeline_Track_ID = Track_Index;
+						Note_On->MIDI_Channel = Global_MIDI_Channel;
+						Note_On->MIDI_Command = 0x90;
+						Note_On->MIDI_Data1 = Octave_Note_Offset + Settings::Get_Instance()->MIDI_Note_Blue;
+						Note_On->MIDI_Data2 = Value_Blue;
+						Export_As_Playback->Add(Note_On);
+
+						Playback_MIDI_Event^ Note_Off = gcnew Playback_MIDI_Event();
+						Note_Off->Timestamp_ms = Timestamp_End_ms;
+						Note_Off->Start_Tick = Export_Event.TickStart + Export_Event.TickLength;
+						Note_Off->Timeline_Track_ID = Track_Index;
+						Note_Off->MIDI_Channel = Global_MIDI_Channel;
+						Note_Off->MIDI_Command = 0x80;
+						Note_Off->MIDI_Data1 = Octave_Note_Offset + Settings::Get_Instance()->MIDI_Note_Blue;
+						Note_Off->MIDI_Data2 = 0;
+						Export_As_Playback->Add(Note_Off);
+					}
+				}
+
+				// Now compare all three lists
+				int Max_Events = Math::Max(Math::Max(Export_As_Playback->Count, Playback_Events->Count), PreRastered_Events->Count);
+
+				for (int i = 0; i < Max_Events; i++)
+				{
+					System::Text::StringBuilder^ Row = gcnew System::Text::StringBuilder();
+
+					Row->Append(i.ToString() + ","); // Event Index
+
+					// Determine which bar this event belongs to
+					int Bar_Index = -1;
+					if (i < Export_As_Playback->Count)
+					{
+						int Event_Tick = Export_As_Playback[i]->Start_Tick;
+						for (int b = 0; b < Current_Track->Events->Count; b++)
+						{
+							if (Event_Tick >= Current_Track->Events[b]->StartTick &&
+								Event_Tick < Current_Track->Events[b]->StartTick + Current_Track->Events[b]->Duration)
+							{
+								Bar_Index = b;
+								break;
+							}
+						}
+					}
+					Row->Append(Bar_Index.ToString() + ",");
+
+					// Export data (converted to playback format)
+					if (i < Export_As_Playback->Count)
+					{
+						Playback_MIDI_Event^ E = Export_As_Playback[i];
+						Row->Append(E->Start_Tick.ToString() + ",");
+						Row->Append("-,"); // No direct length in playback format
+						Row->Append("-,"); // No direct color
+						Row->Append("-,");
+						Row->Append("-,");
+					}
+					else
+					{
+						Row->Append("-,-,-,-,-,");
+					}
+
+					// Playback data
+					if (i < Playback_Events->Count)
+					{
+						Playback_MIDI_Event^ P = Playback_Events[i];
+						String^ Command_Type = (P->MIDI_Command == 0x90) ? "Note On" : ((P->MIDI_Command == 0x80) ? "Note Off" : String::Format("0x{0:X2}", P->MIDI_Command));
+
+						Row->Append(String::Format("{0:F2},", P->Timestamp_ms));
+						Row->Append(P->Start_Tick.ToString() + ",");
+						Row->Append(P->Timeline_Track_ID.ToString() + ",");
+						Row->Append(P->MIDI_Channel.ToString() + ",");
+						Row->Append(Command_Type + ",");
+						Row->Append(P->MIDI_Data1.ToString() + ",");
+						Row->Append(P->MIDI_Data2.ToString() + ",");
+					}
+					else
+					{
+						Row->Append("-,-,-,-,-,-,-,");
+					}
+
+					// PreRastered data
+					if (i < PreRastered_Events->Count)
+					{
+						Playback_MIDI_Event^ PR = PreRastered_Events[i];
+						String^ Command_Type = (PR->MIDI_Command == 0x90) ? "Note On" : ((PR->MIDI_Command == 0x80) ? "Note Off" : String::Format("0x{0:X2}", PR->MIDI_Command));
+
+						Row->Append(String::Format("{0:F2},", PR->Timestamp_ms));
+						Row->Append(PR->Start_Tick.ToString() + ",");
+						Row->Append(PR->Timeline_Track_ID.ToString() + ",");
+						Row->Append(PR->MIDI_Channel.ToString() + ",");
+						Row->Append(Command_Type + ",");
+						Row->Append(PR->MIDI_Data1.ToString() + ",");
+						Row->Append(PR->MIDI_Data2.ToString() + ",");
+					}
+					else
+					{
+						Row->Append("-,-,-,-,-,-,-,");
+					}
+
+					// Match Status
+					String^ Match_Status = "";
+					String^ Notes = "";
+
+					if (i < Export_As_Playback->Count && i < Playback_Events->Count && i < PreRastered_Events->Count)
+					{
+						Playback_MIDI_Event^ E = Export_As_Playback[i];
+						Playback_MIDI_Event^ P = Playback_Events[i];
+						Playback_MIDI_Event^ PR = PreRastered_Events[i];
+
+						bool Match_EP = (E->MIDI_Command == P->MIDI_Command &&
+							E->MIDI_Data1 == P->MIDI_Data1 &&
+							E->MIDI_Data2 == P->MIDI_Data2 &&
+							E->Start_Tick == P->Start_Tick);
+
+						bool Match_EPR = (E->MIDI_Command == PR->MIDI_Command &&
+							E->MIDI_Data1 == PR->MIDI_Data1 &&
+							E->MIDI_Data2 == PR->MIDI_Data2 &&
+							E->Start_Tick == PR->Start_Tick);
+
+						bool Match_PPR = (P->MIDI_Command == PR->MIDI_Command &&
+							P->MIDI_Data1 == PR->MIDI_Data1 &&
+							P->MIDI_Data2 == PR->MIDI_Data2 &&
+							P->Start_Tick == PR->Start_Tick);
+
+						if (Match_EP && Match_EPR && Match_PPR)
+						{
+							Match_Status = "ALL MATCH";
+						}
+						else if (Match_PPR)
+						{
+							Match_Status = "Export differs";
+							Notes = "Playback and PreRastered match";
+						}
+						else if (Match_EP)
+						{
+							Match_Status = "PreRastered differs";
+							Notes = "Export and Playback match";
+						}
+						else
+						{
+							Match_Status = "MISMATCH";
+							Notes = "All three methods differ";
+						}
+					}
+					else if (i >= Export_As_Playback->Count || i >= Playback_Events->Count || i >= PreRastered_Events->Count)
+					{
+						Match_Status = "COUNT MISMATCH";
+						if (i >= Export_As_Playback->Count) Notes += "Export missing; ";
+						if (i >= Playback_Events->Count) Notes += "Playback missing; ";
+						if (i >= PreRastered_Events->Count) Notes += "PreRastered missing; ";
+					}
+
+					Row->Append(Match_Status + ",");
+					Row->Append(Notes);
+
+					Writer->WriteLine(Row->ToString());
+				}
+
+				Writer->WriteLine();
+				Writer->WriteLine();
+			}
+
+			Writer->Close();
+
+			MessageBox::Show("CSV export completed successfully!\n\nFile: " + Save_Dialog->FileName,
+				"Export Complete",
+				MessageBoxButtons::OK,
+				MessageBoxIcon::Information);
+			*/
+		}
+		catch (Exception^ ex)
+		{
+			MessageBox::Show("Failed to export CSV:\n" + ex->Message,
+				"Export Error",
+				MessageBoxButtons::OK,
+				MessageBoxIcon::Error);
+		}
 
 #endif
 	}

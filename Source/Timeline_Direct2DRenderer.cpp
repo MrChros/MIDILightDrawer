@@ -438,6 +438,9 @@ namespace MIDILightDrawer
                     continue;
                 }
 
+				// Draw state of mute and solo settings
+				DrawTrackMuteSolo(track, TrackContentBounds);
+
                 // Draw events and tablature
                 DrawTrackEvents(track, TrackContentBounds, currentTool);
 
@@ -709,6 +712,37 @@ namespace MIDILightDrawer
             MeasureNumber++;
         }
     }
+
+	void Timeline_Direct2DRenderer::DrawTrackMuteSolo(Track^ track, System::Drawing::Rectangle trackContentBounds)
+	{
+		if (!_NativeRenderer) {
+			return;
+		}
+		 
+		const int OffsetFromTop = 10;
+		const int StateBarHeight = 5;
+
+		System::Drawing::Rectangle StateBounds = System::Drawing::Rectangle(
+			trackContentBounds.Left,				// Left
+			trackContentBounds.Top + OffsetFromTop,	// Top
+			trackContentBounds.Width,				// Width
+			StateBarHeight							// Height
+		);
+
+		D2D1_RECT_F StateRect = RECT_TO_RECT_F(StateBounds);
+
+		if(track->IsSoloed) {
+			
+			_NativeRenderer->FillRectangle(StateRect, COLOR_TO_COLOR_F_A(Color::FromArgb(SOLOED_OVERLAY_COLOR), 1.0f));
+
+			StateRect.top += 10;
+			StateRect.bottom += 10;
+		}
+
+		if (track->IsMuted) {
+			_NativeRenderer->FillRectangle(StateRect, COLOR_TO_COLOR_F_A(Color::FromArgb(MUTED_OVERLAY_COLOR), 1.0f));
+		}
+	}
 
     void Timeline_Direct2DRenderer::DrawTrackEvents(Track^ track, System::Drawing::Rectangle trackContentBounds, TimelineToolType currentToolType)
     {

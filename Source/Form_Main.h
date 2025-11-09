@@ -36,6 +36,33 @@ using namespace System::Drawing;
 
 namespace MIDILightDrawer
 {
+	public ref struct MIDI_Writer_Event_Info
+	{
+		int Track_Index;
+		String^ Color;
+		uint32_t Start_Tick;
+		uint32_t Length_Ticks;
+		uint8_t Channel;
+		uint8_t Note;
+		uint8_t Velocity;
+		int Original_Color_Note_Index;
+	};
+
+	// Comparison function for sorting - define as a separate function
+	public ref class MIDI_Writer_Event_Comparer : System::Collections::Generic::IComparer<MIDI_Writer_Event_Info^>
+	{
+	public:
+		virtual int Compare(MIDI_Writer_Event_Info^ a, MIDI_Writer_Event_Info^ b)
+		{
+			if (a->Start_Tick != b->Start_Tick)
+				return a->Start_Tick.CompareTo(b->Start_Tick);
+			// If same start tick, sort by end tick
+			uint32_t a_end = a->Start_Tick + a->Length_Ticks;
+			uint32_t b_end = b->Start_Tick + b->Length_Ticks;
+			return a_end.CompareTo(b_end);
+		}
+	};
+	
 	public ref class Form_Main : public System::Windows::Forms::Form
 	{
 		public:
@@ -161,5 +188,6 @@ namespace MIDILightDrawer
 			// Debug Members
 			void Button_1_Click(System::Object^ sender, System::EventArgs^ e);
 			void Button_2_Click(System::Object^ sender, System::EventArgs^ e);
+			void Button_3_Click(System::Object^ sender, System::EventArgs^ e);
 	};
 }

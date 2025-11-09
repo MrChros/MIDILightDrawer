@@ -220,7 +220,7 @@ namespace MIDILightDrawer
 		}
 
 		// Sort events by time
-		std::sort(_Events.begin(), _Events.end(),
+		std::stable_sort(_Events.begin(), _Events.end(),
 			[](const MIDI_Event& a, const MIDI_Event& b) {
 				return a._delta_time < b._delta_time;
 			});

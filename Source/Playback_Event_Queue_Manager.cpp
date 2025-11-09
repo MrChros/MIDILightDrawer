@@ -65,13 +65,11 @@ namespace MIDILightDrawer
 			_Current_Muted_Tracks->Clear();
 			_Current_Soloed_Tracks->Clear();
 
-			if (muted_tracks)
-			{
+			if (muted_tracks) {
 				_Current_Muted_Tracks->AddRange(muted_tracks);
 			}
 
-			if (soloed_tracks)
-			{
+			if (soloed_tracks) {
 				_Current_Soloed_Tracks->AddRange(soloed_tracks);
 			}
 

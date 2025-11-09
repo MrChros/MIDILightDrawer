@@ -11,7 +11,7 @@ namespace MIDILightDrawer {
 	{
 	public:
 		static const uint8_t MIDI_EVENT_NOTE_ON = 0x90;
-		static const uint8_t MIDI_EVENT_NOTE_OF = 0x80;
+		static const uint8_t MIDI_EVENT_NOTE_OFF = 0x80;
 
 	private:
 		struct Measure

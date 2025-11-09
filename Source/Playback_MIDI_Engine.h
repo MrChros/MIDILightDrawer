@@ -13,7 +13,7 @@ namespace MIDILightDrawer
 	public ref struct Playback_MIDI_Event
 	{
 		double Timestamp_ms;
-		int Start_Tick;
+		int Tick;
 		int Timeline_Track_ID;
 		int MIDI_Channel;
 		unsigned char MIDI_Command;

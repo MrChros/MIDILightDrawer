@@ -37,28 +37,28 @@ namespace MIDILightDrawer
 		}
 
 		List<Export_MIDI_Track^>^ Timeline_Export_Events = _MIDI_Event_Raster->Raster_Timeline_For_Export();
-		for each(Export_MIDI_Track^ EMT in Timeline_Export_Events)
+		for each(Export_MIDI_Track^ Export_Track in Timeline_Export_Events)
 		{
-			int Octave = EMT->Track->Octave;
+			int Octave = Export_Track->Timeline_Track->Octave;
 			int Octave_Note_Offset = (Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
 
-			for each (Export_MIDI_Color_Note^ CN in EMT->Notes_Red) {
-				Writer.Add_Note(CN->TickStart - (uint32_t)CN->Is_Direct_Follower, CN->TickLength + (uint32_t)CN->Is_Direct_Follower, Settings->Global_MIDI_Output_Channel, Octave_Note_Offset + Settings->MIDI_Note_Red + (int)CN->Has_Offset, CN->Color_Value);
-			}
+			// CRITICAL FIX: Merge all color notes into a single sorted list to ensure proper ordering
+			List<Export_MIDI_Color_Note^>^ All_Notes = gcnew List<Export_MIDI_Color_Note^>();
 
-			for each (Export_MIDI_Color_Note^ CN in EMT->Notes_Green) {
-				Writer.Add_Note(CN->TickStart - (uint32_t)CN->Is_Direct_Follower, CN->TickLength + (uint32_t)CN->Is_Direct_Follower, Settings->Global_MIDI_Output_Channel, Octave_Note_Offset + Settings->MIDI_Note_Green + (int)CN->Has_Offset, CN->Color_Value);
-			}
+			All_Notes->AddRange(Export_Track->Notes_Red);
+			All_Notes->AddRange(Export_Track->Notes_Green);
+			All_Notes->AddRange(Export_Track->Notes_Blue);
 
-			for each (Export_MIDI_Color_Note^ CN in EMT->Notes_Blue) {
-				Writer.Add_Note(CN->TickStart - (uint32_t)CN->Is_Direct_Follower, CN->TickLength + (uint32_t)CN->Is_Direct_Follower, Settings->Global_MIDI_Output_Channel, Octave_Note_Offset + Settings->MIDI_Note_Blue + (int)CN->Has_Offset, CN->Color_Value);
-			}
+			// Sort all notes by tick start time to maintain proper ordering
+			All_Notes->Sort(gcnew Comparison<Export_MIDI_Color_Note^>(&MIDI_Exporter::Compare_Events_By_TickStart));
 
-			// Write all rastered events to MIDI file
-			//for each(Export_MIDI_Event EME in EMT->Events)
-			//{
-			//	WriteEventToMIDI(&Writer, EME, Octave_Note_Offset);
-			//}
+			// Now add notes to writer in chronological order
+			for each(Export_MIDI_Color_Note^ Note in All_Notes)
+			{
+				int Note_Number = Note->Base_Note_In_Octave + Octave_Note_Offset + (int)Note->Has_Offset;
+
+				Writer.Add_Note(Note->Tick_Start - (uint32_t)Note->Is_Direct_Follower, Note->Tick_Length + (uint32_t)Note->Is_Direct_Follower, Settings->Global_MIDI_Output_Channel, Note_Number, Note->Color_Value);
+			}
 		}
 
 		if (!Writer.Save_To_File(ConvertToStdString(filename))) {
@@ -86,7 +86,7 @@ namespace MIDILightDrawer
 		return Standard_String;
 	}
 
-	void MIDI_Exporter::WriteEventToMIDI(MIDI_Writer* writer, Export_MIDI_Event event, int octave_note_offset)
+	void MIDI_Exporter::WriteEventToMIDI(MIDI_Writer* writer, Raw_Rasterized_Event event, int octave_note_offset)
 	{
 		Settings^ Settings = Settings::Get_Instance();
 
@@ -104,6 +104,19 @@ namespace MIDILightDrawer
 
 		if (Value_Blue > 0) {
 			writer->Add_Note(event.TickStart, event.TickLength, Settings->Global_MIDI_Output_Channel, octave_note_offset + Settings->MIDI_Note_Blue, Value_Blue);
+		}
+	}
+
+	int MIDI_Exporter::Compare_Events_By_TickStart(Export_MIDI_Color_Note^ a, Export_MIDI_Color_Note^ b)
+	{
+		if (a->Tick_Start < b->Tick_Start) {
+			return -1;
+		}
+		else if (a->Tick_Start > b->Tick_Start) {
+			return 1;
+		}
+		else {
+			return 0;
 		}
 	}
 }

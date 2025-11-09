@@ -86,27 +86,6 @@ namespace MIDILightDrawer
 		return Standard_String;
 	}
 
-	void MIDI_Exporter::WriteEventToMIDI(MIDI_Writer* writer, Raw_Rasterized_Event event, int octave_note_offset)
-	{
-		Settings^ Settings = Settings::Get_Instance();
-
-		uint8_t Value_Red	= (event.Color.R >> 1);
-		uint8_t Value_Green = (event.Color.G >> 1);
-		uint8_t Value_Blue	= (event.Color.B >> 1);
-
-		if (Value_Red > 0) {
-			writer->Add_Note(event.TickStart, event.TickLength, Settings->Global_MIDI_Output_Channel, octave_note_offset + Settings->MIDI_Note_Red, Value_Red);
-		}
-
-		if (Value_Green > 0) {
-			writer->Add_Note(event.TickStart, event.TickLength, Settings->Global_MIDI_Output_Channel, octave_note_offset + Settings->MIDI_Note_Green, Value_Green);
-		}
-
-		if (Value_Blue > 0) {
-			writer->Add_Note(event.TickStart, event.TickLength, Settings->Global_MIDI_Output_Channel, octave_note_offset + Settings->MIDI_Note_Blue, Value_Blue);
-		}
-	}
-
 	int MIDI_Exporter::Compare_Events_By_TickStart(Export_MIDI_Color_Note^ a, Export_MIDI_Color_Note^ b)
 	{
 		if (a->Tick_Start < b->Tick_Start) {

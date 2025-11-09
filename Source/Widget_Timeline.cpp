@@ -103,20 +103,21 @@ namespace MIDILightDrawer
 
 	Beat^ Widget_Timeline::AddBeat(Track^ track, int measureIndex, int startTick, int durationInTicks, bool is_dotted)
 	{
-		if (track == nullptr || measureIndex < 0 || measureIndex >= track->Measures->Count)
+		if (track == nullptr || measureIndex < 0 || measureIndex >= track->Measures->Count) {
 			return nullptr;
+		}
 
-		Beat^ beat = gcnew Beat();
-		beat->Track = track;
-		beat->StartTick = startTick - INITIAL_TICK_OFFSET;
-		beat->Duration = durationInTicks;
-		beat->IsDotted = is_dotted;
+		Beat^ New_Beat = gcnew Beat();
+		New_Beat->Track = track;
+		New_Beat->StartTick = startTick - INITIAL_TICK_OFFSET;
+		New_Beat->Duration = durationInTicks;
+		New_Beat->IsDotted = is_dotted;
 
-		TrackMeasure^ measure = track->Measures[measureIndex];
-		measure->AddBeat(beat);
+		TrackMeasure^ Measure = track->Measures[measureIndex];
+		Measure->AddBeat(New_Beat);
 
 		Invalidate();
-		return beat;
+		return New_Beat;
 	}
 
 	void Widget_Timeline::AddNote(Beat^ beat, int stringNumber, int value, bool is_tied)

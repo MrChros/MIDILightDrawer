@@ -134,7 +134,7 @@ namespace MIDILightDrawer
 		SettingsMIDI_On_Settings_Accepted();
 
 		// Initialize playback system
-		Initialize_Playback_System();
+		InitializePlaybackSystem();
 	}
 
 	Form_Main::~Form_Main()
@@ -145,7 +145,7 @@ namespace MIDILightDrawer
 			delete _Playback_Update_Timer;
 		}
 
-		Shutdown_Playback_System();
+		ShutdownPlaybackSystem();
 	}
 
 	void Form_Main::InitializeBottomControls(Panel^ container)
@@ -302,6 +302,15 @@ namespace MIDILightDrawer
 		Menu_File_Save_Light->ShortcutKeys = Keys::Control | Keys::S;
 		Menu_File_Save_Light->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Save_Light_Click);
 
+		// File -> Open Audio File
+		ToolStripMenuItem^ Menu_Audio_Open_File = gcnew ToolStripMenuItem("Open Audio File (WAV/MP3)");
+		Menu_Audio_Open_File->ShortcutKeys = Keys::Control | Keys::Shift | Keys::A;
+		Menu_Audio_Open_File->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Audio_Open_File_Click);
+
+		// File -> Clear Audio File
+		ToolStripMenuItem^ Menu_Audio_Clear_File = gcnew ToolStripMenuItem("Clear Audio File");
+		Menu_Audio_Clear_File->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Audio_Clear_File_Click);
+
 		// File -> Export MIDI
 		ToolStripMenuItem^ Menu_File_Export_MIDI = gcnew ToolStripMenuItem("Export to MIDI File");
 		Menu_File_Export_MIDI->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Midi")));
@@ -315,10 +324,14 @@ namespace MIDILightDrawer
 
 		// Build File menu
 		Menu_File->DropDownItems->Add(Menu_File_Open_GP);
+		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Open_Light);
 		Menu_File->DropDownItems->Add(Menu_File_Open_Light_Special);
-		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Save_Light);
+		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
+		Menu_File->DropDownItems->Add(Menu_Audio_Open_File);
+		Menu_File->DropDownItems->Add(Menu_Audio_Clear_File);
+		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Export_MIDI);
 		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Exit);
@@ -473,13 +486,16 @@ namespace MIDILightDrawer
 	#endif
 	}
 
-	void Form_Main::Initialize_Playback_System()
+	void Form_Main::InitializePlaybackSystem()
 	{
 		try
 		{
 			// Create Playback_Manager
 			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline, this->_MIDI_Event_Raster);
 			this->_Timeline->SetPlaybackManager(this->_Playback_Manager);
+
+			// Create Audi File _Manager
+			_Playback_Audio_File_Manager = gcnew Playback_Audio_File_Manager();
 
 			Device_Manager^ Devices = gcnew Device_Manager();
 			Devices->Enumerate_All_Devices();
@@ -531,7 +547,7 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Form_Main::Shutdown_Playback_System()
+	void Form_Main::ShutdownPlaybackSystem()
 	{
 		if (_Playback_Manager != nullptr)
 		{
@@ -539,6 +555,12 @@ namespace MIDILightDrawer
 			_Playback_Manager->Cleanup();
 			delete _Playback_Manager;
 			_Playback_Manager = nullptr;
+		}
+
+		if (_Playback_Audio_File_Manager != nullptr) {
+			_Playback_Audio_File_Manager->ClearAudioFile();
+			delete _Playback_Audio_File_Manager;
+			_Playback_Audio_File_Manager = nullptr;
 		}
 	}
 
@@ -732,6 +754,102 @@ namespace MIDILightDrawer
 			else {
 				MessageBox::Show(this, "Error:\n" + ErrorMessage, "Failed to save light information to file", MessageBoxButtons::OK, MessageBoxIcon::Error);
 			}
+		}
+	}
+
+	void Form_Main::Menu_Audio_Open_File_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		OpenFileDialog^ Open_Dialog = gcnew OpenFileDialog();
+		Open_Dialog->InitialDirectory = ".";
+		Open_Dialog->Filter = "Audio Files (*.wav;*.mp3)|*.wav;*.mp3|WAV Files (*.wav)|*.wav|MP3 Files (*.mp3)|*.mp3|All Files (*.*)|*.*";
+		Open_Dialog->RestoreDirectory = true;
+		Open_Dialog->Title = "Select Audio File for Playback";
+
+		if (Open_Dialog->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+		{
+			String^ File_Path = Open_Dialog->FileName;
+			String^ Error_Message = String::Empty;
+
+			// Show loading indicator (optional)
+			this->Cursor = System::Windows::Forms::Cursors::WaitCursor;
+
+			bool Success = _Playback_Audio_File_Manager->LoadAudioFile(File_Path, Error_Message);
+
+			if (Success)
+			{
+				// Pre-calculate waveform data for visualization
+				// Using 100 segments per second for smooth visualization
+				_Playback_Audio_File_Manager->CalculateWaveformData(100);
+
+				// Update the timeline to show the audio track
+				if (_Timeline != nullptr)
+				{
+					// ToDo
+					//_Timeline->SetAudioFileManager(_Audio_File_Manager);
+				}
+
+				// Update playback manager with audio data
+				if (_Playback_Manager != nullptr)
+				{
+					_Playback_Manager->Set_Audio_File_Manager(this->_Playback_Audio_File_Manager);
+				}
+
+				// Show success message in status bar or similar
+				System::IO::FileInfo^ File_Info = gcnew System::IO::FileInfo(File_Path);
+				String^ Success_Message = String::Format(
+					"Audio file loaded: {0} ({1:F2} seconds, {2} Hz, {3} channels)",
+					File_Info->Name,
+					_Playback_Audio_File_Manager->DurationMilliseconds / 1000.0,
+					_Playback_Audio_File_Manager->SampleRate,
+					_Playback_Audio_File_Manager->ChannelCount
+				);
+
+				// If you have a status bar, update it here:
+				// this->_StatusBar->Text = Success_Message;
+
+				// Or show a brief message box:
+				MessageBox::Show(this, Success_Message, "Audio File Loaded", MessageBoxButtons::OK, MessageBoxIcon::Information);
+			}
+			else
+			{
+				MessageBox::Show(this, "Failed to load audio file:\n" + Error_Message, "Audio Load Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
+			}
+
+			this->Cursor = System::Windows::Forms::Cursors::Default;
+		}
+	}
+
+	void Form_Main::Menu_Audio_Clear_File_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		if (_Playback_Audio_File_Manager != nullptr && _Playback_Audio_File_Manager->HasAudioFile)
+		{
+			// Ask for confirmation
+			System::Windows::Forms::DialogResult Result = MessageBox::Show(this, "Are you sure you want to clear the loaded audio file?", "Clear Audio File", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
+
+			if (Result == System::Windows::Forms::DialogResult::Yes)
+			{
+				_Playback_Audio_File_Manager->ClearAudioFile();
+
+				// Update timeline to remove audio track
+				if (_Timeline != nullptr)
+				{
+					// ToDo
+					//_Timeline->_Playback_Audio_File_Manager(nullptr);
+				}
+
+				// Update playback manager
+				if (_Playback_Manager != nullptr)
+				{
+					_Playback_Manager->Set_Audio_File_Manager(nullptr);
+				}
+
+				// Show confirmation in status bar or message
+				// this->_StatusBar->Text = "Audio file cleared";
+			}
+		}
+		else
+		{
+			MessageBox::Show(this, "No audio file is currently loaded.", "Clear Audio File", MessageBoxButtons::OK, MessageBoxIcon::Information);
 		}
 	}
 
@@ -1164,7 +1282,7 @@ namespace MIDILightDrawer
 
 	void Form_Main::SettingsDevice_On_Settings_Changed()
 	{
-		Initialize_Playback_System();
+		InitializePlaybackSystem();
 	}
 
 	void Form_Main::DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)

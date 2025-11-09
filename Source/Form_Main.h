@@ -9,6 +9,7 @@
 #include "MIDI_Event_Raster.h"
 #include "Hotkey_Manager.h"
 #include "Playback_Manager.h"
+#include "Playback_Audio_File_Manager.h"
 
 #include "Control_DropDown.h"
 #include "Control_Trackbar_Zoom.h"
@@ -109,6 +110,7 @@ namespace MIDILightDrawer
 			MIDI_Event_Raster^					_MIDI_Event_Raster;
 
 			Playback_Manager^					_Playback_Manager;
+			Playback_Audio_File_Manager^		_Playback_Audio_File_Manager;
 			System::Windows::Forms::Timer^		_Playback_Update_Timer;
 
 			Dictionary<String^, Keys>^			_Active_Hotkeys;
@@ -118,16 +120,19 @@ namespace MIDILightDrawer
 			void InitializeToolOptions();
 			void InitializeMainMenu();
 			void InitializeDebugButtons();
-			void Initialize_Playback_System();
-			void Shutdown_Playback_System();
+			void InitializePlaybackSystem();
+			void ShutdownPlaybackSystem();
 
 			// Menu Callbacks
 			void Menu_File_Open_GP_Click(Object^ sender, System::EventArgs^ e);
 			void Menu_File_Open_Light_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Open_Light_Special_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Save_Light_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Audio_Open_File_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Audio_Clear_File_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Export_MIDI_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e);
+
 			void Menu_Edit_Undo_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_UndoHistory_Click(Object^ sender, EventArgs^ e);
 			void Menu_Edit_Redo_Click(System::Object^ sender, System::EventArgs^ e);
@@ -135,6 +140,7 @@ namespace MIDILightDrawer
 			void Menu_Edit_Paste_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_Delete_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_BatchAction_Click(System::Object^ sender, System::EventArgs^ e);
+
 			void Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Device_Click(System::Object^ sender, System::EventArgs^ e);

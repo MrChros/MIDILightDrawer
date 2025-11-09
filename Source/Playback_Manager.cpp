@@ -3,6 +3,7 @@
 
 #include "Settings.h"
 #include "MIDI_Event_Raster.h"
+#include "Playback_Audio_File_Manager.h"
 #include "Playback_Event_Queue_Manager.h"
 
 namespace MIDILightDrawer
@@ -11,6 +12,7 @@ namespace MIDILightDrawer
 	{
 		_Timeline = timeline;
 		_MIDI_Event_Raster = midi_event_raster;
+		_Audio_File_Manager = nullptr;
 		
 		_MIDI_Engine = gcnew Playback_MIDI_Engine();
 		_Audio_Engine = gcnew Playback_Audio_Engine();
@@ -55,9 +57,14 @@ namespace MIDILightDrawer
 		_Audio_Engine->Cleanup();
 	}
 
-	bool Playback_Manager::Load_Audio_File(String^ file_path)
+	void Playback_Manager::Set_Audio_File_Manager(Playback_Audio_File_Manager^ audio_manager)
 	{
-		return _Audio_Engine->Load_Audio_File(file_path);
+		_Audio_File_Manager = audio_manager;
+
+		if (_Audio_Engine != nullptr && audio_manager != nullptr && audio_manager->HasAudioFile)
+		{
+			_Audio_Engine->Load_Audio_File(audio_manager->FilePath);
+		}
 	}
 
 	void Playback_Manager::Unload_Audio_File()
@@ -99,24 +106,31 @@ namespace MIDILightDrawer
 			// Set MIDI engine position before starting
 			_MIDI_Engine->Set_Current_Position_Ms(_Playback_Position_ms);
 
-			// Set audio engine position (if loaded)
-			if (Is_Audio_Loaded()) {
+			if (HasAudio && _Audio_Engine != nullptr)
+			{
+				// Audio engine can access the native PCM data directly
+				// through Playback_Audio_File_Manager_Native
+
+				// Calculate starting position in audio file based on current cursor position
+				//double Start_Time_Ms = CalculateAudioTimeFromBarPosition(_Current_Bar_Position);
+
 				_Audio_Engine->Seek_To_Position(_Playback_Position_ms);
+				_Audio_Engine->Start_Playback();
 			}
 
 			// Start MIDI playback thread (MIDI is the master clock)
 			Success &= _MIDI_Engine->Start_Playback();
 
 			// Start audio if loaded
-			if (Is_Audio_Loaded())
-			{
-				if (_Current_State == Playback_State::Paused) {
-					Success &= _Audio_Engine->Resume_Playback();
-				}
-				else {
-					Success &= _Audio_Engine->Start_Playback();
-				}
-			} 
+			//if (Is_Audio_Loaded())
+			//{
+			//	if (_Current_State == Playback_State::Paused) {
+			//		Success &= _Audio_Engine->Resume_Playback();
+			//	}
+			//	else {
+			//		Success &= _Audio_Engine->Start_Playback();
+			//	}
+			//} 
 
 			if (Success) {
 				_Current_State = Playback_State::Playing;
@@ -356,5 +370,37 @@ namespace MIDILightDrawer
 			Success &= _MIDI_Engine->Send_All_Notes_Off(i);
 		}
 		return Success;
+	}
+
+	double Playback_Manager::CalculateAudioTimeFromBarPosition(int bar_position)
+	{
+		// Get first measure to find tempo
+		if (_Timeline->Measures->Count == 0) {
+			return 0.0;
+		}
+
+		// Get tempo from first measure (adjust if you have tempo changes)
+		Measure^ First_Measure = _Timeline->Measures[0];
+		int BPM = First_Measure->Tempo;
+
+		if (BPM <= 0) {
+			return 0.0;
+		}
+
+		// Calculate time per bar
+		// Assuming 4/4 time signature (4 beats per bar)
+		double Beats_Per_Bar = 4.0;
+		double Minutes_Per_Beat = 1.0 / (double)BPM;
+		double Seconds_Per_Bar = (Minutes_Per_Beat * Beats_Per_Bar) * 60.0;
+
+		// Calculate total time in milliseconds
+		double Total_Time_Ms = (bar_position * Seconds_Per_Bar) * 1000.0;
+
+		return Total_Time_Ms;
+	}
+
+	bool Playback_Manager::HasAudio::get()
+	{
+			return _Audio_File_Manager != nullptr && _Audio_File_Manager->HasAudioFile;
 	}
 }

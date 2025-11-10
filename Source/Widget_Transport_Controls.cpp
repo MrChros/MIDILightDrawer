@@ -26,7 +26,7 @@ namespace MIDILightDrawer
 	{
 		TableLayoutPanel^ Layout = gcnew TableLayoutPanel();
 		Layout->Dock = DockStyle::Fill;
-		Layout->ColumnCount = 9;
+		Layout->ColumnCount = 10;
 		Layout->RowCount = 1;
 
 		const int BUTTON = 50;
@@ -42,6 +42,7 @@ namespace MIDILightDrawer
 		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Play/Pause
 		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Fast-Forward
 		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, BUTTON));	// Move to End
+		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
 		
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.f));
 

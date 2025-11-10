@@ -222,6 +222,12 @@
     <ClInclude Include="Playback_Audio_File_Manager_Native.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Widget_Audio_Container.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget_Audio_Waveform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIDI_Light_Drawer.cpp">
@@ -420,6 +426,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Playback_Audio_File_Manager_Native.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Widget_Audio_Container.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Widget_Audio_Waveform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

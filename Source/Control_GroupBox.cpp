@@ -14,42 +14,38 @@ namespace MIDILightDrawer
 
 	void Control_GroupBox::OnPaint(PaintEventArgs^ e)
 	{
-		Theme_Manager^ theme = Theme_Manager::Get_Instance();
+		Theme_Manager^ Theme = Theme_Manager::Get_Instance();
 
-		Graphics^ g = e->Graphics;
-		g->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
+		Graphics^ G = e->Graphics;
+		G->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 
 		// Calculate text size and positions
-		Drawing::Font^ titleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
-		SizeF textSize = g->MeasureString(this->Text, titleFont);
+		Drawing::Font^ TitleFont = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
+		SizeF TextSize = G->MeasureString(this->Text, TitleFont);
 
 		// Define header rect
-		Rectangle headerRect = Rectangle(0, 0, this->Width, 28);
+		Rectangle HeaderRect = Rectangle(0, 0, this->Width, 28);
 
 		// Draw header background with gradient
-		Drawing2D::LinearGradientBrush^ headerBrush = gcnew Drawing2D::LinearGradientBrush(
-			headerRect,
-			theme->BackgroundAlt,
-			theme->Background,
-			Drawing2D::LinearGradientMode::Vertical);
+		Drawing2D::LinearGradientBrush^ HeaderBrush = gcnew Drawing2D::LinearGradientBrush(HeaderRect, Theme->BackgroundAlt, Theme->Background, Drawing2D::LinearGradientMode::Vertical);
 
-		g->FillRectangle(headerBrush, headerRect);
+		G->FillRectangle(HeaderBrush, HeaderRect);
 
 		// Draw title
-		g->DrawString(this->Text, titleFont, gcnew SolidBrush(theme->ForegroundText), Point(12, 6));
+		G->DrawString(this->Text, TitleFont, gcnew SolidBrush(Theme->ForegroundText), Point(12, 6));
 
 		// Draw border
-		Pen^ borderPen = gcnew Pen(theme->BorderStrong);
-		g->DrawRectangle(borderPen, 0, 0, this->Width - 1, this->Height - 1);
+		Pen^ BorderPen = gcnew Pen(Theme->BorderStrong);
+		G->DrawRectangle(BorderPen, 0, 0, this->Width - 1, this->Height - 1);
 
 		// Draw header bottom line with accent
-		Pen^ accentPen = gcnew Pen(theme->AccentPrimary, 1);
-		g->DrawLine(accentPen, 0, headerRect.Bottom, this->Width, headerRect.Bottom);
+		Pen^ AccentPen = gcnew Pen(Theme->AccentPrimary, 1);
+		G->DrawLine(AccentPen, 0, HeaderRect.Bottom, this->Width, HeaderRect.Bottom);
 
 		// Clean up
-		delete headerBrush;
-		delete borderPen;
-		delete accentPen;
-		delete titleFont;
+		delete HeaderBrush;
+		delete BorderPen;
+		delete AccentPen;
+		delete TitleFont;
 	}
 }

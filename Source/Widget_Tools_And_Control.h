@@ -19,8 +19,6 @@ using namespace System::Drawing;
 #include "Widget_Strobe_Options.h"
 #include "Widget_Bucket_Options.h"
 
-#include "Widget_Transport_Controls.h"
-
 namespace MIDILightDrawer {
 
 	public ref class Widget_Tools_And_Control : public System::Windows::Forms::UserControl

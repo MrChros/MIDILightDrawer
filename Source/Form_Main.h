@@ -19,6 +19,8 @@
 #include "Widget_Timeline.h"
 #include "Widget_Timeline_Tools.h"
 #include "Widget_Timeline_Common.h"
+#include "Widget_Audio_Container.h"
+#include "Widget_Transport_Controls.h"
 
 #include "Form_BatchAction.h"
 #include "Form_Light_Import.h"
@@ -105,6 +107,7 @@ namespace MIDILightDrawer
 			Widget_Fade_Options^				_Fade_Options;
 			Widget_Strobe_Options^				_Strobe_Options;
 			Widget_Bucket_Options^				_Bucket_Options;
+			Widget_Audio_Container^				_Audio_Container;
 
 			MIDI_Exporter^						_MIDI_Exporter;
 			MIDI_Event_Raster^					_MIDI_Event_Raster;

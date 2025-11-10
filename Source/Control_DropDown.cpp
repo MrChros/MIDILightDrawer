@@ -118,25 +118,27 @@ namespace MIDILightDrawer
 		g->DrawRectangle(gcnew Pen(_Dropdown_Border), 0, 0, bounds.Width - 1, bounds.Height - 1);
 
 		// Draw items
-		for (int i = 0; i < _First_Lines->Length; i++) {
-			Rectangle tile_bounds = Get_Tile_Bounds(i);
-			tile_bounds.Inflate(-2, -2);  // Add padding
+		if(_First_Lines) {
+			for (int i = 0; i < _First_Lines->Length; i++) {
+				Rectangle tile_bounds = Get_Tile_Bounds(i);
+				tile_bounds.Inflate(-2, -2);  // Add padding
 
-			// Draw highlight for hovered item
-			if (i == _Highlight_Index) {
-				Rectangle highlight_bounds = tile_bounds;
-				highlight_bounds.Inflate(-2, -2);
-				g->FillRectangle(gcnew SolidBrush(_Hover_Color), highlight_bounds);
+				// Draw highlight for hovered item
+				if (i == _Highlight_Index) {
+					Rectangle highlight_bounds = tile_bounds;
+					highlight_bounds.Inflate(-2, -2);
+					g->FillRectangle(gcnew SolidBrush(_Hover_Color), highlight_bounds);
+				}
+
+				// Draw selection for selected item
+				if (i == _Selected_Index) {
+					Rectangle select_bounds = tile_bounds;
+					select_bounds.Inflate(-2, -2);
+					g->FillRectangle(gcnew SolidBrush(_Selected_Color), select_bounds);
+				}
+
+				Draw_Item(g, i, tile_bounds, i == _Highlight_Index, false);
 			}
-
-			// Draw selection for selected item
-			if (i == _Selected_Index) {
-				Rectangle select_bounds = tile_bounds;
-				select_bounds.Inflate(-2, -2);
-				g->FillRectangle(gcnew SolidBrush(_Selected_Color), select_bounds);
-			}
-
-			Draw_Item(g, i, tile_bounds, i == _Highlight_Index, false);
 		}
 	}
 

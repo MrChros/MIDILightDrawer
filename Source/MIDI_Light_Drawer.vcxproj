@@ -188,6 +188,8 @@
     <ClInclude Include="Timeline_Direct2DRenderer_Native.h" />
     <ClInclude Include="Timeline_Performance_Metrics.h" />
     <ClInclude Include="Timeline_Tool_Interface.h" />
+    <ClInclude Include="Widget_Audio_Container.h" />
+    <ClInclude Include="Widget_Audio_Waveform.h" />
     <ClInclude Include="Widget_Bucket_Options.h" />
     <ClInclude Include="Widget_Color_Options.h" />
     <ClInclude Include="Widget_Draw_Options.h" />
@@ -264,6 +266,8 @@
     <ClCompile Include="Timeline_Direct2DRenderer_CommandBatch.cpp" />
     <ClCompile Include="Timeline_Direct2DRenderer_Native.cpp" />
     <ClCompile Include="Timeline_Performance_Metrics.cpp" />
+    <ClCompile Include="Widget_Audio_Container.cpp" />
+    <ClCompile Include="Widget_Audio_Waveform.cpp" />
     <ClCompile Include="Widget_Bucket_Options.cpp" />
     <ClCompile Include="Widget_Color_Options.cpp" />
     <ClCompile Include="Widget_Fade_Options.cpp" />

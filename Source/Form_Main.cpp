@@ -12,8 +12,8 @@ namespace MIDILightDrawer
 	{
 		// Basic form setup with modern styling
 		this->Text			= "MIDI Light Drawer";
-		this->Size			= System::Drawing::Size(1200, 800);
 		this->MinimumSize	= System::Drawing::Size(1200, 800);
+		this->Size			= System::Drawing::Size(1400, 1000);
 		this->Padding		= System::Windows::Forms::Padding(1); // Border padding
 		this->StartPosition = FormStartPosition::CenterScreen;
 		this->_GP_Tab		= NULL;
@@ -36,11 +36,12 @@ namespace MIDILightDrawer
 		Table_Layout_Main->BackColor = Theme_Manager::Get_Instance()->Background;
 
 		// Configure table layout
-		Table_Layout_Main->RowCount = 3;
+		Table_Layout_Main->RowCount = 4;
 		Table_Layout_Main->ColumnCount = 1;
 
 		// Configure row styles with better proportions
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 260)); // Tools section
+		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 150)); // Audio section
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100));  // Timeline
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 60));  // Bottom controls
 
@@ -48,11 +49,11 @@ namespace MIDILightDrawer
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
 
 		// Create tools container with styling
-		Panel^ toolsContainer = gcnew Panel();
-		toolsContainer->Dock = DockStyle::Fill;
-		toolsContainer->Padding = System::Windows::Forms::Padding(0, 0, 0, 10);
-		toolsContainer->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
-		toolsContainer->BorderStyle = BorderStyle::FixedSingle;
+		Panel^ ToolsContainer = gcnew Panel();
+		ToolsContainer->Dock = DockStyle::Fill;
+		ToolsContainer->Padding = System::Windows::Forms::Padding(0, 0, 0, 10);
+		ToolsContainer->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
+		ToolsContainer->BorderStyle = BorderStyle::FixedSingle;
 
 
 		////////////////////////
@@ -61,10 +62,10 @@ namespace MIDILightDrawer
 		this->_Tools_And_Control = gcnew Widget_Tools_And_Control();
 		this->_Tools_And_Control->Dock = DockStyle::Fill;
 		this->_Tools_And_Control->Margin = System::Windows::Forms::Padding(10);
-		toolsContainer->Controls->Add(this->_Tools_And_Control);
+		ToolsContainer->Controls->Add(this->_Tools_And_Control);
 
-		Table_Layout_Main->Controls->Add(toolsContainer, 0, 0);
-		Table_Layout_Main->SetColumnSpan(toolsContainer, Table_Layout_Main->ColumnCount);
+		Table_Layout_Main->Controls->Add(ToolsContainer, 0, 0);
+		Table_Layout_Main->SetColumnSpan(ToolsContainer, Table_Layout_Main->ColumnCount);
 
 		// Initialize toolbar and connect events
 		this->_Toolbar = this->_Tools_And_Control->Get_Widget_Toolbar();
@@ -72,6 +73,19 @@ namespace MIDILightDrawer
 
 		// Get transport controls reference
 		this->_Tab_Info = this->_Tools_And_Control->Get_Widget_Tab_Info();
+
+
+		///////////////////
+		// Audio Section //
+		///////////////////
+		this->_Audio_Container = gcnew Widget_Audio_Container();
+		this->_Audio_Container->Dock = DockStyle::Fill;
+		this->_Audio_Container->Padding = System::Windows::Forms::Padding(0);
+		this->_Audio_Container->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
+		this->_Audio_Container->BorderStyle = BorderStyle::FixedSingle;
+
+		Table_Layout_Main->Controls->Add(this->_Audio_Container, 0, 1);
+		Table_Layout_Main->SetColumnSpan(this->_Audio_Container, Table_Layout_Main->ColumnCount);
 
 		
 		//////////////////////
@@ -90,7 +104,7 @@ namespace MIDILightDrawer
 		this->_Timeline->CommandManager()->CommandStateChanged += gcnew TimelineCommandManager::CommandStateChangedHandler(this, &Form_Main::UpdateUndoRedoState);
 		TimelineContainer->Controls->Add(this->_Timeline);
 
-		Table_Layout_Main->Controls->Add(TimelineContainer, 0, 1);
+		Table_Layout_Main->Controls->Add(TimelineContainer, 0, 2);
 		Table_Layout_Main->SetColumnSpan(TimelineContainer, Table_Layout_Main->ColumnCount);
 
 		// Initialize other tool options
@@ -107,7 +121,7 @@ namespace MIDILightDrawer
 
 		// Configure and add bottom controls
 		InitializeBottomControls(bottomControlsPanel);
-		Table_Layout_Main->Controls->Add(bottomControlsPanel, 0, 2);
+		Table_Layout_Main->Controls->Add(bottomControlsPanel, 0, 3);
 		Table_Layout_Main->SetColumnSpan(bottomControlsPanel, Table_Layout_Main->ColumnCount);
 
 		mainContainer->Controls->Add(Table_Layout_Main);
@@ -493,6 +507,7 @@ namespace MIDILightDrawer
 			// Create Playback_Manager
 			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline, this->_MIDI_Event_Raster);
 			this->_Timeline->SetPlaybackManager(this->_Playback_Manager);
+			this->_Audio_Container->Set_Playback_Manager(this->_Playback_Manager);
 
 			// Create Audi File _Manager
 			_Playback_Audio_File_Manager = gcnew Playback_Audio_File_Manager();
@@ -779,36 +794,22 @@ namespace MIDILightDrawer
 			{
 				// Pre-calculate waveform data for visualization
 				// Using 100 segments per second for smooth visualization
-				_Playback_Audio_File_Manager->CalculateWaveformData(100);
+				_Playback_Audio_File_Manager->CalculateWaveformData(500);
 
 				// Update the timeline to show the audio track
-				if (_Timeline != nullptr)
-				{
+				if (_Timeline != nullptr) {
 					// ToDo
 					//_Timeline->SetAudioFileManager(_Audio_File_Manager);
 				}
 
 				// Update playback manager with audio data
-				if (_Playback_Manager != nullptr)
-				{
+				if (_Playback_Manager != nullptr) {
 					_Playback_Manager->Set_Audio_File_Manager(this->_Playback_Audio_File_Manager);
 				}
 
-				// Show success message in status bar or similar
-				System::IO::FileInfo^ File_Info = gcnew System::IO::FileInfo(File_Path);
-				String^ Success_Message = String::Format(
-					"Audio file loaded: {0} ({1:F2} seconds, {2} Hz, {3} channels)",
-					File_Info->Name,
-					_Playback_Audio_File_Manager->DurationMilliseconds / 1000.0,
-					_Playback_Audio_File_Manager->SampleRate,
-					_Playback_Audio_File_Manager->ChannelCount
-				);
-
-				// If you have a status bar, update it here:
-				// this->_StatusBar->Text = Success_Message;
-
-				// Or show a brief message box:
-				MessageBox::Show(this, Success_Message, "Audio File Loaded", MessageBoxButtons::OK, MessageBoxIcon::Information);
+				if (_Audio_Container != nullptr) {
+					_Audio_Container->Set_Audio_File_Manager(this->_Playback_Audio_File_Manager);
+				}
 			}
 			else
 			{
@@ -841,6 +842,10 @@ namespace MIDILightDrawer
 				if (_Playback_Manager != nullptr)
 				{
 					_Playback_Manager->Set_Audio_File_Manager(nullptr);
+				}
+
+				if (_Audio_Container != nullptr) {
+					_Audio_Container->Set_Audio_File_Manager(nullptr);
 				}
 
 				// Show confirmation in status bar or message
@@ -1529,6 +1534,7 @@ namespace MIDILightDrawer
 			_Transport_Controls->Moved_To_End)
 		{
 			this->_Timeline->AutoScrollForPlayback(_Transport_Controls->AutoScroll_Enabled);
+			this->_Audio_Container->Update_Cursor();
 		}
 	}
 

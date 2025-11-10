@@ -31,6 +31,7 @@ namespace MIDILightDrawer
 	float* Playback_Audio_Engine_Native::_Audio_Buffer = nullptr;
 	int Playback_Audio_Engine_Native::_Buffer_Size_Samples = 0;
 	int Playback_Audio_Engine_Native::_Sample_Rate = 44100;
+	int Playback_Audio_Engine_Native::_File_Sample_Rate = 44100;
 	int Playback_Audio_Engine_Native::_Num_Channels = 2;
 	std::atomic<double> Playback_Audio_Engine_Native::_Current_Position_Ms(0.0);
 	double Playback_Audio_Engine_Native::_Audio_Duration_Ms = 0.0;
@@ -67,6 +68,40 @@ namespace MIDILightDrawer
 		_Is_Initialized = false;
 	}
 
+	std::vector<float> Playback_Audio_Engine_Native::Resample_Audio_Linear(const std::vector<float>& input_buffer, int input_sample_rate, int output_sample_rate, int num_channels)
+	{
+		if (input_sample_rate == output_sample_rate) {
+			return input_buffer; // No resampling needed
+		}
+
+		int64_t Input_Samples = input_buffer.size() / num_channels;
+		double Ratio = (double)output_sample_rate / (double)input_sample_rate;
+		int64_t Output_Samples = (int64_t)(Input_Samples * Ratio);
+
+		std::vector<float> Output_Buffer(Output_Samples * num_channels);
+
+		for (int64_t i = 0; i < Output_Samples; i++) {
+			double Source_Pos = i / Ratio;
+			int64_t Source_Index = (int64_t)Source_Pos;
+			double Fraction = Source_Pos - Source_Index;
+
+			for (int ch = 0; ch < num_channels; ch++) {
+				int64_t Index1 = Source_Index * num_channels + ch;
+				int64_t Index2 = std::min((Source_Index + 1) * num_channels + ch,
+					(int64_t)input_buffer.size() - 1);
+
+				float Sample1 = input_buffer[Index1];
+				float Sample2 = input_buffer[Index2];
+
+				// Linear interpolation
+				Output_Buffer[i * num_channels + ch] =
+					Sample1 + (Sample2 - Sample1) * (float)Fraction;
+			}
+		}
+
+		return Output_Buffer;
+	}
+
 	bool Playback_Audio_Engine_Native::Load_Audio_File(const wchar_t* file_path)
 	{
 		if (!_Is_Initialized) {
@@ -93,6 +128,7 @@ namespace MIDILightDrawer
 		}
 
 		// Configure source reader to output PCM float
+		// NOTE: We don't force sample rate here - let it decode at native rate
 		IMFMediaType* Media_Type = nullptr;
 		Hr = MFCreateMediaType(&Media_Type);
 		if (FAILED(Hr)) {
@@ -103,8 +139,6 @@ namespace MIDILightDrawer
 
 		Media_Type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
 		Media_Type->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_Float);
-		Media_Type->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, _Num_Channels);
-		Media_Type->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, _Sample_Rate);
 
 		Hr = Source_Reader->SetCurrentMediaType((DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, nullptr, Media_Type);
 		Media_Type->Release();
@@ -115,7 +149,7 @@ namespace MIDILightDrawer
 			return false;
 		}
 
-		// Get actual format
+		// Get actual format from the file
 		IMFMediaType* Actual_Type = nullptr;
 		Hr = Source_Reader->GetCurrentMediaType((DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, &Actual_Type);
 		if (FAILED(Hr)) {
@@ -124,13 +158,16 @@ namespace MIDILightDrawer
 			return false;
 		}
 
-		UINT32 Channels = 0;
-		UINT32 Sample_Rate = 0;
-		Actual_Type->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &Channels);
-		Actual_Type->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &Sample_Rate);
+		UINT32 File_Channels = 0;
+		UINT32 File_Sample_Rate = 0;
+		Actual_Type->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &File_Channels);
+		Actual_Type->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &File_Sample_Rate);
 		Actual_Type->Release();
 
-		// Read all samples into buffer
+		// Store the file's original sample rate
+		_File_Sample_Rate = File_Sample_Rate;
+
+		// Read all samples into temporary buffer
 		std::vector<float> Temp_Buffer;
 
 		while (true) {
@@ -183,13 +220,28 @@ namespace MIDILightDrawer
 			return false;
 		}
 
-		// Allocate audio buffer
+		// CRITICAL FIX: Resample if file sample rate doesn't match WASAPI output
+		if (File_Sample_Rate != _Sample_Rate) {
+			// Resample the audio to match WASAPI's sample rate
+			Temp_Buffer = Resample_Audio_Linear(
+				Temp_Buffer,
+				File_Sample_Rate,
+				_Sample_Rate,
+				File_Channels
+			);
+
+			// After resampling, use WASAPI's sample rate for all calculations
+			_File_Sample_Rate = _Sample_Rate;
+		}
+
+		// Allocate audio buffer with resampled data
 		_Audio_Buffer = new float[Temp_Buffer.size()];
 		memcpy(_Audio_Buffer, Temp_Buffer.data(), Temp_Buffer.size() * sizeof(float));
 
-		_Total_Audio_Samples = Temp_Buffer.size() / Channels;
-		_Audio_Duration_Ms = (_Total_Audio_Samples * 1000.0) / Sample_Rate;
+		_Total_Audio_Samples = Temp_Buffer.size() / File_Channels;
+		_Audio_Duration_Ms = (_Total_Audio_Samples * 1000.0) / _File_Sample_Rate;
 		_Current_Sample_Position = 0;
+		_Current_Position_Ms.store(0.0);
 
 		return true;
 	}
@@ -285,6 +337,10 @@ namespace MIDILightDrawer
 
 		// Stop WASAPI (but don't reset position)
 		((IAudioClient*)_Audio_Client)->Stop();
+		((IAudioClient*)_Audio_Client)->Reset();
+
+		// Do NOT set _Should_Stop or kill thread
+		// Thread stays alive, waiting for resume
 
 		return true;
 	}
@@ -295,6 +351,25 @@ namespace MIDILightDrawer
 			return false;
 		}
 
+		// If thread doesn't exist, start it
+		if (_Audio_Thread == nullptr) {
+			// Thread was stopped - need to restart it completely
+			_Should_Stop.store(false);
+			_Is_Playing.store(true);
+
+			// Start WASAPI audio client
+			HRESULT Hr = ((IAudioClient*)_Audio_Client)->Start();
+			if (FAILED(Hr)) {
+				_Is_Playing.store(false);
+				return false;
+			}
+
+			// Create playback thread
+			_Audio_Thread = new std::thread(Audio_Playback_Thread_Function);
+			return true;
+		}
+
+		// Thread exists, just resume playback
 		_Is_Playing.store(true);
 
 		// Restart WASAPI from current position
@@ -313,20 +388,34 @@ namespace MIDILightDrawer
 			return false;
 		}
 
-		std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
+		bool Was_Playing = _Is_Playing.load();
 
-		// Calculate sample position
-		int64_t New_Sample_Position = (int64_t)((position_ms / 1000.0) * _Sample_Rate);
-		New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
+		// Temporarily pause if playing
+		if (Was_Playing) {
+			_Is_Playing.store(false);
+			if (_Audio_Client) {
+				((IAudioClient*)_Audio_Client)->Stop();
+				((IAudioClient*)_Audio_Client)->Reset();
+			}
+		}
+		else
+		{
+			std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
 
-		_Current_Sample_Position = New_Sample_Position;
-		_Current_Position_Ms.store(position_ms);
+			// Calculate sample position using FILE's sample rate
+			int64_t New_Sample_Position = (int64_t)((position_ms / 1000.0) * _File_Sample_Rate);
+			New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
 
-		// Reset WASAPI buffer if playing
-		if (_Is_Playing.load() && _Audio_Client) {
-			((IAudioClient*)_Audio_Client)->Stop();
-			((IAudioClient*)_Audio_Client)->Reset();
-			((IAudioClient*)_Audio_Client)->Start();
+			_Current_Sample_Position = New_Sample_Position;
+			_Current_Position_Ms.store(position_ms);
+		}
+
+		// Resume if it was playing
+		if (Was_Playing) {
+			_Is_Playing.store(true);
+			if (_Audio_Client) {
+				((IAudioClient*)_Audio_Client)->Start();
+			}
 		}
 
 		return true;
@@ -387,8 +476,24 @@ namespace MIDILightDrawer
 				continue;
 			}
 
+			// Check if we should stop before doing any work
+			if (_Should_Stop.load()) break;
+
 			if (!_Is_Playing.load()) {
-				// Paused - just continue waiting
+				// Paused - fill buffer with silence to prevent clicks
+				UINT32 Padding_Frames = 0;
+				HRESULT Hr = Audio_Client->GetCurrentPadding(&Padding_Frames);
+				if (SUCCEEDED(Hr)) {
+					UINT32 Frames_Available = Buffer_Frame_Count - Padding_Frames;
+					if (Frames_Available > 0) {
+						BYTE* Buffer_Data = nullptr;
+						Hr = Render_Client->GetBuffer(Frames_Available, &Buffer_Data);
+						if (SUCCEEDED(Hr)) {
+							memset(Buffer_Data, 0, Frames_Available * _Num_Channels * sizeof(float));
+							Render_Client->ReleaseBuffer(Frames_Available, 0);
+						}
+					}
+				}
 				continue;
 			}
 
@@ -403,7 +508,7 @@ namespace MIDILightDrawer
 				if (abs(Drift_Ms) > 10.0) {
 					// Adjust audio position to match MIDI
 					std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
-					int64_t New_Sample_Position = (int64_t)((MIDI_Pos_Ms / 1000.0) * _Sample_Rate);
+					int64_t New_Sample_Position = (int64_t)((MIDI_Pos_Ms / 1000.0) * _File_Sample_Rate);
 					New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
 					_Current_Sample_Position = New_Sample_Position;
 					_Current_Position_Ms.store(MIDI_Pos_Ms);
@@ -432,14 +537,13 @@ namespace MIDILightDrawer
 
 			// Fill buffer with audio data
 			float* Float_Buffer = (float*)Buffer_Data;
-			UINT32 Frames_To_Write = Frames_Available;
 
 			{
 				std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
 
 				// Check if we've reached the end
 				if (_Current_Sample_Position >= _Total_Audio_Samples) {
-					// End of audio - fill with silence
+					// End of audio - fill with silence and stop
 					memset(Float_Buffer, 0, Frames_Available * _Num_Channels * sizeof(float));
 					_Is_Playing.store(false);
 				}
@@ -450,7 +554,8 @@ namespace MIDILightDrawer
 
 					// Copy audio data (interleaved)
 					int64_t Source_Index = _Current_Sample_Position * _Num_Channels;
-					memcpy(Float_Buffer, &_Audio_Buffer[Source_Index], Frames_Can_Read * _Num_Channels * sizeof(float));
+					memcpy(Float_Buffer, &_Audio_Buffer[Source_Index],
+						Frames_Can_Read * _Num_Channels * sizeof(float));
 
 					// Fill remainder with silence if needed
 					if (Frames_Can_Read < Frames_Available) {
@@ -461,8 +566,8 @@ namespace MIDILightDrawer
 					// Update position
 					_Current_Sample_Position += Frames_Can_Read;
 
-					// Update position in milliseconds
-					double Position_Ms = (_Current_Sample_Position * 1000.0) / _Sample_Rate;
+					// Update position in milliseconds using FILE's sample rate
+					double Position_Ms = (_Current_Sample_Position * 1000.0) / _File_Sample_Rate;
 					_Current_Position_Ms.store(Position_Ms);
 				}
 			}

@@ -10,17 +10,6 @@ namespace MIDILightDrawer
 	class Playback_MIDI_Engine_Native
 	{
 	public:
-		struct Tempo_Map_Entry
-		{
-			double Start_Time_ms;		// Absolute start time in milliseconds
-			double Ticks_Per_ms;		// How many ticks occur per millisecond at this tempo
-			int Start_Tick;				// Starting tick position
-			int Length_Ticks;			// Length of this measure in ticks
-			int Tempo_BPM;				// Tempo in beats per minute
-			int Numerator;				// Time signature numerator
-			int Denominator;			// Time signature denominator
-		};
-
 		struct MIDI_Event
 		{
 			double Timestamp_ms;		// Timestamp in milliseconds
@@ -56,9 +45,6 @@ namespace MIDILightDrawer
 		static std::mutex _Event_Queue_Mutex;
 		static void (*_Event_Sent_Callback)(const MIDI_Event&);
 
-		static std::vector<Tempo_Map_Entry> _Tempo_Map;
-		static std::mutex _Tempo_Map_Mutex;
-
 	public:
 		static bool Initialize(int device_id);
 		static void Cleanup();
@@ -76,12 +62,8 @@ namespace MIDILightDrawer
 		static void Set_Current_Position_Us(int64_t position_us);
 		static bool Is_Playing_Threaded();
 
-		static void Set_Tempo_Map(const Tempo_Map_Entry* entries, size_t count);
-		static void Clear_Tempo_Map();
-
 	private:
 		// Thread function
 		static void MIDI_Playback_Thread_Function();
-		static int64_t Convert_Real_Time_To_Musical_Time_us(int64_t start_musical_time_us, int64_t elapsed_real_time_us);
 	};
 }

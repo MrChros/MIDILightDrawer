@@ -13,6 +13,10 @@
 #include <algorithm>
 #include <vector>
 
+#include <string>
+#include <sstream>
+#include <iomanip>
+
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "oleaut32.lib")
 #pragma comment(lib, "mf.lib")
@@ -367,7 +371,6 @@ namespace MIDILightDrawer
 
 		// Stop WASAPI (but don't reset position)
 		((IAudioClient*)_Audio_Client)->Stop();
-		//((IAudioClient*)_Audio_Client)->Reset();
 
 		// Do NOT set _Should_Stop or kill thread
 		// Thread stays alive, waiting for resume
@@ -596,18 +599,23 @@ namespace MIDILightDrawer
 			if (_Sync_To_MIDI)
 			{
 				int64_t MIDI_Pos_Us = _MIDI_Position_us.load(std::memory_order_relaxed);
-				double MIDI_Pos_Ms = MIDI_Pos_Us / 1000.0;
-				double Audio_Pos_Ms = _Current_Position_ms.load();
+				double MIDI_Pos_ms = MIDI_Pos_Us / 1000.0;
+				double Audio_Pos_ms = _Current_Position_ms.load();
 
 				// If audio is drifting more than 10ms from MIDI, adjust
-				double Drift_Ms = Audio_Pos_Ms - MIDI_Pos_Ms;
-				if (abs(Drift_Ms) > 10.0) {
+				double Drift_ms = Audio_Pos_ms - MIDI_Pos_ms;
+				
+				std::wstringstream ss;
+				ss << std::fixed << std::setprecision(2) << Drift_ms << "\n";
+				OutputDebugStringW(ss.str().c_str());
+				
+				if (abs(Drift_ms) > 50.0) {
 					// Adjust audio position to match MIDI
 					std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
-					int64_t New_Sample_Position = (int64_t)((MIDI_Pos_Ms / 1000.0) * _Audio_Sample_Rate_File);
+					int64_t New_Sample_Position = (int64_t)((MIDI_Pos_ms / 1000.0) * _Audio_Sample_Rate_File);
 					New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
 					_Current_Sample_Position = New_Sample_Position;
-					_Current_Position_ms.store(MIDI_Pos_Ms);
+					_Current_Position_ms.store(MIDI_Pos_ms);
 				}
 			}
 

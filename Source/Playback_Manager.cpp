@@ -44,8 +44,8 @@ namespace MIDILightDrawer
 
 		if (Success) {
 			// Enable MIDI synchronization for audio
-			//_Audio_Engine->Enable_MIDI_Sync(true);
-			_Audio_Engine->Enable_MIDI_Sync(false);
+			_Audio_Engine->Enable_MIDI_Sync(true);
+			//_Audio_Engine->Enable_MIDI_Sync(false);
 		}
 
 		return Success;
@@ -56,30 +56,6 @@ namespace MIDILightDrawer
 		Stop();
 		_MIDI_Engine->Cleanup();
 		_Audio_Engine->Cleanup();
-	}
-
-	void Playback_Manager::Prepare_MIDI_Playback_Tempo_Map()
-	{
-		_MIDI_Engine->Clear_Tempo_Map();
-		
-		int Num_Measures = _Timeline->Measures->Count;
-		array<double>^ Tempo_Data = gcnew array<double>(Num_Measures * 7);
-
-		for (int i = 0; i < Num_Measures; ++i)
-		{
-			Measure^ M = _Timeline->Measures[i];
-
-			int Base_Index = i * 7;
-			Tempo_Data[Base_Index + 0] = M->StartTime_ms;
-			Tempo_Data[Base_Index + 1] = 1.0 / M->Length_Per_Tick_ms;  // Ticks per ms
-			Tempo_Data[Base_Index + 2] = (double)M->StartTick;
-			Tempo_Data[Base_Index + 3] = (double)M->Length;
-			Tempo_Data[Base_Index + 4] = (double)M->Tempo;
-			Tempo_Data[Base_Index + 5] = (double)M->Numerator;
-			Tempo_Data[Base_Index + 6] = (double)M->Denominator;
-		}
-
-		_MIDI_Engine->Set_Tempo_Map(Tempo_Data, Num_Measures);
 	}
 
 	bool Playback_Manager::Load_Audio_File(String^ file_path, String^% error_message)

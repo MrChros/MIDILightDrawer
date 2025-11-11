@@ -597,8 +597,6 @@ namespace MIDILightDrawer
 			if (Settings::Get_Instance()->Octave_Entries->Count == 0) {
 				MessageBox::Show(this, "The Guitar Pro File has been successfully opened.\nTo see the Tablature, add Light Tracks in the MIDI Settings.", "Open Guitar Pro File", MessageBoxButtons::OK, MessageBoxIcon::Information);
 			}
-
-			_Playback_Manager->Prepare_MIDI_Playback_Tempo_Map();
 		}
 	}
 

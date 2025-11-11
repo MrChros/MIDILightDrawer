@@ -45,7 +45,6 @@ namespace MIDILightDrawer
 		bool Initialize_MIDI(int device_id);
 		bool Initialize_Audio(String^ device_id, int buffer_size);
 		void Cleanup();
-		void Prepare_MIDI_Playback_Tempo_Map();
 
 		// Audio file management
 		bool Load_Audio_File(String^ file_path, String^% error_message);

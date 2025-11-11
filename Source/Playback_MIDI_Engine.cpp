@@ -17,7 +17,7 @@ namespace MIDILightDrawer
 		{
 			// Convert native event to managed
 			Playback_MIDI_Event^ Managed_Event = gcnew Playback_MIDI_Event();
-			Managed_Event->Timestamp_ms = event.Timestamp_Ms;
+			Managed_Event->Timestamp_ms = event.Timestamp_ms;
 			Managed_Event->Timeline_Track_ID = event.Track;
 			Managed_Event->MIDI_Channel = event.Channel;
 			Managed_Event->MIDI_Command = event.Command;
@@ -74,7 +74,7 @@ namespace MIDILightDrawer
 		}
 
 		Playback_MIDI_Engine_Native::MIDI_Event Native_Event;
-		Native_Event.Timestamp_Ms = event->Timestamp_ms;
+		Native_Event.Timestamp_ms = event->Timestamp_ms;
 		Native_Event.Track = event->Timeline_Track_ID;
 		Native_Event.Channel = event->MIDI_Channel;
 		Native_Event.Command = event->MIDI_Command;
@@ -92,6 +92,43 @@ namespace MIDILightDrawer
 	bool Playback_MIDI_Engine::Is_Device_Open()
 	{
 		return Playback_MIDI_Engine_Native::Is_Device_Open();
+	}
+
+	void Playback_MIDI_Engine::Set_Tempo_Map(array<double>^ tempo_map_data, int num_measures)
+	{
+		if (tempo_map_data == nullptr || num_measures == 0) {
+			Clear_Tempo_Map();
+			return;
+		}
+
+		// Allocate native tempo map entries
+		std::vector<Playback_MIDI_Engine_Native::Tempo_Map_Entry> Native_Entries;
+		Native_Entries.reserve(num_measures);
+
+		// Convert managed array to native structures
+		for (int i = 0; i < num_measures; ++i)
+		{
+			int Base_Index = i * 7;
+
+			Playback_MIDI_Engine_Native::Tempo_Map_Entry Entry;
+			Entry.Start_Time_ms = tempo_map_data[Base_Index + 0];
+			Entry.Ticks_Per_ms	= tempo_map_data[Base_Index + 1];
+			Entry.Start_Tick	= (int)tempo_map_data[Base_Index + 2];
+			Entry.Length_Ticks	= (int)tempo_map_data[Base_Index + 3];
+			Entry.Tempo_BPM		= (int)tempo_map_data[Base_Index + 4];
+			Entry.Numerator		= (int)tempo_map_data[Base_Index + 5];
+			Entry.Denominator	= (int)tempo_map_data[Base_Index + 6];
+
+			Native_Entries.push_back(Entry);
+		}
+
+		// Pass to native code
+		Playback_MIDI_Engine_Native::Set_Tempo_Map(Native_Entries.data(), Native_Entries.size());
+	}
+
+	void Playback_MIDI_Engine::Clear_Tempo_Map()
+	{
+		Playback_MIDI_Engine_Native::Clear_Tempo_Map();
 	}
 
 	bool Playback_MIDI_Engine::Start_Playback()
@@ -154,7 +191,7 @@ namespace MIDILightDrawer
 	Playback_MIDI_Engine_Native::MIDI_Event Playback_MIDI_Engine::MIDI_Playback_Event_To_Native(Playback_MIDI_Event^ event)
 	{
 		Playback_MIDI_Engine_Native::MIDI_Event Native_Event;
-		Native_Event.Timestamp_Ms = event->Timestamp_ms;
+		Native_Event.Timestamp_ms = event->Timestamp_ms;
 		Native_Event.Track = event->Timeline_Track_ID;
 		Native_Event.Channel = event->MIDI_Channel;
 		Native_Event.Command = event->MIDI_Command;

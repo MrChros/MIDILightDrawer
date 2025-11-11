@@ -28,8 +28,8 @@ namespace MIDILightDrawer
 		static int _Audio_Sample_Rate_File;		// Audio file's original sample rate
 		static int _Audio_Num_Channels;
 		static int _Audio_Bit_Rate;
-		static double _Audio_Duration_Ms;
-		static std::atomic<double> _Current_Position_Ms;
+		static double _Audio_Duration_ms;
+		static std::atomic<double> _Current_Position_ms;
 		
 
 		// Waveform visualization
@@ -47,7 +47,7 @@ namespace MIDILightDrawer
 		static int64_t _Current_Sample_Position;   // Current playback position (in samples)
 
 		// Sync with MIDI master clock
-		static std::atomic<int64_t> _MIDI_Position_Us;  // MIDI position for sync
+		static std::atomic<int64_t> _MIDI_Position_us;  // MIDI position for sync
 		static bool _Sync_To_MIDI;                      // Enable MIDI sync
 
 	public:

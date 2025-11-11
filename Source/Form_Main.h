@@ -129,8 +129,8 @@ namespace MIDILightDrawer
 			void Menu_File_Open_Light_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Open_Light_Special_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Save_Light_Click(System::Object^ sender, System::EventArgs^ e);
-			void Menu_Audio_Open_File_Click(System::Object^ sender, System::EventArgs^ e);
-			void Menu_Audio_Clear_File_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_File_Audio_Open_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_File_Audio_Clear_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Export_MIDI_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e);
 

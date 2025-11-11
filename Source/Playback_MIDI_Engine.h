@@ -41,6 +41,8 @@ namespace MIDILightDrawer
 		bool Send_Event(Playback_MIDI_Event^ event);
 		bool Send_All_Notes_Off(int channel);
 		bool Is_Device_Open();
+		void Set_Tempo_Map(array<double>^ tempo_map_data, int num_measures);
+		void Clear_Tempo_Map();
 
 		// Threading methods
 		bool Start_Playback();

@@ -34,8 +34,8 @@ namespace MIDILightDrawer
 	int Playback_Audio_Engine_Native::_Audio_Sample_Rate_File = 0;
 	int Playback_Audio_Engine_Native::_Audio_Num_Channels = 0;
 	int Playback_Audio_Engine_Native::_Audio_Bit_Rate = 0;
-	std::atomic<double> Playback_Audio_Engine_Native::_Current_Position_Ms(0.0);
-	double Playback_Audio_Engine_Native::_Audio_Duration_Ms = 0.0;
+	std::atomic<double> Playback_Audio_Engine_Native::_Current_Position_ms(0.0);
+	double Playback_Audio_Engine_Native::_Audio_Duration_ms = 0.0;
 
 	std::vector<Playback_Audio_Engine_Native::Waveform_Segment> Playback_Audio_Engine_Native::_Waveform_Segments;
 	int Playback_Audio_Engine_Native::_Samples_Per_Segment = 0;
@@ -47,7 +47,7 @@ namespace MIDILightDrawer
 	std::mutex Playback_Audio_Engine_Native::_Buffer_Mutex;
 	int64_t Playback_Audio_Engine_Native::_Total_Audio_Samples = 0;
 	int64_t Playback_Audio_Engine_Native::_Current_Sample_Position = 0;
-	std::atomic<int64_t> Playback_Audio_Engine_Native::_MIDI_Position_Us(0);
+	std::atomic<int64_t> Playback_Audio_Engine_Native::_MIDI_Position_us(0);
 	bool Playback_Audio_Engine_Native::_Sync_To_MIDI = false;
 
 	bool Playback_Audio_Engine_Native::Initialize(const wchar_t* device_id, int buffer_size_samples)
@@ -265,9 +265,9 @@ namespace MIDILightDrawer
 		memcpy(_Audio_Buffer, Temp_Buffer.data(), Temp_Buffer.size() * sizeof(float));
 
 		_Total_Audio_Samples = Temp_Buffer.size() / File_Channels;
-		_Audio_Duration_Ms = (_Total_Audio_Samples * 1000.0) / _Audio_Sample_Rate_File;
+		_Audio_Duration_ms = (_Total_Audio_Samples * 1000.0) / _Audio_Sample_Rate_File;
 		_Current_Sample_Position = 0;
-		_Current_Position_Ms.store(0.0);
+		_Current_Position_ms.store(0.0);
 
 		return true;
 	}
@@ -281,9 +281,13 @@ namespace MIDILightDrawer
 			delete[] _Audio_Buffer;
 			_Audio_Buffer = nullptr;
 		}
-		_Audio_Duration_Ms = 0.0;
+		_Audio_Duration_ms = 0.0;
 		_Total_Audio_Samples = 0;
 		_Current_Sample_Position = 0;
+
+		_Waveform_Segments.clear();
+		_Samples_Per_Segment = 0;
+		_Segments_Per_Second = 0;
 	}
 
 	bool Playback_Audio_Engine_Native::Start_Playback()
@@ -298,7 +302,7 @@ namespace MIDILightDrawer
 
 		// Reset position if starting from stopped state
 		if (_Current_Sample_Position == 0) {
-			_Current_Position_Ms.store(0.0);
+			_Current_Position_ms.store(0.0);
 		}
 
 		_Should_Stop.store(false);
@@ -348,7 +352,7 @@ namespace MIDILightDrawer
 
 		// Reset position
 		_Current_Sample_Position = 0;
-		_Current_Position_Ms.store(0.0);
+		_Current_Position_ms.store(0.0);
 
 		return true;
 	}
@@ -410,7 +414,7 @@ namespace MIDILightDrawer
 
 	bool Playback_Audio_Engine_Native::Seek_To_Position(double position_ms)
 	{
-		if (!_Audio_Buffer || position_ms < 0.0 || position_ms > _Audio_Duration_Ms) {
+		if (!_Audio_Buffer || position_ms < 0.0 || position_ms > _Audio_Duration_ms) {
 			return false;
 		}
 
@@ -433,7 +437,7 @@ namespace MIDILightDrawer
 			New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
 
 			_Current_Sample_Position = New_Sample_Position;
-			_Current_Position_Ms.store(position_ms);
+			_Current_Position_ms.store(position_ms);
 		}
 
 		// Resume if it was playing
@@ -449,12 +453,12 @@ namespace MIDILightDrawer
 
 	double Playback_Audio_Engine_Native::Get_Current_Position_ms()
 	{
-		return _Current_Position_Ms.load();
+		return _Current_Position_ms.load();
 	}
 
 	double Playback_Audio_Engine_Native::Get_Audio_Duration_ms()
 	{
-		return _Audio_Duration_Ms;
+		return _Audio_Duration_ms;
 	}
 
 	bool Playback_Audio_Engine_Native::Is_Playing()
@@ -528,7 +532,7 @@ namespace MIDILightDrawer
 
 	void Playback_Audio_Engine_Native::Set_MIDI_Position_Us(int64_t position_us)
 	{
-		_MIDI_Position_Us.store(position_us, std::memory_order_relaxed);
+		_MIDI_Position_us.store(position_us, std::memory_order_relaxed);
 	}
 
 	void Playback_Audio_Engine_Native::Enable_MIDI_Sync(bool enable)
@@ -562,15 +566,21 @@ namespace MIDILightDrawer
 			}
 
 			// Check if we should stop before doing any work
-			if (_Should_Stop.load()) break;
+			if (_Should_Stop.load()) {
+				break;
+			}
 
-			if (!_Is_Playing.load()) {
+			if (!_Is_Playing.load())
+			{
 				// Paused - fill buffer with silence to prevent clicks
 				UINT32 Padding_Frames = 0;
 				HRESULT Hr = Audio_Client->GetCurrentPadding(&Padding_Frames);
-				if (SUCCEEDED(Hr)) {
+				if (SUCCEEDED(Hr))
+				{
 					UINT32 Frames_Available = Buffer_Frame_Count - Padding_Frames;
-					if (Frames_Available > 0) {
+
+					if (Frames_Available > 0)
+					{
 						BYTE* Buffer_Data = nullptr;
 						Hr = Render_Client->GetBuffer(Frames_Available, &Buffer_Data);
 						if (SUCCEEDED(Hr)) {
@@ -583,10 +593,11 @@ namespace MIDILightDrawer
 			}
 
 			// Check if we need to sync with MIDI
-			if (_Sync_To_MIDI) {
-				int64_t MIDI_Pos_Us = _MIDI_Position_Us.load(std::memory_order_relaxed);
+			if (_Sync_To_MIDI)
+			{
+				int64_t MIDI_Pos_Us = _MIDI_Position_us.load(std::memory_order_relaxed);
 				double MIDI_Pos_Ms = MIDI_Pos_Us / 1000.0;
-				double Audio_Pos_Ms = _Current_Position_Ms.load();
+				double Audio_Pos_Ms = _Current_Position_ms.load();
 
 				// If audio is drifting more than 10ms from MIDI, adjust
 				double Drift_Ms = Audio_Pos_Ms - MIDI_Pos_Ms;
@@ -596,7 +607,7 @@ namespace MIDILightDrawer
 					int64_t New_Sample_Position = (int64_t)((MIDI_Pos_Ms / 1000.0) * _Audio_Sample_Rate_File);
 					New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
 					_Current_Sample_Position = New_Sample_Position;
-					_Current_Position_Ms.store(MIDI_Pos_Ms);
+					_Current_Position_ms.store(MIDI_Pos_Ms);
 				}
 			}
 
@@ -653,7 +664,7 @@ namespace MIDILightDrawer
 
 					// Update position in milliseconds using FILE's sample rate
 					double Position_Ms = (_Current_Sample_Position * 1000.0) / _Audio_Sample_Rate_File;
-					_Current_Position_Ms.store(Position_Ms);
+					_Current_Position_ms.store(Position_Ms);
 				}
 			}
 

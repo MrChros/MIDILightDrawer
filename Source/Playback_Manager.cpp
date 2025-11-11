@@ -4,13 +4,15 @@
 #include "Settings.h"
 #include "MIDI_Event_Raster.h"
 #include "Playback_Event_Queue_Manager.h"
+#include "Widget_Audio_Container.h"
 
 namespace MIDILightDrawer
 {
-	Playback_Manager::Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster)
+	Playback_Manager::Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster, Widget_Audio_Container^ audio_container)
 	{
 		_Timeline = timeline;
 		_MIDI_Event_Raster = midi_event_raster;
+		_Audio_Container = audio_container;
 		
 		_MIDI_Engine = gcnew Playback_MIDI_Engine();
 		_Audio_Engine = gcnew Playback_Audio_Engine();
@@ -42,7 +44,8 @@ namespace MIDILightDrawer
 
 		if (Success) {
 			// Enable MIDI synchronization for audio
-			_Audio_Engine->Enable_MIDI_Sync(true);
+			//_Audio_Engine->Enable_MIDI_Sync(true);
+			_Audio_Engine->Enable_MIDI_Sync(false);
 		}
 
 		return Success;
@@ -53,6 +56,30 @@ namespace MIDILightDrawer
 		Stop();
 		_MIDI_Engine->Cleanup();
 		_Audio_Engine->Cleanup();
+	}
+
+	void Playback_Manager::Prepare_MIDI_Playback_Tempo_Map()
+	{
+		_MIDI_Engine->Clear_Tempo_Map();
+		
+		int Num_Measures = _Timeline->Measures->Count;
+		array<double>^ Tempo_Data = gcnew array<double>(Num_Measures * 7);
+
+		for (int i = 0; i < Num_Measures; ++i)
+		{
+			Measure^ M = _Timeline->Measures[i];
+
+			int Base_Index = i * 7;
+			Tempo_Data[Base_Index + 0] = M->StartTime_ms;
+			Tempo_Data[Base_Index + 1] = 1.0 / M->Length_Per_Tick_ms;  // Ticks per ms
+			Tempo_Data[Base_Index + 2] = (double)M->StartTick;
+			Tempo_Data[Base_Index + 3] = (double)M->Length;
+			Tempo_Data[Base_Index + 4] = (double)M->Tempo;
+			Tempo_Data[Base_Index + 5] = (double)M->Numerator;
+			Tempo_Data[Base_Index + 6] = (double)M->Denominator;
+		}
+
+		_MIDI_Engine->Set_Tempo_Map(Tempo_Data, Num_Measures);
 	}
 
 	bool Playback_Manager::Load_Audio_File(String^ file_path, String^% error_message)
@@ -67,7 +94,11 @@ namespace MIDILightDrawer
 
 		bool Success = _Audio_Engine->Load_Audio_File(file_path);
 
-		if (!Success) {
+		if (Success) {
+			this->Calculate_Waveform_Data(500);
+			_Audio_Container->Load_Audio_Data();
+		}
+		else {
 			error_message = "Failed to load audio file. File may be corrupted or format not supported.";
 		}
 
@@ -77,6 +108,7 @@ namespace MIDILightDrawer
 	void Playback_Manager::Unload_Audio_File()
 	{
 		_Audio_Engine->Unload_Audio_File();
+		_Audio_Container->Unload_Audio_Data();
 	}
 
 	void Playback_Manager::Calculate_Waveform_Data(int segments_per_second)
@@ -329,6 +361,7 @@ namespace MIDILightDrawer
 	void Playback_Manager::Set_Playback_Position_ms(double position_ms)
 	{
 		_Playback_Position_ms = position_ms;
+		_Audio_Container->Update_Cursor();
 	}
 
 	double Playback_Manager::Get_Audio_Duration_Ms()
@@ -366,32 +399,5 @@ namespace MIDILightDrawer
 			Success &= _MIDI_Engine->Send_All_Notes_Off(i);
 		}
 		return Success;
-	}
-
-	double Playback_Manager::CalculateAudioTimeFromBarPosition(int bar_position)
-	{
-		// Get first measure to find tempo
-		if (_Timeline->Measures->Count == 0) {
-			return 0.0;
-		}
-
-		// Get tempo from first measure (adjust if you have tempo changes)
-		Measure^ First_Measure = _Timeline->Measures[0];
-		int BPM = First_Measure->Tempo;
-
-		if (BPM <= 0) {
-			return 0.0;
-		}
-
-		// Calculate time per bar
-		// Assuming 4/4 time signature (4 beats per bar)
-		double Beats_Per_Bar = 4.0;
-		double Minutes_Per_Beat = 1.0 / (double)BPM;
-		double Seconds_Per_Bar = (Minutes_Per_Beat * Beats_Per_Bar) * 60.0;
-
-		// Calculate total time in milliseconds
-		double Total_Time_Ms = (bar_position * Seconds_Per_Bar) * 1000.0;
-
-		return Total_Time_Ms;
 	}
 }

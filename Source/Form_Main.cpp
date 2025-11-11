@@ -319,11 +319,11 @@ namespace MIDILightDrawer
 		// File -> Open Audio File
 		ToolStripMenuItem^ Menu_Audio_Open_File = gcnew ToolStripMenuItem("Open Audio File (WAV/MP3)");
 		Menu_Audio_Open_File->ShortcutKeys = Keys::Control | Keys::Shift | Keys::A;
-		Menu_Audio_Open_File->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Audio_Open_File_Click);
+		Menu_Audio_Open_File->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Audio_Open_Click);
 
 		// File -> Clear Audio File
 		ToolStripMenuItem^ Menu_Audio_Clear_File = gcnew ToolStripMenuItem("Clear Audio File");
-		Menu_Audio_Clear_File->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Audio_Clear_File_Click);
+		Menu_Audio_Clear_File->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Audio_Clear_Click);
 
 		// File -> Export MIDI
 		ToolStripMenuItem^ Menu_File_Export_MIDI = gcnew ToolStripMenuItem("Export to MIDI File");
@@ -505,7 +505,7 @@ namespace MIDILightDrawer
 		try
 		{
 			// Create Playback_Manager
-			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline, this->_MIDI_Event_Raster);
+			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline, this->_MIDI_Event_Raster, this->_Audio_Container);
 			this->_Timeline->SetPlaybackManager(this->_Playback_Manager);
 			this->_Audio_Container->Set_Playback_Manager(this->_Playback_Manager);
 
@@ -594,10 +594,11 @@ namespace MIDILightDrawer
 			this->_TrackBar_Zoom->Value = 1.0f;
 			SettingsMIDI_On_Settings_Accepted();
 
-
 			if (Settings::Get_Instance()->Octave_Entries->Count == 0) {
 				MessageBox::Show(this, "The Guitar Pro File has been successfully opened.\nTo see the Tablature, add Light Tracks in the MIDI Settings.", "Open Guitar Pro File", MessageBoxButtons::OK, MessageBoxIcon::Information);
 			}
+
+			_Playback_Manager->Prepare_MIDI_Playback_Tempo_Map();
 		}
 	}
 
@@ -763,7 +764,7 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Form_Main::Menu_Audio_Open_File_Click(System::Object^ sender, System::EventArgs^ e)
+	void Form_Main::Menu_File_Audio_Open_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		OpenFileDialog^ Open_Dialog = gcnew OpenFileDialog();
 		Open_Dialog->InitialDirectory = ".";
@@ -782,24 +783,7 @@ namespace MIDILightDrawer
 			//bool Success = _Playback_Audio_File_Manager->LoadAudioFile(File_Path, Error_Message);
 			bool Success = _Playback_Manager->Load_Audio_File(File_Path, Error_Message);
 
-			if (Success)
-			{
-				// Pre-calculate waveform data for visualization
-				// Using 100 segments per second for smooth visualization
-				_Playback_Manager->Calculate_Waveform_Data(500);
-
-				// Update the timeline to show the audio track
-				if (_Timeline != nullptr) {
-					// ToDo
-					//_Timeline->SetAudioFileManager(_Audio_File_Manager);
-				}
-
-				if (_Audio_Container != nullptr) {
-					_Audio_Container->Set_Audio_File_Manager();
-				}
-			}
-			else
-			{
+			if (!Success) {
 				MessageBox::Show(this, "Failed to load audio file:\n" + Error_Message, "Audio Load Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
 			}
 
@@ -807,20 +791,15 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Form_Main::Menu_Audio_Clear_File_Click(System::Object^ sender, System::EventArgs^ e)
+	void Form_Main::Menu_File_Audio_Clear_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		if (_Playback_Manager && _Playback_Manager->Is_Audio_Loaded)
 		{
 			// Ask for confirmation
 			System::Windows::Forms::DialogResult Result = MessageBox::Show(this, "Are you sure you want to clear the loaded audio file?", "Clear Audio File", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
 		
-			if (Result == System::Windows::Forms::DialogResult::Yes)
-			{
+			if (Result == System::Windows::Forms::DialogResult::Yes) {
 				_Playback_Manager->Unload_Audio_File();
-
-				if (_Audio_Container != nullptr) {
-					_Audio_Container->Set_Audio_File_Manager();
-				}
 			}
 		}
 	}
@@ -1246,8 +1225,6 @@ namespace MIDILightDrawer
 				this->_Timeline->Tracks[i]->Name = Settings->Octave_Entries[i]->Name;
 			}
 		}
-
-
 
 		UpdateUndoRedoState();
 	}

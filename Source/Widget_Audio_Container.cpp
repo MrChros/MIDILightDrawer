@@ -73,7 +73,7 @@ namespace MIDILightDrawer
 
 		this->Controls->Add(Table_Layout_Main);
 
-		Set_Audio_File_Manager();
+		Load_Audio_Data();
 	}
 
 	void Widget_Audio_Container::Set_Playback_Manager(Playback_Manager^ playback_manager)
@@ -83,12 +83,20 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Widget_Audio_Container::Set_Audio_File_Manager()
+	void Widget_Audio_Container::Load_Audio_Data()
 	{
 		if(this->_Playback_Manager){
 			this->_Audio_Waveform->Set_Waveform_Data(this->_Playback_Manager->Audio_Waveform_Data);
 		}
 
+		this->_Audio_Waveform->Invalidate();
+
+		Update_Audio_Information();
+	}
+
+	void Widget_Audio_Container::Unload_Audio_Data()
+	{
+		this->_Audio_Waveform->Set_Waveform_Data(nullptr);
 		this->_Audio_Waveform->Invalidate();
 
 		Update_Audio_Information();

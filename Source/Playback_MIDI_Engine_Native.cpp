@@ -15,11 +15,14 @@ namespace MIDILightDrawer
 	bool Playback_MIDI_Engine_Native::_Is_Initialized = false;
 	void (*Playback_MIDI_Engine_Native::_Event_Sent_Callback)(const MIDI_Event&) = nullptr;
 
+	std::vector<Playback_MIDI_Engine_Native::Tempo_Map_Entry> Playback_MIDI_Engine_Native::_Tempo_Map;
+	std::mutex Playback_MIDI_Engine_Native::_Tempo_Map_Mutex;
+
 	// Threading members initialization
 	std::thread* Playback_MIDI_Engine_Native::_Midi_Thread = nullptr;
 	std::atomic<bool> Playback_MIDI_Engine_Native::_Is_Playing(false);
 	std::atomic<bool> Playback_MIDI_Engine_Native::_Should_Stop(false);
-	std::atomic<int64_t> Playback_MIDI_Engine_Native::_Current_Position_Us(0);
+	std::atomic<int64_t> Playback_MIDI_Engine_Native::_Current_Position_us(0);
 	std::vector<Playback_MIDI_Engine_Native::Scheduled_MIDI_Event> Playback_MIDI_Engine_Native::_Event_Queue;
 	std::mutex Playback_MIDI_Engine_Native::_Event_Queue_Mutex;
 
@@ -147,7 +150,7 @@ namespace MIDILightDrawer
 		std::lock_guard<std::mutex> Lock(_Event_Queue_Mutex);
 
 		Scheduled_MIDI_Event Scheduled;
-		Scheduled.Execute_Time_Us = static_cast<int64_t>(event.Timestamp_Ms * 1000.0);
+		Scheduled.Execute_Time_Us = static_cast<int64_t>(event.Timestamp_ms * 1000.0);
 		Scheduled.Event = event;
 
 		_Event_Queue.push_back(Scheduled);
@@ -167,18 +170,38 @@ namespace MIDILightDrawer
 
 	int64_t Playback_MIDI_Engine_Native::Get_Current_Position_Us()
 	{
-		return _Current_Position_Us.load(std::memory_order_relaxed);
+		return _Current_Position_us.load(std::memory_order_relaxed);
 	}
 
 	void Playback_MIDI_Engine_Native::Set_Current_Position_Us(int64_t position_us)
 	{
-		_Current_Position_Us.store(position_us, std::memory_order_relaxed);
+		_Current_Position_us.store(position_us, std::memory_order_relaxed);
 	}
 
 	bool Playback_MIDI_Engine_Native::Is_Playing_Threaded()
 	{
 		return _Is_Playing.load(std::memory_order_relaxed);
 	}
+
+	void Playback_MIDI_Engine_Native::Set_Tempo_Map(const Tempo_Map_Entry* entries, size_t count)
+	{
+		std::lock_guard<std::mutex> Lock(_Tempo_Map_Mutex);
+
+		_Tempo_Map.clear();
+		_Tempo_Map.reserve(count);
+
+		for (size_t i = 0; i < count; ++i)
+		{
+			_Tempo_Map.push_back(entries[i]);
+		}
+	}
+
+	void Playback_MIDI_Engine_Native::Clear_Tempo_Map()
+	{
+		std::lock_guard<std::mutex> Lock(_Tempo_Map_Mutex);
+		_Tempo_Map.clear();
+	}
+
 
 	void Playback_MIDI_Engine_Native::MIDI_Playback_Thread_Function()
 	{
@@ -187,7 +210,7 @@ namespace MIDILightDrawer
 		QueryPerformanceFrequency(&Frequency);
 		QueryPerformanceCounter(&Start_Time);
 
-		int64_t Start_Position_Us = _Current_Position_Us.load();
+		int64_t Start_Position_Us = _Current_Position_us.load();
 
 		while (!_Should_Stop.load())
 		{
@@ -198,14 +221,16 @@ namespace MIDILightDrawer
 				continue;
 			}
 
-			// Calculate current playback position
+			// Calculate elapsed REAL time
 			QueryPerformanceCounter(&Current_Time);
 			int64_t Elapsed_Ticks = Current_Time.QuadPart - Start_Time.QuadPart;
-			int64_t Elapsed_Us = (Elapsed_Ticks * 1000000LL) / Frequency.QuadPart;
-			int64_t Current_Pos_Us = Start_Position_Us + Elapsed_Us;
+			int64_t Elapsed_Real_Time_Us = (Elapsed_Ticks * 1000000LL) / Frequency.QuadPart;
+
+			// NEW: Convert real time to MUSICAL time using tempo map
+			int64_t Current_Musical_Pos_Us = Convert_Real_Time_To_Musical_Time_us(Start_Position_Us, Elapsed_Real_Time_Us);
 
 			// Update shared position
-			_Current_Position_Us.store(Current_Pos_Us, std::memory_order_relaxed);
+			_Current_Position_us.store(Current_Musical_Pos_Us, std::memory_order_relaxed);
 
 			// Process events that should execute now
 			{
@@ -216,7 +241,7 @@ namespace MIDILightDrawer
 					const Scheduled_MIDI_Event& Next_Event = _Event_Queue.front();
 
 					// Check if this event should be sent now (within 1ms tolerance)
-					if (Next_Event.Execute_Time_Us <= Current_Pos_Us + 1000)
+					if (Next_Event.Execute_Time_Us <= Current_Musical_Pos_Us + 1000)
 					{
 						// Send the MIDI event
 						Send_MIDI_Event(Next_Event.Event);
@@ -240,6 +265,75 @@ namespace MIDILightDrawer
 			// Sleep for 1ms - balance between precision and CPU usage
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
+	}
+
+	int64_t Playback_MIDI_Engine_Native::Convert_Real_Time_To_Musical_Time_us(int64_t start_musical_time_us, int64_t elapsed_real_time_us)
+	{
+		std::lock_guard<std::mutex> Lock(_Tempo_Map_Mutex);
+
+		if (_Tempo_Map.empty())
+		{
+			// No tempo map - fall back to 1:1 time
+			return start_musical_time_us + elapsed_real_time_us;
+		}
+
+		// Convert start time from microseconds to milliseconds
+		double start_musical_time_ms = start_musical_time_us / 1000.0;
+		double elapsed_real_time_ms = elapsed_real_time_us / 1000.0;
+
+		// Find the measure containing the start time
+		size_t start_measure_index = 0;
+		for (size_t i = 0; i < _Tempo_Map.size(); ++i)
+		{
+			const Tempo_Map_Entry& entry = _Tempo_Map[i];
+			double measure_end_ms = entry.Start_Time_ms +
+				(entry.Length_Ticks / entry.Ticks_Per_ms);
+
+			if (start_musical_time_ms >= entry.Start_Time_ms && start_musical_time_ms < measure_end_ms)
+			{
+				start_measure_index = i;
+				break;
+			}
+		}
+
+		// Calculate how much musical time elapses for the given real time
+		double musical_time_accumulated_ms = start_musical_time_ms;
+		double real_time_remaining_ms = elapsed_real_time_ms;
+
+		// Process from the starting measure onwards
+		for (size_t i = start_measure_index; i < _Tempo_Map.size(); ++i)
+		{
+			const Tempo_Map_Entry& entry = _Tempo_Map[i];
+
+			// Calculate how much of this measure we need to traverse
+			double time_into_measure_ms = (i == start_measure_index) ? (start_musical_time_ms - entry.Start_Time_ms) : 0.0;
+
+			double measure_duration_ms = entry.Length_Ticks / entry.Ticks_Per_ms;
+			double time_remaining_in_measure_ms = measure_duration_ms - time_into_measure_ms;
+
+			// How much musical time can we add from this measure?
+			if (real_time_remaining_ms <= time_remaining_in_measure_ms)
+			{
+				// We finish within this measure
+				musical_time_accumulated_ms += real_time_remaining_ms;
+				break;
+			}
+			else
+			{
+				// We consume the rest of this measure and continue
+				musical_time_accumulated_ms += time_remaining_in_measure_ms;
+				real_time_remaining_ms -= time_remaining_in_measure_ms;
+			}
+		}
+
+		// If we've exhausted all measures, just continue at the last tempo
+		if (real_time_remaining_ms > 0.0 && !_Tempo_Map.empty())
+		{
+			musical_time_accumulated_ms += real_time_remaining_ms;
+		}
+
+		// Convert back to microseconds
+		return static_cast<int64_t>(musical_time_accumulated_ms * 1000.0);
 	}
 }
 

@@ -9,7 +9,7 @@ namespace MIDILightDrawer
 	// Forward Declaration
 	ref class Waveform_Render_Data;
 	
-	ref class Widget_Audio_Waveform : UserControl
+	public ref class Widget_Audio_Waveform : UserControl
 	{
 	private:
 		Waveform_Render_Data^ _Waveform_Data;

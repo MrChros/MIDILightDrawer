@@ -11,6 +11,7 @@ namespace MIDILightDrawer
 	ref class Widget_Timeline;
 	ref class MIDI_Event_Raster;
 	ref class Playback_Event_Queue_Manager;
+	ref class Widget_Audio_Container;
 	
 	public enum class Playback_State
 	{
@@ -28,6 +29,7 @@ namespace MIDILightDrawer
 		Playback_MIDI_Engine^ _MIDI_Engine;
 		Playback_Event_Queue_Manager^ _Event_Queue_Manager;
 		Playback_Audio_Engine^ _Audio_Engine;
+		Widget_Audio_Container^ _Audio_Container;
 		
 		Playback_State _Current_State;
 		double _Playback_Position_ms;
@@ -36,13 +38,14 @@ namespace MIDILightDrawer
 		System::Object^ _State_Lock;
 
 	public:
-		Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster);
+		Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster, Widget_Audio_Container^ audio_container);
 		~Playback_Manager();
 
 		// Initialization
 		bool Initialize_MIDI(int device_id);
 		bool Initialize_Audio(String^ device_id, int buffer_size);
 		void Cleanup();
+		void Prepare_MIDI_Playback_Tempo_Map();
 
 		// Audio file management
 		bool Load_Audio_File(String^ file_path, String^% error_message);
@@ -72,9 +75,6 @@ namespace MIDILightDrawer
 		// MIDI control
 		bool Send_MIDI_Event(Playback_MIDI_Event^ event);
 		bool Send_All_Notes_Off();
-
-	private:
-		double CalculateAudioTimeFromBarPosition(int bar_position);
 
 	public:
 		property bool Is_Audio_Loaded {

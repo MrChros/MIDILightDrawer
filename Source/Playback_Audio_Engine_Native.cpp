@@ -225,7 +225,7 @@ namespace MIDILightDrawer
 			// Resample the audio to match WASAPI's sample rate
 			Temp_Buffer = Resample_Audio_Linear(
 				Temp_Buffer,
-				File_Sample_Rate,
+				_File_Sample_Rate,
 				_Sample_Rate,
 				File_Channels
 			);
@@ -337,7 +337,7 @@ namespace MIDILightDrawer
 
 		// Stop WASAPI (but don't reset position)
 		((IAudioClient*)_Audio_Client)->Stop();
-		((IAudioClient*)_Audio_Client)->Reset();
+		//((IAudioClient*)_Audio_Client)->Reset();
 
 		// Do NOT set _Should_Stop or kill thread
 		// Thread stays alive, waiting for resume
@@ -398,7 +398,7 @@ namespace MIDILightDrawer
 				((IAudioClient*)_Audio_Client)->Reset();
 			}
 		}
-		else
+		
 		{
 			std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
 
@@ -597,8 +597,7 @@ namespace MIDILightDrawer
 
 		// Get device enumerator
 		IMMDeviceEnumerator* Device_Enumerator = nullptr;
-		Hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL,
-			__uuidof(IMMDeviceEnumerator), (void**)&Device_Enumerator);
+		Hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&Device_Enumerator);
 		if (FAILED(Hr)) {
 			return false;
 		}

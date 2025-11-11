@@ -108,29 +108,18 @@ namespace MIDILightDrawer
 
 			if (HasAudio && _Audio_Engine != nullptr)
 			{
-				// Audio engine can access the native PCM data directly
-				// through Playback_Audio_File_Manager_Native
-
-				// Calculate starting position in audio file based on current cursor position
-				//double Start_Time_Ms = CalculateAudioTimeFromBarPosition(_Current_Bar_Position);
-
 				_Audio_Engine->Seek_To_Position(_Playback_Position_ms);
-				_Audio_Engine->Start_Playback();
+				//_Audio_Engine->Start_Playback();
+				if (_Current_State == Playback_State::Paused) {
+					Success &= _Audio_Engine->Resume_Playback();
+				}
+				else {
+					Success &= _Audio_Engine->Start_Playback();
+				}
 			}
 
 			// Start MIDI playback thread (MIDI is the master clock)
 			Success &= _MIDI_Engine->Start_Playback();
-
-			// Start audio if loaded
-			//if (Is_Audio_Loaded())
-			//{
-			//	if (_Current_State == Playback_State::Paused) {
-			//		Success &= _Audio_Engine->Resume_Playback();
-			//	}
-			//	else {
-			//		Success &= _Audio_Engine->Start_Playback();
-			//	}
-			//} 
 
 			if (Success) {
 				_Current_State = Playback_State::Playing;

@@ -29,12 +29,17 @@ namespace MIDILightDrawer
 	void* Playback_Audio_Engine_Native::_Render_Client = nullptr;
 	void* Playback_Audio_Engine_Native::_Audio_Event = nullptr;
 	float* Playback_Audio_Engine_Native::_Audio_Buffer = nullptr;
-	int Playback_Audio_Engine_Native::_Buffer_Size_Samples = 0;
-	int Playback_Audio_Engine_Native::_Sample_Rate = 44100;
-	int Playback_Audio_Engine_Native::_File_Sample_Rate = 44100;
-	int Playback_Audio_Engine_Native::_Num_Channels = 2;
+	int Playback_Audio_Engine_Native::_Audio_Buffer_Size = 0;
+	int Playback_Audio_Engine_Native::_Audio_Sample_Rate_WASAPI = 0;
+	int Playback_Audio_Engine_Native::_Audio_Sample_Rate_File = 0;
+	int Playback_Audio_Engine_Native::_Audio_Num_Channels = 0;
+	int Playback_Audio_Engine_Native::_Audio_Bit_Rate = 0;
 	std::atomic<double> Playback_Audio_Engine_Native::_Current_Position_Ms(0.0);
 	double Playback_Audio_Engine_Native::_Audio_Duration_Ms = 0.0;
+
+	std::vector<Playback_Audio_Engine_Native::Waveform_Segment> Playback_Audio_Engine_Native::_Waveform_Segments;
+	int Playback_Audio_Engine_Native::_Samples_Per_Segment = 0;
+	int Playback_Audio_Engine_Native::_Segments_Per_Second = 0;
 
 	// Threading members
 	std::thread* Playback_Audio_Engine_Native::_Audio_Thread = nullptr;
@@ -80,22 +85,48 @@ namespace MIDILightDrawer
 
 		std::vector<float> Output_Buffer(Output_Samples * num_channels);
 
+		// Use higher-quality cubic interpolation instead of linear
+		// This significantly reduces distortion when converting between sample rates
 		for (int64_t i = 0; i < Output_Samples; i++) {
 			double Source_Pos = i / Ratio;
 			int64_t Source_Index = (int64_t)Source_Pos;
 			double Fraction = Source_Pos - Source_Index;
 
 			for (int ch = 0; ch < num_channels; ch++) {
-				int64_t Index1 = Source_Index * num_channels + ch;
-				int64_t Index2 = std::min((Source_Index + 1) * num_channels + ch,
-					(int64_t)input_buffer.size() - 1);
+				// Get 4 points for cubic interpolation (with bounds checking)
+				int64_t Index_Minus1 = std::max((int64_t)0, Source_Index - 1) * num_channels + ch;
+				int64_t Index_0 = Source_Index * num_channels + ch;
+				int64_t Index_1 = std::min(Source_Index + 1, Input_Samples - 1) * num_channels + ch;
+				int64_t Index_2 = std::min(Source_Index + 2, Input_Samples - 1) * num_channels + ch;
 
-				float Sample1 = input_buffer[Index1];
-				float Sample2 = input_buffer[Index2];
+				// Ensure indices are within bounds
+				Index_Minus1 = std::min(Index_Minus1, (int64_t)input_buffer.size() - 1);
+				Index_0 = std::min(Index_0, (int64_t)input_buffer.size() - 1);
+				Index_1 = std::min(Index_1, (int64_t)input_buffer.size() - 1);
+				Index_2 = std::min(Index_2, (int64_t)input_buffer.size() - 1);
 
-				// Linear interpolation
-				Output_Buffer[i * num_channels + ch] =
-					Sample1 + (Sample2 - Sample1) * (float)Fraction;
+				float Sample_Minus1 = input_buffer[Index_Minus1];
+				float Sample_0 = input_buffer[Index_0];
+				float Sample_1 = input_buffer[Index_1];
+				float Sample_2 = input_buffer[Index_2];
+
+				// Catmull-Rom cubic interpolation
+				// This provides much smoother resampling than linear interpolation
+				float t = (float)Fraction;
+				float t2 = t * t;
+				float t3 = t2 * t;
+
+				float a0 = -0.5f * Sample_Minus1 + 1.5f * Sample_0 - 1.5f * Sample_1 + 0.5f * Sample_2;
+				float a1 = Sample_Minus1 - 2.5f * Sample_0 + 2.0f * Sample_1 - 0.5f * Sample_2;
+				float a2 = -0.5f * Sample_Minus1 + 0.5f * Sample_1;
+				float a3 = Sample_0;
+
+				float Interpolated_Sample = a0 * t3 + a1 * t2 + a2 * t + a3;
+
+				// Clamp to prevent any potential overflow
+				Interpolated_Sample = std::max(-1.0f, std::min(1.0f, Interpolated_Sample));
+
+				Output_Buffer[i * num_channels + ch] = Interpolated_Sample;
 			}
 		}
 
@@ -160,44 +191,44 @@ namespace MIDILightDrawer
 
 		UINT32 File_Channels = 0;
 		UINT32 File_Sample_Rate = 0;
+		UINT32 File_Bit_Rate = 0;
 		Actual_Type->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &File_Channels);
 		Actual_Type->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &File_Sample_Rate);
+		Actual_Type->GetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, &File_Bit_Rate);
 		Actual_Type->Release();
 
 		// Store the file's original sample rate
-		_File_Sample_Rate = File_Sample_Rate;
+		_Audio_Sample_Rate_File = File_Sample_Rate;
+		_Audio_Bit_Rate = File_Bit_Rate;
 
 		// Read all samples into temporary buffer
 		std::vector<float> Temp_Buffer;
 
-		while (true) {
+		while (true)
+		{
 			IMFSample* Sample = nullptr;
 			DWORD Stream_Flags = 0;
 
-			Hr = Source_Reader->ReadSample(
-				(DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM,
-				0,
-				nullptr,
-				&Stream_Flags,
-				nullptr,
-				&Sample
-			);
+			Hr = Source_Reader->ReadSample((DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, nullptr, &Stream_Flags, nullptr, &Sample);
 
 			if (FAILED(Hr) || (Stream_Flags & MF_SOURCE_READERF_ENDOFSTREAM)) {
 				if (Sample) Sample->Release();
 				break;
 			}
 
-			if (Sample) {
+			if (Sample)
+			{
 				IMFMediaBuffer* Buffer = nullptr;
 				Hr = Sample->ConvertToContiguousBuffer(&Buffer);
 
-				if (SUCCEEDED(Hr)) {
+				if (SUCCEEDED(Hr))
+				{
 					BYTE* Audio_Data = nullptr;
 					DWORD Data_Length = 0;
 
 					Hr = Buffer->Lock(&Audio_Data, nullptr, &Data_Length);
-					if (SUCCEEDED(Hr)) {
+					if (SUCCEEDED(Hr))
+					{
 						float* Float_Data = (float*)Audio_Data;
 						int Sample_Count = Data_Length / sizeof(float);
 
@@ -221,17 +252,12 @@ namespace MIDILightDrawer
 		}
 
 		// CRITICAL FIX: Resample if file sample rate doesn't match WASAPI output
-		if (File_Sample_Rate != _Sample_Rate) {
+		if (File_Sample_Rate != _Audio_Sample_Rate_WASAPI) {
 			// Resample the audio to match WASAPI's sample rate
-			Temp_Buffer = Resample_Audio_Linear(
-				Temp_Buffer,
-				_File_Sample_Rate,
-				_Sample_Rate,
-				File_Channels
-			);
+			Temp_Buffer = Resample_Audio_Linear(Temp_Buffer, _Audio_Sample_Rate_File, _Audio_Sample_Rate_WASAPI, File_Channels);
 
 			// After resampling, use WASAPI's sample rate for all calculations
-			_File_Sample_Rate = _Sample_Rate;
+			_Audio_Sample_Rate_File = _Audio_Sample_Rate_WASAPI;
 		}
 
 		// Allocate audio buffer with resampled data
@@ -239,7 +265,7 @@ namespace MIDILightDrawer
 		memcpy(_Audio_Buffer, Temp_Buffer.data(), Temp_Buffer.size() * sizeof(float));
 
 		_Total_Audio_Samples = Temp_Buffer.size() / File_Channels;
-		_Audio_Duration_Ms = (_Total_Audio_Samples * 1000.0) / _File_Sample_Rate;
+		_Audio_Duration_Ms = (_Total_Audio_Samples * 1000.0) / _Audio_Sample_Rate_File;
 		_Current_Sample_Position = 0;
 		_Current_Position_Ms.store(0.0);
 
@@ -403,7 +429,7 @@ namespace MIDILightDrawer
 			std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
 
 			// Calculate sample position using FILE's sample rate
-			int64_t New_Sample_Position = (int64_t)((position_ms / 1000.0) * _File_Sample_Rate);
+			int64_t New_Sample_Position = (int64_t)((position_ms / 1000.0) * _Audio_Sample_Rate_File);
 			New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
 
 			_Current_Sample_Position = New_Sample_Position;
@@ -421,12 +447,12 @@ namespace MIDILightDrawer
 		return true;
 	}
 
-	double Playback_Audio_Engine_Native::Get_Current_Position_Ms()
+	double Playback_Audio_Engine_Native::Get_Current_Position_ms()
 	{
 		return _Current_Position_Ms.load();
 	}
 
-	double Playback_Audio_Engine_Native::Get_Audio_Duration_Ms()
+	double Playback_Audio_Engine_Native::Get_Audio_Duration_ms()
 	{
 		return _Audio_Duration_Ms;
 	}
@@ -439,6 +465,65 @@ namespace MIDILightDrawer
 	bool Playback_Audio_Engine_Native::Is_Audio_Loaded()
 	{
 		return _Audio_Buffer != nullptr;
+	}
+
+	void Playback_Audio_Engine_Native::Calculate_Waveform_Data(int segments_per_second)
+	{
+		if (!Is_Audio_Loaded() || segments_per_second <= 0) {
+			return;
+		}
+
+		_Segments_Per_Second = segments_per_second;
+		Calculate_Waveform_Data_Internal(segments_per_second);
+	}
+
+	bool Playback_Audio_Engine_Native::Get_Waveform_Segment(int segment_index, float& min_value, float& max_value)
+	{
+		if (segment_index >= 0 && segment_index < (int)_Waveform_Segments.size())
+		{
+			min_value = _Waveform_Segments[segment_index].Min_Value;
+			max_value = _Waveform_Segments[segment_index].Max_Value;
+			return true;
+		}
+
+		min_value = 0.0f;
+		max_value = 0.0f;
+		return false;
+	}
+
+	int Playback_Audio_Engine_Native::Get_Total_Waveform_Segments()
+	{
+		return (int)_Waveform_Segments.size();
+	}
+
+	int Playback_Audio_Engine_Native::Get_Samples_Per_Segment()
+	{
+		return _Samples_Per_Segment;
+	}
+
+	int Playback_Audio_Engine_Native::Get_Sample_Rate_File()
+	{
+		return _Audio_Sample_Rate_File;
+	}
+
+	int Playback_Audio_Engine_Native::Get_Sample_Rate_WASAPI()
+	{
+		return _Audio_Sample_Rate_WASAPI;
+	}
+
+	int Playback_Audio_Engine_Native::Get_Channel_Count()
+	{
+		return _Audio_Num_Channels;
+	}
+
+	int Playback_Audio_Engine_Native::Get_Bit_Rate()
+	{
+		return _Audio_Bit_Rate;
+	}
+
+	int64_t Playback_Audio_Engine_Native::Get_Sample_Count()
+	{
+		return _Total_Audio_Samples;
 	}
 
 	void Playback_Audio_Engine_Native::Set_MIDI_Position_Us(int64_t position_us)
@@ -489,7 +574,7 @@ namespace MIDILightDrawer
 						BYTE* Buffer_Data = nullptr;
 						Hr = Render_Client->GetBuffer(Frames_Available, &Buffer_Data);
 						if (SUCCEEDED(Hr)) {
-							memset(Buffer_Data, 0, Frames_Available * _Num_Channels * sizeof(float));
+							memset(Buffer_Data, 0, Frames_Available * _Audio_Num_Channels * sizeof(float));
 							Render_Client->ReleaseBuffer(Frames_Available, 0);
 						}
 					}
@@ -508,7 +593,7 @@ namespace MIDILightDrawer
 				if (abs(Drift_Ms) > 10.0) {
 					// Adjust audio position to match MIDI
 					std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
-					int64_t New_Sample_Position = (int64_t)((MIDI_Pos_Ms / 1000.0) * _File_Sample_Rate);
+					int64_t New_Sample_Position = (int64_t)((MIDI_Pos_Ms / 1000.0) * _Audio_Sample_Rate_File);
 					New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
 					_Current_Sample_Position = New_Sample_Position;
 					_Current_Position_Ms.store(MIDI_Pos_Ms);
@@ -544,7 +629,7 @@ namespace MIDILightDrawer
 				// Check if we've reached the end
 				if (_Current_Sample_Position >= _Total_Audio_Samples) {
 					// End of audio - fill with silence and stop
-					memset(Float_Buffer, 0, Frames_Available * _Num_Channels * sizeof(float));
+					memset(Float_Buffer, 0, Frames_Available * _Audio_Num_Channels * sizeof(float));
 					_Is_Playing.store(false);
 				}
 				else {
@@ -553,21 +638,21 @@ namespace MIDILightDrawer
 					UINT32 Frames_Can_Read = (UINT32)std::min((int64_t)Frames_Available, Remaining_Samples);
 
 					// Copy audio data (interleaved)
-					int64_t Source_Index = _Current_Sample_Position * _Num_Channels;
+					int64_t Source_Index = _Current_Sample_Position * _Audio_Num_Channels;
 					memcpy(Float_Buffer, &_Audio_Buffer[Source_Index],
-						Frames_Can_Read * _Num_Channels * sizeof(float));
+						Frames_Can_Read * _Audio_Num_Channels * sizeof(float));
 
 					// Fill remainder with silence if needed
 					if (Frames_Can_Read < Frames_Available) {
-						memset(&Float_Buffer[Frames_Can_Read * _Num_Channels], 0,
-							(Frames_Available - Frames_Can_Read) * _Num_Channels * sizeof(float));
+						memset(&Float_Buffer[Frames_Can_Read * _Audio_Num_Channels], 0,
+							(Frames_Available - Frames_Can_Read) * _Audio_Num_Channels * sizeof(float));
 					}
 
 					// Update position
 					_Current_Sample_Position += Frames_Can_Read;
 
 					// Update position in milliseconds using FILE's sample rate
-					double Position_Ms = (_Current_Sample_Position * 1000.0) / _File_Sample_Rate;
+					double Position_Ms = (_Current_Sample_Position * 1000.0) / _Audio_Sample_Rate_File;
 					_Current_Position_Ms.store(Position_Ms);
 				}
 			}
@@ -637,11 +722,11 @@ namespace MIDILightDrawer
 		}
 
 		// Store format info
-		_Sample_Rate = Wave_Format->nSamplesPerSec;
-		_Num_Channels = Wave_Format->nChannels;
+		_Audio_Sample_Rate_WASAPI = Wave_Format->nSamplesPerSec;
+		_Audio_Num_Channels = Wave_Format->nChannels;
 
 		// Initialize audio client in shared mode with event-driven callback
-		REFERENCE_TIME Buffer_Duration = (REFERENCE_TIME)(buffer_size_samples * 10000000.0 / _Sample_Rate);
+		REFERENCE_TIME Buffer_Duration = (REFERENCE_TIME)(buffer_size_samples * 10000000.0 / _Audio_Sample_Rate_WASAPI);
 
 		Hr = Audio_Client->Initialize(
 			AUDCLNT_SHAREMODE_SHARED,
@@ -682,7 +767,7 @@ namespace MIDILightDrawer
 			return false;
 		}
 
-		_Buffer_Size_Samples = Actual_Buffer_Size;
+		_Audio_Buffer_Size = Actual_Buffer_Size;
 
 		// Get render client
 		IAudioRenderClient* Render_Client = nullptr;
@@ -718,6 +803,70 @@ namespace MIDILightDrawer
 		if (_Audio_Event) {
 			CloseHandle((HANDLE)_Audio_Event);
 			_Audio_Event = nullptr;
+		}
+	}
+
+	void Playback_Audio_Engine_Native::Calculate_Waveform_Data_Internal(int segments_per_second)
+	{
+		_Waveform_Segments.clear();
+
+		// Create mono data for visualization
+		std::vector<float> Mono_Data;
+
+		if (_Audio_Num_Channels == 1)
+		{
+			// Already mono, use data as-is
+			for (int64_t i = 0; i < _Total_Audio_Samples; i++) {
+				Mono_Data.push_back(_Audio_Buffer[i]);
+			}
+		}
+		else if (_Audio_Num_Channels == 2)
+		{
+			// Mix stereo to mono by averaging
+			for (int64_t i = 0; i < _Total_Audio_Samples * 2; i += 2)
+			{
+				float Left = _Audio_Buffer[i];
+				float Right = _Audio_Buffer[i + 1];
+				float Mono_Sample = (Left + Right) * 0.5f;
+				Mono_Data.push_back(Mono_Sample);
+			}
+		}
+
+		if (Mono_Data.empty()) {
+			return;
+		}
+
+		// Calculate how many audio samples should be represented by each visual segment
+		int64_t Mono_Sample_Count = (int64_t)Mono_Data.size();
+		_Samples_Per_Segment = (int)std::max((int64_t)1, Mono_Sample_Count / segments_per_second);
+		int Total_Segments = (int)((Mono_Sample_Count + _Samples_Per_Segment - 1) / _Samples_Per_Segment);
+
+		// Pre-calculate min/max for each segment
+		for (int Segment_Index = 0; Segment_Index < Total_Segments; Segment_Index++)
+		{
+			int64_t Start_Sample = (int64_t)Segment_Index * _Samples_Per_Segment;
+			int64_t End_Sample = std::min(Start_Sample + _Samples_Per_Segment, Mono_Sample_Count);
+
+			float Min_Value = 0.0f;
+			float Max_Value = 0.0f;
+
+			// Find min and max values in this segment
+			for (int64_t i = Start_Sample; i < End_Sample; i++)
+			{
+				float Sample_Value = Mono_Data[i];
+
+				if (Sample_Value < Min_Value) {
+					Min_Value = Sample_Value;
+				}
+				if (Sample_Value > Max_Value) {
+					Max_Value = Sample_Value;
+				}
+			}
+
+			Waveform_Segment Segment;
+			Segment.Min_Value = Min_Value;
+			Segment.Max_Value = Max_Value;
+			_Waveform_Segments.push_back(Segment);
 		}
 	}
 }

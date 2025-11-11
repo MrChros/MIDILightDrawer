@@ -3,7 +3,6 @@
 
 #include "Settings.h"
 #include "MIDI_Event_Raster.h"
-#include "Playback_Audio_File_Manager.h"
 #include "Playback_Event_Queue_Manager.h"
 
 namespace MIDILightDrawer
@@ -12,7 +11,6 @@ namespace MIDILightDrawer
 	{
 		_Timeline = timeline;
 		_MIDI_Event_Raster = midi_event_raster;
-		_Audio_File_Manager = nullptr;
 		
 		_MIDI_Engine = gcnew Playback_MIDI_Engine();
 		_Audio_Engine = gcnew Playback_Audio_Engine();
@@ -57,14 +55,23 @@ namespace MIDILightDrawer
 		_Audio_Engine->Cleanup();
 	}
 
-	void Playback_Manager::Set_Audio_File_Manager(Playback_Audio_File_Manager^ audio_manager)
+	bool Playback_Manager::Load_Audio_File(String^ file_path, String^% error_message)
 	{
-		_Audio_File_Manager = audio_manager;
+		error_message = String::Empty;
 
-		if (_Audio_Engine != nullptr && audio_manager != nullptr && audio_manager->HasAudioFile)
+		if (file_path == nullptr || file_path->Length == 0)
 		{
-			_Audio_Engine->Load_Audio_File(audio_manager->FilePath);
+			error_message = "Invalid file path";
+			return false;
 		}
+
+		bool Success = _Audio_Engine->Load_Audio_File(file_path);
+
+		if (!Success) {
+			error_message = "Failed to load audio file. File may be corrupted or format not supported.";
+		}
+
+		return Success;
 	}
 
 	void Playback_Manager::Unload_Audio_File()
@@ -72,9 +79,9 @@ namespace MIDILightDrawer
 		_Audio_Engine->Unload_Audio_File();
 	}
 
-	bool Playback_Manager::Is_Audio_Loaded()
+	void Playback_Manager::Calculate_Waveform_Data(int segments_per_second)
 	{
-		return _Audio_Engine->Is_Audio_Loaded();
+		_Audio_Engine->CalculateWaveformData(segments_per_second);
 	}
 
 	bool Playback_Manager::Play()
@@ -106,7 +113,7 @@ namespace MIDILightDrawer
 			// Set MIDI engine position before starting
 			_MIDI_Engine->Set_Current_Position_Ms(_Playback_Position_ms);
 
-			if (HasAudio && _Audio_Engine != nullptr)
+			if (Is_Audio_Loaded && _Audio_Engine != nullptr)
 			{
 				_Audio_Engine->Seek_To_Position(_Playback_Position_ms);
 				//_Audio_Engine->Start_Playback();
@@ -151,7 +158,7 @@ namespace MIDILightDrawer
 			Success &= _MIDI_Engine->Stop_Playback();
 
 			// Pause audio if loaded
-			if (Is_Audio_Loaded())
+			if (Is_Audio_Loaded)
 				Success &= _Audio_Engine->Pause_Playback();
 
 			// Update position from MIDI engine (master clock)
@@ -189,7 +196,7 @@ namespace MIDILightDrawer
 			_MIDI_Engine->Clear_Event_Queue();
 
 			// Stop audio if loaded
-			if (Is_Audio_Loaded()) {
+			if (Is_Audio_Loaded) {
 				Success &= _Audio_Engine->Stop_Playback();
 			}
 
@@ -210,7 +217,7 @@ namespace MIDILightDrawer
 		if (Was_Playing)
 		{
 			_MIDI_Engine->Stop_Playback();
-			if (Is_Audio_Loaded()) {
+			if (Is_Audio_Loaded) {
 				_Audio_Engine->Pause_Playback();
 			}
 		}
@@ -226,7 +233,7 @@ namespace MIDILightDrawer
 		_MIDI_Engine->Set_Current_Position_Ms(position_ms);
 
 		// Seek audio if loaded
-		if (Is_Audio_Loaded())
+		if (Is_Audio_Loaded)
 		{
 			_Audio_Engine->Seek_To_Position(position_ms);
 		}
@@ -235,7 +242,7 @@ namespace MIDILightDrawer
 		if (Was_Playing)
 		{
 			_MIDI_Engine->Start_Playback();
-			if (Is_Audio_Loaded()) {
+			if (Is_Audio_Loaded) {
 				_Audio_Engine->Resume_Playback();
 			}
 		}
@@ -302,7 +309,7 @@ namespace MIDILightDrawer
 				double MIDI_Pos = _MIDI_Engine->Get_Current_Position_Ms();
 
 				// Sync audio engine with MIDI position
-				if (Is_Audio_Loaded()) {
+				if (Is_Audio_Loaded) {
 					int64_t MIDI_Pos_Us = (int64_t)(MIDI_Pos * 1000.0);
 					_Audio_Engine->Set_MIDI_Position_Us(MIDI_Pos_Us);
 				}
@@ -386,10 +393,5 @@ namespace MIDILightDrawer
 		double Total_Time_Ms = (bar_position * Seconds_Per_Bar) * 1000.0;
 
 		return Total_Time_Ms;
-	}
-
-	bool Playback_Manager::HasAudio::get()
-	{
-			return _Audio_File_Manager != nullptr && _Audio_File_Manager->HasAudioFile;
 	}
 }

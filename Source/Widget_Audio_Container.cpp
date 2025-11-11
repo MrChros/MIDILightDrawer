@@ -2,7 +2,6 @@
 
 #include "Theme_Manager.h"
 #include "Playback_Manager.h"
-#include "Playback_Audio_File_Manager.h"
 
 namespace MIDILightDrawer
 {
@@ -74,7 +73,7 @@ namespace MIDILightDrawer
 
 		this->Controls->Add(Table_Layout_Main);
 
-		Set_Audio_File_Manager(nullptr);
+		Set_Audio_File_Manager();
 	}
 
 	void Widget_Audio_Container::Set_Playback_Manager(Playback_Manager^ playback_manager)
@@ -84,10 +83,11 @@ namespace MIDILightDrawer
 		}
 	}
 
-	void Widget_Audio_Container::Set_Audio_File_Manager(Playback_Audio_File_Manager^ audio_file_manager)
+	void Widget_Audio_Container::Set_Audio_File_Manager()
 	{
-		this->_Audio_File_Manager = audio_file_manager;
-		this->_Audio_Waveform->Set_Audio_File_Manager(audio_file_manager);
+		if(this->_Playback_Manager){
+			this->_Audio_Waveform->Set_Waveform_Data(this->_Playback_Manager->Audio_Waveform_Data);
+		}
 
 		this->_Audio_Waveform->Invalidate();
 
@@ -97,7 +97,7 @@ namespace MIDILightDrawer
 	void Widget_Audio_Container::Update_Cursor()
 	{
 		if(this->_Playback_Manager) {
-			this->_Audio_Waveform->Set_Cursor_Position_ms(this->_Playback_Manager->Get_Playback_Position_ms());
+			this->_Audio_Waveform->Set_Cursor_Position_ms(this->_Playback_Manager->Get_Playback_Position_ms(), this->_Playback_Manager->Audio_Duration_ms);
 		}
 	}
 
@@ -108,7 +108,7 @@ namespace MIDILightDrawer
 
 	void Widget_Audio_Container::Update_Audio_Information()
 	{
-		if (this->_Audio_File_Manager == nullptr) {
+		if (!this->_Playback_Manager || !this->_Playback_Manager->Is_Audio_Loaded) {
 			_Label_Audio_Info_Length->Text = "";
 			_Label_Audio_Info_Channels->Text = "";
 			_Label_Audio_Info_Resolution->Text = "";
@@ -117,14 +117,14 @@ namespace MIDILightDrawer
 			return;
 		}
 
-		TimeSpan Time_Span = TimeSpan::FromMilliseconds(this->_Audio_File_Manager->DurationMilliseconds);
+		TimeSpan Time_Span = TimeSpan::FromMilliseconds(this->_Playback_Manager->Audio_Duration_ms);
 		String^ Formatted_Time = Time_Span.ToString("mm\\:ss\\.fff");
 
 		String^ Audio_Info_Length		= String::Format("Length: {0}"			, Formatted_Time);
-		String^ Audio_Info_Channels		= String::Format("Channels: {0}"		, this->_Audio_File_Manager->ChannelCount);
-		String^ Audio_Info_Resolution	= String::Format("Resolution: {0} bits"	, this->_Audio_File_Manager->BitDepth);
-		String^ Audio_Info_Freqeuncy	= String::Format("Frequency: {0} Hz"	, this->_Audio_File_Manager->SampleRate);
-		String^ Audio_Info_File			= String::Format("File: {0}"			, this->_Audio_File_Manager->FilePath);
+		String^ Audio_Info_Channels		= String::Format("Channels: {0}"		, this->_Playback_Manager->Audio_Channel_Count);
+		String^ Audio_Info_Resolution	= String::Format("Resolution: {0} bits"	, this->_Playback_Manager->Audio_Bit_Rate);
+		String^ Audio_Info_Freqeuncy	= String::Format("Frequency: {0} Hz"	, this->_Playback_Manager->Audio_Sample_Rate_File);
+		String^ Audio_Info_File			= String::Format("File: {0}"			, this->_Playback_Manager->Audio_File_Path);
 
 		_Label_Audio_Info_Length->Text		= Audio_Info_Length;
 		_Label_Audio_Info_Channels->Text	= Audio_Info_Channels;

@@ -9,14 +9,12 @@ namespace MIDILightDrawer
 {
 	// Forward Declaration
 	ref class Playback_Manager;
-	ref class Playback_Audio_File_Manager;
 	
 	ref class Widget_Audio_Container : UserControl
 	{
 	private:
 		Widget_Audio_Waveform^ _Audio_Waveform;
 		Playback_Manager^ _Playback_Manager;
-		Playback_Audio_File_Manager^ _Audio_File_Manager;
 
 		Label^ _Label_Audio_Info_Length;
 		Label^ _Label_Audio_Info_Channels;
@@ -28,7 +26,7 @@ namespace MIDILightDrawer
 		Widget_Audio_Container();
 
 		void Set_Playback_Manager(Playback_Manager^ playback_manager);
-		void Set_Audio_File_Manager(Playback_Audio_File_Manager^ audio_file_manager);
+		void Set_Audio_File_Manager();
 
 		void Update_Cursor();
 

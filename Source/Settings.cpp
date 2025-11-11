@@ -105,11 +105,9 @@ namespace MIDILightDrawer
 		sb->AppendLine(String::Format("  \"MidiExportAntiFlicker\": {0},", _MIDI_Export_Anti_Flicker ? "true" : "false"));
 
 		// Add playback device settings
-		sb->AppendLine(String::Format("  \"SelectedMidiOutputDevice\": \"{0}\",",
-			_Selected_MIDI_Output_Device->Replace("\"", "\\\"")));
+		sb->AppendLine(String::Format("  \"SelectedMidiOutputDevice\": \"{0}\",", _Selected_MIDI_Output_Device->Replace("\"", "\\\"")));
 		sb->AppendLine(String::Format("  \"GlobalMidiOutputChannel\": {0},", _Global_MIDI_Output_Channel));
-		sb->AppendLine(String::Format("  \"SelectedAudioOutputDevice\": \"{0}\",",
-			_Selected_Audio_Output_Device->Replace("\"", "\\\"")));
+		sb->AppendLine(String::Format("  \"SelectedAudioOutputDevice\": \"{0}\",", _Selected_Audio_Output_Device->Replace("\"", "\\\"")));
 		sb->AppendLine(String::Format("  \"AudioBufferSize\": {0},", _Audio_Buffer_Size));
 
 		// Add octave entries
@@ -291,8 +289,8 @@ namespace MIDILightDrawer
 	void Settings::Save_To_File()
 	{
 		try {
-			String^ jsonString = SerializeToString();
-			File::WriteAllText(_Settings_File_Path, jsonString);
+			String^ JsonString = SerializeToString();
+			File::WriteAllText(_Settings_File_Path, JsonString);
 		}
 		catch (Exception^ ex) {
 			Console::WriteLine("Error saving settings: " + ex->Message);
@@ -454,6 +452,7 @@ namespace MIDILightDrawer
 		}
 
 		_Audio_Buffer_Size = value;
+
 		Save_To_File();
 	}
 }

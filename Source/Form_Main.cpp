@@ -509,9 +509,6 @@ namespace MIDILightDrawer
 			this->_Timeline->SetPlaybackManager(this->_Playback_Manager);
 			this->_Audio_Container->Set_Playback_Manager(this->_Playback_Manager);
 
-			// Create Audi File _Manager
-			_Playback_Audio_File_Manager = gcnew Playback_Audio_File_Manager();
-
 			Device_Manager^ Devices = gcnew Device_Manager();
 			Devices->Enumerate_All_Devices();
 
@@ -570,12 +567,6 @@ namespace MIDILightDrawer
 			_Playback_Manager->Cleanup();
 			delete _Playback_Manager;
 			_Playback_Manager = nullptr;
-		}
-
-		if (_Playback_Audio_File_Manager != nullptr) {
-			_Playback_Audio_File_Manager->ClearAudioFile();
-			delete _Playback_Audio_File_Manager;
-			_Playback_Audio_File_Manager = nullptr;
 		}
 	}
 
@@ -788,13 +779,14 @@ namespace MIDILightDrawer
 			// Show loading indicator (optional)
 			this->Cursor = System::Windows::Forms::Cursors::WaitCursor;
 
-			bool Success = _Playback_Audio_File_Manager->LoadAudioFile(File_Path, Error_Message);
+			//bool Success = _Playback_Audio_File_Manager->LoadAudioFile(File_Path, Error_Message);
+			bool Success = _Playback_Manager->Load_Audio_File(File_Path, Error_Message);
 
 			if (Success)
 			{
 				// Pre-calculate waveform data for visualization
 				// Using 100 segments per second for smooth visualization
-				_Playback_Audio_File_Manager->CalculateWaveformData(500);
+				_Playback_Manager->Calculate_Waveform_Data(500);
 
 				// Update the timeline to show the audio track
 				if (_Timeline != nullptr) {
@@ -802,13 +794,8 @@ namespace MIDILightDrawer
 					//_Timeline->SetAudioFileManager(_Audio_File_Manager);
 				}
 
-				// Update playback manager with audio data
-				if (_Playback_Manager != nullptr) {
-					_Playback_Manager->Set_Audio_File_Manager(this->_Playback_Audio_File_Manager);
-				}
-
 				if (_Audio_Container != nullptr) {
-					_Audio_Container->Set_Audio_File_Manager(this->_Playback_Audio_File_Manager);
+					_Audio_Container->Set_Audio_File_Manager();
 				}
 			}
 			else
@@ -822,39 +809,19 @@ namespace MIDILightDrawer
 
 	void Form_Main::Menu_Audio_Clear_File_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		if (_Playback_Audio_File_Manager != nullptr && _Playback_Audio_File_Manager->HasAudioFile)
+		if (_Playback_Manager && _Playback_Manager->Is_Audio_Loaded)
 		{
 			// Ask for confirmation
 			System::Windows::Forms::DialogResult Result = MessageBox::Show(this, "Are you sure you want to clear the loaded audio file?", "Clear Audio File", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
-
+		
 			if (Result == System::Windows::Forms::DialogResult::Yes)
 			{
-				_Playback_Audio_File_Manager->ClearAudioFile();
-
-				// Update timeline to remove audio track
-				if (_Timeline != nullptr)
-				{
-					// ToDo
-					//_Timeline->_Playback_Audio_File_Manager(nullptr);
-				}
-
-				// Update playback manager
-				if (_Playback_Manager != nullptr)
-				{
-					_Playback_Manager->Set_Audio_File_Manager(nullptr);
-				}
+				_Playback_Manager->Unload_Audio_File();
 
 				if (_Audio_Container != nullptr) {
-					_Audio_Container->Set_Audio_File_Manager(nullptr);
+					_Audio_Container->Set_Audio_File_Manager();
 				}
-
-				// Show confirmation in status bar or message
-				// this->_StatusBar->Text = "Audio file cleared";
 			}
-		}
-		else
-		{
-			MessageBox::Show(this, "No audio file is currently loaded.", "Clear Audio File", MessageBoxButtons::OK, MessageBoxIcon::Information);
 		}
 	}
 

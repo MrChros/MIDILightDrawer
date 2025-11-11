@@ -31,9 +31,9 @@ namespace MIDILightDrawer
 		_Main_Layout->RowCount = 4;
 		_Main_Layout->Dock = DockStyle::Fill;
 		_Main_Layout->Padding = System::Windows::Forms::Padding(10);
-		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 33));
-		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 33));
-		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 33));
+		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 110));
+		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 110));
+		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100));
 		_Main_Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 40));
 
 		// MIDI Output Group Box
@@ -96,6 +96,8 @@ namespace MIDILightDrawer
 		_Audio_Layout->Dock = DockStyle::Fill;
 		_Audio_Layout->BackColor = Color::Transparent;
 		_Audio_Layout->Padding = System::Windows::Forms::Padding(0, 10, 0, 0);
+		_Audio_Layout->RowStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
+		_Audio_Layout->RowStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
 		_Audio_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::AutoSize));
 		_Audio_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
 		_Audio_Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::AutoSize));
@@ -111,7 +113,7 @@ namespace MIDILightDrawer
 
 		_Button_Refresh_Audio = gcnew Button();
 		_Button_Refresh_Audio->Text = "Refresh";
-		_Button_Refresh_Audio->AutoSize = true;
+		_Button_Refresh_Audio->Dock = DockStyle::Fill;
 		_Button_Refresh_Audio->Click += gcnew EventHandler(this, &Form_Device_Configuration::Button_Refresh_Audio_Click);
 		Theme_Manager::Get_Instance()->ApplyThemeToButton(_Button_Refresh_Audio);
 

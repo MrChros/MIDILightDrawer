@@ -9,19 +9,33 @@ namespace MIDILightDrawer
 {
 	class Playback_Audio_Engine_Native
 	{
+	public:
+		struct Waveform_Segment
+		{
+			float Min_Value;
+			float Max_Value;
+		};
+
 	private:
 		static bool _Is_Initialized;
 		static std::atomic<bool> _Is_Playing;
-		static void* _Audio_Client;			// IAudioClient*
-		static void* _Render_Client;		// IAudioRenderClient*
-		static void* _Audio_Event;			// HANDLE for event-driven mode
-		static float* _Audio_Buffer;		// Decoded PCM buffer (interleaved)
-		static int _Buffer_Size_Samples;	// WASAPI buffer size
-		static int _Sample_Rate;			// WASAPI output sample rate
-		static int _File_Sample_Rate;		// Audio file's original sample rate
-		static int _Num_Channels;
-		static std::atomic<double> _Current_Position_Ms;
+		static void* _Audio_Client;				// IAudioClient*
+		static void* _Render_Client;			// IAudioRenderClient*
+		static void* _Audio_Event;				// HANDLE for event-driven mode
+		static float* _Audio_Buffer;			// Decoded PCM buffer (interleaved)
+		static int _Audio_Buffer_Size;			// WASAPI buffer size
+		static int _Audio_Sample_Rate_WASAPI;	// WASAPI output sample rate
+		static int _Audio_Sample_Rate_File;		// Audio file's original sample rate
+		static int _Audio_Num_Channels;
+		static int _Audio_Bit_Rate;
 		static double _Audio_Duration_Ms;
+		static std::atomic<double> _Current_Position_Ms;
+		
+
+		// Waveform visualization
+		static std::vector<Waveform_Segment> _Waveform_Segments;
+		static int _Samples_Per_Segment;
+		static int _Segments_Per_Second;
 
 		// Threading
 		static std::thread* _Audio_Thread;
@@ -47,10 +61,19 @@ namespace MIDILightDrawer
 		static bool Pause_Playback();
 		static bool Resume_Playback();
 		static bool Seek_To_Position(double position_ms);
-		static double Get_Current_Position_Ms();
-		static double Get_Audio_Duration_Ms();
+		static double Get_Current_Position_ms();
+		static double Get_Audio_Duration_ms();
 		static bool Is_Playing();
 		static bool Is_Audio_Loaded();
+		static void Calculate_Waveform_Data(int segments_per_second);
+		static bool Get_Waveform_Segment(int segment_index, float& min_value, float& max_value);
+		static int Get_Total_Waveform_Segments();
+		static int Get_Samples_Per_Segment();
+		static int Get_Sample_Rate_File();
+		static int Get_Sample_Rate_WASAPI();
+		static int Get_Channel_Count();
+		static int Get_Bit_Rate();
+		static int64_t Get_Sample_Count();
 
 		// Sync with MIDI master clock
 		static void Set_MIDI_Position_Us(int64_t position_us);
@@ -63,5 +86,6 @@ namespace MIDILightDrawer
 		// Helper functions
 		static bool Initialize_WASAPI(const wchar_t* device_id, int buffer_size_samples);
 		static void Cleanup_WASAPI();
+		static void Calculate_Waveform_Data_Internal(int segments_per_second);
 	};
 }

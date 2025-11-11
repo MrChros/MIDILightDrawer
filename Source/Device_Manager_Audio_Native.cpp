@@ -44,11 +44,14 @@ namespace MIDILightDrawer
 		count = 0;
 
 		IMMDeviceEnumerator* Enumerator = (IMMDeviceEnumerator*)_Enumerator;
-		if (!Enumerator) return nullptr;
+		if (!Enumerator) {
+			return nullptr;
+		}
 
 		IMMDeviceCollection* Collection = nullptr;
-		if (FAILED(Enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &Collection)))
+		if (FAILED(Enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &Collection))) {
 			return nullptr;
+		}
 
 		UINT Count = 0;
 		Collection->GetCount(&Count);

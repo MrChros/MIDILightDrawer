@@ -44,9 +44,9 @@ namespace MIDILightDrawer
 		TableLayoutPanel^ _Audio_Layout;
 		Label^ _Label_Audio_Device;
 		ComboBox^ _Combo_Box_Audio_Device;
+		Button^ _Button_Refresh_Audio;
 		Label^ _Label_Buffer_Size;
 		ComboBox^ _Combo_Box_Buffer_Size;
-		Button^ _Button_Refresh_Audio;
 
 		// Device manager
 		Device_Manager^ _Device_Manager;

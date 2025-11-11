@@ -11,7 +11,6 @@ namespace MIDILightDrawer
 	ref class Widget_Timeline;
 	ref class MIDI_Event_Raster;
 	ref class Playback_Event_Queue_Manager;
-	ref class Playback_Audio_File_Manager;
 	
 	public enum class Playback_State
 	{
@@ -29,7 +28,6 @@ namespace MIDILightDrawer
 		Playback_MIDI_Engine^ _MIDI_Engine;
 		Playback_Event_Queue_Manager^ _Event_Queue_Manager;
 		Playback_Audio_Engine^ _Audio_Engine;
-		Playback_Audio_File_Manager^ _Audio_File_Manager;
 		
 		Playback_State _Current_State;
 		double _Playback_Position_ms;
@@ -47,9 +45,9 @@ namespace MIDILightDrawer
 		void Cleanup();
 
 		// Audio file management
-		void Set_Audio_File_Manager(Playback_Audio_File_Manager^ audio_manager);
+		bool Load_Audio_File(String^ file_path, String^% error_message);
 		void Unload_Audio_File();
-		bool Is_Audio_Loaded();
+		void Calculate_Waveform_Data(int segments_per_second);
 
 		// Playback controls
 		bool Play();
@@ -79,8 +77,40 @@ namespace MIDILightDrawer
 		double CalculateAudioTimeFromBarPosition(int bar_position);
 
 	public:
-		property bool HasAudio {
-			bool get();
+		property bool Is_Audio_Loaded {
+			bool get() { return _Audio_Engine->Is_Audio_Loaded; }
+		}
+
+		property String^ Audio_File_Path {
+			String^ get() { return _Audio_Engine->File_Path; }
+		}
+
+		property int Audio_Sample_Rate_Audio_Interface {
+			int get() { return _Audio_Engine->Sample_Rate_Audio_Interface; }
+		}
+
+		property int Audio_Sample_Rate_File {
+			int get() { return _Audio_Engine->Sample_Rate_File; }
+		}
+
+		property int Audio_Channel_Count {
+			int get() { return _Audio_Engine->Channel_Count; }
+		}
+
+		property int Audio_Bit_Rate {
+			int get() { return _Audio_Engine->Bit_Rate; }
+		}
+
+		property int64_t Audio_Sample_Count {
+			int64_t get() { return _Audio_Engine->Sample_Count; }
+		}
+
+		property double Audio_Duration_ms {
+			double get() { return _Audio_Engine->Duration_ms; }
+		}
+
+		property Waveform_Render_Data^ Audio_Waveform_Data {
+			Waveform_Render_Data^ get() { return _Audio_Engine->Waveform_Data; }
 		}
 	};
 }

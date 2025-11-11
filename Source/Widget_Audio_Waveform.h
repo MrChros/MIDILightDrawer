@@ -7,20 +7,21 @@ using namespace System::Windows::Forms;
 namespace MIDILightDrawer
 {
 	// Forward Declaration
-	ref class Playback_Audio_File_Manager;
+	ref class Waveform_Render_Data;
 	
 	ref class Widget_Audio_Waveform : UserControl
 	{
 	private:
-		Playback_Audio_File_Manager^ _Audio_File_Manager;
+		Waveform_Render_Data^ _Waveform_Data;
 
-		double _Cursor_Poisiton_ms;
+		double _Cursor_Position_ms;
+		double _Audio_Duration_ms;
 
 	public:
 		Widget_Audio_Waveform();
 
-		void Set_Audio_File_Manager(Playback_Audio_File_Manager^ audio_file_manager);
-		void Set_Cursor_Position_ms(double cursor_position_ms);
+		void Set_Waveform_Data(Waveform_Render_Data^ waveform_data);
+		void Set_Cursor_Position_ms(double cursor_position_ms, double audio_duration_ms);
 
 	protected:
 		virtual void OnPaint(PaintEventArgs^ e) override;

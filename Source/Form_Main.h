@@ -9,7 +9,6 @@
 #include "MIDI_Event_Raster.h"
 #include "Hotkey_Manager.h"
 #include "Playback_Manager.h"
-#include "Playback_Audio_File_Manager.h"
 
 #include "Control_DropDown.h"
 #include "Control_Trackbar_Zoom.h"
@@ -113,7 +112,6 @@ namespace MIDILightDrawer
 			MIDI_Event_Raster^					_MIDI_Event_Raster;
 
 			Playback_Manager^					_Playback_Manager;
-			Playback_Audio_File_Manager^		_Playback_Audio_File_Manager;
 			System::Windows::Forms::Timer^		_Playback_Update_Timer;
 
 			Dictionary<String^, Keys>^			_Active_Hotkeys;

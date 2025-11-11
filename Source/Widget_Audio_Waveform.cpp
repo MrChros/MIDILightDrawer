@@ -1,7 +1,7 @@
 #include "Widget_Audio_Waveform.h"
 
 #include "Theme_Manager.h"
-#include "Playback_Audio_File_Manager.h"
+#include "Playback_Audio_Engine.h"
 
 namespace MIDILightDrawer
 {
@@ -12,25 +12,26 @@ namespace MIDILightDrawer
 			ControlStyles::AllPaintingInWmPaint |
 			ControlStyles::UserPaint, true);
 
-		Set_Audio_File_Manager(nullptr);
-		Set_Cursor_Position_ms(0.0);
+		Set_Waveform_Data(nullptr);
+		Set_Cursor_Position_ms(0.0, 1.0);
 	}
 
-	void Widget_Audio_Waveform::Set_Audio_File_Manager(Playback_Audio_File_Manager^ audio_file_manager)
+	void Widget_Audio_Waveform::Set_Waveform_Data(Waveform_Render_Data^ waveform_data)
 	{
-		this->_Audio_File_Manager = audio_file_manager;
+		this->_Waveform_Data = waveform_data;
 	}
 
-	void Widget_Audio_Waveform::Set_Cursor_Position_ms(double cursor_position_ms)
+	void Widget_Audio_Waveform::Set_Cursor_Position_ms(double cursor_position_ms, double audio_duration_ms)
 	{
-		this->_Cursor_Poisiton_ms = cursor_position_ms;
+		this->_Cursor_Position_ms = cursor_position_ms;
+		this->_Audio_Duration_ms = audio_duration_ms;
 
 		this->Invalidate();
 	}
 
 	void Widget_Audio_Waveform::OnPaint(PaintEventArgs^ e)
 	{
-		if (this->_Audio_File_Manager == nullptr) {
+		if (this->_Waveform_Data == nullptr) {
 			return;
 		}
 		
@@ -39,9 +40,8 @@ namespace MIDILightDrawer
 		Graphics^ G = e->Graphics;
 		G->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 
-		Waveform_Render_Data^ WaveformData = this->_Audio_File_Manager->WaveformData;
 		
-		int Segment_Count = WaveformData->TotalSegments;
+		int Segment_Count = _Waveform_Data->TotalSegments;
 		float Pixels_Per_Segment = (float)(this->Width) / (float)Segment_Count;
 
 		SolidBrush^ Waveform_Brush = gcnew System::Drawing::SolidBrush(Theme_Manager::Get_Instance()->BorderStrong);
@@ -53,7 +53,7 @@ namespace MIDILightDrawer
 
 		for (int i = 0; i < Segment_Count; i++) {
 			
-			WaveformData->GetSegmentMinMax(i, Min, Max);
+			_Waveform_Data->GetSegmentMinMax(i, Min, Max);
 
 			int Segment_Upper = (int)(this->Height / 2 * Max);
 			int Segment_Lower = abs((int)(this->Height / 2 * Min));
@@ -75,7 +75,7 @@ namespace MIDILightDrawer
 			X += Pixels_Per_Segment;
 		}
 
-		int Cursor_Pixel_Position = (int)((double)this->Width * (_Cursor_Poisiton_ms / this->_Audio_File_Manager->DurationMilliseconds));
+		int Cursor_Pixel_Position = (int)((double)this->Width * (_Cursor_Position_ms / _Audio_Duration_ms));
 
 		if (Cursor_Pixel_Position > this->Width) {
 			Cursor_Pixel_Position = this->Width;

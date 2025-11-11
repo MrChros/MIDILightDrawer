@@ -216,12 +216,6 @@
     <ClInclude Include="Control_Label.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Playback_Audio_File_Manager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Playback_Audio_File_Manager_Native.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Widget_Audio_Container.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -420,12 +414,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Playback_Event_Queue_Manager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Playback_Audio_File_Manager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Playback_Audio_File_Manager_Native.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Widget_Audio_Container.cpp">

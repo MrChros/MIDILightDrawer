@@ -99,7 +99,7 @@ namespace MIDILightDrawer
 		Playback_MIDI_Engine_Native::Set_Audio_Available(available);
 	}
 
-	void Playback_MIDI_Engine::Set_Audio_Position_Us(int64_t position_us)
+	void Playback_MIDI_Engine::Set_Audio_Position_us(int64_t position_us)
 	{
 		Playback_MIDI_Engine_Native::Set_Audio_Position_Us(position_us);
 	}
@@ -144,7 +144,7 @@ namespace MIDILightDrawer
 		Playback_MIDI_Engine_Native::Clear_Event_Queue();
 	}
 
-	double Playback_MIDI_Engine::Get_Current_Position_Ms()
+	double Playback_MIDI_Engine::Get_Current_Position_ms()
 	{
 		int64_t Position_Us = Playback_MIDI_Engine_Native::Get_Current_Position_Us();
 		return ((double)Position_Us) / 1000.0;

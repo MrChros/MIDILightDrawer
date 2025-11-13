@@ -34,6 +34,8 @@ namespace MIDILightDrawer
 		Playback_State _Current_State;
 		double _Playback_Position_ms;
 		double _Playback_Speed;
+		double _Audio_Offset_ms;
+		double _Audio_Volume;
 
 		System::Object^ _State_Lock;
 
@@ -64,12 +66,19 @@ namespace MIDILightDrawer
 		Playback_State Get_State();
 		double Get_Playback_Position_ms();
 		void Set_Playback_Position_ms(double position_ms);
-		double Get_Audio_Duration_Ms();
+		double Get_Audio_Duration_ms();
+		double Get_MIDI_Duration_ms();
 		bool Is_Playing();
 
 		// Playback speed
 		void Set_Playback_Speed(double speed);
 		double Get_Playback_Speed();
+
+		// Audio Offest and Volume
+		void Set_Audio_Offset(double offset_ms);
+		double Get_Audio_Offset();
+		void Set_Volume(double volume_percent);
+		double Get_Volume();
 
 		// MIDI control
 		bool Send_MIDI_Event(Playback_MIDI_Event^ event);

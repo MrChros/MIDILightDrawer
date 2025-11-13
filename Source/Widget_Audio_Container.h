@@ -22,6 +22,9 @@ namespace MIDILightDrawer
 		Label^ _Label_Audio_Info_Freqeuncy;
 		Label^ _Label_Audio_Info_File;
 
+		TextBox^ _TextBox_Audio_Offset;
+		TrackBar^ _TrackBar_Volume;
+
 	public:
 		Widget_Audio_Container();
 
@@ -35,6 +38,8 @@ namespace MIDILightDrawer
 
 	private:
 		void Update_Audio_Information();
+		void On_Audio_Offset_TextChanged(Object^ sender, EventArgs^ e);
+		void On_Volume_ValueChanged(Object^ sender, EventArgs^ e);
 	};
 }
 

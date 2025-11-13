@@ -30,7 +30,8 @@ namespace MIDILightDrawer
 		static int _Audio_Bit_Rate;
 		static double _Audio_Duration_ms;
 		static std::atomic<double> _Current_Position_ms;
-		
+		static double _Audio_Offset_ms;
+		static std::atomic<double> _Audio_Volume;
 
 		// Waveform visualization
 		static std::vector<Waveform_Segment> _Waveform_Segments;
@@ -45,10 +46,6 @@ namespace MIDILightDrawer
 		// Audio buffer management
 		static int64_t _Total_Audio_Samples;       // Total samples in file (per channel)
 		static int64_t _Current_Sample_Position;   // Current playback position (in samples)
-
-		// Sync with MIDI master clock
-		static std::atomic<int64_t> _MIDI_Position_us;  // MIDI position for sync
-		static bool _Sync_To_MIDI;                      // Enable MIDI sync
 
 	public:
 		static bool Initialize(const wchar_t* device_id, int buffer_size_samples);
@@ -65,6 +62,8 @@ namespace MIDILightDrawer
 		static double Get_Audio_Duration_ms();
 		static bool Is_Playing();
 		static bool Is_Audio_Loaded();
+		static void Set_Offset(double offset_ms);
+		static void Set_Volume(double volume_percent);
 		static void Calculate_Waveform_Data(int segments_per_second);
 		static bool Get_Waveform_Segment(int segment_index, float& min_value, float& max_value);
 		static int Get_Total_Waveform_Segments();
@@ -74,10 +73,6 @@ namespace MIDILightDrawer
 		static int Get_Channel_Count();
 		static int Get_Bit_Rate();
 		static int64_t Get_Sample_Count();
-
-		// Sync with MIDI master clock
-		static void Set_MIDI_Position_Us(int64_t position_us);
-		static void Enable_MIDI_Sync(bool enable);
 
 	private:
 		// Thread function

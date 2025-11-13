@@ -40,6 +40,8 @@ namespace MIDILightDrawer
 	int Playback_Audio_Engine_Native::_Audio_Bit_Rate = 0;
 	std::atomic<double> Playback_Audio_Engine_Native::_Current_Position_ms(0.0);
 	double Playback_Audio_Engine_Native::_Audio_Duration_ms = 0.0;
+	double Playback_Audio_Engine_Native::_Audio_Offset_ms = 0.0;
+	std::atomic<double> Playback_Audio_Engine_Native::_Audio_Volume(1.0);
 
 	std::vector<Playback_Audio_Engine_Native::Waveform_Segment> Playback_Audio_Engine_Native::_Waveform_Segments;
 	int Playback_Audio_Engine_Native::_Samples_Per_Segment = 0;
@@ -51,8 +53,6 @@ namespace MIDILightDrawer
 	std::mutex Playback_Audio_Engine_Native::_Buffer_Mutex;
 	int64_t Playback_Audio_Engine_Native::_Total_Audio_Samples = 0;
 	int64_t Playback_Audio_Engine_Native::_Current_Sample_Position = 0;
-	std::atomic<int64_t> Playback_Audio_Engine_Native::_MIDI_Position_us(0);
-	bool Playback_Audio_Engine_Native::_Sync_To_MIDI = false;
 
 	bool Playback_Audio_Engine_Native::Initialize(const wchar_t* device_id, int buffer_size_samples)
 	{
@@ -261,7 +261,7 @@ namespace MIDILightDrawer
 			Temp_Buffer = Resample_Audio_Linear(Temp_Buffer, _Audio_Sample_Rate_File, _Audio_Sample_Rate_WASAPI, File_Channels);
 
 			// After resampling, use WASAPI's sample rate for all calculations
-			_Audio_Sample_Rate_File = _Audio_Sample_Rate_WASAPI;
+			//_Audio_Sample_Rate_File = _Audio_Sample_Rate_WASAPI;
 		}
 
 		// Allocate audio buffer with resampled data
@@ -474,6 +474,32 @@ namespace MIDILightDrawer
 		return _Audio_Buffer != nullptr;
 	}
 
+	void Playback_Audio_Engine_Native::Set_Offset(double offset_ms)
+	{
+		std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
+		_Audio_Offset_ms = offset_ms;
+
+		// Adjust current playback position if playing
+		if (_Is_Playing) {
+			double Current_Position_ms = Get_Current_Position_ms();
+			Seek_To_Position(Current_Position_ms); // Re-seek to apply offset
+		}
+	}
+
+	void Playback_Audio_Engine_Native::Set_Volume(double volume_percent)
+	{
+		// Clamp to valid range
+		if (volume_percent < 0.0) {
+			volume_percent = 0.0;
+		}
+
+		if (volume_percent > 1.0) {
+			volume_percent = 1.0;
+		}
+
+		_Audio_Volume.store(volume_percent);
+	}
+
 	void Playback_Audio_Engine_Native::Calculate_Waveform_Data(int segments_per_second)
 	{
 		if (!Is_Audio_Loaded() || segments_per_second <= 0) {
@@ -533,16 +559,6 @@ namespace MIDILightDrawer
 		return _Total_Audio_Samples;
 	}
 
-	void Playback_Audio_Engine_Native::Set_MIDI_Position_Us(int64_t position_us)
-	{
-		_MIDI_Position_us.store(position_us, std::memory_order_relaxed);
-	}
-
-	void Playback_Audio_Engine_Native::Enable_MIDI_Sync(bool enable)
-	{
-		_Sync_To_MIDI = enable;
-	}
-
 	void Playback_Audio_Engine_Native::Audio_Playback_Thread_Function()
 	{
 		IAudioClient* Audio_Client = (IAudioClient*)_Audio_Client;
@@ -595,30 +611,6 @@ namespace MIDILightDrawer
 				continue;
 			}
 
-			// Check if we need to sync with MIDI
-			if (_Sync_To_MIDI)
-			{
-				int64_t MIDI_Pos_Us = _MIDI_Position_us.load(std::memory_order_relaxed);
-				double MIDI_Pos_ms = MIDI_Pos_Us / 1000.0;
-				double Audio_Pos_ms = _Current_Position_ms.load();
-
-				// If audio is drifting more than 10ms from MIDI, adjust
-				double Drift_ms = Audio_Pos_ms - MIDI_Pos_ms;
-				
-				std::wstringstream ss;
-				ss << std::fixed << std::setprecision(2) << Drift_ms << "\n";
-				OutputDebugStringW(ss.str().c_str());
-				
-				if (abs(Drift_ms) > 50.0) {
-					// Adjust audio position to match MIDI
-					std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
-					int64_t New_Sample_Position = (int64_t)((MIDI_Pos_ms / 1000.0) * _Audio_Sample_Rate_File);
-					New_Sample_Position = std::min(New_Sample_Position, _Total_Audio_Samples);
-					_Current_Sample_Position = New_Sample_Position;
-					_Current_Position_ms.store(MIDI_Pos_ms);
-				}
-			}
-
 			// Get available buffer space
 			UINT32 Padding_Frames = 0;
 			HRESULT Hr = Audio_Client->GetCurrentPadding(&Padding_Frames);
@@ -645,34 +637,74 @@ namespace MIDILightDrawer
 			{
 				std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
 
-				// Check if we've reached the end
-				if (_Current_Sample_Position >= _Total_Audio_Samples) {
-					// End of audio - fill with silence and stop
+				// Convert offset from milliseconds to samples
+				int64_t Offset_Samples = (int64_t)((_Audio_Offset_ms / 1000.0) * _Audio_Sample_Rate_File);
+
+				// Calculate adjusted position
+				int64_t Adjusted_Sample_Position = _Current_Sample_Position + Offset_Samples;
+
+				// Case 1: Offset is positive and we're before the audio starts
+				// Case 2: Offset is negative and we're before the beginning
+				// Case 3: We're past the end of the audio
+				if (Adjusted_Sample_Position < 0 || Adjusted_Sample_Position >= _Total_Audio_Samples || _Current_Sample_Position >= _Total_Audio_Samples)
+				{
+					// Play silence (zero samples)
 					memset(Float_Buffer, 0, Frames_Available * _Audio_Num_Channels * sizeof(float));
-					_Is_Playing.store(false);
-				}
-				else {
-					// Calculate how many frames we can actually read
-					int64_t Remaining_Samples = _Total_Audio_Samples - _Current_Sample_Position;
-					UINT32 Frames_Can_Read = (UINT32)std::min((int64_t)Frames_Available, Remaining_Samples);
 
-					// Copy audio data (interleaved)
-					int64_t Source_Index = _Current_Sample_Position * _Audio_Num_Channels;
-					memcpy(Float_Buffer, &_Audio_Buffer[Source_Index],
-						Frames_Can_Read * _Audio_Num_Channels * sizeof(float));
-
-					// Fill remainder with silence if needed
-					if (Frames_Can_Read < Frames_Available) {
-						memset(&Float_Buffer[Frames_Can_Read * _Audio_Num_Channels], 0,
-							(Frames_Available - Frames_Can_Read) * _Audio_Num_Channels * sizeof(float));
-					}
-
-					// Update position
-					_Current_Sample_Position += Frames_Can_Read;
+					// Update position normally (ignore offset for position tracking)
+					_Current_Sample_Position += Frames_Available;
 
 					// Update position in milliseconds using FILE's sample rate
 					double Position_Ms = (_Current_Sample_Position * 1000.0) / _Audio_Sample_Rate_File;
 					_Current_Position_ms.store(Position_Ms);
+
+					// If we've gone past the end of the audio (without offset), stop playing
+					if (_Current_Sample_Position >= _Total_Audio_Samples) {
+						_Is_Playing.store(false);
+					}
+				}
+				else
+				{
+					// Calculate remaining samples from the adjusted position
+					int64_t Remaining_Samples = _Total_Audio_Samples - Adjusted_Sample_Position;
+					UINT32 Frames_Can_Read = (UINT32)std::min((int64_t)Frames_Available, Remaining_Samples);
+
+					// Ensure we don't read past the end
+					if (Frames_Can_Read > 0 && Adjusted_Sample_Position + Frames_Can_Read <= _Total_Audio_Samples)
+					{
+						// Copy audio data from adjusted position (interleaved)
+						int64_t Source_Index = Adjusted_Sample_Position * _Audio_Num_Channels;
+						memcpy(Float_Buffer, &_Audio_Buffer[Source_Index], Frames_Can_Read * _Audio_Num_Channels * sizeof(float));
+
+						double Current_Volume = _Audio_Volume.load();
+						if (Current_Volume != 1.0) {  // Optimize: skip if volume is 100%
+							for (UINT32 i = 0; i < Frames_Can_Read * _Audio_Num_Channels; i++) {
+								Float_Buffer[i] *= (float)Current_Volume;
+							}
+						}
+
+						// Fill remainder with silence if we couldn't read enough
+						if (Frames_Can_Read < Frames_Available) {
+							memset(&Float_Buffer[Frames_Can_Read * _Audio_Num_Channels], 0, (Frames_Available - Frames_Can_Read) * _Audio_Num_Channels * sizeof(float));
+						}
+					}
+					else
+					{
+						// Can't read any frames (shouldn't happen due to earlier check, but be safe)
+						memset(Float_Buffer, 0, Frames_Available * _Audio_Num_Channels * sizeof(float));
+					}
+
+					// Update position (WITHOUT offset - position tracks playback time, not audio read position)
+					_Current_Sample_Position += Frames_Available;
+
+					// Update position in milliseconds using FILE's sample rate
+					double Position_Ms = (_Current_Sample_Position * 1000.0) / _Audio_Sample_Rate_File;
+					_Current_Position_ms.store(Position_Ms);
+
+					// If we've gone past the end of the audio timeline (not the adjusted position), stop
+					if (_Current_Sample_Position >= _Total_Audio_Samples) {
+						_Is_Playing.store(false);
+					}
 				}
 			}
 

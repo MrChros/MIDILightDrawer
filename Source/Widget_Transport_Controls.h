@@ -43,7 +43,7 @@ namespace MIDILightDrawer
 		Widget_Transport_Controls();
 
 		void Set_Playback_Manager(Playback_Manager^ playback_manager);
-		void Update_State(bool is_playing);
+		void Update_State();
 
 		void Trigger_Play_Pause();
 		void Trigger_Move_To_Start();

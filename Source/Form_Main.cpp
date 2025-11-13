@@ -1469,6 +1469,8 @@ namespace MIDILightDrawer
 			return;
 		}
 
+		this->_Transport_Controls->Update_State();
+
 		if (_Transport_Controls->Is_Playing			||
 			_Transport_Controls->Is_Rewinding		||
 			_Transport_Controls->Is_Fast_Forwarding ||

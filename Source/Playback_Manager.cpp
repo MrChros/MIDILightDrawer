@@ -23,6 +23,8 @@ namespace MIDILightDrawer
 		_Current_State = Playback_State::Stopped;
 		_Playback_Position_ms = 0.0;
 		_Playback_Speed = 1.0;
+		_Audio_Offset_ms = 0.0;
+		_Audio_Volume = 1.0; // 100%
 
 		_State_Lock = gcnew Object();
 		_Event_Queue_Manager->Invalidate_Cache();
@@ -41,12 +43,6 @@ namespace MIDILightDrawer
 	bool Playback_Manager::Initialize_Audio(String^ device_id, int buffer_size)
 	{
 		bool Success = _Audio_Engine->Initialize(device_id, buffer_size);
-
-		if (Success) {
-			// Enable MIDI synchronization for audio
-			_Audio_Engine->Enable_MIDI_Sync(true);
-			//_Audio_Engine->Enable_MIDI_Sync(false);
-		}
 
 		return Success;
 	}
@@ -117,7 +113,6 @@ namespace MIDILightDrawer
 				bool Success = _Event_Queue_Manager->Raster_And_Cache_Events(_Timeline->Tracks, _Timeline->Measures, Muted_Tracks, Soloed_Tracks, Settings::Get_Instance()->Global_MIDI_Output_Channel);
 
 				if (!Success) {
-					System::Threading::Monitor::Exit(_State_Lock);
 					return false;
 				}
 			}
@@ -152,7 +147,6 @@ namespace MIDILightDrawer
 				_Current_State = Playback_State::Playing;
 			}
 
-			System::Threading::Monitor::Exit(_State_Lock);
 			return Success;
 		}
 		finally {
@@ -183,7 +177,7 @@ namespace MIDILightDrawer
 				Success &= _Audio_Engine->Pause_Playback();
 
 			// Update position from MIDI engine (master clock)
-			_Playback_Position_ms = _MIDI_Engine->Get_Current_Position_Ms();
+			_Playback_Position_ms = _MIDI_Engine->Get_Current_Position_ms();
 
 			if (Success) {
 				_Current_State = Playback_State::Paused;
@@ -202,7 +196,6 @@ namespace MIDILightDrawer
 
 		try {
 			if (_Current_State == Playback_State::Stopped) {
-				System::Threading::Monitor::Exit(_State_Lock);
 				return true;
 			}
 
@@ -224,7 +217,6 @@ namespace MIDILightDrawer
 
 			_Current_State = Playback_State::Stopped;
 
-			System::Threading::Monitor::Exit(_State_Lock);
 			return Success;
 		}
 		finally {
@@ -329,15 +321,21 @@ namespace MIDILightDrawer
 			// Get position from MIDI engine if playing (it's the master clock)
 			if (Current == Playback_State::Playing)
 			{
-				double MIDI_Pos = _MIDI_Engine->Get_Current_Position_Ms();
+				double MIDI_Pos = _MIDI_Engine->Get_Current_Position_ms();
 
 				// Sync audio engine with MIDI position
 				if (Is_Audio_Loaded) {
-					double Audio_Pos_Ms = _Audio_Engine->Get_Current_Position_Ms();
-					int64_t Audio_Pos_Us = (int64_t)(Audio_Pos_Ms * 1000.0);
+					double Audio_Pos_ms = _Audio_Engine->Get_Current_Position_ms();
+					int64_t Audio_Pos_us = (int64_t)(Audio_Pos_ms * 1000.0);
 
 					// Feed audio position to MIDI engine for sync
-					_MIDI_Engine->Set_Audio_Position_Us(Audio_Pos_Us);
+					_MIDI_Engine->Set_Audio_Position_us(Audio_Pos_us);
+				}
+
+				if (MIDI_Pos >= Get_MIDI_Duration_ms()) {
+					Stop();
+					MIDI_Pos = Get_MIDI_Duration_ms();
+					_Playback_Position_ms = MIDI_Pos;
 				}
 
 				return MIDI_Pos;
@@ -358,9 +356,20 @@ namespace MIDILightDrawer
 		_Audio_Container->Update_Cursor();
 	}
 
-	double Playback_Manager::Get_Audio_Duration_Ms()
+	double Playback_Manager::Get_Audio_Duration_ms()
 	{
-		return _Audio_Engine->Get_Audio_Duration_Ms();
+		return _Audio_Engine->Get_Audio_Duration_ms();
+	}
+
+	double Playback_Manager::Get_MIDI_Duration_ms()
+	{
+		if (_Timeline->Measures->Count == 0) {
+			return 0.0;
+		}
+
+		Measure^ Last_Measure = _Timeline->Measures[_Timeline->Measures->Count - 1];
+
+		return Last_Measure->StartTime_ms + Last_Measure->Length_ms - 1;
 	}
 
 	bool Playback_Manager::Is_Playing()
@@ -378,6 +387,32 @@ namespace MIDILightDrawer
 	double Playback_Manager::Get_Playback_Speed()
 	{
 		return _Playback_Speed;
+	}
+
+	void Playback_Manager::Set_Audio_Offset(double offset_ms)
+	{
+		_Audio_Offset_ms = offset_ms;
+		if (_Audio_Engine) {
+			_Audio_Engine->Set_Offset(offset_ms);
+		}
+	}
+
+	double Playback_Manager::Get_Audio_Offset()
+	{
+		return _Audio_Offset_ms;
+	}
+
+	void Playback_Manager::Set_Volume(double volume_percent)
+	{
+		_Audio_Volume = volume_percent;
+		if (_Audio_Engine) {
+			_Audio_Engine->Set_Volume(volume_percent);
+		}
+	}
+
+	double Playback_Manager::Get_Volume()
+	{
+		return _Audio_Volume;
 	}
 
 	bool Playback_Manager::Send_MIDI_Event(Playback_MIDI_Event^ event)

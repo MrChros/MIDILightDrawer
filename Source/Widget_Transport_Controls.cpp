@@ -225,7 +225,7 @@ namespace MIDILightDrawer
 	void Widget_Transport_Controls::On_Move_To_End_Click(Object^ sender, EventArgs^ e)
 	{
 		if (_Playback_Manager) {
-			double Duration = _Playback_Manager->Get_Audio_Duration_Ms();
+			double Duration = _Playback_Manager->Get_MIDI_Duration_ms();
 			if (Duration > 0.0)
 			{
 				_Playback_Manager->Seek_To_Position(Duration);
@@ -263,7 +263,7 @@ namespace MIDILightDrawer
 			_Playback_Manager->Seek_To_Position(New_Position);
 		}
 		else if (_Is_Fast_Forwarding) {
-			double Duration = _Playback_Manager->Get_Audio_Duration_Ms();
+			double Duration = _Playback_Manager->Get_Audio_Duration_ms();
 			double New_Position = Current_Position + Seek_Amount;
 			if (Duration > 0.0 && New_Position > Duration) {
 				New_Position = Duration;
@@ -308,7 +308,7 @@ namespace MIDILightDrawer
 		this->_Playback_Manager = playback_manager;
 	}
 
-	void Widget_Transport_Controls::Update_State(bool is_playing)
+	void Widget_Transport_Controls::Update_State()
 	{
 		Update_Play_Pause_Button();
 	}

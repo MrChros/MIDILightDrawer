@@ -43,7 +43,7 @@ namespace MIDILightDrawer
 		bool Is_Device_Open();
 
 		void Set_Audio_Available(bool available);
-		void Set_Audio_Position_Us(int64_t position_us);
+		void Set_Audio_Position_us(int64_t position_us);
 
 		// Threading methods
 		bool Start_Playback();
@@ -52,7 +52,7 @@ namespace MIDILightDrawer
 		void Queue_Event(Playback_MIDI_Engine_Native::MIDI_Event event);
 		void Queue_Events(List<Playback_MIDI_Event^>^ events);
 		void Clear_Event_Queue();
-		double Get_Current_Position_Ms();
+		double Get_Current_Position_ms();
 		void Set_Current_Position_Ms(double position_ms);
 		bool Is_Playing();
 

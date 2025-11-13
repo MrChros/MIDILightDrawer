@@ -55,13 +55,11 @@ namespace MIDILightDrawer
 		bool Pause_Playback();
 		bool Resume_Playback();
 		bool Seek_To_Position(double position_ms);
-		double Get_Current_Position_Ms();
-		double Get_Audio_Duration_Ms();
+		double Get_Current_Position_ms();
+		double Get_Audio_Duration_ms();
 		bool Is_Playing();
-
-		// Sync with MIDI master clock
-		void Set_MIDI_Position_Us(int64_t position_us);
-		void Enable_MIDI_Sync(bool enable);
+		void Set_Offset(double offset_ms);
+		void Set_Volume(double volume_percent);
 
 		property bool Is_Audio_Loaded {
 			bool get() { return Playback_Audio_Engine_Native::Is_Audio_Loaded(); }

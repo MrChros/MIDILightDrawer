@@ -238,7 +238,7 @@ namespace MIDILightDrawer
 			if (audio_available)
 			{
 				auto now = std::chrono::steady_clock::now();
-				auto elapsed_since_sync = std::chrono::duration_cast(now - last_sync_time).count();
+				auto elapsed_since_sync = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_sync_time).count();
 
 				if (elapsed_since_sync >= SYNC_INTERVAL_MS)
 				{
@@ -246,15 +246,12 @@ namespace MIDILightDrawer
 
 					if (Audio_Pos_Us > 0)  // Validate audio position
 					{
-						int64_t Drift_Us = Current_Musical_Pos_Us - Audio_Pos_Us;
+						int64_t Drift_Us = Current_Pos_Us - Audio_Pos_Us;
 
 						// Debug output (rate-limited)
 #ifdef _DEBUG
 						std::wstringstream ss;
-						ss << L"MIDI Sync Check - Drift: " << std::fixed << std::setprecision(2)
-							<< (Drift_Us / 1000.0) << L" ms (MIDI: "
-							<< (Current_Musical_Pos_Us / 1000.0) << L" ms, Audio: "
-							<< (Audio_Pos_Us / 1000.0) << L" ms)\n";
+						ss << std::fixed << std::setprecision(2) << (Drift_Us / 1000.0) << L"," << (Current_Pos_Us / 1000.0) << L"," << (Audio_Pos_Us / 1000.0) << L"\n";
 						OutputDebugStringW(ss.str().c_str());
 #endif
 
@@ -264,12 +261,11 @@ namespace MIDILightDrawer
 							// Reset MIDI clock to audio's position
 							QueryPerformanceCounter(&Start_Time);
 							Start_Position_Us = Audio_Pos_Us;
-							Current_Musical_Pos_Us = Audio_Pos_Us;
+							Current_Pos_Us = Audio_Pos_Us;
 
 #ifdef _DEBUG
 							std::wstringstream sync_msg;
-							sync_msg << L"*** MIDI CLOCK ADJUSTED: " << (Drift_Us / 1000.0)
-								<< L" ms drift corrected ***\n";
+							sync_msg << L"*** MIDI CLOCK ADJUSTED: " << (Drift_Us / 1000.0) << L" ms drift corrected ***\n";
 							OutputDebugStringW(sync_msg.str().c_str());
 #endif
 						}

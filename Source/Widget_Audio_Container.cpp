@@ -13,29 +13,49 @@ namespace MIDILightDrawer
 		Table_Layout_Main->Dock = DockStyle::Fill;
 
 		Table_Layout_Main->RowCount = 3;
-		Table_Layout_Main->ColumnCount = 7;
+		Table_Layout_Main->ColumnCount = 9;
 
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 35));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 1));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 140));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 140));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 140));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 140));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 140));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 80));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 62));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
 
-		Drawing::Font^ Label_Font = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
+		Drawing::Font^ Font_Label = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
 		Label^ Label_Offset = gcnew Label();
-		Label_Offset->Dock = DockStyle::Fill;
-		Label_Offset->TextAlign = ContentAlignment::MiddleCenter;
-		Label_Offset->ForeColor = Color::White;
-		Label_Offset->BackColor = Color::Transparent;
 		Label_Offset->Text = "Audio Offset:";
-		//Label_Offset->Font = Label_Font;
+		
+		Label^ Label_Volume = gcnew Label();
+		Label_Volume->Text = "Volume:";
 
-		Table_Layout_Main->Controls->Add(Label_Offset, 0, 0);
+
+		// Create Audio Offset TextBox
+		_TextBox_Audio_Offset = gcnew TextBox();
+		_TextBox_Audio_Offset->Dock = DockStyle::Left;
+		_TextBox_Audio_Offset->Width = 70;
+		_TextBox_Audio_Offset->Text = "0";
+		_TextBox_Audio_Offset->TextAlign = HorizontalAlignment::Center;
+		_TextBox_Audio_Offset->TextChanged += gcnew EventHandler(this, &Widget_Audio_Container::On_Audio_Offset_TextChanged);
+		_TextBox_Audio_Offset->Margin = System::Windows::Forms::Padding(0, 6, 0, 0);
+
+		// Create Volume TrackBar
+		_TrackBar_Volume = gcnew TrackBar();
+		_TrackBar_Volume->Minimum = 0;
+		_TrackBar_Volume->Maximum = 100;
+		_TrackBar_Volume->Value = 100;
+		_TrackBar_Volume->TickFrequency = 10;
+		_TrackBar_Volume->Dock = DockStyle::Fill;
+		_TrackBar_Volume->TickStyle = System::Windows::Forms::TickStyle::None;
+		_TrackBar_Volume->ValueChanged += gcnew EventHandler(this, &Widget_Audio_Container::On_Volume_ValueChanged);
+
+		
 
 		_Label_Audio_Info_Length		= gcnew Label();
 		_Label_Audio_Info_Channels		= gcnew Label();
@@ -43,19 +63,25 @@ namespace MIDILightDrawer
 		_Label_Audio_Info_Freqeuncy		= gcnew Label();
 		_Label_Audio_Info_File			= gcnew Label();
 
-		for each (Label ^ Lbl in gcnew array<Label^>{_Label_Audio_Info_Length, _Label_Audio_Info_Channels, _Label_Audio_Info_Resolution, _Label_Audio_Info_Freqeuncy, _Label_Audio_Info_File })
+		for each (Label ^ Lbl in gcnew array<Label^>{Label_Offset, Label_Volume, _Label_Audio_Info_Length, _Label_Audio_Info_Channels, _Label_Audio_Info_Resolution, _Label_Audio_Info_Freqeuncy, _Label_Audio_Info_File })
 		{
 			Lbl->Dock		= DockStyle::Fill;
 			Lbl->TextAlign	= ContentAlignment::MiddleCenter;
 			Lbl->ForeColor	= Color::White;
 			Lbl->BackColor	= Color::Transparent;
 		}
+		_Label_Audio_Info_File->TextAlign = ContentAlignment::MiddleLeft;
 
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Length		, 2, 0);
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Channels		, 3, 0);
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Resolution	, 4, 0);
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Freqeuncy	, 5, 0);
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_File			, 6, 0);
+		Table_Layout_Main->Controls->Add(Label_Offset, 0, 0);
+		Table_Layout_Main->Controls->Add(_TextBox_Audio_Offset, 1, 0);
+		Table_Layout_Main->Controls->Add(Label_Volume, 2, 0);
+		Table_Layout_Main->Controls->Add(_TrackBar_Volume, 3, 0);
+
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Length		, 4, 0);
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Channels		, 5, 0);
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Resolution	, 6, 0);
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Freqeuncy	, 7, 0);
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_File			, 8, 0);
 
 
 		Label^ Label_Line = gcnew Label();
@@ -128,16 +154,46 @@ namespace MIDILightDrawer
 		TimeSpan Time_Span = TimeSpan::FromMilliseconds(this->_Playback_Manager->Audio_Duration_ms);
 		String^ Formatted_Time = Time_Span.ToString("mm\\:ss\\.fff");
 
-		String^ Audio_Info_Length		= String::Format("Length: {0}"			, Formatted_Time);
-		String^ Audio_Info_Channels		= String::Format("Channels: {0}"		, this->_Playback_Manager->Audio_Channel_Count);
-		String^ Audio_Info_Resolution	= String::Format("Resolution: {0} bits"	, this->_Playback_Manager->Audio_Bit_Rate);
-		String^ Audio_Info_Freqeuncy	= String::Format("Frequency: {0} Hz"	, this->_Playback_Manager->Audio_Sample_Rate_File);
-		String^ Audio_Info_File			= String::Format("File: {0}"			, this->_Playback_Manager->Audio_File_Path);
+		String^ Audio_Channel = "Mono";
+		if(this->_Playback_Manager->Audio_Channel_Count == 2) {
+			Audio_Channel = "Stereo";
+		}
+		else if (this->_Playback_Manager->Audio_Channel_Count > 2) {
+			Audio_Channel = "Stereo+";
+		}
+
+		String^ Audio_Info_Length		= String::Format("Length:\n{0}"				, Formatted_Time);
+		String^ Audio_Info_Channels		= String::Format("Channels:\n{0}"			, Audio_Channel);
+		String^ Audio_Info_Resolution	= String::Format("Resolution:\n {0} bits"	, this->_Playback_Manager->Audio_Bit_Rate);
+		String^ Audio_Info_Freqeuncy	= String::Format("Frequency:\n{0} Hz"		, this->_Playback_Manager->Audio_Sample_Rate_File);
+		String^ Audio_Info_File			= String::Format("File:\n{0}"				, this->_Playback_Manager->Audio_File_Path);
 
 		_Label_Audio_Info_Length->Text		= Audio_Info_Length;
 		_Label_Audio_Info_Channels->Text	= Audio_Info_Channels;
 		_Label_Audio_Info_Resolution->Text	= Audio_Info_Resolution;
 		_Label_Audio_Info_Freqeuncy->Text	= Audio_Info_Freqeuncy;
 		_Label_Audio_Info_File->Text		= Audio_Info_File;
+	}
+
+	void Widget_Audio_Container::On_Audio_Offset_TextChanged(Object^ sender, EventArgs^ e)
+	{
+		if (!this->_Playback_Manager) {
+			return;
+		}
+
+		double Offset_ms = 0.0;
+		if (Double::TryParse(_TextBox_Audio_Offset->Text, Offset_ms)) {
+			_Playback_Manager->Set_Audio_Offset(Offset_ms);
+		}
+	}
+
+	void Widget_Audio_Container::On_Volume_ValueChanged(Object^ sender, EventArgs^ e)
+	{
+		if (!this->_Playback_Manager) {
+			return;
+		}
+
+		double Volume_Percent = _TrackBar_Volume->Value / 100.0;
+		_Playback_Manager->Set_Volume(Volume_Percent);
 	}
 }

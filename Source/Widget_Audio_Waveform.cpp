@@ -31,8 +31,6 @@ namespace MIDILightDrawer
 
 	void Widget_Audio_Waveform::OnPaint(PaintEventArgs^ e)
 	{
-		
-		
 		Theme_Manager^ Theme = Theme_Manager::Get_Instance();
 
 		Graphics^ G = e->Graphics;

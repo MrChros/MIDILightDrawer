@@ -83,8 +83,16 @@ namespace MIDILightDrawer
 
 	void Playback_Manager::Unload_Audio_File()
 	{
+		// Stop playback if playing
+		if (_Current_State == Playback_State::Playing) {
+			Stop();
+		}
+
 		_Audio_Engine->Unload_Audio_File();
 		_Audio_Container->Unload_Audio_Data();
+
+		// NEW: Tell MIDI that audio is no longer available
+		_MIDI_Engine->Set_Audio_Available(false);
 	}
 
 	void Playback_Manager::Calculate_Waveform_Data(int segments_per_second)
@@ -109,6 +117,7 @@ namespace MIDILightDrawer
 				bool Success = _Event_Queue_Manager->Raster_And_Cache_Events(_Timeline->Tracks, _Timeline->Measures, Muted_Tracks, Soloed_Tracks, Settings::Get_Instance()->Global_MIDI_Output_Channel);
 
 				if (!Success) {
+					System::Threading::Monitor::Exit(_State_Lock);
 					return false;
 				}
 			}
@@ -121,10 +130,13 @@ namespace MIDILightDrawer
 			// Set MIDI engine position before starting
 			_MIDI_Engine->Set_Current_Position_Ms(_Playback_Position_ms);
 
-			if (Is_Audio_Loaded && _Audio_Engine != nullptr)
+			bool Audio_Available = Is_Audio_Loaded && _Audio_Engine != nullptr;
+			_MIDI_Engine->Set_Audio_Available(Audio_Available);
+
+			if (Audio_Available)
 			{
 				_Audio_Engine->Seek_To_Position(_Playback_Position_ms);
-				//_Audio_Engine->Start_Playback();
+
 				if (_Current_State == Playback_State::Paused) {
 					Success &= _Audio_Engine->Resume_Playback();
 				}
@@ -140,6 +152,7 @@ namespace MIDILightDrawer
 				_Current_State = Playback_State::Playing;
 			}
 
+			System::Threading::Monitor::Exit(_State_Lock);
 			return Success;
 		}
 		finally {
@@ -189,6 +202,7 @@ namespace MIDILightDrawer
 
 		try {
 			if (_Current_State == Playback_State::Stopped) {
+				System::Threading::Monitor::Exit(_State_Lock);
 				return true;
 			}
 
@@ -200,16 +214,17 @@ namespace MIDILightDrawer
 			// Stop MIDI playback thread
 			Success &= _MIDI_Engine->Stop_Playback();
 
-			// Clear any queued MIDI events
 			_MIDI_Engine->Clear_Event_Queue();
+			_MIDI_Engine->Set_Audio_Available(false);
 
 			// Stop audio if loaded
 			if (Is_Audio_Loaded) {
-				Success &= _Audio_Engine->Stop_Playback();
+				_Audio_Engine->Stop_Playback();
 			}
 
 			_Current_State = Playback_State::Stopped;
 
+			System::Threading::Monitor::Exit(_State_Lock);
 			return Success;
 		}
 		finally {
@@ -318,8 +333,11 @@ namespace MIDILightDrawer
 
 				// Sync audio engine with MIDI position
 				if (Is_Audio_Loaded) {
-					int64_t MIDI_Pos_Us = (int64_t)(MIDI_Pos * 1000.0);
-					_Audio_Engine->Set_MIDI_Position_Us(MIDI_Pos_Us);
+					double Audio_Pos_Ms = _Audio_Engine->Get_Current_Position_Ms();
+					int64_t Audio_Pos_Us = (int64_t)(Audio_Pos_Ms * 1000.0);
+
+					// Feed audio position to MIDI engine for sync
+					_MIDI_Engine->Set_Audio_Position_Us(Audio_Pos_Us);
 				}
 
 				return MIDI_Pos;

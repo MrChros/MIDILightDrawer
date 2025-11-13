@@ -6,6 +6,10 @@
 #include <algorithm>
 #include <chrono>
 
+#include <string>
+#include <sstream>
+#include <iomanip>
+
 #pragma comment(lib, "winmm.lib")
 
 namespace MIDILightDrawer
@@ -22,6 +26,9 @@ namespace MIDILightDrawer
 	std::atomic<int64_t> Playback_MIDI_Engine_Native::_Current_Position_us(0);
 	std::vector<Playback_MIDI_Engine_Native::Scheduled_MIDI_Event> Playback_MIDI_Engine_Native::_Event_Queue;
 	std::mutex Playback_MIDI_Engine_Native::_Event_Queue_Mutex;
+
+	std::atomic<bool> Playback_MIDI_Engine_Native::_Audio_Is_Available(false);
+	std::atomic<int64_t> Playback_MIDI_Engine_Native::_Audio_Position_Us(0);
 
 	bool Playback_MIDI_Engine_Native::Initialize(int device_id)
 	{
@@ -90,6 +97,21 @@ namespace MIDILightDrawer
 	bool Playback_MIDI_Engine_Native::Is_Device_Open()
 	{
 		return _Is_Initialized && (_MIDI_Handle != nullptr);
+	}
+
+	void Playback_MIDI_Engine_Native::Set_Audio_Available(bool available)
+	{
+		_Audio_Is_Available.store(available, std::memory_order_relaxed);
+
+		if (!available) {
+			// Clear audio position when audio stops
+			_Audio_Position_Us.store(0, std::memory_order_relaxed);
+		}
+	}
+
+	void Playback_MIDI_Engine_Native::Set_Audio_Position_Us(int64_t position_us)
+	{
+		_Audio_Position_Us.store(position_us, std::memory_order_relaxed);
 	}
 
 	bool Playback_MIDI_Engine_Native::Start_Playback_Thread()
@@ -188,6 +210,11 @@ namespace MIDILightDrawer
 
 		int64_t Start_Position_Us = _Current_Position_us.load();
 
+		// Sync state (only used when audio is available)
+		auto last_sync_time = std::chrono::steady_clock::now();
+		const int64_t SYNC_INTERVAL_MS = 1000;  // Sync every second
+		const int64_t SYNC_THRESHOLD_US = 50000;  // 50ms threshold
+
 		while (!_Should_Stop.load())
 		{
 			if (!_Is_Playing.load())
@@ -204,6 +231,54 @@ namespace MIDILightDrawer
 			// Current position in real time (which matches musical time because
 			// TicksToMilliseconds already accounted for tempo!)
 			int64_t Current_Pos_Us = Start_Position_Us + Elapsed_Us;
+
+			bool audio_available = _Audio_Is_Available.load(std::memory_order_relaxed);
+
+
+			if (audio_available)
+			{
+				auto now = std::chrono::steady_clock::now();
+				auto elapsed_since_sync = std::chrono::duration_cast(now - last_sync_time).count();
+
+				if (elapsed_since_sync >= SYNC_INTERVAL_MS)
+				{
+					int64_t Audio_Pos_Us = _Audio_Position_Us.load(std::memory_order_relaxed);
+
+					if (Audio_Pos_Us > 0)  // Validate audio position
+					{
+						int64_t Drift_Us = Current_Musical_Pos_Us - Audio_Pos_Us;
+
+						// Debug output (rate-limited)
+#ifdef _DEBUG
+						std::wstringstream ss;
+						ss << L"MIDI Sync Check - Drift: " << std::fixed << std::setprecision(2)
+							<< (Drift_Us / 1000.0) << L" ms (MIDI: "
+							<< (Current_Musical_Pos_Us / 1000.0) << L" ms, Audio: "
+							<< (Audio_Pos_Us / 1000.0) << L" ms)\n";
+						OutputDebugStringW(ss.str().c_str());
+#endif
+
+						// If drift exceeds threshold, adjust MIDI clock to match audio
+						if (std::abs(Drift_Us) > SYNC_THRESHOLD_US)
+						{
+							// Reset MIDI clock to audio's position
+							QueryPerformanceCounter(&Start_Time);
+							Start_Position_Us = Audio_Pos_Us;
+							Current_Musical_Pos_Us = Audio_Pos_Us;
+
+#ifdef _DEBUG
+							std::wstringstream sync_msg;
+							sync_msg << L"*** MIDI CLOCK ADJUSTED: " << (Drift_Us / 1000.0)
+								<< L" ms drift corrected ***\n";
+							OutputDebugStringW(sync_msg.str().c_str());
+#endif
+						}
+					}
+
+					last_sync_time = now;
+				}
+			}
+
 
 			// Update shared position
 			_Current_Position_us.store(Current_Pos_Us, std::memory_order_relaxed);

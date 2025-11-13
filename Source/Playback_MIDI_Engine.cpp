@@ -94,6 +94,16 @@ namespace MIDILightDrawer
 		return Playback_MIDI_Engine_Native::Is_Device_Open();
 	}
 
+	void Playback_MIDI_Engine::Set_Audio_Available(bool available)
+	{
+		Playback_MIDI_Engine_Native::Set_Audio_Available(available);
+	}
+
+	void Playback_MIDI_Engine::Set_Audio_Position_Us(int64_t position_us)
+	{
+		Playback_MIDI_Engine_Native::Set_Audio_Position_Us(position_us);
+	}
+
 	bool Playback_MIDI_Engine::Start_Playback()
 	{
 		if (!_Is_Initialized) {

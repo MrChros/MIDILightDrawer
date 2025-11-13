@@ -42,6 +42,9 @@ namespace MIDILightDrawer
 		bool Send_All_Notes_Off(int channel);
 		bool Is_Device_Open();
 
+		void Set_Audio_Available(bool available);
+		void Set_Audio_Position_Us(int64_t position_us);
+
 		// Threading methods
 		bool Start_Playback();
 		bool Stop_Playback();

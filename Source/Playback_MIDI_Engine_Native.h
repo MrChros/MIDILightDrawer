@@ -45,6 +45,9 @@ namespace MIDILightDrawer
 		static std::mutex _Event_Queue_Mutex;
 		static void (*_Event_Sent_Callback)(const MIDI_Event&);
 
+		static std::atomic<bool> _Audio_Is_Available;
+		static std::atomic<int64_t> _Audio_Position_Us;
+
 	public:
 		static bool Initialize(int device_id);
 		static void Cleanup();
@@ -52,6 +55,10 @@ namespace MIDILightDrawer
 		static bool Send_MIDI_Event(const MIDI_Event& event);
 		static bool Send_All_Notes_Off(int channel);
 		static bool Is_Device_Open();
+
+		// Audio state management
+		static void Set_Audio_Available(bool available);
+		static void Set_Audio_Position_Us(int64_t position_us);
 
 		// Threading control
 		static bool Start_Playback_Thread();

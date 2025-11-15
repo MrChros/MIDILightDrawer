@@ -17,9 +17,6 @@ namespace MIDILightDrawer
 		Waveform_Render_Data();
 		~Waveform_Render_Data();
 
-		/// <summary>
-		/// Gets the min/max sample values for a specific segment
-		/// </summary>
 		void GetSegmentMinMax(int segment_index, float% min_value, float% max_value);
 
 		property int TotalSegments {
@@ -54,7 +51,7 @@ namespace MIDILightDrawer
 		bool Stop_Playback();
 		bool Pause_Playback();
 		bool Resume_Playback();
-		bool Seek_To_Position(double position_ms);
+		bool Set_Current_Position_ms(double position_ms);
 		double Get_Current_Position_ms();
 		double Get_Audio_Duration_ms();
 		bool Is_Playing();

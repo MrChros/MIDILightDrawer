@@ -2,6 +2,7 @@
 
 #include "Playback_MIDI_Engine.h"
 #include "MIDI_Event_Raster.h"
+#include "Form_MIDI_Log.h"
 
 using namespace System;
 using namespace System::Collections::Generic;
@@ -36,6 +37,7 @@ namespace MIDILightDrawer
 
 		Playback_MIDI_Engine^ _MIDI_Engine;
 		MIDI_Event_Raster^ _MIDI_Event_Raster;
+		Form_MIDI_Log^ _Form_MIDI_Log;
 
 		// Track filtering state
 		List<int>^ _Current_Muted_Tracks;
@@ -51,7 +53,7 @@ namespace MIDILightDrawer
 		Object^ _Active_Notes_Lock;
 
 	public:
-		Playback_Event_Queue_Manager(Playback_MIDI_Engine^ midi_engine, MIDI_Event_Raster^ midi_event_raster);
+		Playback_Event_Queue_Manager(Playback_MIDI_Engine^ midi_engine, MIDI_Event_Raster^ midi_event_raster, Form_MIDI_Log^ form_midi_log);
 		~Playback_Event_Queue_Manager();
 
 		bool Raster_And_Cache_Events(List<Track^>^ tracks, List<Measure^>^ measures, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel);
@@ -71,7 +73,6 @@ namespace MIDILightDrawer
 		void Clear_Cache();
 
 	private:
-
 		void Apply_Track_Filtering(List<int>^ muted_tracks, List<int>^ soloed_tracks);
 		bool Should_Track_Play(int track_index, List<int>^ muted_tracks, List<int>^ soloed_tracks);
 		List<int>^ Get_Changed_Tracks(List<int>^ old_muted, List<int>^ old_soloed, List<int>^ new_muted, List<int>^ new_soloed);

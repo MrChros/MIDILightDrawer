@@ -222,6 +222,9 @@
     <ClInclude Include="Widget_Audio_Waveform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Control_TimeOffset_NumericUpDown.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIDI_Light_Drawer.cpp">
@@ -420,6 +423,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Widget_Audio_Waveform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Control_TimeOffset_NumericUpDown.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

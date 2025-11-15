@@ -23,12 +23,13 @@ namespace MIDILightDrawer
 	std::thread* Playback_MIDI_Engine_Native::_Midi_Thread = nullptr;
 	std::atomic<bool> Playback_MIDI_Engine_Native::_Is_Playing(false);
 	std::atomic<bool> Playback_MIDI_Engine_Native::_Should_Stop(false);
+	std::atomic<bool> Playback_MIDI_Engine_Native::_Reset_Timing(false);
 	std::atomic<int64_t> Playback_MIDI_Engine_Native::_Current_Position_us(0);
 	std::vector<Playback_MIDI_Engine_Native::Scheduled_MIDI_Event> Playback_MIDI_Engine_Native::_Event_Queue;
 	std::mutex Playback_MIDI_Engine_Native::_Event_Queue_Mutex;
 
 	std::atomic<bool> Playback_MIDI_Engine_Native::_Audio_Is_Available(false);
-	std::atomic<int64_t> Playback_MIDI_Engine_Native::_Audio_Position_Us(0);
+	std::atomic<int64_t> Playback_MIDI_Engine_Native::_Audio_Position_us(0);
 
 	bool Playback_MIDI_Engine_Native::Initialize(int device_id)
 	{
@@ -101,17 +102,17 @@ namespace MIDILightDrawer
 
 	void Playback_MIDI_Engine_Native::Set_Audio_Available(bool available)
 	{
-		_Audio_Is_Available.store(available, std::memory_order_relaxed);
+		_Audio_Is_Available.store(available, std::memory_order_release);
 
 		if (!available) {
 			// Clear audio position when audio stops
-			_Audio_Position_Us.store(0, std::memory_order_relaxed);
+			_Audio_Position_us.store(0, std::memory_order_release);
 		}
 	}
 
-	void Playback_MIDI_Engine_Native::Set_Audio_Position_Us(int64_t position_us)
+	void Playback_MIDI_Engine_Native::Set_Audio_Position_us(int64_t position_us)
 	{
-		_Audio_Position_Us.store(position_us, std::memory_order_relaxed);
+		_Audio_Position_us.store(position_us, std::memory_order_release);
 	}
 
 	bool Playback_MIDI_Engine_Native::Start_Playback_Thread()
@@ -128,8 +129,10 @@ namespace MIDILightDrawer
 		// Set Windows timer resolution to 1ms for better precision
 		timeBeginPeriod(1);
 
-		_Should_Stop.store(false);
-		_Is_Playing.store(true);
+		_Should_Stop.store(false, std::memory_order_release);
+		_Is_Playing.store(true, std::memory_order_release);
+
+		_Reset_Timing.store(true, std::memory_order_release);
 
 		// Create and start the thread
 		_Midi_Thread = new std::thread(MIDI_Playback_Thread_Function);
@@ -144,8 +147,8 @@ namespace MIDILightDrawer
 		}
 
 		// Signal thread to stop
-		_Should_Stop.store(true);
-		_Is_Playing.store(false);
+		_Should_Stop.store(true, std::memory_order_release);
+		_Is_Playing.store(false, std::memory_order_release);
 
 		// Wait for thread to finish
 		if (_Midi_Thread->joinable()) {
@@ -173,12 +176,6 @@ namespace MIDILightDrawer
 		Scheduled.Event = event;
 
 		_Event_Queue.push_back(Scheduled);
-
-		// Keep queue sorted by execution time
-		//std::sort(_Event_Queue.begin(), _Event_Queue.end(),
-		//	[](const Scheduled_MIDI_Event& a, const Scheduled_MIDI_Event& b) {
-		//		return a.Execute_Time_Us < b.Execute_Time_Us;
-		//	});
 	}
 
 	void Playback_MIDI_Engine_Native::Clear_Event_Queue()
@@ -187,99 +184,133 @@ namespace MIDILightDrawer
 		_Event_Queue.clear();
 	}
 
-	int64_t Playback_MIDI_Engine_Native::Get_Current_Position_Us()
+	int64_t Playback_MIDI_Engine_Native::Get_Current_Position_us()
 	{
-		return _Current_Position_us.load(std::memory_order_relaxed);
+		return _Current_Position_us.load(std::memory_order_acquire);
 	}
 
-	void Playback_MIDI_Engine_Native::Set_Current_Position_Us(int64_t position_us)
+	void Playback_MIDI_Engine_Native::Set_Current_Position_us(int64_t position_us)
 	{
-		_Current_Position_us.store(position_us, std::memory_order_relaxed);
+		_Current_Position_us.store(position_us, std::memory_order_release);
+
+		if (_Audio_Is_Available.load()) {
+			_Audio_Position_us.store(position_us, std::memory_order_release);
+		}
 	}
 
 	bool Playback_MIDI_Engine_Native::Is_Playing_Threaded()
 	{
-		return _Is_Playing.load(std::memory_order_relaxed);
+		return _Is_Playing.load(std::memory_order_acquire);
+	}
+
+	// Precise sleep function for better timing
+	void Precise_Sleep_us(int64_t microseconds)
+	{
+		if (microseconds <= 0) return;
+
+		// For very short sleeps, use pure busy-wait
+		if (microseconds < 500)
+		{
+			LARGE_INTEGER Frequency, Start, Current;
+			QueryPerformanceFrequency(&Frequency);
+			QueryPerformanceCounter(&Start);
+
+			int64_t Target_Ticks = (microseconds * Frequency.QuadPart) / 1000000LL;
+
+			do {
+				QueryPerformanceCounter(&Current);
+			} while ((Current.QuadPart - Start.QuadPart) < Target_Ticks);
+
+			return;
+		}
+
+		// For longer sleeps, sleep for most of the time, then busy-wait
+		if (microseconds > 1000)
+		{
+			int64_t Sleep_Time_Us = microseconds - 500;
+			std::this_thread::sleep_for(std::chrono::microseconds(Sleep_Time_Us));
+		}
+
+		// Busy-wait for the last portion
+		LARGE_INTEGER Frequency, Start, Current;
+		QueryPerformanceFrequency(&Frequency);
+		QueryPerformanceCounter(&Start);
+
+		int64_t Remaining_Us = (microseconds > 1000) ? 500 : microseconds;
+		int64_t Target_Ticks = (Remaining_Us * Frequency.QuadPart) / 1000000LL;
+
+		do {
+			QueryPerformanceCounter(&Current);
+		} while ((Current.QuadPart - Start.QuadPart) < Target_Ticks);
 	}
 
 	void Playback_MIDI_Engine_Native::MIDI_Playback_Thread_Function()
 	{
-		LARGE_INTEGER Frequency, Start_Time, Current_Time;
+		// MIDI thread does not maintains its own clock
+		// It now purely reads from audio position and processes events reactively (If Audio is available)
+
+		// Use high-resolution timer only for precise sleeping, NOT for timekeeping
+		LARGE_INTEGER Frequency;
 		QueryPerformanceFrequency(&Frequency);
-		QueryPerformanceCounter(&Start_Time);
 
-		int64_t Start_Position_Us = _Current_Position_us.load();
+		// Lookahead time: Process events slightly ahead of current position
+		// This compensates for MIDI output latency (~2-5ms typical)
+		const int64_t LOOKAHEAD_US = 5000;  // 5ms lookahead
 
-		// Sync state (only used when audio is available)
-		auto last_sync_time = std::chrono::steady_clock::now();
-		const int64_t SYNC_INTERVAL_MS = 1000;  // Sync every second
-		const int64_t SYNC_THRESHOLD_US = 50000;  // 50ms threshold
+		// Polling interval: Check for events every 0.5ms
+		const int64_t POLL_INTERVAL_US = 500;
 
-		while (!_Should_Stop.load())
+		while (!_Should_Stop.load(std::memory_order_acquire))
 		{
-			if (!_Is_Playing.load())
+			if (!_Is_Playing.load(std::memory_order_acquire))
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				Precise_Sleep_us(5000);  // 5ms when paused
 				continue;
 			}
 
-			// Calculate elapsed real time
-			QueryPerformanceCounter(&Current_Time);
-			int64_t Elapsed_Ticks = Current_Time.QuadPart - Start_Time.QuadPart;
-			int64_t Elapsed_Us = (Elapsed_Ticks * 1000000LL) / Frequency.QuadPart;
+			// Read current position from audio (or fallback)
+			int64_t Current_Pos_us = 0;
 
-			// Current position in real time (which matches musical time because
-			// TicksToMilliseconds already accounted for tempo!)
-			int64_t Current_Pos_Us = Start_Position_Us + Elapsed_Us;
+			bool Audio_Available = _Audio_Is_Available.load(std::memory_order_acquire);
 
-			bool audio_available = _Audio_Is_Available.load(std::memory_order_relaxed);
-
-
-			if (audio_available)
+			if (Audio_Available)
 			{
-				auto now = std::chrono::steady_clock::now();
-				auto elapsed_since_sync = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_sync_time).count();
+				// Audio is master: Use its position directly
+				Current_Pos_us = _Audio_Position_us.load(std::memory_order_acquire);
+			}
+			else
+			{
+				// MIDI-only playback: Use stored position
+				Current_Pos_us = _Current_Position_us.load(std::memory_order_acquire);
 
-				if (elapsed_since_sync >= SYNC_INTERVAL_MS)
-				{
-					int64_t Audio_Pos_Us = _Audio_Position_Us.load(std::memory_order_relaxed);
+				// In MIDI-only mode, we need to advance the position ourselves
+				// This is acceptable because there's no drift to worry about
+				static LARGE_INTEGER Last_Update_Time;
+				static bool First_Update = true;
 
-					if (Audio_Pos_Us > 0)  // Validate audio position
-					{
-						int64_t Drift_Us = Current_Pos_Us - Audio_Pos_Us;
-
-						// Debug output (rate-limited)
-#ifdef _DEBUG
-						std::wstringstream ss;
-						ss << std::fixed << std::setprecision(2) << (Drift_Us / 1000.0) << L"," << (Current_Pos_Us / 1000.0) << L"," << (Audio_Pos_Us / 1000.0) << L"\n";
-						OutputDebugStringW(ss.str().c_str());
-#endif
-
-						// If drift exceeds threshold, adjust MIDI clock to match audio
-						if (std::abs(Drift_Us) > SYNC_THRESHOLD_US)
-						{
-							// Reset MIDI clock to audio's position
-							QueryPerformanceCounter(&Start_Time);
-							Start_Position_Us = Audio_Pos_Us;
-							Current_Pos_Us = Audio_Pos_Us;
-
-#ifdef _DEBUG
-							std::wstringstream sync_msg;
-							sync_msg << L"*** MIDI CLOCK ADJUSTED: " << (Drift_Us / 1000.0) << L" ms drift corrected ***\n";
-							OutputDebugStringW(sync_msg.str().c_str());
-#endif
-						}
-					}
-
-					last_sync_time = now;
+				if (_Reset_Timing.load(std::memory_order_acquire)) {
+					First_Update = true;
+					_Reset_Timing.store(false, std::memory_order_release);
 				}
+
+				LARGE_INTEGER Now;
+				QueryPerformanceCounter(&Now);
+
+				if (!First_Update)
+				{
+					int64_t Elapsed_Ticks = Now.QuadPart - Last_Update_Time.QuadPart;
+					int64_t Elapsed_Us = (Elapsed_Ticks * 1000000LL) / Frequency.QuadPart;
+					Current_Pos_us += Elapsed_Us;
+				}
+
+				Last_Update_Time = Now;
+				First_Update = false;
 			}
 
+			// Update shared position for UI
+			_Current_Position_us.store(Current_Pos_us, std::memory_order_release);
 
-			// Update shared position
-			_Current_Position_us.store(Current_Pos_Us, std::memory_order_relaxed);
-
-			// Process events - their timestamps are already in real-world time!
+			// Process MIDI events based on audio's time
 			{
 				std::lock_guard<std::mutex> Lock(_Event_Queue_Mutex);
 
@@ -287,7 +318,8 @@ namespace MIDILightDrawer
 				{
 					const Scheduled_MIDI_Event& Next_Event = _Event_Queue.front();
 
-					if (Next_Event.Execute_Time_Us <= Current_Pos_Us + 1000)
+					// Send events that are due (with lookahead)
+					if (Next_Event.Execute_Time_Us <= Current_Pos_us + LOOKAHEAD_US)
 					{
 						Send_MIDI_Event(Next_Event.Event);
 
@@ -299,12 +331,13 @@ namespace MIDILightDrawer
 					}
 					else
 					{
-						break;
+						break;  // Events are sorted, so we're done
 					}
 				}
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			// Precise sleep until next poll
+			Precise_Sleep_us(POLL_INTERVAL_US);
 		}
 	}
 }

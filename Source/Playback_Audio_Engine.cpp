@@ -138,7 +138,7 @@ namespace MIDILightDrawer
 		return Playback_Audio_Engine_Native::Resume_Playback();
 	}
 
-	bool Playback_Audio_Engine::Seek_To_Position(double position_ms)
+	bool Playback_Audio_Engine::Set_Current_Position_ms(double position_ms)
 	{
 		return Playback_Audio_Engine_Native::Seek_To_Position(position_ms);
 	}

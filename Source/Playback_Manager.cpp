@@ -5,10 +5,11 @@
 #include "MIDI_Event_Raster.h"
 #include "Playback_Event_Queue_Manager.h"
 #include "Widget_Audio_Container.h"
+#include "Form_MIDI_Log.h"
 
 namespace MIDILightDrawer
 {
-	Playback_Manager::Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster, Widget_Audio_Container^ audio_container)
+	Playback_Manager::Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster, Widget_Audio_Container^ audio_container, Form_MIDI_Log^ form_midi_log)
 	{
 		_Timeline = timeline;
 		_MIDI_Event_Raster = midi_event_raster;
@@ -17,7 +18,7 @@ namespace MIDILightDrawer
 		_MIDI_Engine = gcnew Playback_MIDI_Engine();
 		_Audio_Engine = gcnew Playback_Audio_Engine();
 
-		_Event_Queue_Manager = gcnew Playback_Event_Queue_Manager(_MIDI_Engine, _MIDI_Event_Raster);
+		_Event_Queue_Manager = gcnew Playback_Event_Queue_Manager(_MIDI_Engine, _MIDI_Event_Raster, form_midi_log);
 		_MIDI_Engine->Set_Event_Queue_Manager(_Event_Queue_Manager);
 
 		_Current_State = Playback_State::Stopped;
@@ -32,7 +33,7 @@ namespace MIDILightDrawer
 
 	Playback_Manager::~Playback_Manager()
 	{
-		Cleanup();
+		Stop_And_Cleanup();
 	}
 
 	bool Playback_Manager::Initialize_MIDI(int device_id)
@@ -47,9 +48,10 @@ namespace MIDILightDrawer
 		return Success;
 	}
 
-	void Playback_Manager::Cleanup()
+	void Playback_Manager::Stop_And_Cleanup()
 	{
 		Stop();
+
 		_MIDI_Engine->Cleanup();
 		_Audio_Engine->Cleanup();
 	}
@@ -120,17 +122,24 @@ namespace MIDILightDrawer
 			_MIDI_Engine->Clear_Event_Queue();
 			_Event_Queue_Manager->Queue_All_Cached_Events(_Playback_Position_ms);
 
-			bool Success = true;
-
-			// Set MIDI engine position before starting
-			_MIDI_Engine->Set_Current_Position_Ms(_Playback_Position_ms);
-
 			bool Audio_Available = Is_Audio_Loaded && _Audio_Engine != nullptr;
 			_MIDI_Engine->Set_Audio_Available(Audio_Available);
 
-			if (Audio_Available)
-			{
-				_Audio_Engine->Seek_To_Position(_Playback_Position_ms);
+			bool Success = true;
+
+			_Audio_Container->Update_Cursor();
+
+			// Set MIDI engine position before starting
+			_MIDI_Engine->Set_Current_Position_ms(_Playback_Position_ms);
+			if (Audio_Available) {
+
+			}
+
+			// Start MIDI playback thread
+			Success &= _MIDI_Engine->Start_Playback();
+
+			if (Audio_Available) {
+				_Audio_Engine->Set_Current_Position_ms(_Playback_Position_ms);
 
 				if (_Current_State == Playback_State::Paused) {
 					Success &= _Audio_Engine->Resume_Playback();
@@ -139,9 +148,6 @@ namespace MIDILightDrawer
 					Success &= _Audio_Engine->Start_Playback();
 				}
 			}
-
-			// Start MIDI playback thread (MIDI is the master clock)
-			Success &= _MIDI_Engine->Start_Playback();
 
 			if (Success) {
 				_Current_State = Playback_State::Playing;
@@ -176,7 +182,7 @@ namespace MIDILightDrawer
 			if (Is_Audio_Loaded)
 				Success &= _Audio_Engine->Pause_Playback();
 
-			// Update position from MIDI engine (master clock)
+			// Update position from MIDI engine
 			_Playback_Position_ms = _MIDI_Engine->Get_Current_Position_ms();
 
 			if (Success) {
@@ -226,40 +232,33 @@ namespace MIDILightDrawer
 
 	bool Playback_Manager::Seek_To_Position(double position_ms)
 	{
+		if (position_ms < 0.0 || position_ms > Get_MIDI_Duration_ms()) {
+			return false;
+		}
+		
 		bool Was_Playing = (_Current_State == Playback_State::Playing);
 
-		// Stop playback during seek
-		if (Was_Playing)
-		{
-			_MIDI_Engine->Stop_Playback();
-			if (Is_Audio_Loaded) {
-				_Audio_Engine->Pause_Playback();
-			}
+		// Pause playback during seek
+		if (Was_Playing) {
+			Pause();
 		}
 
-		// Send all notes off before seeking
-		//Send_All_Notes_Off();
-
-		// Clear event queue
-		_MIDI_Engine->Clear_Event_Queue();
-
-		// Update position
 		_Playback_Position_ms = position_ms;
-		_MIDI_Engine->Set_Current_Position_Ms(position_ms);
+		_Event_Queue_Manager->Invalidate_Cache();
 
-		// Seek audio if loaded
-		if (Is_Audio_Loaded)
-		{
-			_Audio_Engine->Seek_To_Position(position_ms);
+		if (_MIDI_Engine) {
+			_MIDI_Engine->Set_Current_Position_ms(position_ms);
 		}
+		if (_Audio_Engine && Is_Audio_Loaded) {
+			_Audio_Engine->Set_Current_Position_ms(position_ms);
+		}
+
+		_Audio_Container->Update_Cursor();
+		_Timeline->Playback_Auto_Scroll(true);
 
 		// Resume playback if it was playing
-		if (Was_Playing)
-		{
-			_MIDI_Engine->Start_Playback();
-			if (Is_Audio_Loaded) {
-				_Audio_Engine->Resume_Playback();
-			}
+		if (Was_Playing) {
+			Play();
 		}
 
 		return true;
@@ -311,13 +310,18 @@ namespace MIDILightDrawer
 		}
 	}
 
+	bool Playback_Manager::Is_Playing()
+	{
+		return _Current_State == Playback_State::Playing;
+	}
+
 	double Playback_Manager::Get_Playback_Position_ms()
 	{
 		System::Threading::Monitor::Enter(_State_Lock);
 		try {
 			Playback_State Current = _Current_State;
 			System::Threading::Monitor::Exit(_State_Lock);
-			
+
 			// Get position from MIDI engine if playing (it's the master clock)
 			if (Current == Playback_State::Playing)
 			{
@@ -344,16 +348,10 @@ namespace MIDILightDrawer
 			// Otherwise use stored position
 			return _Playback_Position_ms;
 		}
-		catch (...) {
+		catch(...) {
 			System::Threading::Monitor::Exit(_State_Lock);
 			throw;
 		}
-	}
-
-	void Playback_Manager::Set_Playback_Position_ms(double position_ms)
-	{
-		_Playback_Position_ms = position_ms;
-		_Audio_Container->Update_Cursor();
 	}
 
 	double Playback_Manager::Get_Audio_Duration_ms()
@@ -370,11 +368,6 @@ namespace MIDILightDrawer
 		Measure^ Last_Measure = _Timeline->Measures[_Timeline->Measures->Count - 1];
 
 		return Last_Measure->StartTime_ms + Last_Measure->Length_ms - 1;
-	}
-
-	bool Playback_Manager::Is_Playing()
-	{
-		return _Current_State == Playback_State::Playing;
 	}
 
 	void Playback_Manager::Set_Playback_Speed(double speed)
@@ -418,15 +411,5 @@ namespace MIDILightDrawer
 	bool Playback_Manager::Send_MIDI_Event(Playback_MIDI_Event^ event)
 	{
 		return _MIDI_Engine->Send_Event(event);
-	}
-
-	bool Playback_Manager::Send_All_Notes_Off()
-	{
-		bool Success = true;
-		for (int i = 0; i < 16; ++i)
-		{
-			Success &= _MIDI_Engine->Send_All_Notes_Off(i);
-		}
-		return Success;
 	}
 }

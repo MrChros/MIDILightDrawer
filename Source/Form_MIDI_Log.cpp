@@ -1,6 +1,7 @@
 #include "Form_MIDI_Log.h"
 #include "Theme_Manager.h"
 
+
 #include <vcclr.h>
 
 namespace MIDILightDrawer
@@ -12,6 +13,140 @@ namespace MIDILightDrawer
 		Initialize_Components();
 		Setup_Grid_Columns();
 		Attach_Event_Handlers();
+	}
+
+	void Form_MIDI_Log::Add_Log_Entry(MIDI_Log_Entry^ entry)
+	{
+		if (!entry) {
+			return;
+		}
+
+		// Check if we need to invoke on UI thread
+		if (this->InvokeRequired)
+		{
+			Add_Log_Entry_Delegate^ d = gcnew Add_Log_Entry_Delegate(this, &Form_MIDI_Log::Add_Log_Entry);
+			this->BeginInvoke(d, entry);
+			return;
+		}
+
+		// Add to internal list
+		_Log_Entries->Add(entry);
+
+		// Enforce maximum log size
+		while (_Log_Entries->Count > MAX_LOG_ENTRIES)
+		{
+			_Log_Entries->RemoveAt(0);
+		}
+
+		int Row_Index = _Grid_Log->Rows->Add();
+		DataGridViewRow^ Row = _Grid_Log->Rows[Row_Index];
+
+		Row->Cells["Timestamp"]->Value = Format_Timestamp(entry->Timestamp_Ms);
+		Row->Cells["Track"]->Value = entry->Track_Number.ToString();
+		Row->Cells["Channel"]->Value = (entry->MIDI_Channel + 1).ToString(); // Display as 1-16
+		Row->Cells["Command"]->Value = entry->Command_Type;
+		Row->Cells["Data"]->Value = entry->Data;
+		Row->Cells["Description"]->Value = entry->Description;
+
+		// Auto-scroll to bottom
+		_Grid_Log->FirstDisplayedScrollingRowIndex = _Grid_Log->RowCount - 1;
+
+		// Remove old rows from grid if exceeded max
+		while (_Grid_Log->RowCount > MAX_LOG_ENTRIES)
+		{
+			_Grid_Log->Rows->RemoveAt(0);
+		}
+	}
+
+	void Form_MIDI_Log::Add_MIDI_Event(double timestamp_ms, int track, int channel, unsigned char command, unsigned char data1, unsigned char data2)
+	{
+		// Check if we need to invoke on UI thread
+		if (this->InvokeRequired)
+		{
+			// Use the custom delegate for thread-safe invocation
+			Add_MIDI_Event_Delegate^ d = gcnew Add_MIDI_Event_Delegate(this, &Form_MIDI_Log::Add_MIDI_Event);
+			this->BeginInvoke(d, timestamp_ms, track, channel, command, data1, data2);
+			return;
+		}
+		
+		MIDI_Log_Entry^ Entry = gcnew MIDI_Log_Entry();
+		Entry->Timestamp_Ms = timestamp_ms;
+		Entry->Track_Number = track;
+		Entry->MIDI_Channel = channel;
+
+		unsigned char Command_Type = command & 0xF0;
+
+		switch (Command_Type)
+		{
+		case 0x80:
+			Entry->Command_Type = "Note Off";
+			break;
+		case 0x90:
+			Entry->Command_Type = (data2 == 0) ? "Note Off" : "Note On";
+			break;
+		case 0xA0:
+			Entry->Command_Type = "Aftertouch";
+			break;
+		case 0xB0:
+			Entry->Command_Type = "Control Change";
+			break;
+		case 0xC0:
+			Entry->Command_Type = "Program Change";
+			break;
+		case 0xD0:
+			Entry->Command_Type = "Channel Pressure";
+			break;
+		case 0xE0:
+			Entry->Command_Type = "Pitch Bend";
+			break;
+		default:
+			Entry->Command_Type = "Unknown";
+			break;
+		}
+
+		Entry->Data = String::Format("0x{0:X2}, {1}, {2}", command, data1, data2);
+		Entry->Description = Format_MIDI_Command(command, data1, data2);
+
+		Add_Log_Entry(Entry);
+	}
+
+	void Form_MIDI_Log::Clear_Log()
+	{
+		_Log_Entries->Clear();
+		_Grid_Log->Rows->Clear();
+	}
+
+	void Form_MIDI_Log::Export_Log_To_File(String^ file_path)
+	{
+		try
+		{
+			System::IO::StreamWriter^ Writer = gcnew System::IO::StreamWriter(file_path);
+
+			// Write header
+			Writer->WriteLine("MIDI Command Log");
+			Writer->WriteLine("================");
+			Writer->WriteLine();
+			Writer->WriteLine("Timestamp\tTrack\tChannel\tCommand\tData\tDescription");
+			Writer->WriteLine("-------------------------------------------------------------------");
+
+			// Write entries
+			for each (MIDI_Log_Entry ^ Entry in _Log_Entries)
+			{
+				Writer->WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}",
+					Format_Timestamp(Entry->Timestamp_Ms),
+					Entry->Track_Number,
+					Entry->MIDI_Channel + 1,
+					Entry->Command_Type,
+					Entry->Data,
+					Entry->Description);
+			}
+
+			Writer->Close();
+		}
+		catch (Exception^ ex)
+		{
+			MessageBox::Show("Failed to export log:\n" + ex->Message, "Export Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
+		}
 	}
 
 	void Form_MIDI_Log::Initialize_Components()
@@ -28,20 +163,34 @@ namespace MIDILightDrawer
 		this->ForeColor = Theme_Manager::Get_Instance()->ForegroundText;
 
 		// Create data grid
-		_Grid_Log = gcnew DataGridView();
+		_Grid_Log = gcnew Control_DataGrid();
 		_Grid_Log->Location = Point(10, 10);
 		_Grid_Log->Size = System::Drawing::Size(this->ClientSize.Width - 20, this->ClientSize.Height - 60);
 		_Grid_Log->Anchor = AnchorStyles::Top | AnchorStyles::Bottom | AnchorStyles::Left | AnchorStyles::Right;
-		_Grid_Log->AllowUserToAddRows = false;
-		_Grid_Log->AllowUserToDeleteRows = false;
+		
 		_Grid_Log->ReadOnly = true;
-		_Grid_Log->SelectionMode = DataGridViewSelectionMode::FullRowSelect;
 		_Grid_Log->MultiSelect = false;
 		_Grid_Log->RowHeadersVisible = false;
+		
 		_Grid_Log->BackgroundColor = Theme_Manager::Get_Instance()->BackgroundAlt;
-		_Grid_Log->ForeColor = Theme_Manager::Get_Instance()->ForegroundText;
+		_Grid_Log->ForeColor = Theme_Manager::Get_Instance()->Background;
 		_Grid_Log->GridColor = Theme_Manager::Get_Instance()->BorderPrimary;
+		
+		_Grid_Log->ScrollBars = ScrollBars::Vertical;
+		_Grid_Log->SelectionMode = DataGridViewSelectionMode::FullRowSelect;
+
 		_Grid_Log->AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode::Fill;
+		_Grid_Log->ColumnHeadersHeight = 32;
+		_Grid_Log->ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode::DisableResizing;
+		_Grid_Log->RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode::DisableResizing;
+
+		_Grid_Log->AllowUserToAddRows = false;
+		_Grid_Log->AllowUserToDeleteRows = false;
+		_Grid_Log->AllowUserToResizeRows = false;
+		_Grid_Log->AllowUserToResizeColumns = false;
+		_Grid_Log->AllowUserToOrderColumns = false;
+		_Grid_Log->AutoGenerateColumns = false;
+		
 
 		// Create buttons
 		_Button_Clear = gcnew Button();
@@ -158,135 +307,6 @@ namespace MIDILightDrawer
 			return String::Format("Pitch Bend: {0}", (data2 << 7) | data1);
 		default:
 			return String::Format("Unknown: 0x{0:X2}, {1}, {2}", command, data1, data2);
-		}
-	}
-
-	void Form_MIDI_Log::Add_Log_Entry(MIDI_Log_Entry^ entry)
-	{
-		if (!entry) {
-			return;
-		}
-
-		// Add to internal list
-		_Log_Entries->Add(entry);
-
-		// Enforce maximum log size
-		while (_Log_Entries->Count > MAX_LOG_ENTRIES)
-		{
-			_Log_Entries->RemoveAt(0);
-		}
-
-		// Add to grid (invoke if needed for thread safety)
-		if (this->InvokeRequired)
-		{
-			this->Invoke(gcnew Action<MIDI_Log_Entry^>(this, &Form_MIDI_Log::Add_Log_Entry), entry);
-			return;
-		}
-
-		int Row_Index = _Grid_Log->Rows->Add();
-		DataGridViewRow^ Row = _Grid_Log->Rows[Row_Index];
-
-		Row->Cells["Timestamp"]->Value = Format_Timestamp(entry->Timestamp_Ms);
-		Row->Cells["Track"]->Value = entry->Track_Number.ToString();
-		Row->Cells["Channel"]->Value = (entry->MIDI_Channel + 1).ToString(); // Display as 1-16
-		Row->Cells["Command"]->Value = entry->Command_Type;
-		Row->Cells["Data"]->Value = entry->Data;
-		Row->Cells["Description"]->Value = entry->Description;
-
-		// Auto-scroll to bottom
-		_Grid_Log->FirstDisplayedScrollingRowIndex = _Grid_Log->RowCount - 1;
-
-		// Remove old rows from grid if exceeded max
-		while (_Grid_Log->RowCount > MAX_LOG_ENTRIES)
-		{
-			_Grid_Log->Rows->RemoveAt(0);
-		}
-	}
-
-	void Form_MIDI_Log::Add_MIDI_Event(double timestamp_ms, int track, int channel,
-		unsigned char command, unsigned char data1, unsigned char data2)
-	{
-		MIDI_Log_Entry^ Entry = gcnew MIDI_Log_Entry();
-		Entry->Timestamp_Ms = timestamp_ms;
-		Entry->Track_Number = track;
-		Entry->MIDI_Channel = channel;
-
-		unsigned char Command_Type = command & 0xF0;
-
-		switch (Command_Type)
-		{
-		case 0x80:
-			Entry->Command_Type = "Note Off";
-			break;
-		case 0x90:
-			Entry->Command_Type = (data2 == 0) ? "Note Off" : "Note On";
-			break;
-		case 0xA0:
-			Entry->Command_Type = "Aftertouch";
-			break;
-		case 0xB0:
-			Entry->Command_Type = "Control Change";
-			break;
-		case 0xC0:
-			Entry->Command_Type = "Program Change";
-			break;
-		case 0xD0:
-			Entry->Command_Type = "Channel Pressure";
-			break;
-		case 0xE0:
-			Entry->Command_Type = "Pitch Bend";
-			break;
-		default:
-			Entry->Command_Type = "Unknown";
-			break;
-		}
-
-		Entry->Data = String::Format("0x{0:X2}, {1}, {2}", command, data1, data2);
-		Entry->Description = Format_MIDI_Command(command, data1, data2);
-
-		Add_Log_Entry(Entry);
-	}
-
-	void Form_MIDI_Log::Clear_Log()
-	{
-		_Log_Entries->Clear();
-		_Grid_Log->Rows->Clear();
-	}
-
-	void Form_MIDI_Log::Export_Log_To_File(String^ file_path)
-	{
-		try
-		{
-			System::IO::StreamWriter^ Writer = gcnew System::IO::StreamWriter(file_path);
-
-			// Write header
-			Writer->WriteLine("MIDI Command Log");
-			Writer->WriteLine("================");
-			Writer->WriteLine();
-			Writer->WriteLine("Timestamp\tTrack\tChannel\tCommand\tData\tDescription");
-			Writer->WriteLine("-------------------------------------------------------------------");
-
-			// Write entries
-			for each (MIDI_Log_Entry ^ Entry in _Log_Entries)
-			{
-				Writer->WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}",
-					Format_Timestamp(Entry->Timestamp_Ms),
-					Entry->Track_Number,
-					Entry->MIDI_Channel + 1,
-					Entry->Command_Type,
-					Entry->Data,
-					Entry->Description);
-			}
-
-			Writer->Close();
-
-			MessageBox::Show("Log exported successfully!", "Export Complete",
-				MessageBoxButtons::OK, MessageBoxIcon::Information);
-		}
-		catch (Exception^ ex)
-		{
-			MessageBox::Show("Failed to export log:\n" + ex->Message, "Export Error",
-				MessageBoxButtons::OK, MessageBoxIcon::Error);
 		}
 	}
 }

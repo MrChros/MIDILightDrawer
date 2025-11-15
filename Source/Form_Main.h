@@ -21,6 +21,7 @@
 #include "Widget_Audio_Container.h"
 #include "Widget_Transport_Controls.h"
 
+#include "Form_MIDI_Log.h"
 #include "Form_BatchAction.h"
 #include "Form_Light_Import.h"
 #include "Form_Settings_MIDI.h"
@@ -38,33 +39,6 @@ using namespace System::Drawing;
 
 namespace MIDILightDrawer
 {
-	public ref struct MIDI_Writer_Event_Info
-	{
-		int Track_Index;
-		String^ Color;
-		uint32_t Start_Tick;
-		uint32_t Length_Ticks;
-		uint8_t Channel;
-		uint8_t Note;
-		uint8_t Velocity;
-		int Original_Color_Note_Index;
-	};
-
-	// Comparison function for sorting - define as a separate function
-	public ref class MIDI_Writer_Event_Comparer : System::Collections::Generic::IComparer<MIDI_Writer_Event_Info^>
-	{
-	public:
-		virtual int Compare(MIDI_Writer_Event_Info^ a, MIDI_Writer_Event_Info^ b)
-		{
-			if (a->Start_Tick != b->Start_Tick)
-				return a->Start_Tick.CompareTo(b->Start_Tick);
-			// If same start tick, sort by end tick
-			uint32_t a_end = a->Start_Tick + a->Length_Ticks;
-			uint32_t b_end = b->Start_Tick + b->Length_Ticks;
-			return a_end.CompareTo(b_end);
-		}
-	};
-	
 	public ref class Form_Main : public System::Windows::Forms::Form
 	{
 		public:
@@ -87,6 +61,7 @@ namespace MIDILightDrawer
 			ToolStripMenuItem^					_Menu_Edit_UndoSteps;
 			List<ToolStripMenuItem^>^			_Menu_Edit_UndoSteps_Items;
 			ToolStripMenuItem^					_Menu_Edit_BatchAction;
+			ToolStripMenuItem^					_Menu_Edit_MIDI_Log;
 
 			gp_parser::Parser*					_GP_Tab;
 			Widget_Tab_Info^					_Tab_Info;
@@ -110,6 +85,7 @@ namespace MIDILightDrawer
 
 			MIDI_Exporter^						_MIDI_Exporter;
 			MIDI_Event_Raster^					_MIDI_Event_Raster;
+			Form_MIDI_Log^						_Form_MIDI_Log;
 
 			Playback_Manager^					_Playback_Manager;
 			System::Windows::Forms::Timer^		_Playback_Update_Timer;
@@ -141,6 +117,7 @@ namespace MIDILightDrawer
 			void Menu_Edit_Paste_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_Delete_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_BatchAction_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_View_MIDI_Log_Click(System::Object^ sender, System::EventArgs^ e);
 
 			void Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);

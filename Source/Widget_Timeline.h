@@ -82,11 +82,9 @@ namespace MIDILightDrawer
 		void Unsolo_All_Tracks();
 
 		// Playback Methods
-		void SetPlaybackManager(Playback_Manager^ playback_manager);
-		void SetPlaybackCursorPosition(double position_ms);
-		double GetPlaybackCursorPosition();
-		void SetShowPlaybackCursor(bool show);
-		void AutoScrollForPlayback(bool doaAutoScroll);
+		void Set_Playback_Manager(Playback_Manager^ playback_manager);
+		void Playback_Set_Show_Cursor(bool show);
+		void Playback_Auto_Scroll(bool do_auto_scroll);
 
 		// Tools Setter & Getter
 		void SetCurrentTool(TimelineToolType tool);

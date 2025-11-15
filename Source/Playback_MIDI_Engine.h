@@ -29,6 +29,7 @@ namespace MIDILightDrawer
 		bool _Is_Initialized;
 
 	public:
+		// Neets to be public in order to be accesible from Engine_Callback_Helper class
 		Playback_Event_Queue_Manager^ _Event_Queue_Manager;
 
 	public:
@@ -37,11 +38,11 @@ namespace MIDILightDrawer
 
 		void Set_Event_Queue_Manager(Playback_Event_Queue_Manager^ manager);
 		bool Initialize(int device_id);
+		bool Is_Device_Open();
 		void Cleanup();
 		bool Send_Event(Playback_MIDI_Event^ event);
 		bool Send_All_Notes_Off(int channel);
-		bool Is_Device_Open();
-
+	
 		void Set_Audio_Available(bool available);
 		void Set_Audio_Position_us(int64_t position_us);
 
@@ -53,7 +54,7 @@ namespace MIDILightDrawer
 		void Queue_Events(List<Playback_MIDI_Event^>^ events);
 		void Clear_Event_Queue();
 		double Get_Current_Position_ms();
-		void Set_Current_Position_Ms(double position_ms);
+		void Set_Current_Position_ms(double position_ms);
 		bool Is_Playing();
 
 		static Playback_MIDI_Engine_Native::MIDI_Event MIDI_Playback_Event_To_Native(Playback_MIDI_Event^ event);

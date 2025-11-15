@@ -55,7 +55,13 @@ namespace MIDILightDrawer
 	bool Playback_MIDI_Engine::Initialize(int device_id)
 	{
 		_Is_Initialized = Playback_MIDI_Engine_Native::Initialize(device_id);
+
 		return _Is_Initialized;
+	}
+
+	bool Playback_MIDI_Engine::Is_Device_Open()
+	{
+		return Playback_MIDI_Engine_Native::Is_Device_Open();
 	}
 
 	void Playback_MIDI_Engine::Cleanup()
@@ -89,11 +95,6 @@ namespace MIDILightDrawer
 		return Playback_MIDI_Engine_Native::Send_All_Notes_Off(channel);
 	}
 
-	bool Playback_MIDI_Engine::Is_Device_Open()
-	{
-		return Playback_MIDI_Engine_Native::Is_Device_Open();
-	}
-
 	void Playback_MIDI_Engine::Set_Audio_Available(bool available)
 	{
 		Playback_MIDI_Engine_Native::Set_Audio_Available(available);
@@ -101,7 +102,7 @@ namespace MIDILightDrawer
 
 	void Playback_MIDI_Engine::Set_Audio_Position_us(int64_t position_us)
 	{
-		Playback_MIDI_Engine_Native::Set_Audio_Position_Us(position_us);
+		Playback_MIDI_Engine_Native::Set_Audio_Position_us(position_us);
 	}
 
 	bool Playback_MIDI_Engine::Start_Playback()
@@ -146,14 +147,14 @@ namespace MIDILightDrawer
 
 	double Playback_MIDI_Engine::Get_Current_Position_ms()
 	{
-		int64_t Position_Us = Playback_MIDI_Engine_Native::Get_Current_Position_Us();
+		int64_t Position_Us = Playback_MIDI_Engine_Native::Get_Current_Position_us();
 		return ((double)Position_Us) / 1000.0;
 	}
 
-	void Playback_MIDI_Engine::Set_Current_Position_Ms(double position_ms)
+	void Playback_MIDI_Engine::Set_Current_Position_ms(double position_ms)
 	{
-		int64_t Position_Us = static_cast<int64_t>(position_ms * 1000.0);
-		Playback_MIDI_Engine_Native::Set_Current_Position_Us(Position_Us);
+		int64_t Position_us = static_cast<int64_t>(position_ms * 1000.0);
+		Playback_MIDI_Engine_Native::Set_Current_Position_us(Position_us);
 	}
 
 	bool Playback_MIDI_Engine::Is_Playing()

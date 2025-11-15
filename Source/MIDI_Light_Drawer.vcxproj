@@ -149,6 +149,7 @@
     <ClInclude Include="Control_RadioButton.h" />
     <ClInclude Include="Control_ScrollablePanel.h" />
     <ClInclude Include="Control_ScrollBar.h" />
+    <ClInclude Include="Control_TimeOffset_NumericUpDown.h" />
     <ClInclude Include="Control_ToggleSwitch.h" />
     <ClInclude Include="Control_Trackbar_Range.h" />
     <ClInclude Include="Control_Trackbar_Zoom.h" />
@@ -218,6 +219,7 @@
     <ClCompile Include="Control_RadioButton.cpp" />
     <ClCompile Include="Control_ScrollablePanel.cpp" />
     <ClCompile Include="Control_ScrollBar.cpp" />
+    <ClCompile Include="Control_TimeOffset_NumericUpDown.cpp" />
     <ClCompile Include="Control_ToggleSwitch.cpp" />
     <ClCompile Include="Control_Trackbar_Range.cpp" />
     <ClCompile Include="Control_Trackbar_Zoom.cpp" />

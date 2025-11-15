@@ -255,13 +255,13 @@ namespace MIDILightDrawer
 			return false;
 		}
 
-		// CRITICAL FIX: Resample if file sample rate doesn't match WASAPI output
+		// Resample if file sample rate doesn't match WASAPI output
 		if (File_Sample_Rate != _Audio_Sample_Rate_WASAPI) {
 			// Resample the audio to match WASAPI's sample rate
 			Temp_Buffer = Resample_Audio_Linear(Temp_Buffer, _Audio_Sample_Rate_File, _Audio_Sample_Rate_WASAPI, File_Channels);
 
 			// After resampling, use WASAPI's sample rate for all calculations
-			//_Audio_Sample_Rate_File = _Audio_Sample_Rate_WASAPI;
+			_Audio_Sample_Rate_File = _Audio_Sample_Rate_WASAPI;
 		}
 
 		// Allocate audio buffer with resampled data
@@ -478,12 +478,6 @@ namespace MIDILightDrawer
 	{
 		std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
 		_Audio_Offset_ms = offset_ms;
-
-		// Adjust current playback position if playing
-		if (_Is_Playing) {
-			double Current_Position_ms = Get_Current_Position_ms();
-			Seek_To_Position(Current_Position_ms); // Re-seek to apply offset
-		}
 	}
 
 	void Playback_Audio_Engine_Native::Set_Volume(double volume_percent)
@@ -573,6 +567,18 @@ namespace MIDILightDrawer
 		UINT32 Buffer_Frame_Count = 0;
 		Audio_Client->GetBufferSize(&Buffer_Frame_Count);
 
+		// Real-time reference clock
+		LARGE_INTEGER Frequency, Playback_Start_Time, Current_Time;
+		QueryPerformanceFrequency(&Frequency);
+		QueryPerformanceCounter(&Playback_Start_Time);
+
+		// Remember starting sample position
+		int64_t Start_Sample_Position = _Current_Sample_Position;
+
+		// Calculate approximate hardware latency
+		// WASAPI typically buffers 10-30ms depending on settings
+		int64_t Hardware_Latency_Samples = Buffer_Frame_Count / 2;
+
 		while (!_Should_Stop.load())
 		{
 			// Wait for buffer ready event (or 100ms timeout)
@@ -653,15 +659,6 @@ namespace MIDILightDrawer
 
 					// Update position normally (ignore offset for position tracking)
 					_Current_Sample_Position += Frames_Available;
-
-					// Update position in milliseconds using FILE's sample rate
-					double Position_Ms = (_Current_Sample_Position * 1000.0) / _Audio_Sample_Rate_File;
-					_Current_Position_ms.store(Position_Ms);
-
-					// If we've gone past the end of the audio (without offset), stop playing
-					if (_Current_Sample_Position >= _Total_Audio_Samples) {
-						_Is_Playing.store(false);
-					}
 				}
 				else
 				{
@@ -696,15 +693,20 @@ namespace MIDILightDrawer
 
 					// Update position (WITHOUT offset - position tracks playback time, not audio read position)
 					_Current_Sample_Position += Frames_Available;
+				}
 
-					// Update position in milliseconds using FILE's sample rate
-					double Position_Ms = (_Current_Sample_Position * 1000.0) / _Audio_Sample_Rate_File;
-					_Current_Position_ms.store(Position_Ms);
+				double Position_Ms = (_Current_Sample_Position * 1000.0) / _Audio_Sample_Rate_File;
 
-					// If we've gone past the end of the audio timeline (not the adjusted position), stop
-					if (_Current_Sample_Position >= _Total_Audio_Samples) {
-						_Is_Playing.store(false);
-					}
+				// Account for hardware latency
+				int64_t Hardware_Latency_Samples = Buffer_Frame_Count / 2;
+				Position_Ms -= (Hardware_Latency_Samples * 1000.0) / _Audio_Sample_Rate_File;
+
+				if (Position_Ms < 0.0) Position_Ms = 0.0;
+
+				_Current_Position_ms.store(Position_Ms, std::memory_order_release);
+
+				if (_Current_Sample_Position >= _Total_Audio_Samples) {
+					_Is_Playing.store(false);
 				}
 			}
 

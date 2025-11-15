@@ -371,48 +371,29 @@ namespace MIDILightDrawer
 		Invalidate();
 	}
 
-	void Widget_Timeline::SetPlaybackManager(Playback_Manager^ playback_manager)
+	void Widget_Timeline::Set_Playback_Manager(Playback_Manager^ playback_manager)
 	{
-		_Playback_Manager = playback_manager;
-	}
-
-	void Widget_Timeline::SetPlaybackCursorPosition(double position_ms)
-	{
-		// Update playback manager if available
-		if (_Playback_Manager != nullptr) {
-			_Playback_Manager->Set_Playback_Position_ms(position_ms);
+		if(playback_manager) {
+			_Playback_Manager = playback_manager;
 		}
-
-		// Trigger redraw
-		this->Invalidate();
 	}
 
-	double Widget_Timeline::GetPlaybackCursorPosition()
-	{
-		if (_Playback_Manager != nullptr) {
-			double Time = _Playback_Manager->Get_Playback_Position_ms();
-			return Time;
-		}
-
-		return 0.0;
-	}
-
-	void Widget_Timeline::SetShowPlaybackCursor(bool show)
+	void Widget_Timeline::Playback_Set_Show_Cursor(bool show)
 	{
 		_ShowPlaybackCursor = show;
 
 		this->Invalidate();
 	}
 
-	void Widget_Timeline::AutoScrollForPlayback(bool doaAutoScroll)
+	void Widget_Timeline::Playback_Auto_Scroll(bool doaAutoScroll)
 	{
 		if (_Playback_Manager == nullptr) {
 			return;
 		}
 
-		double Cursor_Position_Ms = GetPlaybackCursorPosition();
+		double Cursor_Position_ms = _Playback_Manager->Get_Playback_Position_ms();
 
-		int Cursor_Position_Ticks	= MillisecondsToTicks(Cursor_Position_Ms);
+		int Cursor_Position_Ticks	= MillisecondsToTicks(Cursor_Position_ms);
 		int Cursor_Position_Pixels	= TicksToPixels(Cursor_Position_Ticks);
 
 		int Current_Scroll_X = ScrollPosition->X;
@@ -796,6 +777,7 @@ namespace MIDILightDrawer
 		{
 			if (M->StartTime_ms + M->Length_ms > milliseconds){
 				Target_Measure = M;
+				break;
 			}
 		}
 
@@ -1975,7 +1957,7 @@ namespace MIDILightDrawer
 
 		// Set cursor position
 		if(_Playback_Manager) {
-			_Playback_Manager->Set_Playback_Position_ms(Position_Ms);
+			_Playback_Manager->Seek_To_Position(Position_Ms);
 			Invalidate();
 		}
 	}

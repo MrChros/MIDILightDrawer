@@ -1,14 +1,17 @@
 #include "Widget_Audio_Container.h"
 
 #include "Theme_Manager.h"
+#include "Widget_Timeline.h"
 #include "Playback_Manager.h"
 
 namespace MIDILightDrawer
 {
 	Widget_Audio_Container::Widget_Audio_Container()
 	{
+		this->_Timeline = nullptr;
 		this->_Playback_Manager = nullptr;
-		
+		this->_Marker_Timestamps = gcnew List<double>;
+
 		TableLayoutPanel^ Table_Layout_Main = gcnew TableLayoutPanel();
 		Table_Layout_Main->Dock = DockStyle::Fill;
 
@@ -19,7 +22,7 @@ namespace MIDILightDrawer
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 1));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 80));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 120));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 62));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
@@ -37,13 +40,13 @@ namespace MIDILightDrawer
 
 
 		// Create Audio Offset TextBox
-		_TextBox_Audio_Offset = gcnew TextBox();
-		_TextBox_Audio_Offset->Dock = DockStyle::Left;
-		_TextBox_Audio_Offset->Width = 70;
-		_TextBox_Audio_Offset->Text = "0";
-		_TextBox_Audio_Offset->TextAlign = HorizontalAlignment::Center;
-		_TextBox_Audio_Offset->TextChanged += gcnew EventHandler(this, &Widget_Audio_Container::On_Audio_Offset_TextChanged);
-		_TextBox_Audio_Offset->Margin = System::Windows::Forms::Padding(0, 6, 0, 0);
+		_TimeOffset_Audio_Offset = gcnew Control_TimeOffset_NumericUpDown();
+		_TimeOffset_Audio_Offset->Dock = DockStyle::Fill;
+		_TimeOffset_Audio_Offset->Value_ms = 0.0;
+		_TimeOffset_Audio_Offset->Minimum_ms = -60000.0; // -60 seconds
+		_TimeOffset_Audio_Offset->Maximum_ms = 60000.0;  // +60 seconds
+		_TimeOffset_Audio_Offset->ValueChanged += gcnew EventHandler(this, &Widget_Audio_Container::On_Audio_Offset_ValueChanged);
+		//_TimeOffset_Audio_Offset->Margin = System::Windows::Forms::Padding(0, 5, 0, 0);
 
 		// Create Volume TrackBar
 		_TrackBar_Volume = gcnew TrackBar();
@@ -73,7 +76,7 @@ namespace MIDILightDrawer
 		_Label_Audio_Info_File->TextAlign = ContentAlignment::MiddleLeft;
 
 		Table_Layout_Main->Controls->Add(Label_Offset, 0, 0);
-		Table_Layout_Main->Controls->Add(_TextBox_Audio_Offset, 1, 0);
+		Table_Layout_Main->Controls->Add(_TimeOffset_Audio_Offset, 1, 0);
 		Table_Layout_Main->Controls->Add(Label_Volume, 2, 0);
 		Table_Layout_Main->Controls->Add(_TrackBar_Volume, 3, 0);
 
@@ -91,8 +94,9 @@ namespace MIDILightDrawer
 		Table_Layout_Main->Controls->Add(Label_Line, 0, 1);
 		Table_Layout_Main->SetColumnSpan(Label_Line, Table_Layout_Main->ColumnCount);
 
-		_Audio_Waveform = gcnew Widget_Audio_Waveform();
+		_Audio_Waveform = gcnew Widget_Audio_Waveform(_Marker_Timestamps);
 		_Audio_Waveform->Dock = DockStyle::Fill;
+		_Audio_Waveform->OnCursorPositionChanged += gcnew System::EventHandler<double>(this, &Widget_Audio_Container::On_Cursor_Position_Changed);
 
 		Table_Layout_Main->Controls->Add(_Audio_Waveform, 0, 2);
 		Table_Layout_Main->SetColumnSpan(_Audio_Waveform, Table_Layout_Main->ColumnCount);
@@ -100,6 +104,13 @@ namespace MIDILightDrawer
 		this->Controls->Add(Table_Layout_Main);
 
 		Load_Audio_Data();
+	}
+
+	void Widget_Audio_Container::Set_Widget_Timeline(Widget_Timeline^ timeline)
+	{
+		if (timeline) {
+			this->_Timeline = timeline;
+		}
 	}
 
 	void Widget_Audio_Container::Set_Playback_Manager(Playback_Manager^ playback_manager)
@@ -111,7 +122,8 @@ namespace MIDILightDrawer
 
 	void Widget_Audio_Container::Load_Audio_Data()
 	{
-		if(this->_Playback_Manager){
+		if(this->_Playback_Manager) {
+			this->_Audio_Waveform->Set_Audio_Duration_ms(this->_Playback_Manager->Get_Audio_Duration_ms());
 			this->_Audio_Waveform->Set_Waveform_Data(this->_Playback_Manager->Audio_Waveform_Data);
 		}
 
@@ -122,16 +134,40 @@ namespace MIDILightDrawer
 
 	void Widget_Audio_Container::Unload_Audio_Data()
 	{
-		this->_Audio_Waveform->Set_Waveform_Data(nullptr);
+		if (this->_Playback_Manager) {
+			this->_Audio_Waveform->Set_Audio_Duration_ms(Widget_Audio_Waveform::NO_AUDIO);
+			this->_Audio_Waveform->Set_Waveform_Data(nullptr);
+		}
+
 		this->_Audio_Waveform->Invalidate();
 
 		Update_Audio_Information();
 	}
 
+	void Widget_Audio_Container::Load_MIDI_Information()
+	{
+		_Marker_Timestamps->Clear();
+
+		if (this->_Playback_Manager) {
+			this->_Audio_Waveform->Set_MIDI_Duration_ms(this->_Playback_Manager->Get_MIDI_Duration_ms());
+		}
+			
+		if (this->_Timeline) {
+			for each(Measure^ M in _Timeline->Measures)
+			{
+				if (M->Marker_Text->Length > 0) {
+					_Marker_Timestamps->Add(M->StartTime_ms);
+				}
+			}
+		}
+
+		this->_Audio_Waveform->Invalidate();
+	}
+
 	void Widget_Audio_Container::Update_Cursor()
 	{
 		if(this->_Playback_Manager) {
-			this->_Audio_Waveform->Set_Cursor_Position_ms(this->_Playback_Manager->Get_Playback_Position_ms(), this->_Playback_Manager->Audio_Duration_ms);
+			this->_Audio_Waveform->Set_Cursor_Position_ms(this->_Playback_Manager->Get_Playback_Position_ms());
 		}
 	}
 
@@ -175,16 +211,14 @@ namespace MIDILightDrawer
 		_Label_Audio_Info_File->Text		= Audio_Info_File;
 	}
 
-	void Widget_Audio_Container::On_Audio_Offset_TextChanged(Object^ sender, EventArgs^ e)
+	void Widget_Audio_Container::On_Audio_Offset_ValueChanged(Object^ sender, EventArgs^ e)
 	{
 		if (!this->_Playback_Manager) {
 			return;
 		}
 
-		double Offset_ms = 0.0;
-		if (Double::TryParse(_TextBox_Audio_Offset->Text, Offset_ms)) {
-			_Playback_Manager->Set_Audio_Offset(Offset_ms);
-		}
+		double Offset_ms = _TimeOffset_Audio_Offset->Value_ms;
+		_Playback_Manager->Set_Audio_Offset(Offset_ms);
 	}
 
 	void Widget_Audio_Container::On_Volume_ValueChanged(Object^ sender, EventArgs^ e)
@@ -195,5 +229,14 @@ namespace MIDILightDrawer
 
 		double Volume_Percent = _TrackBar_Volume->Value / 100.0;
 		_Playback_Manager->Set_Volume(Volume_Percent);
+	}
+
+	void Widget_Audio_Container::On_Cursor_Position_Changed(Object^ sender, double cursor_position_ms)
+	{
+		if (!this->_Playback_Manager) {
+			return;
+		}
+
+		_Playback_Manager->Seek_To_Position(cursor_position_ms);
 	}
 }

@@ -12,6 +12,7 @@ namespace MIDILightDrawer
 	ref class MIDI_Event_Raster;
 	ref class Playback_Event_Queue_Manager;
 	ref class Widget_Audio_Container;
+	ref class Form_MIDI_Log;
 	
 	public enum class Playback_State
 	{
@@ -40,13 +41,13 @@ namespace MIDILightDrawer
 		System::Object^ _State_Lock;
 
 	public:
-		Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster, Widget_Audio_Container^ audio_container);
+		Playback_Manager(Widget_Timeline^ timeline, MIDI_Event_Raster^ midi_event_raster, Widget_Audio_Container^ audio_container, Form_MIDI_Log^ form_midi_log);
 		~Playback_Manager();
 
 		// Initialization
 		bool Initialize_MIDI(int device_id);
 		bool Initialize_Audio(String^ device_id, int buffer_size);
-		void Cleanup();
+		void Stop_And_Cleanup();
 
 		// Audio file management
 		bool Load_Audio_File(String^ file_path, String^% error_message);
@@ -64,11 +65,10 @@ namespace MIDILightDrawer
 
 		// State queries
 		Playback_State Get_State();
+		bool Is_Playing();
 		double Get_Playback_Position_ms();
-		void Set_Playback_Position_ms(double position_ms);
 		double Get_Audio_Duration_ms();
 		double Get_MIDI_Duration_ms();
-		bool Is_Playing();
 
 		// Playback speed
 		void Set_Playback_Speed(double speed);
@@ -82,7 +82,6 @@ namespace MIDILightDrawer
 
 		// MIDI control
 		bool Send_MIDI_Event(Playback_MIDI_Event^ event);
-		bool Send_All_Notes_Off();
 
 	public:
 		property bool Is_Audio_Loaded {

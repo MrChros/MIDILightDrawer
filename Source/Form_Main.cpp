@@ -25,9 +25,9 @@ namespace MIDILightDrawer
 		Settings::Initialize("settings.json");
 
 		// Create main container panel
-		Panel^ mainContainer = gcnew Panel();
-		mainContainer->Dock = DockStyle::Fill;
-		mainContainer->Padding = System::Windows::Forms::Padding(10);
+		Panel^ MainContainer = gcnew Panel();
+		MainContainer->Dock = DockStyle::Fill;
+		MainContainer->Padding = System::Windows::Forms::Padding(10);
 
 		// Create and configure main layout
 		TableLayoutPanel^ Table_Layout_Main = gcnew TableLayoutPanel();
@@ -102,8 +102,10 @@ namespace MIDILightDrawer
 		this->_Timeline->Name = L"timeline";
 		this->_Timeline->Theme = Theme_Manager::Get_Instance()->GetTimelineTheme();
 		this->_Timeline->CommandManager()->CommandStateChanged += gcnew TimelineCommandManager::CommandStateChangedHandler(this, &Form_Main::UpdateUndoRedoState);
+		this->_Audio_Container->Set_Widget_Timeline(this->_Timeline);
+		
 		TimelineContainer->Controls->Add(this->_Timeline);
-
+		
 		Table_Layout_Main->Controls->Add(TimelineContainer, 0, 2);
 		Table_Layout_Main->SetColumnSpan(TimelineContainer, Table_Layout_Main->ColumnCount);
 
@@ -114,18 +116,18 @@ namespace MIDILightDrawer
 		///////////////////////////
 		// Bottom Controls Panel //
 		///////////////////////////
-		Panel^ bottomControlsPanel = gcnew Panel();
-		bottomControlsPanel->Dock = DockStyle::Fill;
-		bottomControlsPanel->Padding = System::Windows::Forms::Padding(0, 10, 0, 0);
-		bottomControlsPanel->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
+		Panel^ BottomControlsPanel = gcnew Panel();
+		BottomControlsPanel->Dock = DockStyle::Fill;
+		BottomControlsPanel->Padding = System::Windows::Forms::Padding(0, 10, 0, 0);
+		BottomControlsPanel->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 
 		// Configure and add bottom controls
-		InitializeBottomControls(bottomControlsPanel);
-		Table_Layout_Main->Controls->Add(bottomControlsPanel, 0, 3);
-		Table_Layout_Main->SetColumnSpan(bottomControlsPanel, Table_Layout_Main->ColumnCount);
+		InitializeBottomControls(BottomControlsPanel);
+		Table_Layout_Main->Controls->Add(BottomControlsPanel, 0, 3);
+		Table_Layout_Main->SetColumnSpan(BottomControlsPanel, Table_Layout_Main->ColumnCount);
 
-		mainContainer->Controls->Add(Table_Layout_Main);
-		this->Controls->Add(mainContainer);
+		MainContainer->Controls->Add(Table_Layout_Main);
+		this->Controls->Add(MainContainer);
 
 
 		///////////////////
@@ -133,6 +135,12 @@ namespace MIDILightDrawer
 		///////////////////
 		_MIDI_Event_Raster = gcnew MIDI_Event_Raster(this->_Timeline);
 		_MIDI_Exporter = gcnew MIDI_Exporter(this->_MIDI_Event_Raster);
+
+
+		///////////////////
+		// MIDI Log Form //
+		///////////////////
+		_Form_MIDI_Log = gcnew Form_MIDI_Log();
 
 
 		// Initialize menu
@@ -396,6 +404,11 @@ namespace MIDILightDrawer
 		_Menu_Edit_BatchAction-> Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Batch")));
 		_Menu_Edit_BatchAction->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Edit_BatchAction_Click);
 
+		// Edit -> MIDI Log
+		_Menu_Edit_MIDI_Log = gcnew ToolStripMenuItem("MIDI Log");
+		//_Menu_Edit_MIDI_Log->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Batch")));
+		_Menu_Edit_MIDI_Log->Click += gcnew System::EventHandler(this, &Form_Main::Menu_View_MIDI_Log_Click);
+
 		// Build Edit menu
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Undo);
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_UndoSteps);
@@ -407,6 +420,7 @@ namespace MIDILightDrawer
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Delete);
 		Menu_Edit->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_BatchAction);
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_MIDI_Log);
 
 		_Menu_Edit_UndoSteps_Items = gcnew List<ToolStripMenuItem^>();
 
@@ -504,9 +518,17 @@ namespace MIDILightDrawer
 	{
 		try
 		{
+			if (_Playback_Manager != nullptr)
+			{
+#ifdef _DEBUG
+				Console::WriteLine("Warning: Playback system already initialized. Cleaning up...");
+#endif
+				ShutdownPlaybackSystem();
+			}
+			
 			// Create Playback_Manager
-			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline, this->_MIDI_Event_Raster, this->_Audio_Container);
-			this->_Timeline->SetPlaybackManager(this->_Playback_Manager);
+			this->_Playback_Manager = gcnew Playback_Manager(this->_Timeline, this->_MIDI_Event_Raster, this->_Audio_Container, this->_Form_MIDI_Log);
+			this->_Timeline->Set_Playback_Manager(this->_Playback_Manager);
 			this->_Audio_Container->Set_Playback_Manager(this->_Playback_Manager);
 
 			Device_Manager^ Devices = gcnew Device_Manager();
@@ -563,8 +585,8 @@ namespace MIDILightDrawer
 	{
 		if (_Playback_Manager != nullptr)
 		{
-			_Playback_Manager->Stop();
-			_Playback_Manager->Cleanup();
+			_Playback_Manager->Stop_And_Cleanup();
+
 			delete _Playback_Manager;
 			_Playback_Manager = nullptr;
 		}
@@ -593,6 +615,8 @@ namespace MIDILightDrawer
 			this->_Timeline->Clear();
 			this->_TrackBar_Zoom->Value = 1.0f;
 			SettingsMIDI_On_Settings_Accepted();
+
+			this->_Audio_Container->Load_MIDI_Information();
 
 			if (Settings::Get_Instance()->Octave_Entries->Count == 0) {
 				MessageBox::Show(this, "The Guitar Pro File has been successfully opened.\nTo see the Tablature, add Light Tracks in the MIDI Settings.", "Open Guitar Pro File", MessageBoxButtons::OK, MessageBoxIcon::Information);
@@ -913,6 +937,12 @@ namespace MIDILightDrawer
 		Form_BatchAction^ BatchForm = gcnew Form_BatchAction(this->_Timeline);
 		BatchForm->Owner = this;
 		BatchForm->ShowDialog();
+	}
+
+	void Form_Main::Menu_View_MIDI_Log_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		_Form_MIDI_Log->Show();
+		_Form_MIDI_Log->BringToFront();
 	}
 
 	void Form_Main::Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e)
@@ -1477,7 +1507,7 @@ namespace MIDILightDrawer
 			_Transport_Controls->Moved_To_Start		||
 			_Transport_Controls->Moved_To_End)
 		{
-			this->_Timeline->AutoScrollForPlayback(_Transport_Controls->AutoScroll_Enabled);
+			this->_Timeline->Playback_Auto_Scroll(_Transport_Controls->AutoScroll_Enabled);
 			this->_Audio_Container->Update_Cursor();
 		}
 	}
@@ -1595,328 +1625,7 @@ namespace MIDILightDrawer
 	void Form_Main::Button_2_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 #ifdef _DEBUG
-		Console::WriteLine("Button 2 Clicked - Exporting MIDI Color Note Debug CSV");
-
-		// Check if timeline has tracks
-		if (this->_Timeline->Tracks->Count == 0)
-		{
-			MessageBox::Show("No tracks available to export.", "Export Error", MessageBoxButtons::OK, MessageBoxIcon::Warning);
-			return;
-		}
-
-		// Ask user for save location
-		SaveFileDialog^ Save_Dialog = gcnew SaveFileDialog();
-		Save_Dialog->Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
-		Save_Dialog->DefaultExt = "csv";
-		Save_Dialog->FileName = "midi_color_note_debug.csv";
-		Save_Dialog->Title = "Export MIDI Color Note Debug";
-
-		if (Save_Dialog->ShowDialog() != System::Windows::Forms::DialogResult::OK)
-		{
-			return;
-		}
-
-		try
-		{
-			System::IO::StreamWriter^ Writer = gcnew System::IO::StreamWriter(Save_Dialog->FileName, false, System::Text::Encoding::UTF8);
-
-			// Write header information
-			Writer->WriteLine("MIDI Color Note Export Debug");
-			Writer->WriteLine("Generated: {0}", DateTime::Now.ToString("yyyy-MM-dd HH:mm:ss"));
-			Writer->WriteLine();
-
-			// Get settings
-			Settings^ Settings = Settings::Get_Instance();
-			uint8_t Global_MIDI_Channel = Settings->Global_MIDI_Output_Channel;
-
-			// Process each track
-			for (int Track_Index = 0; Track_Index < this->_Timeline->Tracks->Count; Track_Index++)
-			{
-				Track^ Current_Track = this->_Timeline->Tracks[Track_Index];
-
-				Writer->WriteLine("================================================================================");
-				Writer->WriteLine("Track {0}: Index {1}, Octave {2}", Track_Index, Current_Track->Index, Current_Track->Octave);
-				Writer->WriteLine("================================================================================");
-				Writer->WriteLine();
-
-				// Calculate octave offset
-				int Octave_Note_Offset = (Current_Track->Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
-
-				// Get the export track with color notes
-				Export_MIDI_Track^ Export_Track = this->_MIDI_Event_Raster->Raster_Track_For_Export(Current_Track);
-
-				// Write summary
-				Writer->WriteLine("=== SUMMARY ===");
-				Writer->WriteLine("Red Notes:   {0}", Export_Track->Notes_Red->Count);
-				Writer->WriteLine("Green Notes: {0}", Export_Track->Notes_Green->Count);
-				Writer->WriteLine("Blue Notes:  {0}", Export_Track->Notes_Blue->Count);
-				Writer->WriteLine("Total Color Notes: {0}", Export_Track->Notes_Red->Count + Export_Track->Notes_Green->Count + Export_Track->Notes_Blue->Count);
-				Writer->WriteLine();
-
-				// Write RED notes
-				Writer->WriteLine("=== RED NOTES ===");
-				Writer->WriteLine("Index,TickStart,TickLength,TickEnd,NoteNumber,Velocity,HasOffset,IsDirectFollower,AdjustedStart,AdjustedLength,BarIndex");
-
-				for (int i = 0; i < Export_Track->Notes_Red->Count; i++)
-				{
-					Export_MIDI_Color_Note^ CN = Export_Track->Notes_Red[i];
-					int Note_Number = Octave_Note_Offset + Settings->MIDI_Note_Red + (int)CN->Has_Offset;
-					int Adjusted_Start = CN->Tick_Start - (int)CN->Is_Direct_Follower;
-					int Adjusted_Length = CN->Tick_Length + (int)CN->Is_Direct_Follower;
-
-					// Find which bar this belongs to
-					int Bar_Index = -1;
-					for (int b = 0; b < Current_Track->Events->Count; b++)
-					{
-						if (CN->Tick_Start >= Current_Track->Events[b]->StartTick &&
-							CN->Tick_Start < Current_Track->Events[b]->StartTick + Current_Track->Events[b]->Duration)
-						{
-							Bar_Index = b;
-							break;
-						}
-					}
-
-					Writer->WriteLine("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}",
-						i,
-						CN->Tick_Start,
-						CN->Tick_Length,
-						CN->Tick_End,
-						Note_Number,
-						CN->Color_Value,
-						CN->Has_Offset,
-						CN->Is_Direct_Follower,
-						Adjusted_Start,
-						Adjusted_Length,
-						Bar_Index);
-				}
-				Writer->WriteLine();
-
-				// Write GREEN notes
-				Writer->WriteLine("=== GREEN NOTES ===");
-				Writer->WriteLine("Index,TickStart,TickLength,TickEnd,NoteNumber,Velocity,HasOffset,IsDirectFollower,AdjustedStart,AdjustedLength,BarIndex");
-
-				for (int i = 0; i < Export_Track->Notes_Green->Count; i++)
-				{
-					Export_MIDI_Color_Note^ CN = Export_Track->Notes_Green[i];
-					int Note_Number = Octave_Note_Offset + Settings->MIDI_Note_Green + (int)CN->Has_Offset;
-					int Adjusted_Start = CN->Tick_Start - (int)CN->Is_Direct_Follower;
-					int Adjusted_Length = CN->Tick_Length + (int)CN->Is_Direct_Follower;
-
-					// Find which bar this belongs to
-					int Bar_Index = -1;
-					for (int b = 0; b < Current_Track->Events->Count; b++)
-					{
-						if (CN->Tick_Start >= Current_Track->Events[b]->StartTick &&
-							CN->Tick_Start < Current_Track->Events[b]->StartTick + Current_Track->Events[b]->Duration)
-						{
-							Bar_Index = b;
-							break;
-						}
-					}
-
-					Writer->WriteLine("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}",
-						i,
-						CN->Tick_Start,
-						CN->Tick_Length,
-						CN->Tick_End,
-						Note_Number,
-						CN->Color_Value,
-						CN->Has_Offset,
-						CN->Is_Direct_Follower,
-						Adjusted_Start,
-						Adjusted_Length,
-						Bar_Index);
-				}
-				Writer->WriteLine();
-
-				// Write BLUE notes
-				Writer->WriteLine("=== BLUE NOTES ===");
-				Writer->WriteLine("Index,TickStart,TickLength,TickEnd,NoteNumber,Velocity,HasOffset,IsDirectFollower,AdjustedStart,AdjustedLength,BarIndex");
-
-				for (int i = 0; i < Export_Track->Notes_Blue->Count; i++)
-				{
-					Export_MIDI_Color_Note^ CN = Export_Track->Notes_Blue[i];
-					int Note_Number = Octave_Note_Offset + Settings->MIDI_Note_Blue + (int)CN->Has_Offset;
-					int Adjusted_Start = CN->Tick_Start - (int)CN->Is_Direct_Follower;
-					int Adjusted_Length = CN->Tick_Length + (int)CN->Is_Direct_Follower;
-
-					// Find which bar this belongs to
-					int Bar_Index = -1;
-					for (int b = 0; b < Current_Track->Events->Count; b++)
-					{
-						if (CN->Tick_Start >= Current_Track->Events[b]->StartTick &&
-							CN->Tick_Start < Current_Track->Events[b]->StartTick + Current_Track->Events[b]->Duration)
-						{
-							Bar_Index = b;
-							break;
-						}
-					}
-
-					Writer->WriteLine("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}",
-						i,
-						CN->Tick_Start,
-						CN->Tick_Length,
-						CN->Tick_End,
-						Note_Number,
-						CN->Color_Value,
-						CN->Has_Offset,
-						CN->Is_Direct_Follower,
-						Adjusted_Start,
-						Adjusted_Length,
-						Bar_Index);
-				}
-				Writer->WriteLine();
-
-				// Bar-by-bar analysis
-				Writer->WriteLine("=== BAR-BY-BAR ANALYSIS ===");
-				for (int b = 0; b < Current_Track->Events->Count; b++)
-				{
-					BarEvent^ Bar = Current_Track->Events[b];
-
-					Writer->WriteLine("--- Bar {0} ---", b);
-					Writer->WriteLine("Type: {0}", Bar->Type);
-					Writer->WriteLine("StartTick: {0}", Bar->StartTick);
-					Writer->WriteLine("Duration: {0}", Bar->Duration);
-					Writer->WriteLine("EndTick: {0}", Bar->StartTick + Bar->Duration);
-					Writer->WriteLine("Color: R={0}, G={1}, B={2}", Bar->Color.R, Bar->Color.G, Bar->Color.B);
-
-					// Count notes in this bar
-					int Red_Count = 0;
-					int Green_Count = 0;
-					int Blue_Count = 0;
-
-					for each(Export_MIDI_Color_Note ^ CN in Export_Track->Notes_Red)
-					{
-						if (CN->Tick_Start >= Bar->StartTick && CN->Tick_Start < Bar->StartTick + Bar->Duration)
-						{
-							Red_Count++;
-						}
-					}
-
-					for each(Export_MIDI_Color_Note ^ CN in Export_Track->Notes_Green)
-					{
-						if (CN->Tick_Start >= Bar->StartTick && CN->Tick_Start < Bar->StartTick + Bar->Duration)
-						{
-							Green_Count++;
-						}
-					}
-
-					for each(Export_MIDI_Color_Note ^ CN in Export_Track->Notes_Blue)
-					{
-						if (CN->Tick_Start >= Bar->StartTick && CN->Tick_Start < Bar->StartTick + Bar->Duration)
-						{
-							Blue_Count++;
-						}
-					}
-
-					Writer->WriteLine("Notes in bar: Red={0}, Green={1}, Blue={2}", Red_Count, Green_Count, Blue_Count);
-					Writer->WriteLine();
-				}
-
-				// Check for potential issues
-				Writer->WriteLine("=== POTENTIAL ISSUES ===");
-
-				bool Issues_Found = false;
-
-				// Check for overlapping RED notes
-				for (int i = 0; i < Export_Track->Notes_Red->Count - 1; i++)
-				{
-					Export_MIDI_Color_Note^ Current = Export_Track->Notes_Red[i];
-					Export_MIDI_Color_Note^ Next = Export_Track->Notes_Red[i + 1];
-
-					if (Current->Tick_End > Next->Tick_Start)
-					{
-						Writer->WriteLine("Overlapping RED notes: Index {0} (Tick {1}-{2}) overlaps with Index {3} (Tick {4}-{5})",
-							i, Current->Tick_Start, Current->Tick_End, i + 1, Next->Tick_Start, Next->Tick_End);
-						Issues_Found = true;
-					}
-				}
-
-				// Check for overlapping GREEN notes
-				for (int i = 0; i < Export_Track->Notes_Green->Count - 1; i++)
-				{
-					Export_MIDI_Color_Note^ Current = Export_Track->Notes_Green[i];
-					Export_MIDI_Color_Note^ Next = Export_Track->Notes_Green[i + 1];
-
-					if (Current->Tick_End > Next->Tick_Start)
-					{
-						Writer->WriteLine("Overlapping GREEN notes: Index {0} (Tick {1}-{2}) overlaps with Index {3} (Tick {4}-{5})",
-							i, Current->Tick_Start, Current->Tick_End, i + 1, Next->Tick_Start, Next->Tick_End);
-						Issues_Found = true;
-					}
-				}
-
-				// Check for overlapping BLUE notes
-				for (int i = 0; i < Export_Track->Notes_Blue->Count - 1; i++)
-				{
-					Export_MIDI_Color_Note^ Current = Export_Track->Notes_Blue[i];
-					Export_MIDI_Color_Note^ Next = Export_Track->Notes_Blue[i + 1];
-
-					if (Current->Tick_End > Next->Tick_Start)
-					{
-						Writer->WriteLine("Overlapping BLUE notes: Index {0} (Tick {1}-{2}) overlaps with Index {3} (Tick {4}-{5})",
-							i, Current->Tick_Start, Current->Tick_End, i + 1, Next->Tick_Start, Next->Tick_End);
-						Issues_Found = true;
-					}
-				}
-
-				// Check for negative adjusted start ticks
-				for each(Export_MIDI_Color_Note ^ CN in Export_Track->Notes_Red)
-				{
-					int Adjusted_Start = CN->Tick_Start - (int)CN->Is_Direct_Follower;
-					if (Adjusted_Start < 0)
-					{
-						Writer->WriteLine("RED note with negative adjusted start: TickStart={0}, Is_Direct_Follower={1}, Adjusted={2}",
-							CN->Tick_Start, CN->Is_Direct_Follower, Adjusted_Start);
-						Issues_Found = true;
-					}
-				}
-
-				for each(Export_MIDI_Color_Note ^ CN in Export_Track->Notes_Green)
-				{
-					int Adjusted_Start = CN->Tick_Start - (int)CN->Is_Direct_Follower;
-					if (Adjusted_Start < 0)
-					{
-						Writer->WriteLine("GREEN note with negative adjusted start: TickStart={0}, Is_Direct_Follower={1}, Adjusted={2}",
-							CN->Tick_Start, CN->Is_Direct_Follower, Adjusted_Start);
-						Issues_Found = true;
-					}
-				}
-
-				for each(Export_MIDI_Color_Note ^ CN in Export_Track->Notes_Blue)
-				{
-					int Adjusted_Start = CN->Tick_Start - (int)CN->Is_Direct_Follower;
-					if (Adjusted_Start < 0)
-					{
-						Writer->WriteLine("BLUE note with negative adjusted start: TickStart={0}, Is_Direct_Follower={1}, Adjusted={2}",
-							CN->Tick_Start, CN->Is_Direct_Follower, Adjusted_Start);
-						Issues_Found = true;
-					}
-				}
-
-				if (!Issues_Found)
-				{
-					Writer->WriteLine("No issues detected.");
-				}
-
-				Writer->WriteLine();
-				Writer->WriteLine();
-			}
-
-			Writer->Close();
-
-			MessageBox::Show("CSV export completed successfully!\n\nFile: " + Save_Dialog->FileName,
-				"Export Complete",
-				MessageBoxButtons::OK,
-				MessageBoxIcon::Information);
-		}
-		catch (Exception^ ex)
-		{
-			MessageBox::Show("Failed to export CSV:\n" + ex->Message,
-				"Export Error",
-				MessageBoxButtons::OK,
-				MessageBoxIcon::Error);
-		}
+		Console::WriteLine("Button 2 Clicked");
 
 #endif
 	}
@@ -1924,243 +1633,7 @@ namespace MIDILightDrawer
 	void Form_Main::Button_3_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 	#ifdef _DEBUG
-		Console::WriteLine("Button 3 Clicked - MIDI Writer Event Debug");
-
-		if (this->_Timeline->Tracks->Count == 0)
-		{
-			MessageBox::Show("No tracks available.", "Error", MessageBoxButtons::OK, MessageBoxIcon::Warning);
-			return;
-		}
-
-		SaveFileDialog^ Save_Dialog = gcnew SaveFileDialog();
-		Save_Dialog->Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
-		Save_Dialog->DefaultExt = "csv";
-		Save_Dialog->FileName = "midi_writer_events.csv";
-		Save_Dialog->Title = "Export MIDI Writer Events Debug";
-
-		if (Save_Dialog->ShowDialog() != System::Windows::Forms::DialogResult::OK)
-		{
-			return;
-		}
-
-		try
-		{
-			System::IO::StreamWriter^ Writer = gcnew System::IO::StreamWriter(Save_Dialog->FileName, false, System::Text::Encoding::UTF8);
-
-			Writer->WriteLine("MIDI Writer Events Debug - What Actually Gets Written");
-			Writer->WriteLine("Generated: {0}", DateTime::Now.ToString("yyyy-MM-dd HH:mm:ss"));
-			Writer->WriteLine();
-
-			Settings^ Settings = Settings::Get_Instance();
-
-			// Simulate what MIDI_Exporter::Export() does
-			List<Export_MIDI_Track^>^ Timeline_Export_Events = this->_MIDI_Event_Raster->Raster_Timeline_For_Export();
-
-			Writer->WriteLine("Total Tracks: {0}", Timeline_Export_Events->Count);
-			Writer->WriteLine();
-
-			List<MIDI_Writer_Event_Info^>^ All_Writer_Events = gcnew List<MIDI_Writer_Event_Info^>();
-
-			for (int Track_Idx = 0; Track_Idx < Timeline_Export_Events->Count; Track_Idx++)
-			{
-				Export_MIDI_Track^ EMT = Timeline_Export_Events[Track_Idx];
-				int Octave = EMT->Timeline_Track->Octave;
-				int Octave_Note_Offset = (Octave + MIDI_Event_Raster::OCTAVE_OFFSET) * MIDI_Event_Raster::NOTES_PER_OCTAVE;
-
-				Writer->WriteLine("=== Track {0} ===", Track_Idx);
-				Writer->WriteLine("Octave: {0}", Octave);
-				Writer->WriteLine("Octave Note Offset: {0}", Octave_Note_Offset);
-				Writer->WriteLine("Red Notes: {0}", EMT->Notes_Red->Count);
-				Writer->WriteLine("Green Notes: {0}", EMT->Notes_Green->Count);
-				Writer->WriteLine("Blue Notes: {0}", EMT->Notes_Blue->Count);
-				Writer->WriteLine();
-
-				// Add Red notes
-				for (int i = 0; i < EMT->Notes_Red->Count; i++)
-				{
-					Export_MIDI_Color_Note^ CN = EMT->Notes_Red[i];
-
-					MIDI_Writer_Event_Info^ Event = gcnew MIDI_Writer_Event_Info();
-					Event->Track_Index = Track_Idx;
-					Event->Color = "Red";
-					Event->Start_Tick = CN->Tick_Start - (uint32_t)CN->Is_Direct_Follower;
-					Event->Length_Ticks = CN->Tick_Length + (uint32_t)CN->Is_Direct_Follower;
-					Event->Channel = Settings->Global_MIDI_Output_Channel;
-					Event->Note = Octave_Note_Offset + Settings->MIDI_Note_Red + (int)CN->Has_Offset;
-					Event->Velocity = CN->Color_Value;
-					Event->Original_Color_Note_Index = i;
-
-					All_Writer_Events->Add(Event);
-				}
-
-				// Add Green notes
-				for (int i = 0; i < EMT->Notes_Green->Count; i++)
-				{
-					Export_MIDI_Color_Note^ CN = EMT->Notes_Green[i];
-
-					MIDI_Writer_Event_Info^ Event = gcnew MIDI_Writer_Event_Info();
-					Event->Track_Index = Track_Idx;
-					Event->Color = "Green";
-					Event->Start_Tick = CN->Tick_Start - (uint32_t)CN->Is_Direct_Follower;
-					Event->Length_Ticks = CN->Tick_Length + (uint32_t)CN->Is_Direct_Follower;
-					Event->Channel = Settings->Global_MIDI_Output_Channel;
-					Event->Note = Octave_Note_Offset + Settings->MIDI_Note_Green + (int)CN->Has_Offset;
-					Event->Velocity = CN->Color_Value;
-					Event->Original_Color_Note_Index = i;
-
-					All_Writer_Events->Add(Event);
-				}
-
-				// Add Blue notes
-				for (int i = 0; i < EMT->Notes_Blue->Count; i++)
-				{
-					Export_MIDI_Color_Note^ CN = EMT->Notes_Blue[i];
-
-					MIDI_Writer_Event_Info^ Event = gcnew MIDI_Writer_Event_Info();
-					Event->Track_Index = Track_Idx;
-					Event->Color = "Blue";
-					Event->Start_Tick = CN->Tick_Start - (uint32_t)CN->Is_Direct_Follower;
-					Event->Length_Ticks = CN->Tick_Length + (uint32_t)CN->Is_Direct_Follower;
-					Event->Channel = Settings->Global_MIDI_Output_Channel;
-					Event->Note = Octave_Note_Offset + Settings->MIDI_Note_Blue + (int)CN->Has_Offset;
-					Event->Velocity = CN->Color_Value;
-					Event->Original_Color_Note_Index = i;
-
-					All_Writer_Events->Add(Event);
-				}
-			}
-
-			// Write header for all events
-			Writer->WriteLine();
-			Writer->WriteLine("=== ALL EVENTS SENT TO MIDI_WRITER (In Order Added) ===");
-			Writer->WriteLine("Index,Track,Color,ColorNoteIdx,StartTick,EndTick,Length,Channel,Note,Velocity");
-
-			for (int i = 0; i < All_Writer_Events->Count; i++)
-			{
-				MIDI_Writer_Event_Info^ Event = All_Writer_Events[i];
-				uint32_t End_Tick = Event->Start_Tick + Event->Length_Ticks;
-
-				Writer->WriteLine("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}",
-					i,
-					Event->Track_Index,
-					Event->Color,
-					Event->Original_Color_Note_Index,
-					Event->Start_Tick,
-					End_Tick,
-					Event->Length_Ticks,
-					Event->Channel,
-					Event->Note,
-					Event->Velocity);
-			}
-
-			// Now show what it SHOULD look like if sorted by time
-			Writer->WriteLine();
-			Writer->WriteLine("=== EVENTS SORTED BY START TICK ===");
-			Writer->WriteLine("Index,Track,Color,ColorNoteIdx,StartTick,EndTick,Length,Channel,Note,Velocity");
-
-			List<MIDI_Writer_Event_Info^>^ Sorted_Events = gcnew List<MIDI_Writer_Event_Info^>(All_Writer_Events);
-			Sorted_Events->Sort(gcnew MIDI_Writer_Event_Comparer());
-
-			for (int i = 0; i < Sorted_Events->Count; i++)
-			{
-				MIDI_Writer_Event_Info^ Event = Sorted_Events[i];
-				uint32_t End_Tick = Event->Start_Tick + Event->Length_Ticks;
-
-				Writer->WriteLine("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}",
-					i,
-					Event->Track_Index,
-					Event->Color,
-					Event->Original_Color_Note_Index,
-					Event->Start_Tick,
-					End_Tick,
-					Event->Length_Ticks,
-					Event->Channel,
-					Event->Note,
-					Event->Velocity);
-			}
-
-			// Analyze the difference between insertion order and sorted order
-			Writer->WriteLine();
-			Writer->WriteLine("=== ORDER ANALYSIS ===");
-
-			int Order_Differences = 0;
-			for (int i = 0; i < All_Writer_Events->Count; i++)
-			{
-				MIDI_Writer_Event_Info^ Original = All_Writer_Events[i];
-				MIDI_Writer_Event_Info^ Sorted = Sorted_Events[i];
-
-				if (Original->Start_Tick != Sorted->Start_Tick ||
-					Original->Color != Sorted->Color ||
-					Original->Track_Index != Sorted->Track_Index)
-				{
-					Order_Differences++;
-					Writer->WriteLine("Position {0}: Original={1} Track{2} Tick{3}, Sorted={4} Track{5} Tick{6}",
-						i,
-						Original->Color,
-						Original->Track_Index,
-						Original->Start_Tick,
-						Sorted->Color,
-						Sorted->Track_Index,
-						Sorted->Start_Tick);
-				}
-			}
-
-			Writer->WriteLine();
-			Writer->WriteLine("Total events out of chronological order: {0}", Order_Differences);
-
-			// Check for events at the same tick
-			Writer->WriteLine();
-			Writer->WriteLine("=== EVENTS AT SAME TICK ===");
-
-			int Same_Tick_Count = 0;
-			for (int i = 0; i < Sorted_Events->Count - 1; i++)
-			{
-				if (Sorted_Events[i]->Start_Tick == Sorted_Events[i + 1]->Start_Tick)
-				{
-					Writer->WriteLine("Tick {0}: {1} (Track {2}, Note {3}) and {4} (Track {5}, Note {6})",
-						Sorted_Events[i]->Start_Tick,
-						Sorted_Events[i]->Color,
-						Sorted_Events[i]->Track_Index,
-						Sorted_Events[i]->Note,
-						Sorted_Events[i + 1]->Color,
-						Sorted_Events[i + 1]->Track_Index,
-						Sorted_Events[i + 1]->Note);
-					Same_Tick_Count++;
-				}
-			}
-
-			Writer->WriteLine();
-			Writer->WriteLine("Total pairs of events at the same tick: {0}", Same_Tick_Count);
-
-			// Summary statistics
-			Writer->WriteLine();
-			Writer->WriteLine("=== SUMMARY STATISTICS ===");
-			Writer->WriteLine("Total events to be written: {0}", All_Writer_Events->Count);
-			Writer->WriteLine("Expected MIDI events (including Note Off): {0}", All_Writer_Events->Count * 2);
-			Writer->WriteLine("Events out of order: {0}", Order_Differences);
-			Writer->WriteLine("Percentage out of order: {0:F2}%", (Order_Differences * 100.0) / All_Writer_Events->Count);
-
-			if (Order_Differences > 0)
-			{
-				Writer->WriteLine();
-				Writer->WriteLine("WARNING: Events are being added out of chronological order!");
-				Writer->WriteLine("This may cause issues with MIDI playback if not sorted properly.");
-			}
-
-			Writer->Close();
-
-			MessageBox::Show("MIDI Writer Events debug completed!\n\nFile: " + Save_Dialog->FileName,
-				"Export Complete",
-				MessageBoxButtons::OK,
-				MessageBoxIcon::Information);
-		}
-		catch (Exception^ ex)
-		{
-			MessageBox::Show("Failed to export:\n" + ex->Message,
-				"Export Error",
-				MessageBoxButtons::OK,
-				MessageBoxIcon::Error);
-		}
+		Console::WriteLine("Button 3 Clicked");
 
 	#endif
 	}

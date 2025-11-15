@@ -1,12 +1,14 @@
 #include "Playback_Event_Queue_Manager.h"
 #include "Widget_Timeline.h"
+#include "MIDI_Writer.h"
 
 namespace MIDILightDrawer
 {
-	Playback_Event_Queue_Manager::Playback_Event_Queue_Manager(Playback_MIDI_Engine^ midi_engine, MIDI_Event_Raster^ midi_event_raster)
+	Playback_Event_Queue_Manager::Playback_Event_Queue_Manager(Playback_MIDI_Engine^ midi_engine, MIDI_Event_Raster^ midi_event_raster, Form_MIDI_Log^ form_midi_log)
 	{
 		_MIDI_Engine = midi_engine;
 		_MIDI_Event_Raster = midi_event_raster;
+		_Form_MIDI_Log = form_midi_log;
 		_Unfiltered_Events = gcnew List<Playback_MIDI_Event^>();
 		_Filtered_Events = gcnew List<Playback_MIDI_Event^>();
 		_Current_Muted_Tracks = gcnew List<int>();
@@ -143,12 +145,7 @@ namespace MIDILightDrawer
 		try
 		{
 			// Get list of tracks that changed state
-			List<int>^ Changed_Tracks = Get_Changed_Tracks(
-				_Current_Muted_Tracks,
-				_Current_Soloed_Tracks,
-				new_muted_tracks,
-				new_soloed_tracks
-			);
+			List<int>^ Changed_Tracks = Get_Changed_Tracks(_Current_Muted_Tracks, _Current_Soloed_Tracks, new_muted_tracks, new_soloed_tracks);
 
 			// Send Note Off for active notes on tracks that are being muted/de-soloed
 			if (Changed_Tracks->Count > 0)
@@ -210,9 +207,21 @@ namespace MIDILightDrawer
 			return;
 		}
 
+		if (_Form_MIDI_Log != nullptr)
+		{
+			_Form_MIDI_Log->Add_MIDI_Event(
+				event->Timestamp_ms,
+				event->Timeline_Track_ID,
+				event->MIDI_Channel,
+				event->MIDI_Command,
+				event->MIDI_Data1,
+				event->MIDI_Data2
+			);
+		}
+
 		unsigned char Command_Type = event->MIDI_Command & 0xF0;
 
-		if (Command_Type == 0x90 && event->MIDI_Data2 > 0)
+		if (Command_Type == MIDI_Writer::MIDI_EVENT_NOTE_ON && event->MIDI_Data2 > 0)
 		{
 			// Note On event (velocity > 0)
 			Track_Note_On(
@@ -222,7 +231,7 @@ namespace MIDILightDrawer
 				event->Timestamp_ms
 			);
 		}
-		else if (Command_Type == 0x80 || (Command_Type == 0x90 && event->MIDI_Data2 == 0))
+		else if (Command_Type == MIDI_Writer::MIDI_EVENT_NOTE_OFF || (Command_Type == MIDI_Writer::MIDI_EVENT_NOTE_ON && event->MIDI_Data2 == 0))
 		{
 			// Note Off event (0x80) or Note On with velocity 0
 			Track_Note_Off(

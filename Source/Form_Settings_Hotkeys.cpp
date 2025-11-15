@@ -3,7 +3,8 @@
 
 namespace MIDILightDrawer
 {
-	Form_Settings_Hotkeys::Form_Settings_Hotkeys() {
+	Form_Settings_Hotkeys::Form_Settings_Hotkeys()
+	{
 		_Current_Edit_Row = -1;
 
 		Initialize_Component();

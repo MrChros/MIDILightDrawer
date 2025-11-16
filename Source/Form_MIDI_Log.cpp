@@ -25,47 +25,79 @@ namespace MIDILightDrawer
 		if (this->InvokeRequired)
 		{
 			Add_Log_Entry_Delegate^ d = gcnew Add_Log_Entry_Delegate(this, &Form_MIDI_Log::Add_Log_Entry);
-			this->BeginInvoke(d, entry);
+			//this->BeginInvoke(d, entry);
+			this->Invoke(d, entry);
 			return;
 		}
 
-		// Add to internal list
-		_Log_Entries->Add(entry);
-
-		// Enforce maximum log size
-		while (_Log_Entries->Count > MAX_LOG_ENTRIES)
-		{
-			_Log_Entries->RemoveAt(0);
+		if (!this->IsHandleCreated || this->Disposing || this->IsDisposed) {
+			return;  // Control not ready or being disposed
 		}
 
-		int Row_Index = _Grid_Log->Rows->Add();
-		DataGridViewRow^ Row = _Grid_Log->Rows[Row_Index];
-
-		Row->Cells["Timestamp"]->Value = Format_Timestamp(entry->Timestamp_Ms);
-		Row->Cells["Track"]->Value = entry->Track_Number.ToString();
-		Row->Cells["Channel"]->Value = (entry->MIDI_Channel + 1).ToString(); // Display as 1-16
-		Row->Cells["Command"]->Value = entry->Command_Type;
-		Row->Cells["Data"]->Value = entry->Data;
-		Row->Cells["Description"]->Value = entry->Description;
-
-		// Auto-scroll to bottom
-		_Grid_Log->FirstDisplayedScrollingRowIndex = _Grid_Log->RowCount - 1;
-
-		// Remove old rows from grid if exceeded max
-		while (_Grid_Log->RowCount > MAX_LOG_ENTRIES)
+		try
 		{
-			_Grid_Log->Rows->RemoveAt(0);
+			// Add to internal list
+			_Log_Entries->Add(entry);
+
+			// Enforce maximum log size
+			while (_Log_Entries->Count > MAX_LOG_ENTRIES)
+			{
+				_Log_Entries->RemoveAt(0);
+			}
+
+			int Row_Index = _Grid_Log->Rows->Add();
+			DataGridViewRow^ Row = _Grid_Log->Rows[Row_Index];
+
+			Row->Cells["Timestamp"]->Value = Format_Timestamp(entry->Timestamp_Ms);
+			Row->Cells["Track"]->Value = entry->Track_Number.ToString();
+			Row->Cells["Channel"]->Value = (entry->MIDI_Channel + 1).ToString(); // Display as 1-16
+			Row->Cells["Command"]->Value = entry->Command_Type;
+			Row->Cells["Data"]->Value = entry->Data;
+			Row->Cells["Description"]->Value = entry->Description;
+
+			// Auto-scroll to bottom
+			_Grid_Log->FirstDisplayedScrollingRowIndex = _Grid_Log->RowCount - 1;
+
+			// Remove old rows from grid if exceeded max
+			while (_Grid_Log->RowCount > MAX_LOG_ENTRIES)
+			{
+				_Grid_Log->Rows->RemoveAt(0);
+			}
+		}
+		catch (System::InvalidOperationException^ ex)
+		{
+			// Silently ignore cross-thread access errors
+			// These can occur during form shutdown or rapid playback
+			System::Diagnostics::Debug::WriteLine("MIDI Log: Cross-thread access prevented - " + ex->Message);
+		}
+		catch (System::Exception^ ex)
+		{
+			// Log other errors but don't crash
+			System::Diagnostics::Debug::WriteLine("MIDI Log Error: " + ex->Message);
 		}
 	}
 
 	void Form_MIDI_Log::Add_MIDI_Event(double timestamp_ms, int track, int channel, unsigned char command, unsigned char data1, unsigned char data2)
 	{
+		// Check control state before proceeding
+		if (!this->IsHandleCreated || this->Disposing || this->IsDisposed) {
+			return;
+		}
+		
 		// Check if we need to invoke on UI thread
 		if (this->InvokeRequired)
 		{
 			// Use the custom delegate for thread-safe invocation
 			Add_MIDI_Event_Delegate^ d = gcnew Add_MIDI_Event_Delegate(this, &Form_MIDI_Log::Add_MIDI_Event);
-			this->BeginInvoke(d, timestamp_ms, track, channel, command, data1, data2);
+			try
+			{
+				this->Invoke(d, timestamp_ms, track, channel, command, data1, data2);
+			}
+			catch (System::InvalidOperationException^)
+			{
+				// Form is closing or disposed - silently ignore
+				return;
+			}
 			return;
 		}
 		

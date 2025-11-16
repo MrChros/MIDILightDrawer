@@ -152,7 +152,7 @@ namespace MIDILightDrawer
 		return AllEvents;
 	}
 
-	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Get_Timeline_PreRastered_Playback_Events(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel)
+	List<Playback_MIDI_Event^>^ MIDI_Event_Raster::Get_Timeline_PreRastered_Playback_Events(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks)
 	{
 		List<Playback_MIDI_Event^>^ AllEvents = gcnew List<Playback_MIDI_Event^>();
 
@@ -314,6 +314,8 @@ namespace MIDILightDrawer
 		double Timestamp_Start_ms	= _Timeline->TicksToMilliseconds(tick_start);
 		double Timestamp_End_ms		= _Timeline->TicksToMilliseconds(tick_start + AppliedTickLength);
 
+		int Applicable_MIDI_Channel = Math::Max(midi_channel - 1, 0);	// Ensure minimum MIDI Channel is 0 (Channel 1 in terms of 1 to 16)
+
 		// Create Note On events for each color channel
 		if (ValueRed > 0)
 		{
@@ -321,8 +323,8 @@ namespace MIDILightDrawer
 			NoteOn->Timestamp_ms = Timestamp_Start_ms;
 			NoteOn->Tick = tick_start;
 			NoteOn->Timeline_Track_ID = track_index;
-			NoteOn->MIDI_Channel = midi_channel;
-			NoteOn->MIDI_Command = 0x90;  // Note On
+			NoteOn->MIDI_Channel = Applicable_MIDI_Channel;
+			NoteOn->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_ON;
 			NoteOn->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Red;
 			NoteOn->MIDI_Data2 = ValueRed;
 			
@@ -333,8 +335,8 @@ namespace MIDILightDrawer
 			NoteOff->Timestamp_ms = Timestamp_End_ms;
 			NoteOff->Tick = tick_start + AppliedTickLength;
 			NoteOff->Timeline_Track_ID = track_index;
-			NoteOff->MIDI_Channel = midi_channel;
-			NoteOff->MIDI_Command = 0x80;  // Note Off
+			NoteOff->MIDI_Channel = Applicable_MIDI_Channel;
+			NoteOff->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_OFF;  // Note Off
 			NoteOff->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Red;
 			NoteOff->MIDI_Data2 = 0;
 			
@@ -347,8 +349,8 @@ namespace MIDILightDrawer
 			NoteOn->Timestamp_ms = Timestamp_Start_ms;
 			NoteOn->Tick = tick_start;
 			NoteOn->Timeline_Track_ID = track_index;
-			NoteOn->MIDI_Channel = midi_channel;
-			NoteOn->MIDI_Command = 0x90;  // Note On
+			NoteOn->MIDI_Channel = Applicable_MIDI_Channel;
+			NoteOn->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_ON;
 			NoteOn->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Green;
 			NoteOn->MIDI_Data2 = ValueGreen;
 			
@@ -358,8 +360,8 @@ namespace MIDILightDrawer
 			Playback_MIDI_Event^ NoteOff = gcnew Playback_MIDI_Event();
 			NoteOff->Timestamp_ms = Timestamp_End_ms;
 			NoteOff->Tick = tick_start + AppliedTickLength;
-			NoteOff->MIDI_Channel = midi_channel;
-			NoteOff->MIDI_Command = 0x80;  // Note Off
+			NoteOff->MIDI_Channel = Applicable_MIDI_Channel;
+			NoteOff->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_OFF;
 			NoteOff->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Green;
 			NoteOff->MIDI_Data2 = 0;
 			NoteOff->Timeline_Track_ID = track_index;
@@ -373,8 +375,8 @@ namespace MIDILightDrawer
 			NoteOn->Timestamp_ms = Timestamp_Start_ms;
 			NoteOn->Tick = tick_start;
 			NoteOn->Timeline_Track_ID = track_index;
-			NoteOn->MIDI_Channel = midi_channel;
-			NoteOn->MIDI_Command = 0x90;  // Note On
+			NoteOn->MIDI_Channel = Applicable_MIDI_Channel;
+			NoteOn->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_ON;
 			NoteOn->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Blue;
 			NoteOn->MIDI_Data2 = ValueBlue;
 			
@@ -385,8 +387,8 @@ namespace MIDILightDrawer
 			NoteOff->Timestamp_ms = Timestamp_End_ms;
 			NoteOff->Tick = tick_start + AppliedTickLength;
 			NoteOff->Timeline_Track_ID = track_index;
-			NoteOff->MIDI_Channel = midi_channel;
-			NoteOff->MIDI_Command = 0x80;  // Note Off
+			NoteOff->MIDI_Channel = Applicable_MIDI_Channel;
+			NoteOff->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_OFF;
 			NoteOff->MIDI_Data1 = octave_note_offset + Settings->MIDI_Note_Blue;
 			NoteOff->MIDI_Data2 = 0;
 
@@ -430,12 +432,14 @@ namespace MIDILightDrawer
 		double Time_Start_ms = _Timeline->TicksToMilliseconds(note->Tick_Start - (int)note->Is_Direct_Follower);
 		double Time_End_ms = _Timeline->TicksToMilliseconds(note->Tick_End);
 
+		int Applicable_MIDI_Channel = Math::Max(Settings->Global_MIDI_Output_Channel - 1, 0);	// Ensure minimum MIDI Channel is 0 (Channel 1 in terms of 1 to 16) 
+
 		Playback_MIDI_Event^ Note_On = gcnew Playback_MIDI_Event();
 		Note_On->Timestamp_ms = Time_Start_ms;
 		Note_On->Tick = note->Tick_Start - (int)note->Is_Direct_Follower;
 		Note_On->Timeline_Track_ID = track_index;
-		Note_On->MIDI_Channel = Settings->Global_MIDI_Output_Channel;
-		Note_On->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_ON;  // Note On
+		Note_On->MIDI_Channel = Applicable_MIDI_Channel;
+		Note_On->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_ON;
 		Note_On->MIDI_Data1 = Note_Number;
 		Note_On->MIDI_Data2 = note->Color_Value;
 
@@ -443,8 +447,8 @@ namespace MIDILightDrawer
 		Note_Off->Timestamp_ms = Time_End_ms;
 		Note_Off->Tick = note->Tick_End;
 		Note_Off->Timeline_Track_ID = track_index;
-		Note_Off->MIDI_Channel = Settings->Global_MIDI_Output_Channel;
-		Note_Off->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_OFF;  // Note Off
+		Note_Off->MIDI_Channel = Applicable_MIDI_Channel;
+		Note_Off->MIDI_Command = MIDI_Writer::MIDI_EVENT_NOTE_OFF;
 		Note_Off->MIDI_Data1 = Note_Number;
 		Note_Off->MIDI_Data2 = 0;
 

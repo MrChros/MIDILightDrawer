@@ -95,7 +95,7 @@ namespace MIDILightDrawer
 		
 		List<Playback_MIDI_Event^>^ Raster_Timeline_For_Playback();
 
-		List<Playback_MIDI_Event^>^ Get_Timeline_PreRastered_Playback_Events(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks, uint8_t global_midi_channel);
+		List<Playback_MIDI_Event^>^ Get_Timeline_PreRastered_Playback_Events(List<Track^>^ tracks, List<int>^ muted_tracks, List<int>^ soloed_tracks);
 
 	private:
 		void RasterBarSolid(List<Raw_Rasterized_Event>^ rastered_events, BarEvent^ bar);

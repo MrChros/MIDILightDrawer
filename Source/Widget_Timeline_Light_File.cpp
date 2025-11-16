@@ -8,109 +8,109 @@ namespace MIDILightDrawer
 	{
 		try
 		{
-			List<String^>^ lines = gcnew List<String^>();
+			List<String^>^ Lines = gcnew List<String^>();
 
 			// Header with version - updated to v2.0 to indicate support for fade/strobe
-			lines->Add("MIDILightDrawer_BarEvents_v2.0");
+			Lines->Add("MIDILightDrawer_BarEvents_v2.0");
 
 			// Save pattern information - number of measures
-			lines->Add(measures->Count.ToString());
+			Lines->Add(measures->Count.ToString());
 
 			// Save time signatures for all measures
-			for each (Measure ^ measure in measures) {
-				lines->Add(String::Format("{0},{1}",
-					measure->Numerator,
-					measure->Denominator));
+			for each (Measure^ M in measures) {
+				Lines->Add(String::Format("{0},{1}",
+					M->Numerator,
+					M->Denominator));
 			}
 
 			// Calculate total number of bars across all tracks
-			int totalBars = 0;
-			for each (Track ^ track in tracks) {
-				totalBars += track->Events->Count;
+			int Total_Bars = 0;
+			for each (Track^ Tr in tracks) {
+				Total_Bars += Tr->Events->Count;
 			}
-			lines->Add(totalBars.ToString());
+			Lines->Add(Total_Bars.ToString());
 
 			// Save each bar's data with track name and type-specific information
-			for each (Track ^ track in tracks) {
-				for each (BarEvent ^ bar in track->Events) {
-					String^ baseData = String::Format("{0},{1},{2},{3}",
-						bar->StartTick,
-						bar->Duration,
-						tracks->IndexOf(track),
-						static_cast<int>(bar->Type)  // Save the bar event type
+			for each (Track^ Tr in tracks) {
+				for each (BarEvent^ Bar in Tr->Events) {
+					String^ Base_Data = String::Format("{0},{1},{2},{3}",
+						Bar->StartTick,
+						Bar->Duration,
+						tracks->IndexOf(Tr),
+						static_cast<int>(Bar->Type)  // Save the bar event type
 					);
 
 					// Add type-specific data
-					switch (bar->Type) {
-					case BarEventType::Solid:
-						lines->Add(String::Format("{0},{1},{2},{3},{4},{5}",
-							baseData,
-							bar->Color.R,
-							bar->Color.G,
-							bar->Color.B,
-							track->Name,
-							"SOLID"  // Type identifier for verification
-						));
-						break;
-
-					case BarEventType::Fade:
-						if (bar->FadeInfo != nullptr) {
-							if (bar->FadeInfo->Type == FadeType::Two_Colors) {
-								lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}",
-									baseData,
-									bar->FadeInfo->QuantizationTicks,
-									bar->FadeInfo->ColorStart.R,
-									bar->FadeInfo->ColorStart.G,
-									bar->FadeInfo->ColorStart.B,
-									bar->FadeInfo->ColorEnd.R,
-									bar->FadeInfo->ColorEnd.G,
-									bar->FadeInfo->ColorEnd.B,
-									track->Name,
-									static_cast<int>(bar->FadeInfo->EaseIn),  // Add easing parameters
-									static_cast<int>(bar->FadeInfo->EaseOut),
-									"FADE2"  // Two-color fade identifier
-								));
-							}
-							else {  // Three-color fade
-								lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14}",
-									baseData,
-									bar->FadeInfo->QuantizationTicks,
-									bar->FadeInfo->ColorStart.R,
-									bar->FadeInfo->ColorStart.G,
-									bar->FadeInfo->ColorStart.B,
-									bar->FadeInfo->ColorCenter.R,
-									bar->FadeInfo->ColorCenter.G,
-									bar->FadeInfo->ColorCenter.B,
-									bar->FadeInfo->ColorEnd.R,
-									bar->FadeInfo->ColorEnd.G,
-									bar->FadeInfo->ColorEnd.B,
-									track->Name,
-									static_cast<int>(bar->FadeInfo->EaseIn),  // Add easing parameters
-									static_cast<int>(bar->FadeInfo->EaseOut),
-									"FADE3"  // Three-color fade identifier
-								));
-							}
-						}
-						break;
-
-					case BarEventType::Strobe:
-						if (bar->StrobeInfo != nullptr) {
-							lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6}",
-								baseData,
-								bar->StrobeInfo->QuantizationTicks,
-								bar->StrobeInfo->ColorStrobe.R,
-								bar->StrobeInfo->ColorStrobe.G,
-								bar->StrobeInfo->ColorStrobe.B,
-								track->Name,
-								"STROBE"  // Strobe identifier
+					switch (Bar->Type) {
+						case BarEventType::Solid:
+							Lines->Add(String::Format("{0},{1},{2},{3},{4},{5}",
+								Base_Data,
+								Bar->Color.R,
+								Bar->Color.G,
+								Bar->Color.B,
+								Tr->Name,
+								"SOLID"  // Type identifier for verification
 							));
-						}
-						break;
+							break;
+
+						case BarEventType::Fade:
+							if (Bar->FadeInfo != nullptr) {
+								if (Bar->FadeInfo->Type == FadeType::Two_Colors) {
+									Lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}",
+										Base_Data,
+										Bar->FadeInfo->QuantizationTicks,
+										Bar->FadeInfo->ColorStart.R,
+										Bar->FadeInfo->ColorStart.G,
+										Bar->FadeInfo->ColorStart.B,
+										Bar->FadeInfo->ColorEnd.R,
+										Bar->FadeInfo->ColorEnd.G,
+										Bar->FadeInfo->ColorEnd.B,
+										static_cast<int>(Bar->FadeInfo->EaseIn),  // Add easing parameters
+										static_cast<int>(Bar->FadeInfo->EaseOut),
+										Tr->Name,
+										"FADE2"  // Two-color fade identifier
+									));
+								}
+								else {  // Three-color fade
+									Lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14}",
+										Base_Data,
+										Bar->FadeInfo->QuantizationTicks,
+										Bar->FadeInfo->ColorStart.R,
+										Bar->FadeInfo->ColorStart.G,
+										Bar->FadeInfo->ColorStart.B,
+										Bar->FadeInfo->ColorCenter.R,
+										Bar->FadeInfo->ColorCenter.G,
+										Bar->FadeInfo->ColorCenter.B,
+										Bar->FadeInfo->ColorEnd.R,
+										Bar->FadeInfo->ColorEnd.G,
+										Bar->FadeInfo->ColorEnd.B,
+										static_cast<int>(Bar->FadeInfo->EaseIn),  // Add easing parameters
+										static_cast<int>(Bar->FadeInfo->EaseOut),
+										Tr->Name,
+										"FADE3"  // Three-color fade identifier
+									));
+								}
+							}
+							break;
+
+						case BarEventType::Strobe:
+							if (Bar->StrobeInfo != nullptr) {
+								Lines->Add(String::Format("{0},{1},{2},{3},{4},{5},{6}",
+									Base_Data,
+									Bar->StrobeInfo->QuantizationTicks,
+									Bar->StrobeInfo->ColorStrobe.R,
+									Bar->StrobeInfo->ColorStrobe.G,
+									Bar->StrobeInfo->ColorStrobe.B,
+									Tr->Name,
+									"STROBE"  // Strobe identifier
+								));
+							}
+							break;
 					}
 				}
 			}
 
-			System::IO::File::WriteAllLines(filePath, lines->ToArray());
+			System::IO::File::WriteAllLines(filePath, Lines->ToArray());
 			return String::Empty;
 		}
 		catch (Exception^ ex)
@@ -237,10 +237,10 @@ namespace MIDILightDrawer
 						break;
 
 					case BarEventType::Fade:
-						if (Identifier == "FADE2" && Parts->Length >= 11) {
+						if (Identifier == "FADE2" && Parts->Length >= 12) {
 
-							bool HasEasing = Parts->Length >= 11 && IsCurrentFormat;
-							if (Parts->Length >= (HasEasing ? 12 : 10))
+							bool HasEasing = Parts->Length >= 15 && IsCurrentFormat;
+							if (Parts->Length >= (HasEasing ? 15 : 12))
 							{
 								int quantization, r1, g1, b1, r2, g2, b2;
 								int easeIn = static_cast<int>(FadeEasing::Linear);
@@ -253,24 +253,24 @@ namespace MIDILightDrawer
 								}
 
 								if (HasEasing) {
-									Int32::TryParse(Parts[9], easeIn);
-									Int32::TryParse(Parts[10], easeOut);
+									Int32::TryParse(Parts[11], easeIn);
+									Int32::TryParse(Parts[12], easeOut);
 								}
 
-								BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
+								BarEventFadeInfo^ FadeInfo = gcnew BarEventFadeInfo(
 									quantization,
 									Color::FromArgb(r1, g1, b1),
 									Color::FromArgb(r2, g2, b2),
 									static_cast<FadeEasing>(easeIn),
 									static_cast<FadeEasing>(easeOut)
 								);
-								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, fadeInfo));
+								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, FadeInfo));
 							}
 						}
-						else if (Identifier == "FADE3" && Parts->Length >= 14)
+						else if (Identifier == "FADE3" && Parts->Length >= 15)
 						{
-							bool HasEasing = Parts->Length >= 14 && IsCurrentFormat;
-							if (Parts->Length >= (HasEasing ? 15 : 13)) {
+							bool HasEasing = Parts->Length >= 18 && IsCurrentFormat;
+							if (Parts->Length >= (HasEasing ? 18 : 15)) {
 								int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
 								int easeIn = static_cast<int>(FadeEasing::Linear);
 								int easeOut = static_cast<int>(FadeEasing::Linear);
@@ -283,8 +283,8 @@ namespace MIDILightDrawer
 								}
 
 								if (HasEasing) {
-									Int32::TryParse(Parts[12], easeIn);
-									Int32::TryParse(Parts[13], easeOut);
+									Int32::TryParse(Parts[14], easeIn);
+									Int32::TryParse(Parts[15], easeOut);
 								}
 
 								BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
@@ -418,7 +418,7 @@ namespace MIDILightDrawer
 						break;
 
 					case BarEventType::Fade:
-						if (Identifier == "FADE2" && Parts->Length >= 11) {
+						if (Identifier == "FADE2" && Parts->Length >= 12) {
 							int quantization, r1, g1, b1, r2, g2, b2;
 							int easeIn = static_cast<int>(FadeEasing::Linear);
 							int easeOut = static_cast<int>(FadeEasing::Linear);
@@ -429,9 +429,9 @@ namespace MIDILightDrawer
 								continue;
 							}
 
-							if (Parts->Length >= 12) {
-								Int32::TryParse(Parts[9], easeIn);
-								Int32::TryParse(Parts[10], easeOut);
+							if (Parts->Length >= 15) {
+								Int32::TryParse(Parts[12], easeIn);
+								Int32::TryParse(Parts[13], easeOut);
 							}
 
 							BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
@@ -443,7 +443,7 @@ namespace MIDILightDrawer
 							);
 							bar = gcnew BarEvent(tempTrack, StartTick, Length, fadeInfo);
 						}
-						else if (Identifier == "FADE3" && Parts->Length >= 14) {
+						else if (Identifier == "FADE3" && Parts->Length >= 15) {
 							int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
 							int easeIn = static_cast<int>(FadeEasing::Linear);
 							int easeOut = static_cast<int>(FadeEasing::Linear);
@@ -455,9 +455,9 @@ namespace MIDILightDrawer
 								continue;
 							}
 
-							if (Parts->Length >= 15) {
-								Int32::TryParse(Parts[12], easeIn);
-								Int32::TryParse(Parts[13], easeOut);
+							if (Parts->Length >= 18) {
+								Int32::TryParse(Parts[15], easeIn);
+								Int32::TryParse(Parts[16], easeOut);
 							}
 
 							BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(

@@ -76,7 +76,7 @@ namespace MIDILightDrawer
 		}
 
 		// Pack MIDI message into DWORD (status | data1 << 8 | data2 << 16)
-		DWORD Midi_Message = event.Command | (event.Data1 << 8) | (event.Data2 << 16);
+		DWORD Midi_Message = (event.Command | event.Channel) | (event.Data1 << 8) | (event.Data2 << 16);
 
 		MMRESULT Result = midiOutShortMsg((HMIDIOUT)_MIDI_Handle, Midi_Message);
 		return (Result == MMSYSERR_NOERROR);
@@ -314,6 +314,7 @@ namespace MIDILightDrawer
 			{
 				std::lock_guard<std::mutex> Lock(_Event_Queue_Mutex);
 
+				// Batch process all events at the same timestamp
 				while (!_Event_Queue.empty())
 				{
 					const Scheduled_MIDI_Event& Next_Event = _Event_Queue.front();
@@ -321,13 +322,34 @@ namespace MIDILightDrawer
 					// Send events that are due (with lookahead)
 					if (Next_Event.Execute_Time_Us <= Current_Pos_us + LOOKAHEAD_US)
 					{
-						Send_MIDI_Event(Next_Event.Event);
+						// Store the timestamp of the first event we're processing
+						int64_t Current_Batch_Timestamp = Next_Event.Execute_Time_Us;
 
-						if (_Event_Sent_Callback != nullptr) {
-							_Event_Sent_Callback(Next_Event.Event);
+						// Send ALL events at this timestamp (within 100us tolerance)
+						// This ensures simultaneous MIDI events are sent together
+						while (!_Event_Queue.empty())
+						{
+							const Scheduled_MIDI_Event& Batch_Event = _Event_Queue.front();
+
+							// Check if this event is at the same timestamp (within 100us tolerance)
+							if (Batch_Event.Execute_Time_Us <= Current_Batch_Timestamp + 100)
+							{
+								Send_MIDI_Event(Batch_Event.Event);
+
+								if (_Event_Sent_Callback != nullptr) {
+									_Event_Sent_Callback(Batch_Event.Event);
+								}
+
+								_Event_Queue.erase(_Event_Queue.begin());
+							}
+							else
+							{
+								break;  // Different timestamp, stop batching
+							}
 						}
 
-						_Event_Queue.erase(_Event_Queue.begin());
+						// Exit outer loop to re-check timing after batch
+						break;
 					}
 					else
 					{

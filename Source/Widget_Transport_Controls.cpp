@@ -6,6 +6,12 @@ namespace MIDILightDrawer
 {
 	Widget_Transport_Controls::Widget_Transport_Controls()
 	{
+		// Enable double buffering on this control to prevent flicker
+		this->SetStyle(ControlStyles::OptimizedDoubleBuffer |
+			ControlStyles::AllPaintingInWmPaint |
+			ControlStyles::UserPaint, true);
+		this->DoubleBuffered = true;
+		
 		_Resources = gcnew System::Resources::ResourceManager("MIDILightDrawer.Icons", System::Reflection::Assembly::GetExecutingAssembly());
 
 		_Playback_Manager = nullptr;
@@ -66,7 +72,7 @@ namespace MIDILightDrawer
 		_Label_Time->Dock = DockStyle::Fill;
 		_Label_Time->TextAlign = ContentAlignment::MiddleCenter;
 		_Label_Time->ForeColor = Color::White;
-		_Label_Time->BackColor = Color::Transparent;
+		_Label_Time->BackColor = Theme_Manager::Get_Instance()->BackgroundAlt;
 		_Label_Time->Font = Label_Font;
 
 		// Set tooltips
@@ -96,17 +102,17 @@ namespace MIDILightDrawer
 		_Seek_Timer->Tick += gcnew EventHandler(this, &Widget_Transport_Controls::On_Seek_Timer_Tick);
 
 		_Update_Time_Timer = gcnew Timer();
-		_Update_Time_Timer->Interval = 100;
+		_Update_Time_Timer->Interval = 33; // ~30 updates per second for smooth display
 		_Update_Time_Timer->Tick += gcnew EventHandler(this, &Widget_Transport_Controls::On_Update_Time_Timer_Tick);
 
 		// Add controls
 		Layout->Controls->Add(_Label_Time			, 1, 0);
-		Layout->Controls->Add(_Button_AutoScroll, 3-1, 0);
-		Layout->Controls->Add(_Button_Move_To_Start	, 5-1, 0);
-		Layout->Controls->Add(_Button_Rewind		, 6-1, 0);
-		Layout->Controls->Add(_Button_Play_Pause	, 7-1, 0);
-		Layout->Controls->Add(_Button_Fast_Forward	, 8-1, 0);
-		Layout->Controls->Add(_Button_Move_To_End	, 9-1, 0);
+		Layout->Controls->Add(_Button_AutoScroll	, 2, 0);
+		Layout->Controls->Add(_Button_Move_To_Start	, 4, 0);
+		Layout->Controls->Add(_Button_Rewind		, 5, 0);
+		Layout->Controls->Add(_Button_Play_Pause	, 6, 0);
+		Layout->Controls->Add(_Button_Fast_Forward	, 7, 0);
+		Layout->Controls->Add(_Button_Move_To_End	, 8, 0);
 
 		this->Controls->Add(Layout);
 
@@ -279,7 +285,7 @@ namespace MIDILightDrawer
 		}
 
 		Int64 _Current_Time_ms = (Int64)_Playback_Manager->Get_Playback_Position_ms();
-		
+
 		if (_Current_Time_ms != _Last_Time_ms) {
 			_Last_Time_ms = _Current_Time_ms;
 			Int64 Time_ms = _Current_Time_ms;
@@ -289,7 +295,14 @@ namespace MIDILightDrawer
 			Time_ms %= 1000;
 			String^ String_MSec = Time_ms.ToString(L"D")->PadLeft(3, L'0');
 
-			_Label_Time->Text = String_Min + ":" + String_Sec + ":" + String_MSec;
+			String^ New_Text = String_Min + ":" + String_Sec + ":" + String_MSec;
+
+			// Only update if text actually changed to reduce redraws
+			if (_Label_Time->Text != New_Text) {
+				_Label_Time->SuspendLayout();
+				_Label_Time->Text = New_Text;
+				_Label_Time->ResumeLayout(false);
+			}
 		}
 	}
 

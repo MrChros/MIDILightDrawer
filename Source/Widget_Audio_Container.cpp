@@ -22,9 +22,9 @@ namespace MIDILightDrawer
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 1));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 130));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 70));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 120));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 62));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
@@ -45,20 +45,16 @@ namespace MIDILightDrawer
 		_TimeOffset_Audio_Offset->Value_ms = 0.0;
 		_TimeOffset_Audio_Offset->Minimum_ms = -60000.0; // -60 seconds
 		_TimeOffset_Audio_Offset->Maximum_ms = 60000.0;  // +60 seconds
-		_TimeOffset_Audio_Offset->ValueChanged += gcnew EventHandler(this, &Widget_Audio_Container::On_Audio_Offset_ValueChanged);
+		_TimeOffset_Audio_Offset->Value_Changed += gcnew System::EventHandler(this, &Widget_Audio_Container::On_Audio_Offset_ValueChanged);
 		//_TimeOffset_Audio_Offset->Margin = System::Windows::Forms::Padding(0, 5, 0, 0);
 
-		// Create Volume TrackBar
-		_TrackBar_Volume = gcnew TrackBar();
-		_TrackBar_Volume->Minimum = 0;
-		_TrackBar_Volume->Maximum = 100;
-		_TrackBar_Volume->Value = 100;
-		_TrackBar_Volume->TickFrequency = 10;
-		_TrackBar_Volume->Dock = DockStyle::Fill;
-		_TrackBar_Volume->TickStyle = System::Windows::Forms::TickStyle::None;
-		_TrackBar_Volume->ValueChanged += gcnew EventHandler(this, &Widget_Audio_Container::On_Volume_ValueChanged);
-
-		
+		// Create Volume Slider
+		_VolumeSlider = gcnew Control_VolumeSlider();
+		_VolumeSlider->Minimum = 0;
+		_VolumeSlider->Maximum = 100;
+		_VolumeSlider->Value = 100;
+		_VolumeSlider->Dock = DockStyle::Fill;
+		_VolumeSlider->ValueChanged += gcnew EventHandler(this, &Widget_Audio_Container::On_Volume_ValueChanged);
 
 		_Label_Audio_Info_Length		= gcnew Label();
 		_Label_Audio_Info_Channels		= gcnew Label();
@@ -78,7 +74,7 @@ namespace MIDILightDrawer
 		Table_Layout_Main->Controls->Add(Label_Offset, 0, 0);
 		Table_Layout_Main->Controls->Add(_TimeOffset_Audio_Offset, 1, 0);
 		Table_Layout_Main->Controls->Add(Label_Volume, 2, 0);
-		Table_Layout_Main->Controls->Add(_TrackBar_Volume, 3, 0);
+		Table_Layout_Main->Controls->Add(_VolumeSlider, 3, 0);
 
 		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Length		, 4, 0);
 		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Channels		, 5, 0);
@@ -217,8 +213,9 @@ namespace MIDILightDrawer
 			return;
 		}
 
-		double Offset_ms = _TimeOffset_Audio_Offset->Value_ms;
-		_Playback_Manager->Set_Audio_Offset(Offset_ms);
+		double Audio_Offset_ms = _TimeOffset_Audio_Offset->Value_ms;
+
+		_Playback_Manager->Set_Audio_Offset(Audio_Offset_ms);
 	}
 
 	void Widget_Audio_Container::On_Volume_ValueChanged(Object^ sender, EventArgs^ e)
@@ -227,7 +224,7 @@ namespace MIDILightDrawer
 			return;
 		}
 
-		double Volume_Percent = _TrackBar_Volume->Value / 100.0;
+		double Volume_Percent = _VolumeSlider->Value / 100.0;
 		_Playback_Manager->Set_Volume(Volume_Percent);
 	}
 

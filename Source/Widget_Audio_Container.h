@@ -2,6 +2,7 @@
 
 #include "Widget_Audio_Waveform.h"
 #include "Control_TimeOffset_NumericUpDown.h"
+#include "Control_VolumeSlider.h"
 
 using namespace System;
 using namespace System::Windows::Forms;
@@ -29,7 +30,7 @@ namespace MIDILightDrawer
 		Label^ _Label_Audio_Info_File;
 
 		Control_TimeOffset_NumericUpDown^ _TimeOffset_Audio_Offset;
-		TrackBar^ _TrackBar_Volume;
+		Control_VolumeSlider^ _VolumeSlider;
 
 	public:
 		Widget_Audio_Container();

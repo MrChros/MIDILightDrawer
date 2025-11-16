@@ -153,6 +153,7 @@
     <ClInclude Include="Control_ToggleSwitch.h" />
     <ClInclude Include="Control_Trackbar_Range.h" />
     <ClInclude Include="Control_Trackbar_Zoom.h" />
+    <ClInclude Include="Control_VolumeSlider.h" />
     <ClInclude Include="Custom_Color_Table.h" />
     <ClInclude Include="Device_Manager.h" />
     <ClInclude Include="Device_Manager_Audio_Native.h" />
@@ -223,6 +224,7 @@
     <ClCompile Include="Control_ToggleSwitch.cpp" />
     <ClCompile Include="Control_Trackbar_Range.cpp" />
     <ClCompile Include="Control_Trackbar_Zoom.cpp" />
+    <ClCompile Include="Control_VolumeSlider.cpp" />
     <ClCompile Include="Device_Manager.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</CompileAsManaged>
     </ClCompile>

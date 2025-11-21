@@ -118,11 +118,39 @@ namespace MIDILightDrawer
 			// Clear any existing events in the MIDI engine
 			_MIDI_Engine->Clear_Event_Queue();
 
-			// Only queue events that occur at or after the start position
+			// Use Dictionary to track Note Ons that will be played (for filtering orphan Note Offs)
+			// Key format: "TrackID_Channel_NoteNumber"
+			Dictionary<String^, int>^ Active_Notes_Set = gcnew Dictionary<String^, int>();
+
+			// Single pass: queue events and track active notes
 			for each (Playback_MIDI_Event^ Event in _Filtered_Events)
 			{
-				if (Event->Timestamp_ms >= start_position_ms)
+				if (Event->Timestamp_ms < start_position_ms) {
+					continue;
+				}
+
+				unsigned char Command_Type = Event->MIDI_Command & 0xF0;
+				String^ Note_Key = String::Format("{0}_{1}_{2}", Event->Timeline_Track_ID, Event->MIDI_Channel, Event->MIDI_Data1);
+
+				if (Command_Type == 0x90 && Event->MIDI_Data2 > 0)
 				{
+					// Note On - queue and track
+					Active_Notes_Set[Note_Key] = 1;
+					_MIDI_Engine->Queue_Event(Event);
+				}
+				else if (Command_Type == 0x80 || (Command_Type == 0x90 && Event->MIDI_Data2 == 0))
+				{
+					// Note Off - only queue if matching Note On was queued
+					if (Active_Notes_Set->ContainsKey(Note_Key))
+					{
+						Active_Notes_Set->Remove(Note_Key);
+						_MIDI_Engine->Queue_Event(Event);
+					}
+					// else: orphan Note Off, skip it
+				}
+				else
+				{
+					// Other MIDI events (CC, etc.) - queue normally
 					_MIDI_Engine->Queue_Event(Event);
 				}
 			}

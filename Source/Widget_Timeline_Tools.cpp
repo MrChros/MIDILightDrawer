@@ -804,7 +804,9 @@ namespace MIDILightDrawer
 			{
 				if (_SelectedBars->Contains(Bar))
 				{
-					BarEvent^ CopiedBar = TimelineCommandManager::CreateBarCopy(Bar, Bar->StartTick - EarliestTick, false);
+					int RelativePosition = Bar->StartTick - EarliestTick;
+					BarEvent^ CopiedBar = TimelineCommandManager::CreateBarCopy(Bar, RelativePosition, false);
+					CopiedBar->OriginalStartTick = RelativePosition;
 					TimelineClipboardManager::Content->Add(CopiedBar);
 				}
 			}

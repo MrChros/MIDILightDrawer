@@ -3148,6 +3148,14 @@ namespace MIDILightDrawer
         // Add glow effect
         DrawBarGlowEffect(BarBounds, m_ColorTheme.SelectionHighlight, 6);
 
+		// Add solid white border for better visibility
+		D2D1_RECT_F BarRect = RECT_TO_RECT_F(BarBounds);
+		_NativeRenderer->DrawRectangle(BarRect, D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.9f), 2.0f);
+
+		// Add corner markers for extra visibility
+		const float CornerSize = 6.0f;
+		D2D1_COLOR_F CornerColor = D2D1::ColorF(1.0f, 1.0f, 1.0f, 1.0f);
+
 		// Add tool-specific enhancements
 		DrawToolEnhancements(bar, BarBounds);
     }
@@ -3291,7 +3299,7 @@ namespace MIDILightDrawer
 			{
 				DrawResizeHandle(barBounds, false);
 			}
-			else if (ToolAccess->SelectedBars->Count > 0 && ToolAccess->SelectedBars->Contains(bar) && ToolAccess->IsOverResizeHandle)
+			else if (ToolAccess->SelectedBars->Count > 0 && ToolAccess->SelectedBars->Contains(bar) && ToolAccess->SelectedBars->Contains(ToolAccess->HoveredBar) && ToolAccess->IsOverResizeHandle)
 			{
 				DrawResizeHandle(barBounds, false);
 			}

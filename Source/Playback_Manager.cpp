@@ -131,9 +131,7 @@ namespace MIDILightDrawer
 
 			// Set MIDI engine position before starting
 			_MIDI_Engine->Set_Current_Position_ms(_Playback_Position_ms);
-			if (Audio_Available) {
-
-			}
+			_MIDI_Engine->Send_All_Notes_Off(Math::Max(Settings::Get_Instance()->Global_MIDI_Output_Channel - 1, 0));
 
 			// Start MIDI playback thread
 			Success &= _MIDI_Engine->Start_Playback();
@@ -177,6 +175,7 @@ namespace MIDILightDrawer
 
 			// Stop MIDI playback thread
 			Success &= _MIDI_Engine->Stop_Playback();
+			_MIDI_Engine->Send_All_Notes_Off(Math::Max(Settings::Get_Instance()->Global_MIDI_Output_Channel - 1, 0));
 
 			// Pause audio if loaded
 			if (Is_Audio_Loaded)
@@ -215,6 +214,7 @@ namespace MIDILightDrawer
 
 			_MIDI_Engine->Clear_Event_Queue();
 			_MIDI_Engine->Set_Audio_Available(false);
+			_MIDI_Engine->Send_All_Notes_Off(Math::Max(Settings::Get_Instance()->Global_MIDI_Output_Channel - 1, 0));
 
 			// Stop audio if loaded
 			if (Is_Audio_Loaded) {

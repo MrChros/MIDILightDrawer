@@ -177,6 +177,10 @@ namespace MIDILightDrawer
 				return "Invalid bar count";
 			}
 
+			// Track skipped records for error reporting
+			int SkippedRecords = 0;
+			int LoadedRecords = 0;
+
 			// Load each bar
 			for (int i = 0; i < BarCount; i++)
 			{
@@ -186,11 +190,13 @@ namespace MIDILightDrawer
 				if (IsLegacyFormat) {
 					// Handle v1.0 format (solid bars only)
 					if (Parts->Length != 7) {
+						SkippedRecords++;
 						continue;
 					}
 
 					String^ TrackName = Parts[6];
 					if (!trackMap->ContainsKey(TrackName)) {
+						SkippedRecords++;
 						continue;
 					}
 
@@ -198,19 +204,28 @@ namespace MIDILightDrawer
 					int StartTick, Length, R, G, B;
 
 					if (!Int32::TryParse(Parts[0], StartTick) || !Int32::TryParse(Parts[1], Length) || !Int32::TryParse(Parts[3], R) || !Int32::TryParse(Parts[4], G) || !Int32::TryParse(Parts[5], B)) {
+						SkippedRecords++;
 						continue;
 					}
 
+					// Clamp RGB values to valid range [0-255]
+					R = Math::Max(0, Math::Min(255, R));
+					G = Math::Max(0, Math::Min(255, G));
+					B = Math::Max(0, Math::Min(255, B));
+
 					TargetTrack->AddBar(StartTick, Length, Color::FromArgb(R, G, B));
+					LoadedRecords++;
 				}
 				else {
 					// Handle v2.0 format with multiple bar types
 					if (Parts->Length < 5) {
+						SkippedRecords++;
 						continue;
 					}
 
 					int StartTick, Length, TrackIndex, EventType;
 					if (!Int32::TryParse(Parts[0], StartTick) || !Int32::TryParse(Parts[1], Length) || !Int32::TryParse(Parts[2], TrackIndex) || !Int32::TryParse(Parts[3], EventType)) {
+						SkippedRecords++;
 						continue;
 					}
 
@@ -218,6 +233,7 @@ namespace MIDILightDrawer
 					String^ TrackName = Parts[Parts->Length - 2];
 
 					if (!trackMap->ContainsKey(TrackName)) {
+						SkippedRecords++;
 						continue;
 					}
 
@@ -227,12 +243,19 @@ namespace MIDILightDrawer
 					{
 					case BarEventType::Solid:
 						if (Identifier == "SOLID" && Parts->Length >= 8) {
-							int r, g, b;
-							if (!Int32::TryParse(Parts[4], r) || !Int32::TryParse(Parts[5], g) || !Int32::TryParse(Parts[6], b)) {
+							int R, G, B;
+							if (!Int32::TryParse(Parts[4], R) || !Int32::TryParse(Parts[5], G) || !Int32::TryParse(Parts[6], B)) {
+								SkippedRecords++;
 								continue;
 							}
 
-							TargetTrack->AddBar(StartTick, Length, Color::FromArgb(r, g, b));
+							// Clamp RGB values to valid range [0-255]
+							R = Math::Max(0, Math::Min(255, R));
+							G = Math::Max(0, Math::Min(255, G));
+							B = Math::Max(0, Math::Min(255, B));
+
+							TargetTrack->AddBar(StartTick, Length, Color::FromArgb(R, G, B));
+							LoadedRecords++;
 						}
 						break;
 
@@ -242,76 +265,106 @@ namespace MIDILightDrawer
 							bool HasEasing = Parts->Length >= 15 && IsCurrentFormat;
 							if (Parts->Length >= (HasEasing ? 15 : 12))
 							{
-								int quantization, r1, g1, b1, r2, g2, b2;
-								int easeIn = static_cast<int>(FadeEasing::Linear);
-								int easeOut = static_cast<int>(FadeEasing::Linear);
+								int Quantization, R1, G1, B1, R2, G2, B2;
+								int EaseIn = static_cast<int>(FadeEasing::Linear);
+								int EaseOut = static_cast<int>(FadeEasing::Linear);
 
-								if (!Int32::TryParse(Parts[4], quantization) ||
-									!Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) ||
-									!Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2)) {
+								if (!Int32::TryParse(Parts[4], Quantization) ||
+									!Int32::TryParse(Parts[5], R1) || !Int32::TryParse(Parts[6], G1) || !Int32::TryParse(Parts[7], B1) ||
+									!Int32::TryParse(Parts[8], R2) || !Int32::TryParse(Parts[9], G2) || !Int32::TryParse(Parts[10], B2)) {
+									SkippedRecords++;
 									continue;
 								}
 
+								// Clamp RGB values to valid range [0-255]
+								R1 = Math::Max(0, Math::Min(255, R1));
+								G1 = Math::Max(0, Math::Min(255, G1));
+								B1 = Math::Max(0, Math::Min(255, B1));
+								R2 = Math::Max(0, Math::Min(255, R2));
+								G2 = Math::Max(0, Math::Min(255, G2));
+								B2 = Math::Max(0, Math::Min(255, B2));
+
 								if (HasEasing) {
-									Int32::TryParse(Parts[11], easeIn);
-									Int32::TryParse(Parts[12], easeOut);
+									Int32::TryParse(Parts[11], EaseIn);
+									Int32::TryParse(Parts[12], EaseOut);
 								}
 
 								BarEventFadeInfo^ FadeInfo = gcnew BarEventFadeInfo(
-									quantization,
-									Color::FromArgb(r1, g1, b1),
-									Color::FromArgb(r2, g2, b2),
-									static_cast<FadeEasing>(easeIn),
-									static_cast<FadeEasing>(easeOut)
+									Quantization,
+									Color::FromArgb(R1, G1, B1),
+									Color::FromArgb(R2, G2, B2),
+									static_cast<FadeEasing>(EaseIn),
+									static_cast<FadeEasing>(EaseOut)
 								);
 								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, FadeInfo));
+								LoadedRecords++;
 							}
 						}
 						else if (Identifier == "FADE3" && Parts->Length >= 15)
 						{
 							bool HasEasing = Parts->Length >= 18 && IsCurrentFormat;
 							if (Parts->Length >= (HasEasing ? 18 : 15)) {
-								int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
-								int easeIn = static_cast<int>(FadeEasing::Linear);
-								int easeOut = static_cast<int>(FadeEasing::Linear);
+								int Quantization, R1, G1, B1, R2, G2, B2, R3, G3, B3;
+								int EaseIn = static_cast<int>(FadeEasing::Linear);
+								int EaseOut = static_cast<int>(FadeEasing::Linear);
 
-								if (!Int32::TryParse(Parts[4], quantization) ||
-									!Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) ||
-									!Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2) ||
-									!Int32::TryParse(Parts[11], r3) || !Int32::TryParse(Parts[12], g3) || !Int32::TryParse(Parts[13], b3)) {
+								if (!Int32::TryParse(Parts[4], Quantization) ||
+									!Int32::TryParse(Parts[5], R1) || !Int32::TryParse(Parts[6], G1) || !Int32::TryParse(Parts[7], B1) ||
+									!Int32::TryParse(Parts[8], R2) || !Int32::TryParse(Parts[9], G2) || !Int32::TryParse(Parts[10], B2) ||
+									!Int32::TryParse(Parts[11], R3) || !Int32::TryParse(Parts[12], G3) || !Int32::TryParse(Parts[13], B3)) {
+									SkippedRecords++;
 									continue;
 								}
 
+								// Clamp RGB values to valid range [0-255]
+								R1 = Math::Max(0, Math::Min(255, R1));
+								G1 = Math::Max(0, Math::Min(255, G1));
+								B1 = Math::Max(0, Math::Min(255, B1));
+								R2 = Math::Max(0, Math::Min(255, R2));
+								G2 = Math::Max(0, Math::Min(255, G2));
+								B2 = Math::Max(0, Math::Min(255, B2));
+								R3 = Math::Max(0, Math::Min(255, R3));
+								G3 = Math::Max(0, Math::Min(255, G3));
+								B3 = Math::Max(0, Math::Min(255, B3));
+
 								if (HasEasing) {
-									Int32::TryParse(Parts[14], easeIn);
-									Int32::TryParse(Parts[15], easeOut);
+									Int32::TryParse(Parts[14], EaseIn);
+									Int32::TryParse(Parts[15], EaseOut);
 								}
 
-								BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
-									quantization,
-									Color::FromArgb(r1, g1, b1),
-									Color::FromArgb(r2, g2, b2),
-									Color::FromArgb(r3, g3, b3),
-									static_cast<FadeEasing>(easeIn),
-									static_cast<FadeEasing>(easeOut)
+								BarEventFadeInfo^ FadeInfo = gcnew BarEventFadeInfo(
+									Quantization,
+									Color::FromArgb(R1, G1, B1),
+									Color::FromArgb(R2, G2, B2),
+									Color::FromArgb(R3, G3, B3),
+									static_cast<FadeEasing>(EaseIn),
+									static_cast<FadeEasing>(EaseOut)
 								);
-								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, fadeInfo));
+								TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, FadeInfo));
+								LoadedRecords++;
 							}
 						}
 						break;
 
 					case BarEventType::Strobe:
 						if (Identifier == "STROBE" && Parts->Length >= 8) {
-							int quantization, r, g, b;
-							if (!Int32::TryParse(Parts[4], quantization) || !Int32::TryParse(Parts[5], r) || !Int32::TryParse(Parts[6], g) || !Int32::TryParse(Parts[7], b)) {
+							int Quantization, R, G, B;
+							if (!Int32::TryParse(Parts[4], Quantization) || !Int32::TryParse(Parts[5], R) || !Int32::TryParse(Parts[6], G) || !Int32::TryParse(Parts[7], B)) {
+								SkippedRecords++;
 								continue;
 							}
 
-							BarEventStrobeInfo^ strobeInfo = gcnew BarEventStrobeInfo(
-								quantization,
-								Color::FromArgb(r, g, b)
+							// Clamp RGB values to valid range [0-255]
+							R = Math::Max(0, Math::Min(255, R));
+							G = Math::Max(0, Math::Min(255, G));
+							B = Math::Max(0, Math::Min(255, B));
+
+							BarEventStrobeInfo^ StrobeInfo = gcnew BarEventStrobeInfo(
+								Quantization,
+								Color::FromArgb(R, G, B)
 							);
-							TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, strobeInfo));
+							TargetTrack->AddBar(gcnew BarEvent(TargetTrack, StartTick, Length, StrobeInfo));
+							LoadedRecords++;
 						}
 						break;
 					}
@@ -321,6 +374,11 @@ namespace MIDILightDrawer
 			// Sort events in each track
 			for each (Track ^ Trk in tracks) {
 				Trk->Events->Sort(Track::barComparer);
+			}
+
+			// Report any skipped records
+			if (SkippedRecords > 0) {
+				return String::Format("Warning: {0} of {1} bar events could not be loaded due to parse errors or missing tracks", SkippedRecords, BarCount);
 			}
 
 			return String::Empty;
@@ -370,7 +428,7 @@ namespace MIDILightDrawer
 				array<String^>^ Parts = BarData->Split(',');
 
 				String^ TrackName;
-				BarEvent^ bar = nullptr;
+				BarEvent^ Bar = nullptr;
 
 				if (IsLegacyFormat) {
 					// Handle v1.0 format (solid bars only)
@@ -386,7 +444,7 @@ namespace MIDILightDrawer
 
 					// Create a temporary track just for the bar
 					Track^ tempTrack = gcnew Track(TrackName, 0, 4);
-					bar = gcnew BarEvent(tempTrack, StartTick, Length, Color::FromArgb(R, G, B));
+					Bar = gcnew BarEvent(tempTrack, StartTick, Length, Color::FromArgb(R, G, B));
 				}
 				else {
 					// Handle v2.0 format with multiple bar types
@@ -413,88 +471,88 @@ namespace MIDILightDrawer
 								continue;
 							}
 
-							bar = gcnew BarEvent(tempTrack, StartTick, Length, Color::FromArgb(r, g, b));
+							Bar = gcnew BarEvent(tempTrack, StartTick, Length, Color::FromArgb(r, g, b));
 						}
 						break;
 
 					case BarEventType::Fade:
 						if (Identifier == "FADE2" && Parts->Length >= 12) {
-							int quantization, r1, g1, b1, r2, g2, b2;
-							int easeIn = static_cast<int>(FadeEasing::Linear);
-							int easeOut = static_cast<int>(FadeEasing::Linear);
+							int Quantization, R1, G1, B1, R2, G2, B2;
+							int EaseIn = static_cast<int>(FadeEasing::Linear);
+							int EaseOut = static_cast<int>(FadeEasing::Linear);
 
-							if (!Int32::TryParse(Parts[4], quantization) ||
-								!Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) ||
-								!Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2)) {
+							if (!Int32::TryParse(Parts[4], Quantization) ||
+								!Int32::TryParse(Parts[5], R1) || !Int32::TryParse(Parts[6], G1) || !Int32::TryParse(Parts[7], B1) ||
+								!Int32::TryParse(Parts[8], R2) || !Int32::TryParse(Parts[9], G2) || !Int32::TryParse(Parts[10], B2)) {
 								continue;
 							}
 
 							if (Parts->Length >= 15) {
-								Int32::TryParse(Parts[12], easeIn);
-								Int32::TryParse(Parts[13], easeOut);
+								Int32::TryParse(Parts[12], EaseIn);
+								Int32::TryParse(Parts[13], EaseOut);
 							}
 
-							BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
-								quantization,
-								Color::FromArgb(r1, g1, b1),
-								Color::FromArgb(r2, g2, b2),
-								static_cast<FadeEasing>(easeIn),
-								static_cast<FadeEasing>(easeOut)
+							BarEventFadeInfo^ FadeInfo = gcnew BarEventFadeInfo(
+								Quantization,
+								Color::FromArgb(R1, G1, B1),
+								Color::FromArgb(R2, G2, B2),
+								static_cast<FadeEasing>(EaseIn),
+								static_cast<FadeEasing>(EaseOut)
 							);
-							bar = gcnew BarEvent(tempTrack, StartTick, Length, fadeInfo);
+							Bar = gcnew BarEvent(tempTrack, StartTick, Length, FadeInfo);
 						}
 						else if (Identifier == "FADE3" && Parts->Length >= 15) {
-							int quantization, r1, g1, b1, r2, g2, b2, r3, g3, b3;
-							int easeIn = static_cast<int>(FadeEasing::Linear);
-							int easeOut = static_cast<int>(FadeEasing::Linear);
+							int Quantization, R1, G1, B1, R2, G2, B2, R3, G3, B3;
+							int EaseIn = static_cast<int>(FadeEasing::Linear);
+							int EaseOut = static_cast<int>(FadeEasing::Linear);
 
-							if (!Int32::TryParse(Parts[4], quantization) ||
-								!Int32::TryParse(Parts[5], r1) || !Int32::TryParse(Parts[6], g1) || !Int32::TryParse(Parts[7], b1) ||
-								!Int32::TryParse(Parts[8], r2) || !Int32::TryParse(Parts[9], g2) || !Int32::TryParse(Parts[10], b2) ||
-								!Int32::TryParse(Parts[11], r3) || !Int32::TryParse(Parts[12], g3) || !Int32::TryParse(Parts[13], b3)) {
+							if (!Int32::TryParse(Parts[4], Quantization) ||
+								!Int32::TryParse(Parts[5], R1) || !Int32::TryParse(Parts[6], G1) || !Int32::TryParse(Parts[7], B1) ||
+								!Int32::TryParse(Parts[8], R2) || !Int32::TryParse(Parts[9], G2) || !Int32::TryParse(Parts[10], B2) ||
+								!Int32::TryParse(Parts[11], R3) || !Int32::TryParse(Parts[12], G3) || !Int32::TryParse(Parts[13], B3)) {
 								continue;
 							}
 
 							if (Parts->Length >= 18) {
-								Int32::TryParse(Parts[15], easeIn);
-								Int32::TryParse(Parts[16], easeOut);
+								Int32::TryParse(Parts[15], EaseIn);
+								Int32::TryParse(Parts[16], EaseOut);
 							}
 
-							BarEventFadeInfo^ fadeInfo = gcnew BarEventFadeInfo(
-								quantization,
-								Color::FromArgb(r1, g1, b1),
-								Color::FromArgb(r2, g2, b2),
-								Color::FromArgb(r3, g3, b3),
-								static_cast<FadeEasing>(easeIn),
-								static_cast<FadeEasing>(easeOut)
+							BarEventFadeInfo^ FadeInfo = gcnew BarEventFadeInfo(
+								Quantization,
+								Color::FromArgb(R1, G1, B1),
+								Color::FromArgb(R2, G2, B2),
+								Color::FromArgb(R3, G3, B3),
+								static_cast<FadeEasing>(EaseIn),
+								static_cast<FadeEasing>(EaseOut)
 							);
-							bar = gcnew BarEvent(tempTrack, StartTick, Length, fadeInfo);
+							Bar = gcnew BarEvent(tempTrack, StartTick, Length, FadeInfo);
 						}
 						break;
 
 					case BarEventType::Strobe:
 						if (Identifier == "STROBE" && Parts->Length >= 8) {
-							int quantization, r, g, b;
-							if (!Int32::TryParse(Parts[4], quantization) || !Int32::TryParse(Parts[5], r) || !Int32::TryParse(Parts[6], g) || !Int32::TryParse(Parts[7], b)) {
+							int Quantization, R, G, B;
+							if (!Int32::TryParse(Parts[4], Quantization) || !Int32::TryParse(Parts[5], R) || !Int32::TryParse(Parts[6], G) || !Int32::TryParse(Parts[7], B)) {
 								continue;
 							}
 
-							BarEventStrobeInfo^ strobeInfo = gcnew BarEventStrobeInfo(
-								quantization,
-								Color::FromArgb(r, g, b)
+							BarEventStrobeInfo^ StrobeInfo = gcnew BarEventStrobeInfo(
+								Quantization,
+								Color::FromArgb(R, G, B)
 							);
-							bar = gcnew BarEvent(tempTrack, StartTick, Length, strobeInfo);
+							Bar = gcnew BarEvent(tempTrack, StartTick, Length, StrobeInfo);
 						}
 						break;
 					}
 				}
 
 				// Add the bar to the appropriate track's event list
-				if (bar != nullptr) {
+				if (Bar != nullptr) {
 					if (!trackEvents->ContainsKey(TrackName)) {
 						trackEvents[TrackName] = gcnew List<BarEvent^>();
 					}
-					trackEvents[TrackName]->Add(bar);
+					trackEvents[TrackName]->Add(Bar);
 				}
 			}
 

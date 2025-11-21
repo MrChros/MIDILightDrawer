@@ -53,6 +53,9 @@ namespace MIDILightDrawer
 		private:
 			System::Resources::ResourceManager^ _Resources;
 			MenuStrip^							_Menu_Strip;
+			ToolStripMenuItem^					_Menu_File_Recent_GP;
+			ToolStripMenuItem^					_Menu_File_Recent_Light;
+			ToolStripMenuItem^					_Menu_File_Recent_Audio;
 			ToolStripMenuItem^					_Menu_Edit_Undo;
 			ToolStripMenuItem^					_Menu_Edit_Redo;
 			ToolStripMenuItem^					_Menu_Edit_Copy;
@@ -62,6 +65,11 @@ namespace MIDILightDrawer
 			List<ToolStripMenuItem^>^			_Menu_Edit_UndoSteps_Items;
 			ToolStripMenuItem^					_Menu_Edit_BatchAction;
 			ToolStripMenuItem^					_Menu_Edit_MIDI_Log;
+
+			// Recent Files Menu Items
+			//ToolStripMenuItem^					_Menu_Recent_GP;
+			//ToolStripMenuItem^					_Menu_Recent_Light;
+			//ToolStripMenuItem^					_Menu_Recent_Audio;
 
 			gp_parser::Parser*					_GP_Tab;
 			Widget_Tab_Info^					_Tab_Info;
@@ -109,6 +117,15 @@ namespace MIDILightDrawer
 			void Menu_File_Audio_Clear_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Export_MIDI_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e);
+
+			// Recent Files Handlers
+			void Menu_Recent_GP_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Recent_Light_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Recent_Audio_Click(System::Object^ sender, System::EventArgs^ e);
+			void Update_Recent_Files_Menus();
+			void Open_GP_File(String^ filePath);
+			void Open_Light_File(String^ filePath);
+			void Open_Audio_File(String^ filePath);
 
 			void Menu_Edit_Undo_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_UndoHistory_Click(Object^ sender, EventArgs^ e);

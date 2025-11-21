@@ -43,6 +43,12 @@ namespace MIDILightDrawer
 		String^ _Selected_Audio_Output_Device;
 		int _Audio_Buffer_Size;
 
+		// Recent Files Lists
+		List<String^>^ _Recent_GP_Files;
+		List<String^>^ _Recent_Light_Files;
+		List<String^>^ _Recent_Audio_Files;
+		static const int MAX_RECENT_FILES = 5;
+
 		Settings();
 		void Load_Defaults();
 		void Load_From_File();
@@ -125,5 +131,26 @@ namespace MIDILightDrawer
 			int get();
 			void set(int value);
 		}
+
+		// Recent Files Properties
+		property List<String^>^ Recent_GP_Files
+		{
+			List<String^>^ get();
+		}
+
+		property List<String^>^ Recent_Light_Files
+		{
+			List<String^>^ get();
+		}
+
+		property List<String^>^ Recent_Audio_Files
+		{
+			List<String^>^ get();
+		}
+
+		// Recent Files Methods
+		void Add_Recent_GP_File(String^ filePath);
+		void Add_Recent_Light_File(String^ filePath);
+		void Add_Recent_Audio_File(String^ filePath);
 	};
 }

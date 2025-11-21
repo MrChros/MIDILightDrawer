@@ -304,16 +304,22 @@ namespace MIDILightDrawer
 		Menu_File->Padding = System::Windows::Forms::Padding(4, 0, 4, 0);
 
 		// File -> Open Guitar Pro
-		ToolStripMenuItem^ Menu_File_Open_GP = gcnew ToolStripMenuItem("Open Guitar Pro 5 File");
+		ToolStripMenuItem^  Menu_File_Open_GP = gcnew ToolStripMenuItem("Open Guitar Pro 5 File");
 		Menu_File_Open_GP->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"GP5")));
 		Menu_File_Open_GP->ShortcutKeys = Keys::Control | Keys::O;
 		Menu_File_Open_GP->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Open_GP_Click);
+
+		// File -> Recent GP Files
+		_Menu_File_Recent_GP = gcnew ToolStripMenuItem("Recent Guitar Pro 5 Files");
 
 		// File -> Open Light
 		ToolStripMenuItem^ Menu_File_Open_Light = gcnew ToolStripMenuItem("Open Light Information File");
 		Menu_File_Open_Light->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Light_Open")));
 		Menu_File_Open_Light->ShortcutKeys = Keys::Control | Keys::Shift | Keys::O;
 		Menu_File_Open_Light->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Open_Light_Click);
+
+		// File -> Recent Light Files
+		_Menu_File_Recent_Light = gcnew ToolStripMenuItem("Recent Light Files");
 
 		ToolStripMenuItem^ Menu_File_Open_Light_Special = gcnew ToolStripMenuItem("Open Light Information File Special...");
 		Menu_File_Open_Light_Special->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Open_Light_Special_Click);
@@ -325,9 +331,12 @@ namespace MIDILightDrawer
 		Menu_File_Save_Light->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Save_Light_Click);
 
 		// File -> Open Audio File
-		ToolStripMenuItem^ Menu_Audio_Open_File = gcnew ToolStripMenuItem("Open Audio File (WAV/MP3)");
-		Menu_Audio_Open_File->ShortcutKeys = Keys::Control | Keys::Shift | Keys::A;
-		Menu_Audio_Open_File->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Audio_Open_Click);
+		ToolStripMenuItem^ Menu_File_Open_Audio = gcnew ToolStripMenuItem("Open Audio File (WAV/MP3)");
+		Menu_File_Open_Audio->ShortcutKeys = Keys::Control | Keys::Shift | Keys::A;
+		Menu_File_Open_Audio->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Audio_Open_Click);
+
+		// File -> Recent Audio Files
+		_Menu_File_Recent_Audio = gcnew ToolStripMenuItem("Recent Audio Files");
 
 		// File -> Clear Audio File
 		ToolStripMenuItem^ Menu_Audio_Clear_File = gcnew ToolStripMenuItem("Clear Audio File");
@@ -346,17 +355,23 @@ namespace MIDILightDrawer
 
 		// Build File menu
 		Menu_File->DropDownItems->Add(Menu_File_Open_GP);
+		Menu_File->DropDownItems->Add(_Menu_File_Recent_GP);
 		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Open_Light);
 		Menu_File->DropDownItems->Add(Menu_File_Open_Light_Special);
+		Menu_File->DropDownItems->Add(_Menu_File_Recent_Light);
 		Menu_File->DropDownItems->Add(Menu_File_Save_Light);
 		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
-		Menu_File->DropDownItems->Add(Menu_Audio_Open_File);
+		Menu_File->DropDownItems->Add(Menu_File_Open_Audio);
+		Menu_File->DropDownItems->Add(_Menu_File_Recent_Audio);
 		Menu_File->DropDownItems->Add(Menu_Audio_Clear_File);
 		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Export_MIDI);
 		Menu_File->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_File->DropDownItems->Add(Menu_File_Exit);
+
+		// Populate recent files menus
+		Update_Recent_Files_Menus();
 
 
 		///////////////
@@ -601,26 +616,7 @@ namespace MIDILightDrawer
 
 		if (Open_Dialog_File->ShowDialog() == System::Windows::Forms::DialogResult::OK)
 		{
-			System::String^ GuiterPro5_Filename = Open_Dialog_File->FileName;
-
-			if (this->_GP_Tab != NULL) {
-				delete(this->_GP_Tab);
-				this->_GP_Tab = NULL;
-			}
-
-			this->_GP_Tab = new gp_parser::Parser(_MIDI_Exporter->ConvertToStdString(GuiterPro5_Filename));
-
-			this->_Tab_Info->Update_Info(GuiterPro5_Filename, gcnew String(this->_GP_Tab->getTabFile().title.data()), (unsigned int)this->_GP_Tab->getTabFile().measureHeaders.size(), this->_GP_Tab->getTabFile().trackCount);
-
-			this->_Timeline->Clear();
-			this->_TrackBar_Zoom->Value = 1.0f;
-			SettingsMIDI_On_Settings_Accepted();
-
-			this->_Audio_Container->Load_MIDI_Information();
-
-			if (Settings::Get_Instance()->Octave_Entries->Count == 0) {
-				MessageBox::Show(this, "The Guitar Pro File has been successfully opened.\nTo see the Tablature, add Light Tracks in the MIDI Settings.", "Open Guitar Pro File", MessageBoxButtons::OK, MessageBoxIcon::Information);
-			}
+			Open_GP_File(Open_Dialog_File->FileName);
 		}
 	}
 
@@ -633,13 +629,7 @@ namespace MIDILightDrawer
 
 		if (Open_Dialog_File->ShowDialog() == System::Windows::Forms::DialogResult::OK)
 		{
-			System::String^ Filename = Open_Dialog_File->FileName;
-
-			String^ Error_Message = this->_Timeline->LoadBarEventsFromFile(Filename);
-
-			if (Error_Message->Length > 0) {
-				MessageBox::Show(this, "Error:\n" + Error_Message,  "Failed to load light information file", MessageBoxButtons::OK,	MessageBoxIcon::Error);
-			}
+			Open_Light_File(Open_Dialog_File->FileName);
 		}
 	}
 
@@ -796,20 +786,7 @@ namespace MIDILightDrawer
 
 		if (Open_Dialog->ShowDialog() == System::Windows::Forms::DialogResult::OK)
 		{
-			String^ File_Path = Open_Dialog->FileName;
-			String^ Error_Message = String::Empty;
-
-			// Show loading indicator (optional)
-			this->Cursor = System::Windows::Forms::Cursors::WaitCursor;
-
-			//bool Success = _Playback_Audio_File_Manager->LoadAudioFile(File_Path, Error_Message);
-			bool Success = _Playback_Manager->Load_Audio_File(File_Path, Error_Message);
-
-			if (!Success) {
-				MessageBox::Show(this, "Failed to load audio file:\n" + Error_Message, "Audio Load Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
-			}
-
-			this->Cursor = System::Windows::Forms::Cursors::Default;
+			Open_Audio_File(Open_Dialog->FileName);
 		}
 	}
 
@@ -852,6 +829,159 @@ namespace MIDILightDrawer
 	void Form_Main::Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e)
 	{
 		this->Close();
+	}
+
+	void Form_Main::Update_Recent_Files_Menus()
+	{
+		// Update GP Files submenu
+		_Menu_File_Recent_GP->DropDownItems->Clear();
+		List<String^>^ Recent_GP_Files = Settings::Get_Instance()->Recent_GP_Files;
+		if (Recent_GP_Files->Count == 0) {
+			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
+			Empty_Item->Enabled = false;
+			_Menu_File_Recent_GP->DropDownItems->Add(Empty_Item);
+		}
+		else {
+			for each (String^ filePath in Recent_GP_Files) {
+				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(filePath));
+				Item->Tag = filePath;
+				Item->ToolTipText = filePath;
+				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_GP_Click);
+				_Menu_File_Recent_GP->DropDownItems->Add(Item);
+			}
+		}
+
+		// Update Light Files submenu
+		_Menu_File_Recent_Light->DropDownItems->Clear();
+		List<String^>^ Recent_Light_Files = Settings::Get_Instance()->Recent_Light_Files;
+		if (Recent_Light_Files->Count == 0) {
+			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
+			Empty_Item->Enabled = false;
+			_Menu_File_Recent_Light->DropDownItems->Add(Empty_Item);
+		}
+		else {
+			for each (String^ File_Path in Recent_Light_Files) {
+				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(File_Path));
+				Item->Tag = File_Path;
+				Item->ToolTipText = File_Path;
+				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_Light_Click);
+				_Menu_File_Recent_Light->DropDownItems->Add(Item);
+			}
+		}
+
+		// Update Audio Files submenu
+		_Menu_File_Recent_Audio->DropDownItems->Clear();
+		List<String^>^ Recent_Audio_Files = Settings::Get_Instance()->Recent_Audio_Files;
+		if (Recent_Audio_Files->Count == 0) {
+			ToolStripMenuItem^ emptyItem = gcnew ToolStripMenuItem("(No recent files)");
+			emptyItem->Enabled = false;
+			_Menu_File_Recent_Audio->DropDownItems->Add(emptyItem);
+		}
+		else {
+			for each (String^ File_Path in Recent_Audio_Files) {
+				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(File_Path));
+				Item->Tag = File_Path;
+				Item->ToolTipText = File_Path;
+				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_Audio_Click);
+				_Menu_File_Recent_Audio->DropDownItems->Add(Item);
+			}
+		}
+	}
+
+	void Form_Main::Open_GP_File(String^ filePath)
+	{
+		if (!System::IO::File::Exists(filePath)) {
+			MessageBox::Show(this, "File not found:\n" + filePath, "Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
+			return;
+		}
+
+		if (this->_GP_Tab != NULL) {
+			delete(this->_GP_Tab);
+			this->_GP_Tab = NULL;
+		}
+
+		this->_GP_Tab = new gp_parser::Parser(_MIDI_Exporter->ConvertToStdString(filePath));
+
+		this->_Tab_Info->Update_Info(filePath, gcnew String(this->_GP_Tab->getTabFile().title.data()), (unsigned int)this->_GP_Tab->getTabFile().measureHeaders.size(), this->_GP_Tab->getTabFile().trackCount);
+
+		this->_Timeline->Clear();
+		this->_TrackBar_Zoom->Value = 1.0f;
+		SettingsMIDI_On_Settings_Accepted();
+
+		this->_Audio_Container->Load_MIDI_Information();
+
+		// Add to recent files
+		Settings::Get_Instance()->Add_Recent_GP_File(filePath);
+		Update_Recent_Files_Menus();
+
+		if (Settings::Get_Instance()->Octave_Entries->Count == 0) {
+			MessageBox::Show(this, "The Guitar Pro File has been successfully opened.\nTo see the Tablature, add Light Tracks in the MIDI Settings.", "Open Guitar Pro File", MessageBoxButtons::OK, MessageBoxIcon::Information);
+		}
+	}
+
+	void Form_Main::Open_Light_File(String^ filePath)
+	{
+		if (!System::IO::File::Exists(filePath)) {
+			MessageBox::Show(this, "File not found:\n" + filePath, "Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
+			return;
+		}
+
+		String^ Error_Message = this->_Timeline->LoadBarEventsFromFile(filePath);
+
+		if (Error_Message->Length > 0) {
+			MessageBox::Show(this, "Error:\n" + Error_Message, "Failed to load light information file", MessageBoxButtons::OK, MessageBoxIcon::Error);
+		}
+		else {
+			// Add to recent files only on success
+			Settings::Get_Instance()->Add_Recent_Light_File(filePath);
+			Update_Recent_Files_Menus();
+		}
+	}
+
+	void Form_Main::Open_Audio_File(String^ filePath)
+	{
+		if (!System::IO::File::Exists(filePath)) {
+			MessageBox::Show(this, "File not found:\n" + filePath, "Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
+			return;
+		}
+
+		String^ Error_Message = String::Empty;
+
+		this->Cursor = System::Windows::Forms::Cursors::WaitCursor;
+
+		bool Success = _Playback_Manager->Load_Audio_File(filePath, Error_Message);
+
+		if (!Success) {
+			MessageBox::Show(this, "Failed to load audio file:\n" + Error_Message, "Audio Load Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
+		}
+		else {
+			// Add to recent files only on success
+			Settings::Get_Instance()->Add_Recent_Audio_File(filePath);
+			Update_Recent_Files_Menus();
+		}
+
+		this->Cursor = System::Windows::Forms::Cursors::Default;
+	}
+
+	void Form_Main::Menu_Recent_GP_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		ToolStripMenuItem^ item = safe_cast<ToolStripMenuItem^>(sender);
+		String^ filePath = safe_cast<String^>(item->Tag);
+		Open_GP_File(filePath);
+	}
+
+	void Form_Main::Menu_Recent_Light_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		ToolStripMenuItem^ item = safe_cast<ToolStripMenuItem^>(sender);
+		String^ filePath = safe_cast<String^>(item->Tag);
+		Open_Light_File(filePath);
+	}
+
+	void Form_Main::Menu_Recent_Audio_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		ToolStripMenuItem^ item = safe_cast<ToolStripMenuItem^>(sender);
+		String^ filePath = safe_cast<String^>(item->Tag);
+		Open_Audio_File(filePath);
 	}
 
 	void Form_Main::Menu_Edit_Undo_Click(System::Object^ sender, System::EventArgs^ e)

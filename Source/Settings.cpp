@@ -60,6 +60,11 @@ namespace MIDILightDrawer
 		_Global_MIDI_Output_Channel = 1;     // Default to MIDI channel 1
 		_Selected_Audio_Output_Device = ""; // Empty string means use system default
 		_Audio_Buffer_Size = 1024;           // Default buffer size
+
+		// Recent files defaults
+		_Recent_GP_Files = gcnew List<String^>();
+		_Recent_Light_Files = gcnew List<String^>();
+		_Recent_Audio_Files = gcnew List<String^>();
 	}
 
 	void Settings::Load_From_File()
@@ -128,6 +133,33 @@ namespace MIDILightDrawer
 				_ColorPresets[i]->Replace("\"", "\\\""),
 				i < _ColorPresets->Count - 1 ? "," : ""));
 		}
+		sb->AppendLine("  ],");
+
+		// Add recent GP files
+		sb->AppendLine("  \"RecentGPFiles\": [");
+		for (int i = 0; i < _Recent_GP_Files->Count; i++) {
+			sb->AppendLine(String::Format("    \"{0}\"{1}",
+				_Recent_GP_Files[i]->Replace("\\", "\\\\")->Replace("\"", "\\\""),
+				i < _Recent_GP_Files->Count - 1 ? "," : ""));
+		}
+		sb->AppendLine("  ],");
+
+		// Add recent Light files
+		sb->AppendLine("  \"RecentLightFiles\": [");
+		for (int i = 0; i < _Recent_Light_Files->Count; i++) {
+			sb->AppendLine(String::Format("    \"{0}\"{1}",
+				_Recent_Light_Files[i]->Replace("\\", "\\\\")->Replace("\"", "\\\""),
+				i < _Recent_Light_Files->Count - 1 ? "," : ""));
+		}
+		sb->AppendLine("  ],");
+
+		// Add recent Audio files
+		sb->AppendLine("  \"RecentAudioFiles\": [");
+		for (int i = 0; i < _Recent_Audio_Files->Count; i++) {
+			sb->AppendLine(String::Format("    \"{0}\"{1}",
+				_Recent_Audio_Files[i]->Replace("\\", "\\\\")->Replace("\"", "\\\""),
+				i < _Recent_Audio_Files->Count - 1 ? "," : ""));
+		}
 		sb->AppendLine("  ]");
 
 		// Close JSON object
@@ -151,6 +183,13 @@ namespace MIDILightDrawer
 			bool inColorPresets = false;
 			_ColorPresets->Clear();
 
+			bool inRecentGPFiles = false;
+			bool inRecentLightFiles = false;
+			bool inRecentAudioFiles = false;
+			_Recent_GP_Files->Clear();
+			_Recent_Light_Files->Clear();
+			_Recent_Audio_Files->Clear();
+
 			for each (String ^ line in lines) {
 				String^ currentLine = line->Trim();
 
@@ -167,6 +206,9 @@ namespace MIDILightDrawer
 				if (currentLine == "]" || currentLine == "],") {
 					inOctaveEntries = false;
 					inColorPresets = false;
+					inRecentGPFiles = false;
+					inRecentLightFiles = false;
+					inRecentAudioFiles = false;
 					continue;
 				}
 
@@ -249,6 +291,42 @@ namespace MIDILightDrawer
 				if (inColorPresets && currentLine->StartsWith("\"")) {
 					String^ colorStr = currentLine->Trim(L'"', L' ', L',');
 					_ColorPresets->Add(colorStr);
+				}
+
+				// Check for Recent GP Files
+				if (currentLine == "\"RecentGPFiles\": [") {
+					inRecentGPFiles = true;
+					continue;
+				}
+
+				if (inRecentGPFiles && currentLine->StartsWith("\"")) {
+					String^ filePath = currentLine->Trim(L'"', L' ', L',');
+					filePath = filePath->Replace("\\\\", "\\");
+					_Recent_GP_Files->Add(filePath);
+				}
+
+				// Check for Recent Light Files
+				if (currentLine == "\"RecentLightFiles\": [") {
+					inRecentLightFiles = true;
+					continue;
+				}
+
+				if (inRecentLightFiles && currentLine->StartsWith("\"")) {
+					String^ filePath = currentLine->Trim(L'"', L' ', L',');
+					filePath = filePath->Replace("\\\\", "\\");
+					_Recent_Light_Files->Add(filePath);
+				}
+
+				// Check for Recent Audio Files
+				if (currentLine == "\"RecentAudioFiles\": [") {
+					inRecentAudioFiles = true;
+					continue;
+				}
+
+				if (inRecentAudioFiles && currentLine->StartsWith("\"")) {
+					String^ filePath = currentLine->Trim(L'"', L' ', L',');
+					filePath = filePath->Replace("\\\\", "\\");
+					_Recent_Audio_Files->Add(filePath);
 				}
 			}
 
@@ -452,6 +530,71 @@ namespace MIDILightDrawer
 		}
 
 		_Audio_Buffer_Size = value;
+
+		Save_To_File();
+	}
+
+	// Recent Files Properties
+	List<String^>^ Settings::Recent_GP_Files::get()
+	{
+		return _Recent_GP_Files;
+	}
+
+	List<String^>^ Settings::Recent_Light_Files::get()
+	{
+		return _Recent_Light_Files;
+	}
+
+	List<String^>^ Settings::Recent_Audio_Files::get()
+	{
+		return _Recent_Audio_Files;
+	}
+
+	// Recent Files Methods
+	void Settings::Add_Recent_GP_File(String^ filePath)
+	{
+		// Remove if already exists (to move to top)
+		_Recent_GP_Files->Remove(filePath);
+
+		// Insert at beginning
+		_Recent_GP_Files->Insert(0, filePath);
+
+		// Trim to max size
+		while (_Recent_GP_Files->Count > MAX_RECENT_FILES) {
+			_Recent_GP_Files->RemoveAt(_Recent_GP_Files->Count - 1);
+		}
+
+		Save_To_File();
+	}
+
+	void Settings::Add_Recent_Light_File(String^ filePath)
+	{
+		// Remove if already exists (to move to top)
+		_Recent_Light_Files->Remove(filePath);
+
+		// Insert at beginning
+		_Recent_Light_Files->Insert(0, filePath);
+
+		// Trim to max size
+		while (_Recent_Light_Files->Count > MAX_RECENT_FILES) {
+			_Recent_Light_Files->RemoveAt(_Recent_Light_Files->Count - 1);
+		}
+
+		Save_To_File();
+	}
+
+	void Settings::Add_Recent_Audio_File(String^ filePath)
+	{
+		// Remove if already exists (to move to top)
+		_Recent_Audio_Files->Remove(filePath);
+
+		// Insert at beginning
+		_Recent_Audio_Files->Insert(0, filePath);
+
+		// Trim to max size
+		while (_Recent_Audio_Files->Count > MAX_RECENT_FILES) {
+			_Recent_Audio_Files->RemoveAt(_Recent_Audio_Files->Count - 1);
+		}
 
 		Save_To_File();
 	}

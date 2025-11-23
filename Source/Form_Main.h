@@ -152,6 +152,7 @@ namespace MIDILightDrawer
 			void DropDown_Track_Height_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void DropDown_View_Marker_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e);
 			void TrackBar_Zoom_OnValue_Changed(System::Object^ sender, Track_Bar_Value_Changed_Event_Args^ e);
+			void Timeline_OnViewChanged(System::Object^ sender, System::EventArgs^ e);
 
 			// Hotkey Members
 			void Initialize_Hotkeys();

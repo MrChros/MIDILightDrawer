@@ -452,6 +452,9 @@ namespace MIDILightDrawer
 		// Register for tool change events to update menu state
 		_Timeline->ToolChanged += gcnew System::EventHandler<TimelineToolType>(this, &Form_Main::UpdateEditMenuState);
 
+		// Register for view change events to update audio waveform view range
+		_Timeline->ViewChanged += gcnew System::EventHandler(this, &Form_Main::Timeline_OnViewChanged);
+
 
 		///////////////////
 		// Settings Menu //
@@ -916,6 +919,7 @@ namespace MIDILightDrawer
 		SettingsMIDI_On_Settings_Accepted();
 
 		this->_Audio_Container->Load_MIDI_Information();
+		this->_Audio_Container->Update_View_Range();
 
 		// Add to recent files
 		Settings::Get_Instance()->Add_Recent_GP_File(filePath);
@@ -1410,11 +1414,18 @@ namespace MIDILightDrawer
 	void Form_Main::DropDown_View_Marker_OnItem_Selected(System::Object^ sender, Control_DropDown_Item_Selected_Event_Args^ e)
 	{
 		this->_Timeline->ScrollToMeasure(e->Value);
+		this->_Audio_Container->Update_View_Range();
 	}
 
 	void Form_Main::TrackBar_Zoom_OnValue_Changed(System::Object^ sender, Track_Bar_Value_Changed_Event_Args^ e)
 	{
 		this->_Timeline->SetZoom(e->Value);
+		this->_Audio_Container->Update_View_Range();
+	}
+
+	void Form_Main::Timeline_OnViewChanged(System::Object^ sender, System::EventArgs^ e)
+	{
+		this->_Audio_Container->Update_View_Range();
 	}
 
 	void Form_Main::Initialize_Hotkeys()
@@ -1649,6 +1660,7 @@ namespace MIDILightDrawer
 		{
 			this->_Timeline->Playback_Auto_Scroll(_Transport_Controls->AutoScroll_Enabled);
 			this->_Audio_Container->Update_Cursor();
+			this->_Audio_Container->Update_View_Range();
 		}
 	}
 

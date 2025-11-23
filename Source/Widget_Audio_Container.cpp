@@ -167,6 +167,29 @@ namespace MIDILightDrawer
 		}
 	}
 
+	void Widget_Audio_Container::Update_View_Range()
+	{
+		if (!this->_Timeline) {
+			return;
+		}
+
+		// Get scroll position and visible width from timeline
+		// ScrollPosition->X is negative (more negative = scrolled further right)
+		Point^ Scroll_Pos = this->_Timeline->ScrollPosition;
+		int Visible_Width = this->_Timeline->Width - this->_Timeline->GetLeftPanelAndTrackHeaderWidth();
+
+		// Convert pixels to ticks, then to milliseconds
+		// Negate Scroll_Pos->X since it's stored as negative offset
+		int Scroll_Offset = Math::Max(0, -Scroll_Pos->X);
+		int Start_Tick = this->_Timeline->PixelsToTicks(Scroll_Offset);
+		int End_Tick = this->_Timeline->PixelsToTicks(Scroll_Offset + Visible_Width);
+
+		double Start_ms = this->_Timeline->TicksToMilliseconds(Start_Tick);
+		double End_ms = this->_Timeline->TicksToMilliseconds(End_Tick);
+
+		this->_Audio_Waveform->Set_View_Range_ms(Start_ms, End_ms);
+	}
+
 	Widget_Audio_Waveform^ Widget_Audio_Container::Waveform()
 	{
 		return _Audio_Waveform;

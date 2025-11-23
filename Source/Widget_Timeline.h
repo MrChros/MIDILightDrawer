@@ -37,6 +37,7 @@ namespace MIDILightDrawer
 	public ref class Widget_Timeline : public UserControl, public ITimelineAccess {
 	public:
 		event EventHandler<TimelineToolType>^ ToolChanged;
+		event EventHandler^ ViewChanged;
 
 		// Constants
 		static const int INITIAL_TICK_OFFSET			= Timeline_Direct2DRenderer::TICKS_PER_QUARTER;

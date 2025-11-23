@@ -18,6 +18,9 @@ namespace MIDILightDrawer
 		Set_Audio_Duration_ms(Widget_Audio_Waveform::NO_AUDIO);
 		Set_MIDI_Duration_ms(Widget_Audio_Waveform::NO_MIDI);
 		Set_Cursor_Position_ms(0.0);
+
+		_View_Range_Start_ms = 0.0;
+		_View_Range_End_ms = 0.0;
 	}
 
 	void Widget_Audio_Waveform::Set_Waveform_Data(Waveform_Render_Data^ waveform_data)
@@ -54,6 +57,13 @@ namespace MIDILightDrawer
 	void Widget_Audio_Waveform::Set_Cursor_Position_ms(double cursor_position_ms)
 	{
 		this->_Cursor_Position_ms = cursor_position_ms;
+		this->Invalidate();
+	}
+
+	void Widget_Audio_Waveform::Set_View_Range_ms(double start_ms, double end_ms)
+	{
+		this->_View_Range_Start_ms = start_ms;
+		this->_View_Range_End_ms = end_ms;
 		this->Invalidate();
 	}
 
@@ -120,14 +130,40 @@ namespace MIDILightDrawer
 
 		if (this->_Audio_Duration_ms > this->_MIDI_Duration_ms) {
 			HatchBrush^ Audio_Only_Brush = gcnew HatchBrush(HatchStyle::BackwardDiagonal, Color::Yellow, Color::FromArgb(0));
-			
+
 			int Last_Pixel_MIDI = (int)((double)this->Width * (this->_MIDI_Duration_ms / this->_Maximum_Duration_ms));
-			
+
 			Rectangle Audio_Only_Rect = Rectangle(Last_Pixel_MIDI, 0, this->Width - Last_Pixel_MIDI, this->Height);
 
 			G->FillRectangle(Audio_Only_Brush, Audio_Only_Rect);
 
 			delete Audio_Only_Brush;
+		}
+
+		// Draw View Range Indicator (visible timeline region)
+		if (this->_View_Range_End_ms > this->_View_Range_Start_ms && this->_Maximum_Duration_ms > 0)
+		{
+			int Start_Pixel = (int)((double)this->Width * (this->_View_Range_Start_ms / this->_Maximum_Duration_ms));
+			int End_Pixel = (int)((double)this->Width * (this->_View_Range_End_ms / this->_Maximum_Duration_ms));
+
+			// Clamp to widget bounds
+			Start_Pixel = Math::Max(0, Start_Pixel);
+			End_Pixel = Math::Min(this->Width, End_Pixel);
+
+			if (End_Pixel > Start_Pixel)
+			{
+				// Draw semi-transparent fill for visible region
+				SolidBrush^ View_Range_Brush = gcnew SolidBrush(Color::FromArgb(40, Theme->AccentPrimary));
+				Rectangle View_Range_Rect = Rectangle(Start_Pixel, 0, End_Pixel - Start_Pixel, this->Height);
+				G->FillRectangle(View_Range_Brush, View_Range_Rect);
+				delete View_Range_Brush;
+
+				// Draw border lines at start and end
+				Pen^ View_Range_Pen = gcnew Pen(Color::FromArgb(150, Theme->AccentPrimary), 1.0f);
+				G->DrawLine(View_Range_Pen, Start_Pixel, 0, Start_Pixel, this->Height);
+				G->DrawLine(View_Range_Pen, End_Pixel - 1, 0, End_Pixel - 1, this->Height);
+				delete View_Range_Pen;
+			}
 		}
 
 		// Draw Cursor Position

@@ -43,6 +43,7 @@ namespace MIDILightDrawer
 		void Load_MIDI_Information();
 
 		void Update_Cursor();
+		void Update_View_Range();
 
 		Widget_Audio_Waveform^ Waveform();
 

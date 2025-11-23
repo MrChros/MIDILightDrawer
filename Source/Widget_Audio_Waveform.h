@@ -27,6 +27,10 @@ namespace MIDILightDrawer
 		double _Maximum_Duration_ms;
 		double _Cursor_Position_ms;
 
+		// View range from timeline
+		double _View_Range_Start_ms;
+		double _View_Range_End_ms;
+
 		List<double>^ _Marker_Timestamps;
 
 	public:
@@ -36,6 +40,7 @@ namespace MIDILightDrawer
 		void Set_Audio_Duration_ms(double audio_duration_ms);
 		void Set_MIDI_Duration_ms(double midi_duration_ms);
 		void Set_Cursor_Position_ms(double cursor_position_ms);
+		void Set_View_Range_ms(double start_ms, double end_ms);
 
 	protected:
 		virtual void OnPaint(PaintEventArgs^ e) override;

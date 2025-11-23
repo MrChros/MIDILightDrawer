@@ -239,12 +239,18 @@ namespace MIDILightDrawer
 		// Ensure proper alignment
 		UpdateScrollBounds();
 		Invalidate();
+
+		// Notify view changed
+		ViewChanged(this, EventArgs::Empty);
 	}
 
 	void Widget_Timeline::ScrollTo(Point newPosition)
 	{
 		_ScrollPosition = newPosition;
 		Invalidate();
+
+		// Notify view changed
+		ViewChanged(this, EventArgs::Empty);
 	}
 
 	void Widget_Timeline::SetTrackHeight(Track^ track, int height)
@@ -2173,6 +2179,9 @@ namespace MIDILightDrawer
 
 		// Request redraw
 		Invalidate();
+
+		// Notify view changed
+		ViewChanged(this, EventArgs::Empty);
 	}
 
 	void Widget_Timeline::OnVerticalScroll(Object^ sender, ScrollEventArgs^ e)

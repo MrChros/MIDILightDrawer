@@ -1,19 +1,30 @@
 #include "Playback_MIDI_Engine.h"
 #include "Playback_Event_Queue_Manager.h"
+#include <msclr/lock.h>
 
 namespace MIDILightDrawer
 {
 	ref class Engine_Callback_Helper {
 	public:
 		static Playback_MIDI_Engine^ Instance = nullptr;
+		static Object^ SyncLock = gcnew Object();
 	};
 
 	void Native_Event_Sent_Callback(const Playback_MIDI_Engine_Native::MIDI_Event& event)
 	{
-		// Get the managed instance
-		Playback_MIDI_Engine^ Managed_Instance = Engine_Callback_Helper::Instance;
+		// Get the managed instance with thread-safe access
+		Playback_MIDI_Engine^ Managed_Instance = nullptr;
+		Playback_Event_Queue_Manager^ Queue_Manager = nullptr;
 
-		if (Managed_Instance != nullptr && Managed_Instance->_Event_Queue_Manager != nullptr)
+		{
+			msclr::lock Lock(Engine_Callback_Helper::SyncLock);
+			Managed_Instance = Engine_Callback_Helper::Instance;
+			if (Managed_Instance != nullptr) {
+				Queue_Manager = Managed_Instance->_Event_Queue_Manager;
+			}
+		}
+
+		if (Managed_Instance != nullptr && Queue_Manager != nullptr)
 		{
 			// Convert native event to managed
 			Playback_MIDI_Event^ Managed_Event = gcnew Playback_MIDI_Event();
@@ -25,7 +36,7 @@ namespace MIDILightDrawer
 			Managed_Event->MIDI_Data2 = event.Data2;
 
 			// Notify queue manager
-			Managed_Instance->_Event_Queue_Manager->On_Event_Sent(Managed_Event);
+			Queue_Manager->On_Event_Sent(Managed_Event);
 		}
 	}
 	
@@ -38,15 +49,22 @@ namespace MIDILightDrawer
 	{
 		Cleanup();
 
-		if (Engine_Callback_Helper::Instance == this) {
-			Engine_Callback_Helper::Instance = nullptr;
+		{
+			msclr::lock Lock(Engine_Callback_Helper::SyncLock);
+			if (Engine_Callback_Helper::Instance == this) {
+				Engine_Callback_Helper::Instance = nullptr;
+			}
 		}
 	}
 
 	void Playback_MIDI_Engine::Set_Event_Queue_Manager(Playback_Event_Queue_Manager^ manager)
 	{
 		_Event_Queue_Manager = manager;
-		Engine_Callback_Helper::Instance = this;
+
+		{
+			msclr::lock Lock(Engine_Callback_Helper::SyncLock);
+			Engine_Callback_Helper::Instance = this;
+		}
 
 		// Set native callback
 		Playback_MIDI_Engine_Native::Set_Event_Sent_Callback(&Native_Event_Sent_Callback);

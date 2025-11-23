@@ -851,6 +851,9 @@ namespace MIDILightDrawer
 
 	String^ Widget_Timeline::LoadBarEventsFromFile(String^ filePath)
 	{
+		// Clear undo/redo history when loading a new file
+		_CommandManager->Clear();
+
 		// Create mapping of track names to indices
 		Dictionary<String^, Track^>^ TrackMap = gcnew Dictionary<String^, Track^>();
 		for each (Track ^ Trk in _Tracks) {

@@ -66,11 +66,6 @@ namespace MIDILightDrawer
 			ToolStripMenuItem^					_Menu_Edit_BatchAction;
 			ToolStripMenuItem^					_Menu_Edit_MIDI_Log;
 
-			// Recent Files Menu Items
-			//ToolStripMenuItem^					_Menu_Recent_GP;
-			//ToolStripMenuItem^					_Menu_Recent_Light;
-			//ToolStripMenuItem^					_Menu_Recent_Audio;
-
 			gp_parser::Parser*					_GP_Tab;
 			Widget_Tab_Info^					_Tab_Info;
 			Widget_Tools_And_Control^			_Tools_And_Control;

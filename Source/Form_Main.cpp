@@ -332,6 +332,7 @@ namespace MIDILightDrawer
 
 		// File -> Open Audio File
 		ToolStripMenuItem^ Menu_File_Open_Audio = gcnew ToolStripMenuItem("Open Audio File (WAV/MP3)");
+		Menu_File_Open_Audio->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Audio_File")));
 		Menu_File_Open_Audio->ShortcutKeys = Keys::Control | Keys::Shift | Keys::A;
 		Menu_File_Open_Audio->Click += gcnew System::EventHandler(this, &Form_Main::Menu_File_Audio_Open_Click);
 
@@ -421,7 +422,7 @@ namespace MIDILightDrawer
 
 		// Edit -> MIDI Log
 		_Menu_Edit_MIDI_Log = gcnew ToolStripMenuItem("MIDI Log");
-		//_Menu_Edit_MIDI_Log->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Batch")));
+		_Menu_Edit_MIDI_Log->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"MIDI_Log")));
 		_Menu_Edit_MIDI_Log->Click += gcnew System::EventHandler(this, &Form_Main::Menu_View_MIDI_Log_Click);
 
 		// Build Edit menu
@@ -461,19 +462,16 @@ namespace MIDILightDrawer
 		// Settings -> Hotkeys
 		ToolStripMenuItem^ Menu_Settings_Hotkeys = gcnew ToolStripMenuItem("Keyboard Shortcuts");
 		Menu_Settings_Hotkeys->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Hotkey")));
-		Menu_Settings_Hotkeys->ShortcutKeys = Keys::Control | Keys::K;
 		Menu_Settings_Hotkeys->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Settings_Hotkeys_Click);
 
 		// Settings -> MIDI
 		ToolStripMenuItem^ Menu_Settings_Midi = gcnew ToolStripMenuItem("MIDI Settings");
 		Menu_Settings_Midi->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Midi_Settings")));
-		Menu_Settings_Midi->ShortcutKeys = Keys::Control | Keys::M;
 		Menu_Settings_Midi->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Settings_Midi_Click);
 
 		// Settings -> Device
 		ToolStripMenuItem^ Menu_Settings_Device = gcnew ToolStripMenuItem("Device Configuration");
-		//Menu_Settings_Device->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Midi_Settings")));
-		//Menu_Settings_Device->ShortcutKeys = Keys::Control | Keys::M;
+		Menu_Settings_Device->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"Device")));
 		Menu_Settings_Device->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Settings_Device_Click);
 
 		// Build Settings menu
@@ -833,12 +831,15 @@ namespace MIDILightDrawer
 
 	void Form_Main::Update_Recent_Files_Menus()
 	{
+		Theme_Manager^ Theme = Theme_Manager::Get_Instance();
+
 		// Update GP Files submenu
 		_Menu_File_Recent_GP->DropDownItems->Clear();
 		List<String^>^ Recent_GP_Files = Settings::Get_Instance()->Recent_GP_Files;
 		if (Recent_GP_Files->Count == 0) {
 			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
 			Empty_Item->Enabled = false;
+			Empty_Item->ForeColor = Theme->ForegroundText;
 			_Menu_File_Recent_GP->DropDownItems->Add(Empty_Item);
 		}
 		else {
@@ -847,6 +848,7 @@ namespace MIDILightDrawer
 				Item->Tag = filePath;
 				Item->ToolTipText = filePath;
 				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_GP_Click);
+				Item->ForeColor = Theme->ForegroundText;
 				_Menu_File_Recent_GP->DropDownItems->Add(Item);
 			}
 		}
@@ -857,6 +859,7 @@ namespace MIDILightDrawer
 		if (Recent_Light_Files->Count == 0) {
 			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
 			Empty_Item->Enabled = false;
+			Empty_Item->ForeColor = Theme->ForegroundText;
 			_Menu_File_Recent_Light->DropDownItems->Add(Empty_Item);
 		}
 		else {
@@ -865,6 +868,7 @@ namespace MIDILightDrawer
 				Item->Tag = File_Path;
 				Item->ToolTipText = File_Path;
 				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_Light_Click);
+				Item->ForeColor = Theme->ForegroundText;
 				_Menu_File_Recent_Light->DropDownItems->Add(Item);
 			}
 		}
@@ -873,9 +877,10 @@ namespace MIDILightDrawer
 		_Menu_File_Recent_Audio->DropDownItems->Clear();
 		List<String^>^ Recent_Audio_Files = Settings::Get_Instance()->Recent_Audio_Files;
 		if (Recent_Audio_Files->Count == 0) {
-			ToolStripMenuItem^ emptyItem = gcnew ToolStripMenuItem("(No recent files)");
-			emptyItem->Enabled = false;
-			_Menu_File_Recent_Audio->DropDownItems->Add(emptyItem);
+			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
+			Empty_Item->Enabled = false;
+			Empty_Item->ForeColor = Theme->ForegroundText;
+			_Menu_File_Recent_Audio->DropDownItems->Add(Empty_Item);
 		}
 		else {
 			for each (String^ File_Path in Recent_Audio_Files) {
@@ -883,6 +888,7 @@ namespace MIDILightDrawer
 				Item->Tag = File_Path;
 				Item->ToolTipText = File_Path;
 				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_Audio_Click);
+				Item->ForeColor = Theme->ForegroundText;
 				_Menu_File_Recent_Audio->DropDownItems->Add(Item);
 			}
 		}
@@ -905,6 +911,7 @@ namespace MIDILightDrawer
 		this->_Tab_Info->Update_Info(filePath, gcnew String(this->_GP_Tab->getTabFile().title.data()), (unsigned int)this->_GP_Tab->getTabFile().measureHeaders.size(), this->_GP_Tab->getTabFile().trackCount);
 
 		this->_Timeline->Clear();
+		this->_Timeline->CommandManager()->Clear();
 		this->_TrackBar_Zoom->Value = 1.0f;
 		SettingsMIDI_On_Settings_Accepted();
 
@@ -997,11 +1004,14 @@ namespace MIDILightDrawer
 		ToolStripMenuItem^ Item = safe_cast<ToolStripMenuItem^>(sender);
 
 		int TargetIndex = safe_cast<int>(Item->Tag);
-		int CurrentIndex = _Timeline->CommandManager()->GetCurrentIndex();
 
-		for (int i = 0; i <= TargetIndex && i <= CurrentIndex; i++) {
+		// Undo (TargetIndex + 1) commands to reach the target state
+		int UndoCount = TargetIndex + 1;
+		for (int i = 0; i < UndoCount; i++) {
 			_Timeline->Undo();
 		}
+
+		UpdateUndoRedoState();
 	}
 
 	void Form_Main::Menu_Edit_Redo_Click(System::Object^ sender, System::EventArgs^ e)

@@ -4,6 +4,7 @@
 #include <atomic>
 #include <mutex>
 #include <vector>
+#include <deque>
 
 namespace MIDILightDrawer
 {
@@ -42,7 +43,7 @@ namespace MIDILightDrawer
 			}
 		};
 
-		static std::vector<Scheduled_MIDI_Event> _Event_Queue;
+		static std::deque<Scheduled_MIDI_Event> _Event_Queue;
 		static std::mutex _Event_Queue_Mutex;
 		static void (*_Event_Sent_Callback)(const MIDI_Event&);
 

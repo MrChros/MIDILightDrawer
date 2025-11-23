@@ -25,7 +25,7 @@ namespace MIDILightDrawer
 	std::atomic<bool> Playback_MIDI_Engine_Native::_Should_Stop(false);
 	std::atomic<bool> Playback_MIDI_Engine_Native::_Reset_Timing(false);
 	std::atomic<int64_t> Playback_MIDI_Engine_Native::_Current_Position_us(0);
-	std::vector<Playback_MIDI_Engine_Native::Scheduled_MIDI_Event> Playback_MIDI_Engine_Native::_Event_Queue;
+	std::deque<Playback_MIDI_Engine_Native::Scheduled_MIDI_Event> Playback_MIDI_Engine_Native::_Event_Queue;
 	std::mutex Playback_MIDI_Engine_Native::_Event_Queue_Mutex;
 
 	std::atomic<bool> Playback_MIDI_Engine_Native::_Audio_Is_Available(false);
@@ -340,7 +340,7 @@ namespace MIDILightDrawer
 									_Event_Sent_Callback(Batch_Event.Event);
 								}
 
-								_Event_Queue.erase(_Event_Queue.begin());
+								_Event_Queue.pop_front();
 							}
 							else
 							{

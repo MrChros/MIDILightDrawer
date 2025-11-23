@@ -45,6 +45,7 @@ namespace MIDILightDrawer
 		void ExecuteCommand(ITimelineCommand^ command);
 		void Undo();
 		void Redo();
+		void Clear();
 
 		property bool CanUndo {
 			bool get() { return _UndoStack->Count > 0; }

@@ -20,9 +20,14 @@ namespace MIDILightDrawer
 		_UndoStack->Push(command);
 		_RedoStack->Clear();  // Clear redo stack when new command is executed
 
-		// Limit undo stack size
-		while (_UndoStack->Count > MAX_UNDO_LEVELS) {
-			_UndoStack->Pop();
+		// Limit undo stack size - remove oldest commands from bottom
+		if (_UndoStack->Count > MAX_UNDO_LEVELS) {
+			array<ITimelineCommand^>^ Commands = _UndoStack->ToArray();
+			_UndoStack->Clear();
+			// ToArray returns newest first, so push from end to keep newest MAX_UNDO_LEVELS
+			for (int i = MAX_UNDO_LEVELS - 1; i >= 0; i--) {
+				_UndoStack->Push(Commands[i]);
+			}
 		}
 
 		_Timeline->ToolAccess()->OnCommandStateChanged();
@@ -43,11 +48,16 @@ namespace MIDILightDrawer
 	{
 		if (_UndoStack->Count > 0) {
 			ITimelineCommand^ Command = _UndoStack->Pop();
-			Command->Undo();
-			_RedoStack->Push(Command);
+			try {
+				Command->Undo();
+				_RedoStack->Push(Command);
 
-			// Notify current tool
-			_Timeline->ToolAccess()->OnCommandStateChanged();
+				// Notify current tool
+				_Timeline->ToolAccess()->OnCommandStateChanged();
+			}
+			catch (Exception^) {
+				// Command failed - discard it to maintain stack consistency
+			}
 		}
 
 		CommandStateChanged();
@@ -57,15 +67,26 @@ namespace MIDILightDrawer
 	{
 		if (_RedoStack->Count > 0) {
 			ITimelineCommand^ Command = _RedoStack->Pop();
+			try {
+				Command->Execute();
+				_UndoStack->Push(Command);
 
-			Command->Execute();
-
-			_UndoStack->Push(Command);
-
-			// Notify current tool
-			_Timeline->ToolAccess()->OnCommandStateChanged();
+				// Notify current tool
+				_Timeline->ToolAccess()->OnCommandStateChanged();
+			}
+			catch (Exception^) {
+				// Command failed - discard it to maintain stack consistency
+			}
 		}
 
+		CommandStateChanged();
+	}
+
+	void TimelineCommandManager::Clear()
+	{
+		_UndoStack->Clear();
+		_RedoStack->Clear();
+		_Timeline->ToolAccess()->OnCommandStateChanged();
 		CommandStateChanged();
 	}
 

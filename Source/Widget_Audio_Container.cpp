@@ -22,7 +22,7 @@ namespace MIDILightDrawer
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 1));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 130));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 150));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 70));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 120));
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
@@ -71,10 +71,10 @@ namespace MIDILightDrawer
 		}
 		_Label_Audio_Info_File->TextAlign = ContentAlignment::MiddleLeft;
 
-		Table_Layout_Main->Controls->Add(Label_Offset, 0, 0);
-		Table_Layout_Main->Controls->Add(_TimeOffset_Audio_Offset, 1, 0);
-		Table_Layout_Main->Controls->Add(Label_Volume, 2, 0);
-		Table_Layout_Main->Controls->Add(_VolumeSlider, 3, 0);
+		Table_Layout_Main->Controls->Add(Label_Offset					, 0, 0);
+		Table_Layout_Main->Controls->Add(_TimeOffset_Audio_Offset		, 1, 0);
+		Table_Layout_Main->Controls->Add(Label_Volume					, 2, 0);
+		Table_Layout_Main->Controls->Add(_VolumeSlider					, 3, 0);
 
 		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Length		, 4, 0);
 		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Channels		, 5, 0);
@@ -182,7 +182,7 @@ namespace MIDILightDrawer
 		// Negate Scroll_Pos->X since it's stored as negative offset
 		int Scroll_Offset = Math::Max(0, -Scroll_Pos->X);
 		int Start_Tick = this->_Timeline->PixelsToTicks(Scroll_Offset);
-		int End_Tick = this->_Timeline->PixelsToTicks(Scroll_Offset + Visible_Width);
+		int End_Tick = Math::Min(this->_Timeline->PixelsToTicks(Scroll_Offset + Visible_Width), this->_Timeline->TotalTicks - 1);
 
 		double Start_ms = this->_Timeline->TicksToMilliseconds(Start_Tick);
 		double End_ms = this->_Timeline->TicksToMilliseconds(End_Tick);

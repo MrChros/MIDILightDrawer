@@ -64,6 +64,7 @@ namespace MIDILightDrawer
 	{
 		this->_View_Range_Start_ms = start_ms;
 		this->_View_Range_End_ms = end_ms;
+
 		this->Invalidate();
 	}
 

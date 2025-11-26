@@ -193,6 +193,12 @@ namespace MIDILightDrawer
 		double _ZoomLevel;
 		bool _ShowPlaybackCursor;
 
+		// Invalidation optimization
+		bool _InvalidatePending;
+		Rectangle _DirtyRect;
+		DateTime _LastInvalidation;
+		static const int MIN_INVALIDATION_INTERVAL_MS = 16; // ~60fps cap
+
 		// Tools
 		TimelineToolType _CurrentToolType;
 		TimelineTool^ _CurrentTool;
@@ -203,6 +209,13 @@ namespace MIDILightDrawer
 		void InitializeComponent();
 		void InitializeToolSystem();
 		void InitializeContextMenu();
+
+		// Invalidation helpers
+		void InvalidateRegion(Rectangle region);
+		void InvalidateTrack(Track^ track);
+		void InvalidateBar(BarEvent^ bar);
+		void ThrottledInvalidate();
+		void FlushInvalidation();
 
 		void CreateContextMenuCommon();
 		void CreateContextMenuSolid();

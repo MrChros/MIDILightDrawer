@@ -832,71 +832,6 @@ namespace MIDILightDrawer
 		this->Close();
 	}
 
-	void Form_Main::Update_Recent_Files_Menus()
-	{
-		Theme_Manager^ Theme = Theme_Manager::Get_Instance();
-
-		// Update GP Files submenu
-		_Menu_File_Recent_GP->DropDownItems->Clear();
-		List<String^>^ Recent_GP_Files = Settings::Get_Instance()->Recent_GP_Files;
-		if (Recent_GP_Files->Count == 0) {
-			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
-			Empty_Item->Enabled = false;
-			Empty_Item->ForeColor = Theme->ForegroundText;
-			_Menu_File_Recent_GP->DropDownItems->Add(Empty_Item);
-		}
-		else {
-			for each (String^ filePath in Recent_GP_Files) {
-				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(filePath));
-				Item->Tag = filePath;
-				Item->ToolTipText = filePath;
-				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_GP_Click);
-				Item->ForeColor = Theme->ForegroundText;
-				_Menu_File_Recent_GP->DropDownItems->Add(Item);
-			}
-		}
-
-		// Update Light Files submenu
-		_Menu_File_Recent_Light->DropDownItems->Clear();
-		List<String^>^ Recent_Light_Files = Settings::Get_Instance()->Recent_Light_Files;
-		if (Recent_Light_Files->Count == 0) {
-			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
-			Empty_Item->Enabled = false;
-			Empty_Item->ForeColor = Theme->ForegroundText;
-			_Menu_File_Recent_Light->DropDownItems->Add(Empty_Item);
-		}
-		else {
-			for each (String^ File_Path in Recent_Light_Files) {
-				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(File_Path));
-				Item->Tag = File_Path;
-				Item->ToolTipText = File_Path;
-				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_Light_Click);
-				Item->ForeColor = Theme->ForegroundText;
-				_Menu_File_Recent_Light->DropDownItems->Add(Item);
-			}
-		}
-
-		// Update Audio Files submenu
-		_Menu_File_Recent_Audio->DropDownItems->Clear();
-		List<String^>^ Recent_Audio_Files = Settings::Get_Instance()->Recent_Audio_Files;
-		if (Recent_Audio_Files->Count == 0) {
-			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
-			Empty_Item->Enabled = false;
-			Empty_Item->ForeColor = Theme->ForegroundText;
-			_Menu_File_Recent_Audio->DropDownItems->Add(Empty_Item);
-		}
-		else {
-			for each (String^ File_Path in Recent_Audio_Files) {
-				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(File_Path));
-				Item->Tag = File_Path;
-				Item->ToolTipText = File_Path;
-				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_Audio_Click);
-				Item->ForeColor = Theme->ForegroundText;
-				_Menu_File_Recent_Audio->DropDownItems->Add(Item);
-			}
-		}
-	}
-
 	void Form_Main::Open_GP_File(String^ filePath)
 	{
 		if (!System::IO::File::Exists(filePath)) {
@@ -974,33 +909,100 @@ namespace MIDILightDrawer
 		this->Cursor = System::Windows::Forms::Cursors::Default;
 	}
 
+	void Form_Main::Update_Recent_Files_Menus()
+	{
+		Theme_Manager^ Theme = Theme_Manager::Get_Instance();
+
+		// Update GP Files submenu
+		_Menu_File_Recent_GP->DropDownItems->Clear();
+		List<String^>^ Recent_GP_Files = Settings::Get_Instance()->Recent_GP_Files;
+		if (Recent_GP_Files->Count == 0) {
+			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
+			Empty_Item->Enabled = false;
+			Empty_Item->ForeColor = Theme->ForegroundText;
+			_Menu_File_Recent_GP->DropDownItems->Add(Empty_Item);
+		}
+		else {
+			for each(String ^ filePath in Recent_GP_Files) {
+				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(filePath));
+				Item->Tag = filePath;
+				Item->ToolTipText = filePath;
+				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_GP_Click);
+				Item->ForeColor = Theme->ForegroundText;
+				_Menu_File_Recent_GP->DropDownItems->Add(Item);
+			}
+		}
+
+		// Update Light Files submenu
+		_Menu_File_Recent_Light->DropDownItems->Clear();
+		List<String^>^ Recent_Light_Files = Settings::Get_Instance()->Recent_Light_Files;
+		if (Recent_Light_Files->Count == 0) {
+			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
+			Empty_Item->Enabled = false;
+			Empty_Item->ForeColor = Theme->ForegroundText;
+			_Menu_File_Recent_Light->DropDownItems->Add(Empty_Item);
+		}
+		else {
+			for each(String ^ File_Path in Recent_Light_Files) {
+				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(File_Path));
+				Item->Tag = File_Path;
+				Item->ToolTipText = File_Path;
+				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_Light_Click);
+				Item->ForeColor = Theme->ForegroundText;
+				_Menu_File_Recent_Light->DropDownItems->Add(Item);
+			}
+		}
+
+		// Update Audio Files submenu
+		_Menu_File_Recent_Audio->DropDownItems->Clear();
+		List<String^>^ Recent_Audio_Files = Settings::Get_Instance()->Recent_Audio_Files;
+		if (Recent_Audio_Files->Count == 0) {
+			ToolStripMenuItem^ Empty_Item = gcnew ToolStripMenuItem("(No recent files)");
+			Empty_Item->Enabled = false;
+			Empty_Item->ForeColor = Theme->ForegroundText;
+			_Menu_File_Recent_Audio->DropDownItems->Add(Empty_Item);
+		}
+		else {
+			for each(String ^ File_Path in Recent_Audio_Files) {
+				ToolStripMenuItem^ Item = gcnew ToolStripMenuItem(System::IO::Path::GetFileName(File_Path));
+				Item->Tag = File_Path;
+				Item->ToolTipText = File_Path;
+				Item->Click += gcnew System::EventHandler(this, &Form_Main::Menu_Recent_Audio_Click);
+				Item->ForeColor = Theme->ForegroundText;
+				_Menu_File_Recent_Audio->DropDownItems->Add(Item);
+			}
+		}
+	}
+
 	void Form_Main::Menu_Recent_GP_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		ToolStripMenuItem^ item = safe_cast<ToolStripMenuItem^>(sender);
-		String^ filePath = safe_cast<String^>(item->Tag);
-		Open_GP_File(filePath);
+		ToolStripMenuItem^ Item = safe_cast<ToolStripMenuItem^>(sender);
+		String^ FilePath = safe_cast<String^>(Item->Tag);
+		Open_GP_File(FilePath);
 	}
 
 	void Form_Main::Menu_Recent_Light_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		ToolStripMenuItem^ item = safe_cast<ToolStripMenuItem^>(sender);
-		String^ filePath = safe_cast<String^>(item->Tag);
-		Open_Light_File(filePath);
+		ToolStripMenuItem^ Item = safe_cast<ToolStripMenuItem^>(sender);
+		String^ FilePath = safe_cast<String^>(Item->Tag);
+		Open_Light_File(FilePath);
 	}
 
 	void Form_Main::Menu_Recent_Audio_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		ToolStripMenuItem^ item = safe_cast<ToolStripMenuItem^>(sender);
-		String^ filePath = safe_cast<String^>(item->Tag);
-		Open_Audio_File(filePath);
+		ToolStripMenuItem^ Item = safe_cast<ToolStripMenuItem^>(sender);
+		String^ FilePath = safe_cast<String^>(Item->Tag);
+		Open_Audio_File(FilePath);
 	}
 
 	void Form_Main::Menu_Edit_Undo_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		if (this->_Timeline != nullptr) {
-			this->_Timeline->Undo();
-			UpdateUndoRedoState();
+		if (this->_Timeline == nullptr) {
+			return;
 		}
+
+		this->_Timeline->Undo();
+		UpdateUndoRedoState();
 	}
 
 	void Form_Main::Menu_Edit_UndoHistory_Click(Object^ sender, EventArgs^ e)
@@ -1020,10 +1022,12 @@ namespace MIDILightDrawer
 
 	void Form_Main::Menu_Edit_Redo_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		if (this->_Timeline != nullptr) {
-			this->_Timeline->Redo();
-			UpdateUndoRedoState();
+		if (this->_Timeline == nullptr) {
+			return;
 		}
+		
+		this->_Timeline->Redo();
+		UpdateUndoRedoState();
 	}
 
 	void Form_Main::Menu_Edit_Copy_Click(System::Object^ sender, System::EventArgs^ e)
@@ -1181,18 +1185,18 @@ namespace MIDILightDrawer
 
 	void Form_Main::UpdateEditMenuState()
 	{
-		if (_Timeline == nullptr) {
+		if (this->_Timeline == nullptr) {
 			_Menu_Edit_Copy->Enabled = false;
 			_Menu_Edit_Paste->Enabled = false;
 			_Menu_Edit_Delete->Enabled = false;
 			return;
 		}
 
-		bool IsPointerToolActive	= _Timeline->CurrentTool == TimelineToolType::Pointer;
-		bool IsEraseToolActive		= _Timeline->CurrentTool == TimelineToolType::Erase;
+		bool IsPointerToolActive	= this->_Timeline->CurrentTool == TimelineToolType::Pointer;
+		bool IsEraseToolActive		= this->_Timeline->CurrentTool == TimelineToolType::Erase;
 
-		PointerTool^ PointerTool	= _Timeline->GetPointerTool();
-		EraseTool^ EraseTool		= _Timeline->GetEraseTool();
+		PointerTool^ PointerTool	= this->_Timeline->GetPointerTool();
+		EraseTool^ EraseTool		= this->_Timeline->GetEraseTool();
 
 		// Handle Copy and Paste (only for pointer tool)
 		if (PointerTool != nullptr && IsPointerToolActive) {
@@ -1323,8 +1327,8 @@ namespace MIDILightDrawer
 												Marker_Text);
 
 					if (Marker_Text->Length > 0) {
-						String^ markerTitle = Marker_Text;
-						First_Marker_List->Add(markerTitle);
+						String^ MarkerTitle = Marker_Text;
+						First_Marker_List->Add(MarkerTitle);
 						Second_Marker_List->Add(""); 
 						Values_List->Add(MH->number);
 					}
@@ -1438,27 +1442,32 @@ namespace MIDILightDrawer
 	void Form_Main::Update_Hotkeys()
 	{
 		_Active_Hotkeys->Clear();
-		auto bindings = Hotkey_Manager::Instance->Get_All_Bindings();
+		auto Bindings = Hotkey_Manager::Instance->Get_All_Bindings();
 
-		for each (KeyValuePair<String^, String^> binding in bindings)
+		for each (KeyValuePair<String^, String^> Binding in Bindings)
 		{
-			array<String^>^ parts = binding.Value->Split('+');
-			Keys key_code = Keys::None;
+			array<String^>^ Parts = Binding.Value->Split('+');
+			Keys Key_Code = Keys::None;
 
-			String^ main_key = parts[parts->Length - 1]->Trim();
-			if (main_key == "") {
+			String^ Main_Key = Parts[Parts->Length - 1]->Trim();
+			if (Main_Key == "") {
 				continue;
 			}
-			key_code = safe_cast<Keys>(Enum::Parse(Keys::typeid, main_key));
+			Key_Code = safe_cast<Keys>(Enum::Parse(Keys::typeid, Main_Key));
 
-			if (binding.Value->Contains("Ctrl"))
-				key_code = key_code | Keys::Control;
-			if (binding.Value->Contains("Shift"))
-				key_code = key_code | Keys::Shift;
-			if (binding.Value->Contains("Alt"))
-				key_code = key_code | Keys::Alt;
+			if (Binding.Value->Contains("Ctrl")) {
+				Key_Code = Key_Code | Keys::Control;
+			}
 
-			_Active_Hotkeys->Add(binding.Key, key_code);
+			if (Binding.Value->Contains("Shift")) {
+				Key_Code = Key_Code | Keys::Shift;
+			}
+
+			if (Binding.Value->Contains("Alt")) {
+				Key_Code = Key_Code | Keys::Alt;
+			}
+
+			_Active_Hotkeys->Add(Binding.Key, Key_Code);
 		}
 	}
 
@@ -1476,69 +1485,71 @@ namespace MIDILightDrawer
 		}
 		
 		// Get current key with modifiers
-		Keys currentKey = key_code;
+		Keys CurrentKey = key_code;
 		if (ModifierKeys.HasFlag(Keys::Control)) {
-			currentKey = currentKey | Keys::Control;
-		}
-		if (ModifierKeys.HasFlag(Keys::Shift)) {
-			currentKey = currentKey | Keys::Shift;
-		}
-		if (ModifierKeys.HasFlag(Keys::Alt)) {
-			currentKey = currentKey | Keys::Alt;
+			CurrentKey = CurrentKey | Keys::Control;
 		}
 
-		for each (KeyValuePair<String^, System::Windows::Forms::Keys> hotkey in _Active_Hotkeys)
+		if (ModifierKeys.HasFlag(Keys::Shift)) {
+			CurrentKey = CurrentKey | Keys::Shift;
+		}
+
+		if (ModifierKeys.HasFlag(Keys::Alt)) {
+			CurrentKey = CurrentKey | Keys::Alt;
+		}
+
+		for each (KeyValuePair<String^, System::Windows::Forms::Keys> Hotkey in _Active_Hotkeys)
 		{
-			if (currentKey == hotkey.Value)
+			if (CurrentKey == Hotkey.Value)
 			{
-					 if (hotkey.Key == "Select Tool")	{ this->_Toolbar->CurrentTool = TimelineToolType::Pointer;	return true; }
-				else if (hotkey.Key == "Draw Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Draw;		return true; }
-				else if (hotkey.Key == "Erase Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Erase;	return true; }
-				else if (hotkey.Key == "Color Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Color;	return true; }
+					 if (Hotkey.Key == "Select Tool")	{ this->_Toolbar->CurrentTool = TimelineToolType::Pointer;	return true; }
+				else if (Hotkey.Key == "Draw Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Draw;		return true; }
+				else if (Hotkey.Key == "Erase Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Erase;	return true; }
+				else if (Hotkey.Key == "Color Tool"	)	{ this->_Toolbar->CurrentTool = TimelineToolType::Color;	return true; }
 				//else if (hotkey.Key == "Duration Tool") { this->_Toolbar->CurrentTool = TimelineToolType::Duration; return true; }
-				else if (hotkey.Key == "Fade Tool")		{ this->_Toolbar->CurrentTool = TimelineToolType::Fade;		return true; }
-				else if (hotkey.Key == "Strobe Tool")	{ this->_Toolbar->CurrentTool = TimelineToolType::Strobe;	return true; }
+				else if (Hotkey.Key == "Fade Tool")		{ this->_Toolbar->CurrentTool = TimelineToolType::Fade;		return true; }
+				else if (Hotkey.Key == "Strobe Tool")	{ this->_Toolbar->CurrentTool = TimelineToolType::Strobe;	return true; }
 				//else if (hotkey.Key == "Bucket Tool") { this->_Toolbar->CurrentTool = TimelineToolType::Pointer; return true; }
 
-				else if (hotkey.Key->StartsWith("Select Color "))
+				else if (Hotkey.Key->StartsWith("Select Color "))
 				{
-					String^ color_num = hotkey.Key->Substring(13);
+					String^ color_num = Hotkey.Key->Substring(13);
 					int color_index = Int32::Parse(color_num);
 					this->_Tools_And_Control->SelectColorFromPreset(color_index-1);
 					return true;
 				}
 
-				else if (hotkey.Key == "Length Up"						) { this->_Tools_And_Control->LengthUp();				return true; }
-				else if (hotkey.Key == "Length Down"					) { this->_Tools_And_Control->LengthDown();			return true; }
-				else if (hotkey.Key == "Draw Tool - Toggle Length Tab"	) { this->_Draw_Options->Toggle_LengthByTablature();	return true; }
+				else if (Hotkey.Key == "Length Up"						) { this->_Tools_And_Control->LengthUp();				return true; }
+				else if (Hotkey.Key == "Length Down"					) { this->_Tools_And_Control->LengthDown();				return true; }
+				else if (Hotkey.Key == "Draw Tool - Toggle Length Tab"	) { this->_Draw_Options->Toggle_LengthByTablature();	return true; }
 
-				else if (hotkey.Key == "Snapping Next"					) { this->_Tools_And_Control->SnappingUp();			return true; }
-				else if (hotkey.Key == "Snapping Previous"				) { this->_Tools_And_Control->SnappingDown();			return true; }
-				else if (hotkey.Key == "Snap To None"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_None);		return true; }
-				else if (hotkey.Key == "Snap To Grid"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Grid);		return true; }
-				else if (hotkey.Key == "Snap To Bars"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Events);		return true; }
-				else if (hotkey.Key == "Snap To Tablature"				) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Tablature);	return true; }
+				else if (Hotkey.Key == "Snapping Next"					) { this->_Tools_And_Control->SnappingUp();				return true; }
+				else if (Hotkey.Key == "Snapping Previous"				) { this->_Tools_And_Control->SnappingDown();			return true; }
+				else if (Hotkey.Key == "Snap To None"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_None);			return true; }
+				else if (Hotkey.Key == "Snap To Grid"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Grid);			return true; }
+				else if (Hotkey.Key == "Snap To Bars"					) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Events);		return true; }
+				else if (Hotkey.Key == "Snap To Tablature"				) { this->_Tools_And_Control->SnapTo((int)SnappingType::Snap_Tablature);	return true; }
 
-				else if (hotkey.Key == "Zoom In"						) { this->_TrackBar_Zoom->Move_To_Next_Value();			return true; }
-				else if (hotkey.Key == "Zoom Out"						) { this->_TrackBar_Zoom->Move_To_Previous_Value();		return true; }
-				else if (hotkey.Key == "Zoom Reset"						) { this->_TrackBar_Zoom->Value = 1;					return true; }
+				else if (Hotkey.Key == "Zoom In"						) { this->_TrackBar_Zoom->Move_To_Next_Value();			return true; }
+				else if (Hotkey.Key == "Zoom Out"						) { this->_TrackBar_Zoom->Move_To_Previous_Value();		return true; }
+				else if (Hotkey.Key == "Zoom Reset"						) { this->_TrackBar_Zoom->Value = 1;					return true; }
 
-				else if (hotkey.Key == "Track Height Increase"			) { this->_DropDown_Track_Height->Select_Next();		return true; }
-				else if (hotkey.Key == "Track Height Decrease"			) { this->_DropDown_Track_Height->Select_Previous();	return true; }
-				else if (hotkey.Key == "Track Height Reset"				) { this->_DropDown_Track_Height->Selected_Index = 1;	return true; }
+				else if (Hotkey.Key == "Track Height Increase"			) { this->_DropDown_Track_Height->Select_Next();		return true; }
+				else if (Hotkey.Key == "Track Height Decrease"			) { this->_DropDown_Track_Height->Select_Previous();	return true; }
+				else if (Hotkey.Key == "Track Height Reset"				) { this->_DropDown_Track_Height->Selected_Index = 1;	return true; }
 
 				// Transport Controls
-				else if (hotkey.Key == "Play Pause"		) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Play_Pause();			return true; } }
-				else if (hotkey.Key == "Move To Start"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Move_To_Start();			return true; } }
-				else if (hotkey.Key == "Move To End"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Move_To_End();			return true; } }
-				else if (hotkey.Key == "Rewind"			) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Rewind_Start();			return true; } }
-				else if (hotkey.Key == "Fast Forward"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Fast_Forward_Start();	return true; } }
+				else if (Hotkey.Key == "Play Pause"		) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Play_Pause();			return true; } }
+				else if (Hotkey.Key == "Move To Start"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Move_To_Start();			return true; } }
+				else if (Hotkey.Key == "Move To End"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Move_To_End();			return true; } }
+				else if (Hotkey.Key == "Rewind"			) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Rewind_Start();			return true; } }
+				else if (Hotkey.Key == "Fast Forward"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Fast_Forward_Start();	return true; } }
 
 				// Track Mute/Solo
-				else if (hotkey.Key == "Mute All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Mute_All_Tracks();	return true; } }
-				else if (hotkey.Key == "Unmute All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Unmute_All_Tracks(); return true; } }
-				else if (hotkey.Key == "Solo All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Solo_All_Tracks();	return true; } }
-				else if (hotkey.Key == "Unsolo All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Unsolo_All_Tracks(); return true; } }
+				else if (Hotkey.Key == "Mute All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Mute_All_Tracks();	return true; } }
+				else if (Hotkey.Key == "Unmute All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Unmute_All_Tracks(); return true; } }
+				else if (Hotkey.Key == "Solo All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Solo_All_Tracks();	return true; } }
+				else if (Hotkey.Key == "Unsolo All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Unsolo_All_Tracks(); return true; } }
 			}
 		}
 
@@ -1612,29 +1623,31 @@ namespace MIDILightDrawer
 	void Form_Main::Form_KeyUp(Object^ sender, System::Windows::Forms::KeyEventArgs^ e)
 	{
 		// Get current key with modifiers
-		Keys currentKey = e->KeyCode;
+		Keys CurrentKey = e->KeyCode;
 		if (e->Control) {
-			currentKey = currentKey | Keys::Control;
+			CurrentKey = CurrentKey | Keys::Control;
 		}
+
 		if (e->Shift) {
-			currentKey = currentKey | Keys::Shift;
+			CurrentKey = CurrentKey | Keys::Shift;
 		}
+
 		if (e->Alt) {
-			currentKey = currentKey | Keys::Alt;
+			CurrentKey = CurrentKey | Keys::Alt;
 		}
 
 		// Check if Rewind or Fast Forward key was released
-		for each (KeyValuePair<String^, System::Windows::Forms::Keys> hotkey in _Active_Hotkeys)
+		for each (KeyValuePair<String^, System::Windows::Forms::Keys> Hotkey in _Active_Hotkeys)
 		{
-			if (currentKey == hotkey.Value)
+			if (CurrentKey == Hotkey.Value)
 			{
-				if (hotkey.Key == "Rewind")
+				if (Hotkey.Key == "Rewind")
 				{
 					if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Rewind_Stop(); }
 					e->Handled = true;
 					return;
 				}
-				else if (hotkey.Key == "Fast Forward")
+				else if (Hotkey.Key == "Fast Forward")
 				{
 					if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Fast_Forward_Stop(); }
 					e->Handled = true;

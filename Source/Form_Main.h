@@ -113,14 +113,14 @@ namespace MIDILightDrawer
 			void Menu_File_Export_MIDI_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_File_Exit_Click(System::Object^ sender, System::EventArgs^ e);
 
-			// Recent Files Handlers
-			void Menu_Recent_GP_Click(System::Object^ sender, System::EventArgs^ e);
-			void Menu_Recent_Light_Click(System::Object^ sender, System::EventArgs^ e);
-			void Menu_Recent_Audio_Click(System::Object^ sender, System::EventArgs^ e);
-			void Update_Recent_Files_Menus();
+			// Opne (Recent) Files Handlers
 			void Open_GP_File(String^ filePath);
 			void Open_Light_File(String^ filePath);
 			void Open_Audio_File(String^ filePath);
+			void Update_Recent_Files_Menus();
+			void Menu_Recent_GP_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Recent_Light_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_Recent_Audio_Click(System::Object^ sender, System::EventArgs^ e);
 
 			void Menu_Edit_Undo_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_UndoHistory_Click(Object^ sender, EventArgs^ e);

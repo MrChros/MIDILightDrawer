@@ -47,6 +47,57 @@ namespace MIDILightDrawer
 		static const int SCROLL_UNIT					= 50;	// Pixels per scroll unit
 		static const int DEFAULT_FADE_TICK_QUANTIZATION = Timeline_Direct2DRenderer::TICKS_PER_QUARTER / 4; // 16th Note
 		static const float MIN_TRACK_HEIGHT_WITH_TAB	= Timeline_Direct2DRenderer::TRACK_PADDING * 2 + Timeline_Direct2DRenderer::FIXED_STRING_SPACING * 5;
+	
+	private:
+		TimelineCommandManager^ _CommandManager;
+		Timeline_Direct2DRenderer^ _D2DRenderer;
+		Collapsible_Left_Panel^ _Left_Panel;
+		PerformanceMetrics^ _PerformanceMetrics;
+		Widget_Tools_And_Control^ _Tool_And_Control;
+		Playback_Manager^ _Playback_Manager;
+
+		ThemeColors		_CurrentTheme;
+		TrackButtonId	_HoveredButton;
+
+		List<Track^>^ _Tracks;
+		List<Measure^>^ _Measures;
+
+		// Scroll Bars
+		System::Windows::Forms::HScrollBar^ _HScrollBar;
+		System::Windows::Forms::VScrollBar^ _VScrollBar;
+
+		// Context Menu
+		System::Resources::ResourceManager^ _Resources;
+		System::Windows::Forms::ContextMenuStrip^ _ContextMenu;
+		BarEvent^ _ContextMenuBar;
+
+		Track^ _TrackBeingResized;
+		Track^ _ResizeHoverTrack;
+
+		Point^ _ScrollPosition;
+
+		int	_ResizeStartY;
+		int	_InitialTrackHeight;
+
+		bool _IsOverPanelResizeHandle;
+		bool _IsPanelResizing;
+		int _PanelResizeStartX;
+		int _InitialPanelWidth;
+
+		double _ZoomLevel;
+		bool _ShowPlaybackCursor;
+
+		// Invalidation optimization
+		bool _InvalidatePending;
+		Rectangle _DirtyRect;
+		DateTime _LastInvalidation;
+		static const int MIN_INVALIDATION_INTERVAL_MS = 16; // ~60fps cap
+
+		// Tools
+		TimelineToolType _CurrentToolType;
+		TimelineTool^ _CurrentTool;
+		SnappingType _SnappingType;
+		Dictionary<TimelineToolType, TimelineTool^>^ _Tools;
 
 	public:
 		Widget_Timeline(Widget_Tools_And_Control^ toolsAndControl);
@@ -69,7 +120,7 @@ namespace MIDILightDrawer
 		void ZoomIn();
 		void ZoomOut();
 		void SetZoom(double zoom);
-		void ScrollTo(Point newPosition);
+		void ScrollToPixelPosition(int pixel_x);
 		void SetTrackHeight(Track^ track, int height);
 		void SetAllTracksHeight(int height);
 		void SetToolSnapping(SnappingType type);
@@ -155,56 +206,6 @@ namespace MIDILightDrawer
 
 
 	private:
-		TimelineCommandManager^		_CommandManager;
-		Timeline_Direct2DRenderer^	_D2DRenderer;
-		Collapsible_Left_Panel^		_Left_Panel;
-		PerformanceMetrics^			_PerformanceMetrics;
-		Widget_Tools_And_Control^	_Tool_And_Control;
-		Playback_Manager^			_Playback_Manager;
-		
-		ThemeColors		_CurrentTheme;
-		TrackButtonId	_HoveredButton;
-		
-		List<Track^>^	_Tracks;
-		List<Measure^>^ _Measures;
-
-		// Scroll Bars
-		System::Windows::Forms::HScrollBar^ _HScrollBar;
-		System::Windows::Forms::VScrollBar^ _VScrollBar;
-
-		// Context Menu
-		System::Resources::ResourceManager^ _Resources;
-		System::Windows::Forms::ContextMenuStrip^ _ContextMenu;
-		BarEvent^ _ContextMenuBar;
-
-		Track^ _TrackBeingResized;
-		Track^ _ResizeHoverTrack;
-		
-		Point^ _ScrollPosition;
-
-		int	_ResizeStartY;
-		int	_InitialTrackHeight;
-
-		bool _IsOverPanelResizeHandle;
-		bool _IsPanelResizing;
-		int _PanelResizeStartX;
-		int _InitialPanelWidth;
-
-		double _ZoomLevel;
-		bool _ShowPlaybackCursor;
-
-		// Invalidation optimization
-		bool _InvalidatePending;
-		Rectangle _DirtyRect;
-		DateTime _LastInvalidation;
-		static const int MIN_INVALIDATION_INTERVAL_MS = 16; // ~60fps cap
-
-		// Tools
-		TimelineToolType _CurrentToolType;
-		TimelineTool^ _CurrentTool;
-		SnappingType _SnappingType;
-		Dictionary<TimelineToolType, TimelineTool^>^ _Tools;
-
 		// Private methods
 		void InitializeComponent();
 		void InitializeToolSystem();

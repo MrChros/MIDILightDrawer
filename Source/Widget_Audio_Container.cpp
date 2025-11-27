@@ -3,6 +3,8 @@
 #include "Theme_Manager.h"
 #include "Widget_Timeline.h"
 #include "Playback_Manager.h"
+#include "Control_Trackbar_Zoom.h"
+#include "Timeline_Direct2DRenderer.h"
 
 namespace MIDILightDrawer
 {
@@ -10,6 +12,7 @@ namespace MIDILightDrawer
 	{
 		this->_Timeline = nullptr;
 		this->_Playback_Manager = nullptr;
+		this->_TrackBar_Zoom = nullptr;
 		this->_Marker_Timestamps = gcnew List<double>;
 
 		TableLayoutPanel^ Table_Layout_Main = gcnew TableLayoutPanel();
@@ -93,6 +96,8 @@ namespace MIDILightDrawer
 		_Audio_Waveform = gcnew Widget_Audio_Waveform(_Marker_Timestamps);
 		_Audio_Waveform->Dock = DockStyle::Fill;
 		_Audio_Waveform->OnCursorPositionChanged += gcnew System::EventHandler<double>(this, &Widget_Audio_Container::On_Cursor_Position_Changed);
+		_Audio_Waveform->OnViewportScrollChanged += gcnew System::EventHandler<double>(this, &Widget_Audio_Container::On_Viewport_Scroll_Changed);
+		_Audio_Waveform->OnViewportRangeChanged  += gcnew System::EventHandler<array<double>^>(this, &Widget_Audio_Container::On_Viewport_Range_Changed);
 
 		Table_Layout_Main->Controls->Add(_Audio_Waveform, 0, 2);
 		Table_Layout_Main->SetColumnSpan(_Audio_Waveform, Table_Layout_Main->ColumnCount);
@@ -106,6 +111,8 @@ namespace MIDILightDrawer
 	{
 		if (timeline) {
 			this->_Timeline = timeline;
+
+			_Audio_Waveform->Set_Widget_Timeline(timeline);
 		}
 	}
 
@@ -113,6 +120,13 @@ namespace MIDILightDrawer
 	{
 		if (playback_manager) {
 			this->_Playback_Manager = playback_manager;
+		}
+	}
+
+	void Widget_Audio_Container::Set_TrackBar_Zoom(Control_TrackBar_Zoom^ trackbar_zoom)
+	{
+		if (trackbar_zoom) {
+			this->_TrackBar_Zoom = trackbar_zoom;
 		}
 	}
 
@@ -190,6 +204,11 @@ namespace MIDILightDrawer
 		this->_Audio_Waveform->Set_View_Range_ms(Start_ms, End_ms);
 	}
 
+	void Widget_Audio_Container::Refresh_Event_Display()
+	{
+		_Audio_Waveform->Invalidate_Event_Cache();
+	}
+
 	Widget_Audio_Waveform^ Widget_Audio_Container::Waveform()
 	{
 		return _Audio_Waveform;
@@ -258,5 +277,59 @@ namespace MIDILightDrawer
 		}
 
 		_Playback_Manager->Seek_To_Position(cursor_position_ms);
+	}
+
+	void Widget_Audio_Container::On_Viewport_Scroll_Changed(Object^ sender, double start_position_ms)
+	{
+		if (!this->_Timeline) {
+			return;
+		}
+
+		// Convert ms to ticks, then to pixels
+		int Start_Tick	= _Timeline->MillisecondsToTicks(start_position_ms);
+		int Start_Pixel = _Timeline->TicksToPixels(Start_Tick);
+
+		// Clamp to valid range
+		Start_Pixel = Math::Max(0, Start_Pixel);
+
+		// Scroll without changing zoom
+		_Timeline->ScrollToPixelPosition(Start_Pixel);
+	}
+
+	void Widget_Audio_Container::On_Viewport_Range_Changed(Object^ sender, array<double>^ range)
+	{
+		if (!this->_Timeline || range->Length < 2) {
+			return;
+		}
+
+		double Start_ms = range[0];
+		double End_ms = range[1];
+
+		// Convert to ticks
+		int Start_Tick = _Timeline->MillisecondsToTicks(Start_ms);
+		int End_Tick = _Timeline->MillisecondsToTicks(End_ms);
+
+		int Tick_Range = End_Tick - Start_Tick;
+		if (Tick_Range <= 0) return;
+
+		// Calculate visible width in pixels
+		int Visible_Width = _Timeline->Width - _Timeline->GetLeftPanelAndTrackHeaderWidth();
+		if (Visible_Width <= 0) return;
+
+		// Calculate required zoom level to fit the tick range in the visible width
+		// So: zoom = pixels / (ticks * 16.0 / 960.0)
+		// Or: zoom = (pixels * 960.0) / (ticks * 16.0)
+		double Required_Pixels_Per_Tick = (double)Visible_Width / (double)Tick_Range;
+		double New_Zoom = Required_Pixels_Per_Tick / Timeline_Direct2DRenderer::TICK_PIXEL_BASE_SCALE;
+
+		// Clamp zoom to the renderer's limits
+		New_Zoom = Math::Max(Timeline_Direct2DRenderer::MIN_ZOOM_LEVEL, Math::Min(Timeline_Direct2DRenderer::MAX_ZOOM_LEVEL, New_Zoom));
+
+		// Set the new zoom level
+		_TrackBar_Zoom->Value = New_Zoom;
+
+		// Now scroll to the start position (after zoom change, pixel positions have changed)
+		int Start_Pixel = _Timeline->TicksToPixels(Start_Tick);
+		_Timeline->ScrollToPixelPosition(Start_Pixel);
 	}
 }

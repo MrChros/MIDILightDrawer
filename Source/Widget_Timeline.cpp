@@ -249,24 +249,46 @@ namespace MIDILightDrawer
 		ViewChanged(this, EventArgs::Empty);
 	}
 
-	void Widget_Timeline::ScrollTo(Point newPosition)
+	void Widget_Timeline::ScrollToPixelPosition(int pixel_x)
 	{
-		_ScrollPosition = newPosition;
+		// Clamp to valid range
+		double Virtual_Width = GetVirtualWidth();
+		int Viewport_Width = Width - GetLeftPanelAndTrackHeaderWidth();
+		int Max_Scroll = (int)Math::Max(0.0, Virtual_Width - Viewport_Width);
+
+		pixel_x = Math::Max(0, Math::Min(pixel_x, Max_Scroll));
+
+		// Update scroll position (stored as negative offset internally)
+		_ScrollPosition->X = -pixel_x;
+
+		// Update the scroll bar to match
+		// The scroll bar uses "scroll units" where each unit = SCROLL_UNIT pixels
+		int Scroll_Units = pixel_x / SCROLL_UNIT;
+
+		// Clamp to scroll bar range
+		Scroll_Units = Math::Max(_HScrollBar->Minimum, Math::Min(Scroll_Units, _HScrollBar->Maximum - _HScrollBar->LargeChange + 1));
+
+		// Set the scroll bar value WITHOUT triggering OnScroll (to avoid feedback loop)
+		_HScrollBar->Value = Scroll_Units;
+
+		// Request redraw
 		Invalidate();
 
-		// Notify view changed
+		// Notify view changed (this updates the mini-map viewport indicator)
 		ViewChanged(this, EventArgs::Empty);
 	}
 
 	void Widget_Timeline::SetTrackHeight(Track^ track, int height)
 	{
-		if (track == nullptr) return;
+		if (track == nullptr) {
+			return;
+		}
 
 		// Calculate minimum height based on whether tablature is shown
-		int minHeight = track->ShowTablature ? (int)MIN_TRACK_HEIGHT_WITH_TAB : MINIMUM_TRACK_HEIGHT;
+		int Min_Height = track->ShowTablature ? (int)MIN_TRACK_HEIGHT_WITH_TAB : MINIMUM_TRACK_HEIGHT;
 
 		// Ensure height is within acceptable bounds
-		height = Math::Max(minHeight, height);
+		height = Math::Max(Min_Height, height);
 
 		track->Height = height;
 
@@ -280,10 +302,10 @@ namespace MIDILightDrawer
 		UpdateScrollBounds();
 
 		// Ensure current scroll position is still valid
-		int viewportHeight = Height - Timeline_Direct2DRenderer::HEADER_HEIGHT - _HScrollBar->Height;
-		if (-_ScrollPosition->Y + viewportHeight > TotalHeight)
+		int Vviewport_Height = Height - Timeline_Direct2DRenderer::HEADER_HEIGHT - _HScrollBar->Height;
+		if (-_ScrollPosition->Y + Vviewport_Height > TotalHeight)
 		{
-			_ScrollPosition->Y = Math::Min(0, -(TotalHeight - viewportHeight));
+			_ScrollPosition->Y = Math::Min(0, -(TotalHeight - Vviewport_Height));
 			_VScrollBar->Value = -_ScrollPosition->Y;
 		}
 
@@ -292,9 +314,9 @@ namespace MIDILightDrawer
 
 	void Widget_Timeline::SetAllTracksHeight(int height)
 	{
-		for each (Track ^ track in _Tracks)
+		for each (Track^ Tr in _Tracks)
 		{
-			SetTrackHeight(track, height);
+			SetTrackHeight(Tr, height);
 		}
 	}
 

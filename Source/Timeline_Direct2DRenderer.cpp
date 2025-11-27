@@ -3330,22 +3330,22 @@ namespace MIDILightDrawer
         }
 
         // Scale for display
-        const float baseScale = 16.0f / (float)TICKS_PER_QUARTER;
-        return (float)ticks * baseScale * this->_ZoomLevel;
+        return (float)ticks * TICK_PIXEL_BASE_SCALE * this->_ZoomLevel;
     }
 
     float Timeline_Direct2DRenderer::PixelsToTicks(int pixels)
     {
         // Handle edge cases
-        if (pixels == 0) return 0;
+		if (pixels == 0) {
+			return 0;
+		}
 
         // Use double for intermediate calculations to maintain precision
-        double baseScale = TICKS_PER_QUARTER / 16.0;
-        double scaledPixels = (double)pixels * baseScale;
-        double result = scaledPixels / this->_ZoomLevel;
+        double ScaledPixels = (double)pixels * PIXEL_TICK_BASE_SCALE;
+        double Result = ScaledPixels / this->_ZoomLevel;
 
         // Round to nearest integer
-        return (float)result;
+        return (float)Result;
     }
 
     float Timeline_Direct2DRenderer::GetSubdivisionLevel(float pixelsPerBeat)

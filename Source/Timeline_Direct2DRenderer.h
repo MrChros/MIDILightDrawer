@@ -67,6 +67,8 @@ namespace MIDILightDrawer
 		// Zoom Level
 		static const double MIN_ZOOM_LEVEL				= 0.1;	// 1/10x zoom
 		static const double MAX_ZOOM_LEVEL				= 20.0;	// 20x zoom
+		static const double TICK_PIXEL_BASE_SCALE		= 16.0f / (float)TICKS_PER_QUARTER;
+		static const double PIXEL_TICK_BASE_SCALE		= (float)TICKS_PER_QUARTER / 16.0f;
 		// Track overlay colors
 		static const unsigned int MUTED_OVERLAY_COLOR	= 0x40FF0000; // Red, 25% alpha
 		static const unsigned int SOLOED_OVERLAY_COLOR	= 0x40DBB14E; // Yellow, 25% alpha

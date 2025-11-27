@@ -99,7 +99,7 @@ namespace MIDILightDrawer
 
 		this->_Timeline = gcnew Widget_Timeline(this->_Tools_And_Control);
 		this->_Timeline->Dock = System::Windows::Forms::DockStyle::Fill;
-		this->_Timeline->Name = L"timeline";
+		this->_Timeline->Name = L"Timeline";
 		this->_Timeline->Theme = Theme_Manager::Get_Instance()->GetTimelineTheme();
 		this->_Timeline->CommandManager()->CommandStateChanged += gcnew TimelineCommandManager::CommandStateChangedHandler(this, &Form_Main::UpdateUndoRedoState);
 		this->_Audio_Container->Set_Widget_Timeline(this->_Timeline);
@@ -125,6 +125,7 @@ namespace MIDILightDrawer
 		InitializeBottomControls(BottomControlsPanel);
 		Table_Layout_Main->Controls->Add(BottomControlsPanel, 0, 3);
 		Table_Layout_Main->SetColumnSpan(BottomControlsPanel, Table_Layout_Main->ColumnCount);
+		this->_Audio_Container->Set_TrackBar_Zoom(_TrackBar_Zoom);
 
 		MainContainer->Controls->Add(Table_Layout_Main);
 		this->Controls->Add(MainContainer);
@@ -1149,6 +1150,10 @@ namespace MIDILightDrawer
 
 		UpdateEditMenuState();
 		UpdateUndoHistoryMenu();
+
+		if (this->_Audio_Container != nullptr) {
+			_Audio_Container->Refresh_Event_Display();
+		}
 	}
 
 	void Form_Main::UpdateUndoHistoryMenu()

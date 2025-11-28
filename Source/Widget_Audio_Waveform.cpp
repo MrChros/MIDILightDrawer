@@ -25,7 +25,15 @@ namespace MIDILightDrawer
 		_View_Range_Start_ms = 0.0;
 		_View_Range_End_ms = 0.0;
 
+		// Initialize waveform cache
+		_Waveform_Cache_Valid = false;
+		_Waveform_Cache_Bitmap = nullptr;
+		_Waveform_Cache_Width = 0;
+		_Waveform_Cache_Height = 0;
+		_Waveform_Cache_Audio_Duration = 0.0;
+
 		// Initialize event visualization
+		_Events_Render_Enabled = true;
 		_Events_Cache_Valid = false;
 		_Events_Cache_Bitmap = nullptr;
 		_Last_Cache_Width = 0;
@@ -42,7 +50,6 @@ namespace MIDILightDrawer
 		_Is_Mouse_Over_Right_Handle = false;
 
 		// Initialize display settings
-		_Display_Flags = MiniMapDisplayFlags::All;
 
 		// Initialize colors from theme
 		Update_Colors_From_Theme();
@@ -60,6 +67,8 @@ namespace MIDILightDrawer
 	void Widget_Audio_Waveform::Set_Waveform_Data(Waveform_Render_Data^ waveform_data)
 	{
 		this->_Waveform_Data = waveform_data;
+
+		Invalidate_Waveform_Cache();
 	}
 
 	void Widget_Audio_Waveform::Set_Audio_Duration_ms(double audio_duration_ms)
@@ -71,6 +80,7 @@ namespace MIDILightDrawer
 		this->_Audio_Duration_ms = audio_duration_ms;
 
 		Update_Max_Duration();
+		Invalidate_Waveform_Cache();
 		Invalidate_Event_Cache();
 
 		this->Invalidate();
@@ -85,6 +95,8 @@ namespace MIDILightDrawer
 		this->_MIDI_Duration_ms = midi_duration_ms;
 
 		Update_Max_Duration();
+		Invalidate_Waveform_Cache();
+		Invalidate_Event_Cache();
 
 		this->Invalidate();
 	}
@@ -111,9 +123,16 @@ namespace MIDILightDrawer
 		this->Invalidate();
 	}
 
-	void Widget_Audio_Waveform::Set_Display_Flags(MiniMapDisplayFlags flags)
+	void Widget_Audio_Waveform::Invalidate_Waveform_Cache()
 	{
-		_Display_Flags = flags;
+		_Waveform_Cache_Valid = false;
+
+		this->Invalidate();
+	}
+
+	void Widget_Audio_Waveform::Set_Events_Render_Enabled(bool enabled)
+	{
+		_Events_Render_Enabled = enabled;
 
 		this->Invalidate();
 	}
@@ -128,39 +147,27 @@ namespace MIDILightDrawer
 
 	void Widget_Audio_Waveform::OnPaint(PaintEventArgs^ e)
 	{
-		//Theme_Manager^ Theme = Theme_Manager::Get_Instance();
-
 		Graphics^ G = e->Graphics;
 		G->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
 
 		// Render layers in order (back to front)
-		if (((int)_Display_Flags & (int)MiniMapDisplayFlags::Waveform) != 0) {
-			Render_Waveform(G);
-		}
+		Render_Waveform_Cached(G);
 
-		if (((int)_Display_Flags & (int)MiniMapDisplayFlags::Events) != 0) {
+		if (_Events_Render_Enabled) {
 			Render_Events_Cached(G);
 		}
 
 		Render_Audio_Overflow_Region(G);
-
-		if (((int)_Display_Flags & (int)MiniMapDisplayFlags::Markers) != 0) {
-			Render_Markers(G);
-		}
-
-		if (((int)_Display_Flags & (int)MiniMapDisplayFlags::Viewport) != 0) {
-			Render_Viewport(G);
-		}
-
-		if (((int)_Display_Flags & (int)MiniMapDisplayFlags::Cursor) != 0) {
-			Render_Cursor(G);
-		}
+		Render_Markers(G);
+		Render_Viewport(G);
+		Render_Cursor(G);
 	}
 
 	void Widget_Audio_Waveform::OnResize(EventArgs^ e)
 	{
 		UserControl::OnResize(e);
 
+		Invalidate_Waveform_Cache();
 		Invalidate_Event_Cache();
 		this->Invalidate();
 	}
@@ -351,10 +358,50 @@ namespace MIDILightDrawer
 		this->_Maximum_Duration_ms = Math::Max(this->_Audio_Duration_ms, this->_MIDI_Duration_ms);
 	}
 
-	void Widget_Audio_Waveform::Render_Waveform(Graphics^ g)
+	void Widget_Audio_Waveform::Render_Waveform_Cached(Graphics^ g)
 	{
-		if (this->_Waveform_Data == nullptr) return;
+		if (this->_Waveform_Data == nullptr) {
+			return;
+		}
 
+		// Check if we need to rebuild the cache
+		if (_Waveform_Cache_Valid == false ||
+			_Waveform_Cache_Bitmap == nullptr ||
+			_Waveform_Cache_Width != this->Width ||
+			_Waveform_Cache_Height != this->Height ||
+			_Waveform_Cache_Audio_Duration != this->_Audio_Duration_ms)
+		{
+			Rebuild_Waveform_Cache();
+		}
+
+		// Draw the cached bitmap
+		if (_Waveform_Cache_Bitmap != nullptr)
+		{
+			g->DrawImage(_Waveform_Cache_Bitmap, 0, 0);
+		}
+	}
+
+	void Widget_Audio_Waveform::Rebuild_Waveform_Cache()
+	{
+		if (this->_Waveform_Data == nullptr || this->Width <= 0 || this->Height <= 0) {
+			return;
+		}
+
+		// Clean up old cache
+		if (_Waveform_Cache_Bitmap != nullptr) {
+			delete _Waveform_Cache_Bitmap;
+		}
+
+		_Waveform_Cache_Bitmap = gcnew Bitmap(this->Width, this->Height);
+		_Waveform_Cache_Width = this->Width;
+		_Waveform_Cache_Height = this->Height;
+		_Waveform_Cache_Audio_Duration = this->_Audio_Duration_ms;
+
+		Graphics^ G = Graphics::FromImage(_Waveform_Cache_Bitmap);
+		G->Clear(Color::Transparent);
+		G->SmoothingMode = Drawing2D::SmoothingMode::AntiAlias;
+
+		// Render waveform to cache
 		Theme_Manager^ Theme = Theme_Manager::Get_Instance();
 
 		int Segment_Count = _Waveform_Data->TotalSegments;
@@ -388,11 +435,15 @@ namespace MIDILightDrawer
 			Waveform_Rect.Y = (int)((this->Height / 2) - Segment_Upper);
 			Waveform_Rect.Height = Segment_Upper + Segment_Lower;
 
-			g->FillRectangle(Waveform_Brush, Waveform_Rect);
+			G->FillRectangle(Waveform_Brush, Waveform_Rect);
 
 			X += Pixels_Per_Segment;
 		}
+
 		delete Waveform_Brush;
+		delete G;
+
+		_Waveform_Cache_Valid = true;
 	}
 
 	void Widget_Audio_Waveform::Render_Events_Cached(Graphics^ g)

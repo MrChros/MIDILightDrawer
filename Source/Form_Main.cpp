@@ -125,7 +125,6 @@ namespace MIDILightDrawer
 		InitializeBottomControls(BottomControlsPanel);
 		Table_Layout_Main->Controls->Add(BottomControlsPanel, 0, 3);
 		Table_Layout_Main->SetColumnSpan(BottomControlsPanel, Table_Layout_Main->ColumnCount);
-		this->_Audio_Container->Set_TrackBar_Zoom(_TrackBar_Zoom);
 
 		MainContainer->Controls->Add(Table_Layout_Main);
 		this->Controls->Add(MainContainer);

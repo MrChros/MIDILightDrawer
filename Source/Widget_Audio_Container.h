@@ -13,7 +13,6 @@ namespace MIDILightDrawer
 	// Forward Declaration
 	ref class Widget_Timeline;
 	ref class Playback_Manager;
-	ref class Control_TrackBar_Zoom;
 	
 	public ref class Widget_Audio_Container : UserControl
 	{
@@ -21,9 +20,13 @@ namespace MIDILightDrawer
 		Widget_Timeline^ _Timeline;
 		Playback_Manager^ _Playback_Manager;
 		Widget_Audio_Waveform^ _Audio_Waveform;
-		Control_TrackBar_Zoom^ _TrackBar_Zoom;
 
 		List<double>^ _Marker_Timestamps;
+
+		Control_TimeOffset_NumericUpDown^ _TimeOffset_Audio_Offset;
+		Control_VolumeSlider^ _VolumeSlider;
+
+		CheckBox^ _CheckBox_Show_Events;
 
 		Label^ _Label_Audio_Info_Length;
 		Label^ _Label_Audio_Info_Channels;
@@ -31,15 +34,11 @@ namespace MIDILightDrawer
 		Label^ _Label_Audio_Info_Freqeuncy;
 		Label^ _Label_Audio_Info_File;
 
-		Control_TimeOffset_NumericUpDown^ _TimeOffset_Audio_Offset;
-		Control_VolumeSlider^ _VolumeSlider;
-
 	public:
 		Widget_Audio_Container();
 
 		void Set_Widget_Timeline(Widget_Timeline^ timeline);
 		void Set_Playback_Manager(Playback_Manager^ playback_manager);
-		void Set_TrackBar_Zoom(Control_TrackBar_Zoom^ trackbar_zoom);
 		void Load_Audio_Data();
 		void Unload_Audio_Data();
 
@@ -58,6 +57,7 @@ namespace MIDILightDrawer
 		void On_Cursor_Position_Changed(Object^ sender, double cursor_position_ms);
 		void On_Viewport_Scroll_Changed(Object^ sender, double start_position_ms);
 		void On_Viewport_Range_Changed(Object^ sender, array<double>^ range);
+		void CheckBox_Show_Events_OnCheckedChanged(System::Object^ sender, System::EventArgs^ e);
 	};
 }
 

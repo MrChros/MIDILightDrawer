@@ -23,29 +23,15 @@ namespace MIDILightDrawer
 		ResizeRight     // Resizing viewport from right edge
 	};
 
-	// Defines what elements are displayed in the mini-map
-	// [Flags]
-	public enum class MiniMapDisplayFlags
-	{
-		None		= 0,
-		Waveform	= 1 << 0,   // Show audio waveform
-		Events		= 1 << 1,   // Show bar events as colored blocks
-		Markers		= 1 << 2,   // Show measure markers
-		Viewport	= 1 << 3,   // Show viewport indicator
-		Cursor		= 1 << 4,   // Show playback cursor
-		LoopRegion	= 1 << 5,   // Show loop in/out region
-		All = Waveform | Events | Markers | Viewport | Cursor | LoopRegion
-	};
-
 	public ref class Widget_Audio_Waveform : UserControl
 	{
 	public:
-		static const double NO_AUDIO = -1.0;
-		static const double NO_MIDI = -1.0;
-		static const int MINI_MAP_TRACK_HEIGHT		= 10;	// Height per track in mini-map
-		static const int MINI_MAP_TRACK_SPACING		= 6;
-		static const float MINI_MAP_EVENT_OPACITY	= 0.7f;	// Opacity of event blocks (0.0 - 1.0)
-		static const int VIEWPORT_HANDLE_WIDTH		= 6;	// Width of resize handles
+		static const double NO_AUDIO				= -1.0;
+		static const double NO_MIDI					= -1.0;
+		static const int	MINI_MAP_TRACK_HEIGHT	= 10;	// Height per track in mini-map
+		static const int	MINI_MAP_TRACK_SPACING	= 6;	// Spacog between tracks in mini-map
+		static const float	MINI_MAP_EVENT_OPACITY	= 0.5f;	// Opacity of event blocks (0.0 - 1.0)
+		static const int	VIEWPORT_HANDLE_WIDTH	= 6;	// Width of resize handles
 
 		event EventHandler<double>^ OnCursorPositionChanged;
 		event EventHandler<double>^ OnViewportScrollChanged;		// Request to scroll view to start at this ms (no zoom change)
@@ -66,7 +52,15 @@ namespace MIDILightDrawer
 
 		List<double>^ _Marker_Timestamps;
 
-		// Event visualization cache
+		// Waveform visualization cache
+		bool _Waveform_Cache_Valid;
+		Bitmap^ _Waveform_Cache_Bitmap;
+		int _Waveform_Cache_Width;
+		int _Waveform_Cache_Height;
+		double _Waveform_Cache_Audio_Duration;
+
+		// Event visualization
+		bool _Events_Render_Enabled;
 		bool _Events_Cache_Valid;
 		Bitmap^ _Events_Cache_Bitmap;
 		int _Last_Cache_Width;
@@ -81,9 +75,6 @@ namespace MIDILightDrawer
 		bool _Is_Mouse_Over_Viewport;
 		bool _Is_Mouse_Over_Left_Handle;
 		bool _Is_Mouse_Over_Right_Handle;
-
-		// Display settings
-		MiniMapDisplayFlags _Display_Flags;
 
 		// Colors (cached from theme)
 		Color _Color_Viewport_Fill;
@@ -105,9 +96,10 @@ namespace MIDILightDrawer
 
 		// New mini-map methods
 		void Invalidate_Event_Cache();
+		void Invalidate_Waveform_Cache();
 
 		// Display configuration
-		void Set_Display_Flags(MiniMapDisplayFlags flags);
+		void Set_Events_Render_Enabled(bool enabled);
 
 		// Navigation helpers
 		void Zoom_To_Range(double start_ms, double end_ms);
@@ -130,7 +122,8 @@ namespace MIDILightDrawer
 		void Update_Max_Duration();
 
 		// Rendering helpers
-		void Render_Waveform(Graphics^ g);
+		void Render_Waveform_Cached(Graphics^ g);
+		void Rebuild_Waveform_Cache();
 		void Render_Events_Cached(Graphics^ g);
 		void Rebuild_Event_Cache();
 		void Render_Markers(Graphics^ g);

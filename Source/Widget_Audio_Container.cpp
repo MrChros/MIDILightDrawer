@@ -3,7 +3,6 @@
 #include "Theme_Manager.h"
 #include "Widget_Timeline.h"
 #include "Playback_Manager.h"
-#include "Control_Trackbar_Zoom.h"
 #include "Timeline_Direct2DRenderer.h"
 
 namespace MIDILightDrawer
@@ -12,46 +11,47 @@ namespace MIDILightDrawer
 	{
 		this->_Timeline = nullptr;
 		this->_Playback_Manager = nullptr;
-		this->_TrackBar_Zoom = nullptr;
 		this->_Marker_Timestamps = gcnew List<double>;
 
 		TableLayoutPanel^ Table_Layout_Main = gcnew TableLayoutPanel();
 		Table_Layout_Main->Dock = DockStyle::Fill;
 
 		Table_Layout_Main->RowCount = 3;
-		Table_Layout_Main->ColumnCount = 9;
+		Table_Layout_Main->ColumnCount = 11;
 
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 35));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 1));
 		Table_Layout_Main->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 150));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 70));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 120));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));	//Label_Offset
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 150));	// Control_TimeOffset_NumericUpDown
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 70));	// Label_Volume
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 120));	// Control_VolumeSlider
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 10));	// <Spacer>
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 120));	// CheckBox_Show_Events
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));	// Label_Audio_Info_Length
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));	// Label_Audio_Info_Channels
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));	// Label_Audio_Info_Resolution
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));	// Label_Audio_Info_Freqeuncy
+		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));	// Label_Audio_Info_File
 
-		Drawing::Font^ Font_Label = gcnew Drawing::Font("Segoe UI Semibold", 9.5f);
-		Label^ Label_Offset = gcnew Label();
-		Label_Offset->Text = "Audio Offset:";
-		
-		Label^ Label_Volume = gcnew Label();
-		Label_Volume->Text = "Volume:";
-
+		Drawing::Font^ Font_Label = gcnew Drawing::Font("Segoe UI Regular", 9.5f);
 
 		// Create Audio Offset TextBox
+		Label^ Label_Offset = gcnew Label();
+		Label_Offset->Text = "Audio Offset:";
+				
 		_TimeOffset_Audio_Offset = gcnew Control_TimeOffset_NumericUpDown();
 		_TimeOffset_Audio_Offset->Dock = DockStyle::Fill;
 		_TimeOffset_Audio_Offset->Value_ms = 0.0;
 		_TimeOffset_Audio_Offset->Minimum_ms = -60000.0; // -60 seconds
 		_TimeOffset_Audio_Offset->Maximum_ms = 60000.0;  // +60 seconds
 		_TimeOffset_Audio_Offset->Value_Changed += gcnew System::EventHandler(this, &Widget_Audio_Container::On_Audio_Offset_ValueChanged);
-		//_TimeOffset_Audio_Offset->Margin = System::Windows::Forms::Padding(0, 5, 0, 0);
+		
 
 		// Create Volume Slider
+		Label^ Label_Volume = gcnew Label();
+		Label_Volume->Text = "Volume:";
+		
 		_VolumeSlider = gcnew Control_VolumeSlider();
 		_VolumeSlider->Minimum = 0;
 		_VolumeSlider->Maximum = 100;
@@ -59,6 +59,17 @@ namespace MIDILightDrawer
 		_VolumeSlider->Dock = DockStyle::Fill;
 		_VolumeSlider->ValueChanged += gcnew EventHandler(this, &Widget_Audio_Container::On_Volume_ValueChanged);
 
+		// Create CheckBox Show Events
+		_CheckBox_Show_Events = gcnew CheckBox();
+		_CheckBox_Show_Events->Text = "Show Events";
+		_CheckBox_Show_Events->ForeColor = Color::White;
+		_CheckBox_Show_Events->AutoSize = true;
+		_CheckBox_Show_Events->Checked = true;
+		_CheckBox_Show_Events->Padding = System::Windows::Forms::Padding(0, 0, 0, 5);
+		_CheckBox_Show_Events->Anchor = System::Windows::Forms::AnchorStyles::Bottom;
+		_CheckBox_Show_Events->CheckedChanged += gcnew System::EventHandler(this, &Widget_Audio_Container::CheckBox_Show_Events_OnCheckedChanged);
+
+		// Create Audio Information Labels
 		_Label_Audio_Info_Length		= gcnew Label();
 		_Label_Audio_Info_Channels		= gcnew Label();
 		_Label_Audio_Info_Resolution	= gcnew Label();
@@ -72,18 +83,22 @@ namespace MIDILightDrawer
 			Lbl->ForeColor	= Color::White;
 			Lbl->BackColor	= Color::Transparent;
 		}
+		Label_Volume->TextAlign = ContentAlignment::MiddleRight;
 		_Label_Audio_Info_File->TextAlign = ContentAlignment::MiddleLeft;
+		
 
 		Table_Layout_Main->Controls->Add(Label_Offset					, 0, 0);
 		Table_Layout_Main->Controls->Add(_TimeOffset_Audio_Offset		, 1, 0);
 		Table_Layout_Main->Controls->Add(Label_Volume					, 2, 0);
 		Table_Layout_Main->Controls->Add(_VolumeSlider					, 3, 0);
 
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Length		, 4, 0);
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Channels		, 5, 0);
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Resolution	, 6, 0);
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Freqeuncy	, 7, 0);
-		Table_Layout_Main->Controls->Add(_Label_Audio_Info_File			, 8, 0);
+		Table_Layout_Main->Controls->Add(_CheckBox_Show_Events			, 5, 0);
+
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Length		, 6, 0);
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Channels		, 7, 0);
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Resolution	, 8, 0);
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_Freqeuncy	, 9, 0);
+		Table_Layout_Main->Controls->Add(_Label_Audio_Info_File			, 10, 0);
 
 
 		Label^ Label_Line = gcnew Label();
@@ -120,13 +135,6 @@ namespace MIDILightDrawer
 	{
 		if (playback_manager) {
 			this->_Playback_Manager = playback_manager;
-		}
-	}
-
-	void Widget_Audio_Container::Set_TrackBar_Zoom(Control_TrackBar_Zoom^ trackbar_zoom)
-	{
-		if (trackbar_zoom) {
-			this->_TrackBar_Zoom = trackbar_zoom;
 		}
 	}
 
@@ -326,10 +334,16 @@ namespace MIDILightDrawer
 		New_Zoom = Math::Max(Timeline_Direct2DRenderer::MIN_ZOOM_LEVEL, Math::Min(Timeline_Direct2DRenderer::MAX_ZOOM_LEVEL, New_Zoom));
 
 		// Set the new zoom level
-		_TrackBar_Zoom->Value = New_Zoom;
+		this->_Timeline->SetZoom(New_Zoom);
 
 		// Now scroll to the start position (after zoom change, pixel positions have changed)
 		int Start_Pixel = _Timeline->TicksToPixels(Start_Tick);
 		_Timeline->ScrollToPixelPosition(Start_Pixel);
 	}
+
+	void Widget_Audio_Container::CheckBox_Show_Events_OnCheckedChanged(System::Object^ sender, System::EventArgs^ e)
+	{
+		this->_Audio_Waveform->Set_Events_Render_Enabled(this->_CheckBox_Show_Events->Checked);
+	}
 }
+

@@ -765,7 +765,9 @@ namespace MIDILightDrawer
         bool IsDragging			= ToolAccess->IsDragging;
         bool IsResizing			= ToolAccess->IsResizing;
 
-        for each (BarEvent^ Bar in track->Events)
+		List<BarEvent^>^ Visible_Bars = track->QueryVisibleEvents(StartTick, EndTick);
+
+        for each (BarEvent^ Bar in Visible_Bars)
         {
             if ((Bar->StartTick + Bar->Duration < StartTick) || (Bar->StartTick > EndTick)) {
                 continue;
@@ -3600,4 +3602,4 @@ namespace MIDILightDrawer
         }
     }
 
-} // namespace MIDILightDrawer
+} // Namespace MIDILightDrawer

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Widget_Timeline_Common.h"
+#include "Timeline_Interval_Tree.h"
 
 using namespace System;
 using namespace System::ComponentModel;
@@ -178,6 +179,8 @@ namespace MIDILightDrawer
 		int _Index;
 		int _Octave;
 		List<BarEvent^>^ _Events;
+		Timeline_BarEvent_Interval_Tree^ _Event_Interval_Tree;
+
 		bool _IsSelected;
 		bool _IsMuted;
 		bool _IsSoloed;
@@ -202,6 +205,10 @@ namespace MIDILightDrawer
 
 		property List<BarEvent^>^ Events {
 			List<BarEvent^>^ get() { return _Events; }
+		}
+
+		property Timeline_BarEvent_Interval_Tree^ EventIntervalTree {
+			Timeline_BarEvent_Interval_Tree^ get() { return _Event_Interval_Tree; }
 		}
 
 		property bool IsSelected {
@@ -230,6 +237,11 @@ namespace MIDILightDrawer
 		void AddBar(int startTick, int length, Color color);
 		void AddBar(BarEvent^ bar);
 		void RemoveBar(BarEvent^ bar);
+
+		List<BarEvent^>^ QueryVisibleEvents(int start_tick, int end_tick);
+		List<BarEvent^>^ QueryEventsAtTick(int tick);
+		void InvalidateEventTree();
+		void RebuildEventTree();
 
 		void ToggleMute();
 		void ToggleSolo();

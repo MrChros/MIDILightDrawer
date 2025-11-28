@@ -158,6 +158,7 @@ namespace MIDILightDrawer
 		this->_Index = trackIndex;
 		this->_Octave = octave;
 		this->_Events = gcnew List<BarEvent^>();
+		this->_Event_Interval_Tree = gcnew Timeline_BarEvent_Interval_Tree();
 		this->_IsSelected = false;
 		this->_IsMuted = false;
 		this->_IsSoloed = false;
@@ -169,26 +170,56 @@ namespace MIDILightDrawer
 
 	void Track::AddBar(int startTick, int length, Color color)
 	{
-		BarEvent^ newBar = gcnew BarEvent(this, startTick, length, color);
-		_Events->Add(newBar);
+		BarEvent^ New_Bar = gcnew BarEvent(this, startTick, length, color);
+		_Events->Add(New_Bar);
 
 		// Sort using the static comparison delegate
 		_Events->Sort(barComparer);
+
+		_Event_Interval_Tree->Insert(New_Bar);
 	}
 
 	void Track::AddBar(BarEvent^ bar)
 	{
+		if (!bar) {
+			return;
+		}
+		
 		bar->ContainingTrack = this;
 
 		_Events->Add(bar);
 		_Events->Sort(barComparer);
+
+		_Event_Interval_Tree->Insert(bar);
 	}
 
 	void Track::RemoveBar(BarEvent^ bar)
 	{
 		if (_Events->Contains(bar)) {
 			_Events->Remove(bar);
+
+			_Event_Interval_Tree->Remove(bar);
 		}
+	}
+
+	List<BarEvent^>^ Track::QueryVisibleEvents(int start_tick, int end_tick)
+	{
+		return _Event_Interval_Tree->QueryRange(start_tick, end_tick);
+	}
+
+	List<BarEvent^>^ Track::QueryEventsAtTick(int tick)
+	{
+		return _Event_Interval_Tree->QueryPoint(tick);
+	}
+
+	void Track::InvalidateEventTree()
+	{
+		_Event_Interval_Tree->MarkDirty();
+	}
+
+	void Track::RebuildEventTree()
+	{
+		_Event_Interval_Tree->Rebuild(_Events);
 	}
 
 	void Track::ToggleMute()

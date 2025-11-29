@@ -4,6 +4,8 @@
 #include "Timeline_Tool_Interface.h"
 
 // Forward declare the native renderer
+struct DrumSymbolCacheEntry;
+struct DurationSymbolCacheEntry;
 class Timeline_Direct2DRenderer_Native;
 
 using namespace System::Collections::Generic;
@@ -150,9 +152,9 @@ namespace MIDILightDrawer
         bool DrawTrackTablature(Track^ track, System::Drawing::Rectangle trackContentBounds);
         bool DrawTrackTablatureDrum(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
         bool DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale);
-        void DrawBeatDuration(Beat^ beat, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions);
+        void DrawBeatDuration(Beat^ beat, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, DurationSymbolCacheEntry* cachedSymbol);
         void DrawTieLines(Track^ track, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, float scaledFontSize);
-        void DrawDrumSymbol(DrumNotationType symbolType, float x, float y, float size);
+        void DrawDrumSymbol(DrumNotationType symbolType, float x, float y, float size, DrumSymbolCacheEntry* cachedDrumSymbolEntry);
         TabStringInfo DrawTablatureStrings(System::Drawing::Rectangle bounds, float availableHeight, float logScale, int numStrings);
 		float GetTablatureScaledFontSize(float logScale);
 		float GetTablatureScaledStringSpacing(float logScale);

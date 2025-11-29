@@ -285,7 +285,7 @@ void CommandBatch::ExecuteCommand(DrawCommand* cmd, ID2D1RenderTarget* renderTar
                         dashedStroke->Release();
                     }
 
-                    factory->Release();
+                    //factory->Release();
                 }
             }
             break;
@@ -452,7 +452,7 @@ void CommandBatch::ExecuteCommand(DrawCommand* cmd, ID2D1RenderTarget* renderTar
                         }
                     }
 
-                    factory->Release();
+                    //factory->Release();
                 }
             }
             break;

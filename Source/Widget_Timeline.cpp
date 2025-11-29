@@ -143,8 +143,8 @@ namespace MIDILightDrawer
 	{
 		if (_Tracks->Contains(track)) {
 			track->AddBar(startTick, length, color);
-			InvalidateTrack(track);
-			FlushInvalidation();
+			
+			this->Invalidate();
 		}
 	}
 
@@ -487,7 +487,7 @@ namespace MIDILightDrawer
 			OnScroll(_HScrollBar, gcnew ScrollEventArgs(ScrollEventType::ThumbPosition, _HScrollBar->Value));
 		}
 		else {
-			ThrottledInvalidate();
+			this->Invalidate();
 		}
 	}
 
@@ -923,87 +923,6 @@ namespace MIDILightDrawer
 		_PerformanceMetrics->Reset();
 	}
 
-
-	///////////////////////////////
-	// Invalidation Optimization //
-	///////////////////////////////
-	void Widget_Timeline::InvalidateRegion(Rectangle region)
-	{
-		if (region.IsEmpty) {
-			return;
-		}
-
-		if (_InvalidatePending) {
-			_DirtyRect = Rectangle::Union(_DirtyRect, region);
-		}
-		else {
-			_DirtyRect = region;
-			_InvalidatePending = true;
-		}
-	}
-
-	void Widget_Timeline::InvalidateTrack(Track^ track)
-	{
-		if (track == nullptr) {
-			return;
-		}
-
-		Rectangle trackBounds = GetTrackContentBounds(track);
-		trackBounds.Y += _ScrollPosition->Y;
-
-		Rectangle headerBounds = GetTrackHeaderBounds(track);
-		headerBounds.Y += _ScrollPosition->Y;
-
-		Rectangle fullBounds = Rectangle::Union(trackBounds, headerBounds);
-		InvalidateRegion(fullBounds);
-	}
-
-	void Widget_Timeline::InvalidateBar(BarEvent^ bar)
-	{
-		if (bar == nullptr || bar->ContainingTrack == nullptr) {
-			return;
-		}
-
-		Rectangle trackBounds = GetTrackContentBounds(bar->ContainingTrack);
-		trackBounds.Y += _ScrollPosition->Y;
-
-		Rectangle barBounds = CalculateBarBounds(bar, trackBounds);
-		barBounds.Inflate(4, 4);
-		InvalidateRegion(barBounds);
-	}
-
-	void Widget_Timeline::ThrottledInvalidate()
-	{
-		DateTime now = DateTime::Now;
-		if ((now - _LastInvalidation).TotalMilliseconds >= MIN_INVALIDATION_INTERVAL_MS) {
-			FlushInvalidation();
-			if (!_InvalidatePending) {
-				Invalidate();
-			}
-			_LastInvalidation = now;
-		}
-		else {
-			_InvalidatePending = true;
-			_DirtyRect = ClientRectangle;
-		}
-	}
-
-	void Widget_Timeline::FlushInvalidation()
-	{
-		if (_InvalidatePending) {
-			if (_DirtyRect.Width >= Width && _DirtyRect.Height >= Height) {
-				Invalidate();
-			}
-			else {
-				Invalidate(_DirtyRect);
-			}
-			_InvalidatePending = false;
-			_DirtyRect = Rectangle::Empty;
-			_LastInvalidation = DateTime::Now;
-		}
-	}
-
-
 	///////////////////////
 	// Protected Methods //
 	///////////////////////
@@ -1026,7 +945,9 @@ namespace MIDILightDrawer
 			_D2DRenderer->DrawTrackHeaders();
 			_D2DRenderer->DrawTrackDividers(_ResizeHoverTrack);
 			_D2DRenderer->DrawMeasureNumbers();
-			if(this->_ShowPlaybackCursor && _Playback_Manager && _Measures->Count > 0) _D2DRenderer->DrawPlaybackCursor(MillisecondsToTicks(_Playback_Manager->Get_Playback_Position_ms()));
+			if (this->_ShowPlaybackCursor && _Playback_Manager && _Measures->Count > 0) {
+				_D2DRenderer->DrawPlaybackCursor(MillisecondsToTicks(_Playback_Manager->Get_Playback_Position_ms()));
+			}
 			_D2DRenderer->DrawLeftPanel(_IsOverPanelResizeHandle || _IsPanelResizing);
 
 			const float FPSCounter_X_Offset = (float)(Timeline_Direct2DRenderer::PANEL_BUTTON_SIZE + Timeline_Direct2DRenderer::PANEL_BUTTON_MARGIN);
@@ -1133,14 +1054,13 @@ namespace MIDILightDrawer
 		Point MousePos = Point(e->X, e->Y);
 
 		// Check panel resize handle
-		bool newOverPanelResize = IsOverPanelResizeHandle(MousePos);
-		if (_IsOverPanelResizeHandle != newOverPanelResize) {
-			_IsOverPanelResizeHandle = newOverPanelResize;
-			// Invalidate just the panel edge area
-			Rectangle panelEdge = Rectangle(_Left_Panel->Width - 10,
-				Timeline_Direct2DRenderer::HEADER_HEIGHT, 20, Height);
-			InvalidateRegion(panelEdge);
-		}
+		//bool newOverPanelResize = IsOverPanelResizeHandle(MousePos);
+		//if (_IsOverPanelResizeHandle != newOverPanelResize) {
+		//	_IsOverPanelResizeHandle = newOverPanelResize;
+		//	// Invalidate just the panel edge area
+		//	Rectangle panelEdge = Rectangle(_Left_Panel->Width - 10, Timeline_Direct2DRenderer::HEADER_HEIGHT, 20, Height);
+		//	InvalidateRegion(panelEdge);
+		//}
 
 		if (_IsPanelResizing)
 		{
@@ -1152,7 +1072,8 @@ namespace MIDILightDrawer
 		if (_IsOverPanelResizeHandle)
 		{
 			this->Cursor = Cursors::SizeWE;
-			FlushInvalidation();
+			this->Invalidate();
+
 			return;
 		}
 
@@ -1187,30 +1108,12 @@ namespace MIDILightDrawer
 		if (NewHoveredButton.Track != _HoveredButton.Track ||
 			NewHoveredButton.ButtonIndex != _HoveredButton.ButtonIndex)
 		{
-			// Invalidate old button area
-			if (_HoveredButton.Track != nullptr) {
-				Rectangle headerBounds = GetTrackHeaderBounds(_HoveredButton.Track);
-				headerBounds.Y += _ScrollPosition->Y;
-				Rectangle oldButtonBounds = GetTrackButtonBounds(headerBounds, _HoveredButton.ButtonIndex);
-				oldButtonBounds.Inflate(2, 2);
-				InvalidateRegion(oldButtonBounds);
-			}
-
-			// Invalidate new button area
-			if (NewHoveredButton.Track != nullptr) {
-				Rectangle headerBounds = GetTrackHeaderBounds(NewHoveredButton.Track);
-				headerBounds.Y += _ScrollPosition->Y;
-				Rectangle newButtonBounds = GetTrackButtonBounds(headerBounds, NewHoveredButton.ButtonIndex);
-				newButtonBounds.Inflate(2, 2);
-				InvalidateRegion(newButtonBounds);
-			}
-
 			_HoveredButton = NewHoveredButton;
 		}
 
 		if (IsOverAnyButton) {
 			this->Cursor = Cursors::Hand;
-			FlushInvalidation();
+			this->Invalidate();
 			return;
 		}
 
@@ -1224,31 +1127,17 @@ namespace MIDILightDrawer
 		{
 			if (_ResizeHoverTrack != HoverTrack)
 			{
-				// Invalidate old divider area
-				if (_ResizeHoverTrack != nullptr) {
-					int oldTop = GetTrackTop(_ResizeHoverTrack) + _ResizeHoverTrack->Height + _ScrollPosition->Y;
-					InvalidateRegion(Rectangle(0, oldTop - 5, Width, 10));
-				}
-
-				// Invalidate new divider area
-				if (HoverTrack != nullptr) {
-					int newTop = GetTrackTop(HoverTrack) + HoverTrack->Height + _ScrollPosition->Y;
-					InvalidateRegion(Rectangle(0, newTop - 5, Width, 10));
-				}
-
 				_ResizeHoverTrack = HoverTrack;
 			}
 
 			this->Cursor = Cursors::SizeNS;
-			FlushInvalidation();
+			this->Invalidate();
 			return;
 		}
 
 		// Not over a divider
 		if (_ResizeHoverTrack != nullptr)
 		{
-			int oldTop = GetTrackTop(_ResizeHoverTrack) + _ResizeHoverTrack->Height + _ScrollPosition->Y;
-			InvalidateRegion(Rectangle(0, oldTop - 5, Width, 10));
 			_ResizeHoverTrack = nullptr;
 		}
 
@@ -1267,8 +1156,7 @@ namespace MIDILightDrawer
 			this->Cursor = Cursors::Default;
 		}
 
-		// Flush any accumulated invalidations
-		FlushInvalidation();
+		this->Invalidate();
 	}
 
 	void Widget_Timeline::OnMouseUp(MouseEventArgs^ e)

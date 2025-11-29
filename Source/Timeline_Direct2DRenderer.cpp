@@ -419,6 +419,7 @@ namespace MIDILightDrawer
 
         _NativeRenderer->PushAxisAlignedClip(ContentArea, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 
+
         try {
             // 1. Draw grid lines first (these should be visible through track content)
             float totalHeight = GetTotalTrackHeight();
@@ -426,7 +427,7 @@ namespace MIDILightDrawer
             DrawGridLines(totalHeight);
 
             TimelineToolType currentTool = this->_ToolAccessDelegate->CurrentToolType();
-
+			
             // 2. Draw track content (events and tablature)
             for each (Track ^ track in this->_Tracks)
             {
@@ -444,11 +445,11 @@ namespace MIDILightDrawer
                 // Draw events and tablature
                 DrawTrackEvents(track, TrackContentBounds, currentTool);
 
-                if (track->ShowTablature) {
-                    DrawTrackTablature(track, TrackContentBounds);
-                }
+				if (track->ShowTablature) {
+					DrawTrackTablature(track, TrackContentBounds);
+				}
             }
-
+			
             // 3. Draw track headers and borders
             // Commented due to use of batched drawing -> Manual call from Widget_Timeline->OnPaint(...)
             //DrawTrackHeaders();
@@ -822,6 +823,11 @@ namespace MIDILightDrawer
             return true;
         }
 
+		float String_Space = ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0f) - 1;
+
+		DrumSymbolCacheEntry* CachedDrumSymbol = _NativeRenderer->GetNearestCachedDrumSymbolEntry(String_Space);
+		DurationSymbolCacheEntry* CachedDurationSymbol = _NativeRenderer->GetNearestCachedDurationSymbolEntry(_ZoomLevel);
+
         try {
             // Calculate visible range
             int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
@@ -865,7 +871,7 @@ namespace MIDILightDrawer
                     float BeatX = (float)(TicksToPixels(beat->StartTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth());
 
                     if ((beat->Duration > 0) && (beat->Notes->Count > 0) && AvailableHeight > String_Info.TotalHeight + RequiredSpace) {
-                        DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions);
+                        DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions, CachedDurationSymbol);
                     }
 
                     for each(Note^ note in beat->Notes)
@@ -889,7 +895,7 @@ namespace MIDILightDrawer
                             YPos = String_Info.StringYPositions[LineIndex] + (String_Info.StringYPositions[LineIndex + 1] - String_Info.StringYPositions[LineIndex]) * Fraction;
                         }
 
-                        DrawDrumSymbol(NoteInfo.SymbolType, BeatX, YPos, ((String_Info.StringYPositions[1] - String_Info.StringYPositions[0]) / 2.0f) - 1);
+                        DrawDrumSymbol(NoteInfo.SymbolType, BeatX, YPos, String_Space, CachedDrumSymbol);
                     }
                 }
                 MeasureStartTick += Measure->Length;
@@ -902,116 +908,110 @@ namespace MIDILightDrawer
         }
     }
 
-    bool Timeline_Direct2DRenderer::DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale)
-    {
-        if (!_NativeRenderer) {
-            return false;
-        }
+	bool Timeline_Direct2DRenderer::DrawTrackTablatureRegular(Track^ track, System::Drawing::Rectangle trackContentBounds, float logScale)
+	{
+		if (!_NativeRenderer) {
+			return false;
+		}
 
 		float ScaledFontSize = GetTablatureScaledFontSize(logScale);
-        float AvailableHeight = (float)(trackContentBounds.Height - TRACK_PADDING * 2);
+		float AvailableHeight = (float)(trackContentBounds.Height - TRACK_PADDING * 2);
 
-        TabStringInfo String_Info = DrawTablatureStrings(trackContentBounds, AvailableHeight, logScale, 6);
+		TabStringInfo String_Info = DrawTablatureStrings(trackContentBounds, AvailableHeight, logScale, 6);
 
-        if (String_Info.TotalHeight > AvailableHeight) {
-            return true;
-        }
+		if (String_Info.TotalHeight > AvailableHeight) {
+			return true;
+		}
 
-        try
-        {
-            // Calculate visible tick range
-            int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
-            int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
+		TabTextCacheEntry* CachedTabTextSymbol = _NativeRenderer->GetNearestCachedTabTextEntry(ScaledFontSize);
+		if (CachedTabTextSymbol == nullptr) {
+			return false;
+		}
 
-            // Track measure position
-            int MeasureStartTick = 0;
+		DurationSymbolCacheEntry* CachedDurationSymbol = _NativeRenderer->GetNearestCachedDurationSymbolEntry(_ZoomLevel);
 
-            // Process only visible measures
-            for (int i = 0; i < track->Measures->Count; i++)
-            {
-                TrackMeasure^ Measure = track->Measures[i];
-                if (Measure == nullptr) {
-                    MeasureStartTick += Measure->Length;
-                    continue;
-                }
+		const float BASE_DURATION_SPACE = 23.0f;
+		const float DURATION_SCALE_FACTOR = 20.0f;
+		float RequiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
 
-                int MeasureEndTick = MeasureStartTick + Measure->Length;
+		int VisibleStartTick = (int)PixelsToTicks(-this->_ScrollPosition->X);
+		int VisibleEndTick = (int)PixelsToTicks(-this->_ScrollPosition->X + trackContentBounds.Width);
 
-                // Skip if measure is out of visible range
-                if (MeasureStartTick > VisibleEndTick || MeasureEndTick < VisibleStartTick)
-                {
-                    MeasureStartTick = MeasureEndTick;
-                    continue;
-                }
+		int MeasureStartTick = 0;
 
-                // Draw beats in this measure
-                for each (Beat^ beat in Measure->Beats)
-                {
-                    if (beat == nullptr || beat->Notes == nullptr || beat->Notes->Count == 0) {
-                        continue;
-                    }
+		try
+		{
+			for (int i = 0; i < track->Measures->Count; i++)
+			{
+				TrackMeasure^ Measure = track->Measures[i];
+				if (Measure == nullptr) {
+					MeasureStartTick += Measure->Length;
+					continue;
+				}
 
-                    if (!ShouldRenderBeat(beat, Measure, m_LevelOfDetail.TabResolution)) {
-                        continue;
-                    }
+				int MeasureEndTick = MeasureStartTick + Measure->Length;
 
-                    int BeatTick = beat->StartTick;
+				if (MeasureStartTick > VisibleEndTick || MeasureEndTick < VisibleStartTick)
+				{
+					MeasureStartTick = MeasureEndTick;
+					continue;
+				}
 
-                    // Skip if beat is outside visible range
-                    if (BeatTick > VisibleEndTick || BeatTick + beat->Duration < VisibleStartTick) {
-                        continue;
-                    }
+				for each(Beat ^ beat in Measure->Beats)
+				{
+					if (beat == nullptr || beat->Notes == nullptr || beat->Notes->Count == 0) {
+						continue;
+					}
 
-                    float BeatX = (float)(TicksToPixels(BeatTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth());
+					if (!ShouldRenderBeat(beat, Measure, m_LevelOfDetail.TabResolution)) {
+						continue;
+					}
 
-                    const float BASE_DURATION_SPACE = 23.0f;
-                    const float DURATION_SCALE_FACTOR = 20.0f;
-                    float RequiredSpace = BASE_DURATION_SPACE + (DURATION_SCALE_FACTOR * logScale);
-                        
-                    // Draw duration lines for beats with multiple notes
-                    if ((beat->Duration > 0) && (beat->Notes->Count > 0) && AvailableHeight > String_Info.TotalHeight + RequiredSpace)
-                    {
-                        DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions);
-                    }
+					int BeatTick = beat->StartTick;
 
-                    // Draw the notes
-                    for each (Note^ note in beat->Notes)
-                    {
-                        if (note == nullptr || note->String < 1 || note->String > 6) {
-                            continue;
-                        }
-					                        
-						TabTextCacheEntry* CachedText = _NativeRenderer->GetNearestCachedTabTextEntry(ScaledFontSize);
+					if (BeatTick > VisibleEndTick || BeatTick + beat->Duration < VisibleStartTick) {
+						continue;
+					}
 
-						if (CachedText == nullptr) {
-							return false;
+					float BeatX = (float)(TicksToPixels(BeatTick) + this->_ScrollPosition->X + GetLeftPanelAndTrackHeaderWidth());
+
+					if ((beat->Duration > 0) && (beat->Notes->Count > 0) && AvailableHeight > String_Info.TotalHeight + RequiredSpace)
+					{
+						DrawBeatDuration(beat, trackContentBounds, String_Info.StringYPositions, CachedDurationSymbol);
+					}
+
+					auto tn1 = std::chrono::high_resolution_clock::now();
+					for each(Note ^ note in beat->Notes)
+					{
+						if (note == nullptr || note->String < 1 || note->String > 6) {
+							continue;
 						}
 
-						float TextWidth = CachedText->TextWidths[note->Value];
+						float TextWidth = CachedTabTextSymbol->TextWidths[note->Value];
 
 						D2D1_RECT_F TextRect;
-						TextRect.left	= BeatX - (TextWidth / 2.0f);
-						TextRect.right	= BeatX + (TextWidth / 2.0f);
-						TextRect.top	= String_Info.StringYPositions[note->String - 1] - (String_Info.StringSpacing / 2.0f);
+						TextRect.left = BeatX - (TextWidth / 2.0f);
+						TextRect.right = BeatX + (TextWidth / 2.0f);
+						TextRect.top = String_Info.StringYPositions[note->String - 1] - (String_Info.StringSpacing / 2.0f);
 						TextRect.bottom = TextRect.top + String_Info.StringSpacing;
 
-						_NativeRenderer->DrawCachedTabText(note->Value, TextRect, ScaledFontSize);
-                    }
-                }
+						_NativeRenderer->DrawCachedTabText(note->Value, TextRect, ScaledFontSize, CachedTabTextSymbol);
+					}
+				}
 
-                MeasureStartTick = MeasureEndTick;
-            }
+				MeasureStartTick = MeasureEndTick;
+			}
 
-            DrawTieLines(track, trackContentBounds, String_Info.StringYPositions, ScaledFontSize);
+			DrawTieLines(track, trackContentBounds, String_Info.StringYPositions, ScaledFontSize);
 
-            return true;
-        }
-        catch (...) {
-            return false;
-        }
-    }
+			return true;
+		}
+		catch (...) {
+			return false;
+		}
+	}
 
-    void Timeline_Direct2DRenderer::DrawBeatDuration(Beat^ beat, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions)
+    void Timeline_Direct2DRenderer::DrawBeatDuration(Beat^ beat, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, DurationSymbolCacheEntry* cachedSymbol)
     {
         if (!_NativeRenderer || beat->Notes == nullptr || beat->Notes->Count == 0 || beat->Duration <= 0) {
             return;
@@ -1021,12 +1021,6 @@ namespace MIDILightDrawer
         const float BASE_STEM_LENGTH = 10.0f;
         const float BASE_LINE_LENGTH = 8.0f;
         const float BASE_STEM_OFFSET = 8.0f;
-
-        DurationSymbolCacheEntry* CachedSymbol = _NativeRenderer->GetNearestCachedDurationSymbolEntry(_ZoomLevel);
-
-        if (CachedSymbol == nullptr) {
-            return;
-        }
 
         // Calculate logarithmic scaling factor
         float LogScale = TO_LOGSCALE(this->_ZoomLevel);
@@ -1052,7 +1046,7 @@ namespace MIDILightDrawer
         DurationRect.top = BottomStringY;
         DurationRect.bottom = BottomStringY + ScaledStemOffset + ScaledStemLength;
 
-        _NativeRenderer->DrawCachedDudationSymbol(Duration, DurationRect, _ZoomLevel);
+        _NativeRenderer->DrawCachedDurationSymbol(Duration, DurationRect, _ZoomLevel, cachedSymbol);
     }
 
     void Timeline_Direct2DRenderer::DrawTieLines(Track^ track, System::Drawing::Rectangle trackContentBounds, array<float>^ stringYPositions, float scaledFontSize)
@@ -1198,7 +1192,7 @@ namespace MIDILightDrawer
         }
     }
 
-    void Timeline_Direct2DRenderer::DrawDrumSymbol(DrumNotationType symbolType, float x, float y, float size)
+    void Timeline_Direct2DRenderer::DrawDrumSymbol(DrumNotationType symbolType, float x, float y, float size, DrumSymbolCacheEntry* cachedDrumSymbolEntry)
     {
         if (!_NativeRenderer) {
             return;
@@ -1212,7 +1206,7 @@ namespace MIDILightDrawer
 		);
 
 		// Draw using the cached bitmap
-		_NativeRenderer->DrawCachedDrumSymbol((int)symbolType, DestRect, size);
+		_NativeRenderer->DrawCachedDrumSymbol((int)symbolType, DestRect, size, cachedDrumSymbolEntry);
     }
 
     TabStringInfo Timeline_Direct2DRenderer::DrawTablatureStrings(System::Drawing::Rectangle bounds, float availableHeight, float logScale, int numStrings)
@@ -3332,7 +3326,7 @@ namespace MIDILightDrawer
         }
 
         // Scale for display
-        return (float)ticks * TICK_PIXEL_BASE_SCALE * this->_ZoomLevel;
+		return (float)((double)ticks * TICK_PIXEL_BASE_SCALE * this->_ZoomLevel);
     }
 
     float Timeline_Direct2DRenderer::PixelsToTicks(int pixels)

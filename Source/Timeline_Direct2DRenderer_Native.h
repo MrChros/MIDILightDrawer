@@ -2,18 +2,27 @@
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "user32.lib")
+#pragma comment(lib, "shcore.lib")
 
 #define NOMINMAX
 
-#include <d2d1.h>
 #include <vector>
 #include <string>
-#include <dwrite.h>
 #include <utility>
 #include <algorithm>
 #include <unordered_map>
+
+#include <d2d1_1.h>
+#include <d2d1_1helper.h>
+#include <d3d11_1.h>
+#include <dxgi1_2.h>
+#include <dwrite_1.h>
+#include <shellscalingapi.h>
 
 #include "Timeline_Direct2DRenderer_CommandBatch.h"
 
@@ -100,6 +109,7 @@ public:
 
     // Resource Management
     bool CreateDeviceResources();
+	bool CreateTargetBitmap();
     void ReleaseDeviceResources();
 	bool PreloadTabText(float fontSize, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor);
 	bool PreloadDrumSymbol(float stringSpace, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor);
@@ -162,9 +172,9 @@ public:
     bool DrawCachedBitmap(const std::wstring& key, const D2D1_RECT_F& destRect, float opacity = 1.0f);
 
 	// Draw Cached Texts & Symbols
-	bool DrawCachedTabText(int fretNumber, const D2D1_RECT_F& destRect, float fontSize);
-	bool DrawCachedDrumSymbol(int symbolIndex, const D2D1_RECT_F& destRect, float stringSpace);
-	bool DrawCachedDudationSymbol(int duration, const D2D1_RECT_F& destRect, float zoomLevel);
+	bool DrawCachedTabText(int fretNumber, const D2D1_RECT_F& destRect, float fontSize, TabTextCacheEntry* cachedTabTextEntry);
+	bool DrawCachedDrumSymbol(int symbolIndex, const D2D1_RECT_F& destRect, float stringSpace, DrumSymbolCacheEntry* cachedDrumSymbolEntry);
+	bool DrawCachedDurationSymbol(int duration, const D2D1_RECT_F& destRect, float zoomLevel, DurationSymbolCacheEntry* cachedDurationSymbol);
 	TabTextCacheEntry* GetNearestCachedTabTextEntry(float fontSize);
 	DrumSymbolCacheEntry* GetNearestCachedDrumSymbolEntry(float stringSpace);
     DurationSymbolCacheEntry* GetNearestCachedDurationSymbolEntry(float zoomLevel);
@@ -187,8 +197,21 @@ public:
    
 private:
     // Direct2D Resources
-    ID2D1Factory* m_pD2DFactory;
-    ID2D1HwndRenderTarget* m_pRenderTarget;
+    //ID2D1Factory* m_pD2DFactory;
+    //ID2D1HwndRenderTarget* m_pRenderTarget;
+
+	// Direct2D 1.1 Resources
+	ID2D1Factory1* m_pD2DFactory;
+	ID2D1Device* m_pD2DDevice;
+	ID2D1DeviceContext* m_pDeviceContext;  // Replaces m_pRenderTarget
+
+	// Direct3D Resources (required for Direct2D 1.1)
+	ID3D11Device1* m_pD3DDevice;
+	ID3D11DeviceContext1* m_pD3DDeviceContext;
+
+	// DXGI Resources
+	IDXGISwapChain1* m_pSwapChain;
+	ID2D1Bitmap1* m_pTargetBitmap;
 
 #if USE_BATCH_RENDERING
     CommandBatch m_CommandBatch;  // Command batch for deferred rendering
@@ -205,7 +228,9 @@ private:
 	ID2D1LinearGradientBrush* m_pLinearGradientBrush;
 
     // DirectWrite resources
-    IDWriteFactory* m_pDWriteFactory;
+    //IDWriteFactory* m_pDWriteFactory;
+	IDWriteFactory1* m_pDWriteFactory;				// Changed from IDWriteFactory*
+
     IDWriteTextFormat* m_pMeasureNumberFormat;		// For measure numbers
     IDWriteTextFormat* m_pMarkerTextFormat;			// For marker text
     IDWriteTextFormat* m_pTimeSignatureFormat;		// For time signatures

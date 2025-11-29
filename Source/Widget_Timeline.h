@@ -211,13 +211,6 @@ namespace MIDILightDrawer
 		void InitializeToolSystem();
 		void InitializeContextMenu();
 
-		// Invalidation helpers
-		void InvalidateRegion(Rectangle region);
-		void InvalidateTrack(Track^ track);
-		void InvalidateBar(BarEvent^ bar);
-		void ThrottledInvalidate();
-		void FlushInvalidation();
-
 		void CreateContextMenuCommon();
 		void CreateContextMenuSolid();
 		void CreateContextMenuFade();

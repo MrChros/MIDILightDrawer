@@ -1,23 +1,37 @@
 ﻿#include "Timeline_Direct2DRenderer_Native.h"
 
-
 Timeline_Direct2DRenderer_Native::Timeline_Direct2DRenderer_Native():
-    m_hwnd(nullptr),
-    m_pD2DFactory(nullptr),
-    m_pRenderTarget(nullptr),
-    m_pSolidStroke(nullptr),
+	m_hwnd(nullptr),
+	// Direct2D 1.1
+	m_pD2DFactory(nullptr),
+	m_pD2DDevice(nullptr),
+	m_pDeviceContext(nullptr),
+	m_pTargetBitmap(nullptr),
+	// Direct3D
+	m_pD3DDevice(nullptr),
+	m_pD3DDeviceContext(nullptr),
+	// DXGI
+	m_pSwapChain(nullptr),
+	// Stroke styles
+	m_pSolidStroke(nullptr),
 	m_pDashedStroke(nullptr),
 	m_pLinearGradientBrush(nullptr),
-    m_pDWriteFactory(nullptr),
-    m_pMeasureNumberFormat(nullptr),
-    m_pMarkerTextFormat(nullptr),
-    m_pTimeSignatureFormat(nullptr),
-    m_pQuarterNoteFormat(nullptr),
-    m_pTrackHeaderFormat(nullptr),
-    m_pTablatureFormat(nullptr),
-    m_pFPSCounterFormat(nullptr),
+	// DirectWrite
+	m_pDWriteFactory(nullptr),
+	m_pMeasureNumberFormat(nullptr),
+	m_pMarkerTextFormat(nullptr),
+	m_pTimeSignatureFormat(nullptr),
+	m_pQuarterNoteFormat(nullptr),
+	m_pTrackHeaderFormat(nullptr),
+	m_pTablatureFormat(nullptr),
+	m_pFPSCounterFormat(nullptr),
 	m_pLeftPanelTextFormat(nullptr),
-    m_resourcesValid(false)
+	m_pLeftPanelTitleFormat(nullptr),
+	m_pLeftPanelSectionFormat(nullptr),
+	m_resourcesValid(false)
+#if USE_BATCH_RENDERING
+	, m_ZOrderCounter(0.0f)
+#endif
 {
 }
 
@@ -34,53 +48,44 @@ bool Timeline_Direct2DRenderer_Native::Initialize(HWND hwnd)
 
     m_hwnd = hwnd;
 
-    // Create D2D factory
-    D2D1_FACTORY_OPTIONS options = {};
+	// 1. Create D2D Factory (version 1.1)
+	D2D1_FACTORY_OPTIONS options = {};
+#ifdef _DEBUG
+	//options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
+#endif
 
-    HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory), &options, reinterpret_cast<void**>(&m_pD2DFactory));
+    //HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory), &options, reinterpret_cast<void**>(&m_pD2DFactory));
+	HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void**>(&m_pD2DFactory));
 
     if (FAILED(hr)) {
         return false;
 	}
 
-    hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&m_pDWriteFactory));
+	// 2. Create DirectWrite Factory
+    //hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&m_pDWriteFactory));
+	hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory1), reinterpret_cast<IUnknown**>(&m_pDWriteFactory));
 
-    if (FAILED(hr))
-        return false;
+	if (FAILED(hr)) {
+		return false;
+	}
 
-    // Create text formats
+	// 3. Create Text Formats
     if (!CreateTextFormats()) {
         return false;
 	}
 
-    // Create stroke styles
+	// 4. Create Stroke Styles
     if (!CreateStrokeStyles()) {
         return false;
 	}
 
+	// 5. Create Device Resources (Direct3D + Direct2D Device + Swap Chain)
     return CreateDeviceResources();
 }
 
 void Timeline_Direct2DRenderer_Native::Cleanup()
 {
-    ReleaseDeviceResources();
-
-    // Release brush cache
-    for (auto& cached : m_BrushCache)
-    {
-        if (cached.Brush) {
-            cached.Brush->Release();
-		}
-    }
-    m_BrushCache.clear();
-
-    // Release bitmap cache
-    for (auto& cached : m_BitmapCache) {
-        if (cached.Bitmap) {
-            cached.Bitmap->Release();
-        }
-    }
-    m_BitmapCache.clear();
+	ReleaseDeviceResources();
 
 	// Release text formats
     if (m_pMeasureNumberFormat)
@@ -119,25 +124,50 @@ void Timeline_Direct2DRenderer_Native::Cleanup()
         m_pTablatureFormat = nullptr;
     }
 
-    // Release DirectWrite factory
-    if (m_pDWriteFactory)
-    {
-        m_pDWriteFactory->Release();
-        m_pDWriteFactory = nullptr;
-    }
+	if (m_pFPSCounterFormat)
+	{
+		m_pFPSCounterFormat->Release();
+		m_pFPSCounterFormat = nullptr;
+	}
 
+	if (m_pLeftPanelTextFormat)
+	{
+		m_pLeftPanelTextFormat->Release();
+		m_pLeftPanelTextFormat = nullptr;
+	}
+
+	if (m_pLeftPanelTitleFormat)
+	{
+		m_pLeftPanelTitleFormat->Release();
+		m_pLeftPanelTitleFormat = nullptr;
+	}
+
+	if (m_pLeftPanelSectionFormat)
+	{
+		m_pLeftPanelSectionFormat->Release();
+		m_pLeftPanelSectionFormat = nullptr;
+	}
+
+	// Release stroke styles
 	if (m_pDashedStroke)
 	{
 		m_pDashedStroke->Release();
 		m_pDashedStroke = nullptr;
 	}
 
-    if (m_pSolidStroke)
-    {
-        m_pSolidStroke->Release();
-        m_pSolidStroke = nullptr;
-    }
+	if (m_pSolidStroke)
+	{
+		m_pSolidStroke->Release();
+		m_pSolidStroke = nullptr;
+	}
 
+    // Release DirectWrite factory
+    if (m_pDWriteFactory)
+    {
+        m_pDWriteFactory->Release();
+        m_pDWriteFactory = nullptr;
+    }
+	
     // Release factory
     if (m_pD2DFactory)
     {
@@ -155,67 +185,268 @@ bool Timeline_Direct2DRenderer_Native::CreateDeviceResources()
         return true;
 	}
 
-    // Get window size
-    RECT rc;
-    GetClientRect(m_hwnd, &rc);
+	HRESULT hr = S_OK;
 
+	// ========================================
+	// Step 1: Create Direct3D Device
+	// ========================================
+	D3D_FEATURE_LEVEL Feature_Levels[] = {
+		D3D_FEATURE_LEVEL_11_1,
+		D3D_FEATURE_LEVEL_11_0,
+		D3D_FEATURE_LEVEL_10_1,
+		D3D_FEATURE_LEVEL_10_0,
+		D3D_FEATURE_LEVEL_9_3,
+		D3D_FEATURE_LEVEL_9_2,
+		D3D_FEATURE_LEVEL_9_1
+	};
 
-    // Create render target with optimized properties
-    D2D1_RENDER_TARGET_PROPERTIES rtProps = D2D1::RenderTargetProperties(
-        D2D1_RENDER_TARGET_TYPE_HARDWARE,  // Use hardware rendering
-        D2D1::PixelFormat(
-            DXGI_FORMAT_B8G8R8A8_UNORM,
-            D2D1_ALPHA_MODE_PREMULTIPLIED
-        ),
-        96.0f,  // Default DPI
-        96.0f,
-        D2D1_RENDER_TARGET_USAGE_NONE
-    );
+	UINT Creation_Flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+#ifdef _DEBUG
+	//Creation_Flags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
 
-    D2D1_HWND_RENDER_TARGET_PROPERTIES hwndProps = D2D1::HwndRenderTargetProperties(
-        m_hwnd,
-        D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top),
-        D2D1_PRESENT_OPTIONS_IMMEDIATELY  // Present results immediately
-    );
+	ID3D11Device* Temp_Device = nullptr;
+	ID3D11DeviceContext* Temp_Context = nullptr;
+	D3D_FEATURE_LEVEL Returned_Feature_Level;
 
-    HRESULT hr = m_pD2DFactory->CreateHwndRenderTarget(
-        rtProps,
-        hwndProps,
-        &m_pRenderTarget
-    );
+	hr = D3D11CreateDevice(
+		nullptr,                    // Default adapter
+		D3D_DRIVER_TYPE_HARDWARE,   // Hardware rendering
+		nullptr,                    // No software rasterizer
+		Creation_Flags,
+		Feature_Levels,
+		ARRAYSIZE(Feature_Levels),
+		D3D11_SDK_VERSION,
+		&Temp_Device,
+		&Returned_Feature_Level,
+		&Temp_Context
+	);
 
-    if (FAILED(hr)) {
-        return false;
-    }
+	if (FAILED(hr)) {
+		return false;
+	}
 
-    m_resourcesValid = true;
+	// Get the 11.1 interfaces
+	hr = Temp_Device->QueryInterface(__uuidof(ID3D11Device1), reinterpret_cast<void**>(&m_pD3DDevice));
+	if (FAILED(hr)) {
+		Temp_Device->Release();
+		Temp_Context->Release();
+		return false;
+	}
 
-    return true;
+	hr = Temp_Context->QueryInterface(__uuidof(ID3D11DeviceContext1), reinterpret_cast<void**>(&m_pD3DDeviceContext));
+	Temp_Device->Release();
+	Temp_Context->Release();
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// ========================================
+	// Step 2: Create Direct2D Device
+	// ========================================
+	IDXGIDevice* Dxgi_Device = nullptr;
+	hr = m_pD3DDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&Dxgi_Device));
+	
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	hr = m_pD2DFactory->CreateDevice(Dxgi_Device, &m_pD2DDevice);
+	
+	if (FAILED(hr)) {
+		Dxgi_Device->Release();
+		return false;
+	}
+
+	// ========================================
+	// Step 3: Create Device Context (replaces HwndRenderTarget)
+	// ========================================
+	hr = m_pD2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &m_pDeviceContext);
+	
+	if (FAILED(hr)) {
+		Dxgi_Device->Release();
+		return false;
+	}
+
+	// ========================================
+	// Step 4: Create Swap Chain
+	// ========================================
+	IDXGIAdapter* Dxgi_Adapter = nullptr;
+	hr = Dxgi_Device->GetAdapter(&Dxgi_Adapter);
+	
+	if (FAILED(hr)) {
+		Dxgi_Device->Release();
+		return false;
+	}
+
+	IDXGIFactory2* Dxgi_Factory = nullptr;
+	hr = Dxgi_Adapter->GetParent(IID_PPV_ARGS(&Dxgi_Factory));
+	Dxgi_Adapter->Release();
+	
+	if (FAILED(hr)) {
+		Dxgi_Device->Release();
+		return false;
+	}
+
+	DXGI_SWAP_CHAIN_DESC1 Swap_Chain_Desc = {};
+	Swap_Chain_Desc.Width = 0;  // Auto-size from window
+	Swap_Chain_Desc.Height = 0;
+	Swap_Chain_Desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	Swap_Chain_Desc.Stereo = FALSE;
+	Swap_Chain_Desc.SampleDesc.Count = 1;
+	Swap_Chain_Desc.SampleDesc.Quality = 0;
+	Swap_Chain_Desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	Swap_Chain_Desc.BufferCount = 2;
+	Swap_Chain_Desc.Scaling = DXGI_SCALING_STRETCH;
+	Swap_Chain_Desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+	Swap_Chain_Desc.Flags = 0;
+
+	hr = Dxgi_Factory->CreateSwapChainForHwnd(
+		m_pD3DDevice,
+		m_hwnd,
+		&Swap_Chain_Desc,
+		nullptr,  // No fullscreen desc
+		nullptr,  // No restrict to output
+		&m_pSwapChain
+	);
+
+	Dxgi_Factory->Release();
+	Dxgi_Device->Release();
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// ========================================
+	// Step 5: Create Target Bitmap from Back Buffer
+	// ========================================
+	if (!CreateTargetBitmap()) {
+		return false;
+	}
+
+	m_resourcesValid = true;
+	return true;
+}
+
+bool Timeline_Direct2DRenderer_Native::CreateTargetBitmap()
+{
+	if (!m_pSwapChain || !m_pDeviceContext) {
+		return false;
+	}
+
+	// Get the back buffer as a DXGI surface
+	IDXGISurface* Dxgi_Back_Buffer = nullptr;
+	HRESULT hr = m_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&Dxgi_Back_Buffer));
+	if (FAILED(hr)) return false;
+
+	// Get DPI
+	FLOAT Dpi_X = static_cast<FLOAT>(GetDpiForWindow(m_hwnd));
+	FLOAT Dpi_Y = Dpi_X;
+
+	// Create a Direct2D bitmap linked to the DXGI back buffer
+	D2D1_BITMAP_PROPERTIES1 Bitmap_Properties = D2D1::BitmapProperties1(
+		D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+		D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
+		Dpi_X,
+		Dpi_Y
+	);
+
+	hr = m_pDeviceContext->CreateBitmapFromDxgiSurface(Dxgi_Back_Buffer, &Bitmap_Properties, &m_pTargetBitmap);
+	Dxgi_Back_Buffer->Release();
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Set as render target
+	m_pDeviceContext->SetTarget(m_pTargetBitmap);
+
+	return true;
 }
 
 void Timeline_Direct2DRenderer_Native::ReleaseDeviceResources()
 {
-    // Release brushes
-    for (auto& cached : m_BrushCache)
-    {
-        if (cached.Brush)
-            cached.Brush->Release();
-    }
-    m_BrushCache.clear();
+	// Release brushes
+	for (auto& cached : m_BrushCache) {
+		if (cached.Brush)
+			cached.Brush->Release();
+	}
+	m_BrushCache.clear();
 
-    // Release render target
-    if (m_pRenderTarget)
-    {
-        m_pRenderTarget->Release();
-        m_pRenderTarget = nullptr;
-    }
+	// Release bitmaps (they depend on render target)
+	for (auto& cached : m_BitmapCache) {
+		if (cached.Bitmap)
+			cached.Bitmap->Release();
+	}
+	m_BitmapCache.clear();
 
-    m_resourcesValid = false;
+	// Release tab text cache
+	for (auto& entry : m_TabTextCache) {
+		for (auto& pair : entry.TabTexts) {
+			if (pair.second)
+				pair.second->Release();
+		}
+	}
+	m_TabTextCache.clear();
+
+	// Release drum symbol cache
+	for (auto& entry : m_DrumSymbolCache) {
+		for (auto& pair : entry.DrumSymbols) {
+			if (pair.second)
+				pair.second->Release();
+		}
+	}
+	m_DrumSymbolCache.clear();
+
+	// Release duration symbol cache
+	for (auto& entry : m_DurationSymbolCache) {
+		for (auto& pair : entry.DurationSymbols) {
+			if (pair.second)
+				pair.second->Release();
+		}
+	}
+	m_DurationSymbolCache.clear();
+
+	// Release Direct2D 1.1 resources
+	if (m_pTargetBitmap) {
+		m_pTargetBitmap->Release();
+		m_pTargetBitmap = nullptr;
+	}
+
+	if (m_pDeviceContext) {
+		m_pDeviceContext->Release();
+		m_pDeviceContext = nullptr;
+	}
+
+	if (m_pD2DDevice) {
+		m_pD2DDevice->Release();
+		m_pD2DDevice = nullptr;
+	}
+
+	// Release DXGI resources
+	if (m_pSwapChain) {
+		m_pSwapChain->Release();
+		m_pSwapChain = nullptr;
+	}
+
+	// Release Direct3D resources
+	if (m_pD3DDeviceContext) {
+		m_pD3DDeviceContext->Release();
+		m_pD3DDeviceContext = nullptr;
+	}
+
+	if (m_pD3DDevice) {
+		m_pD3DDevice->Release();
+		m_pD3DDevice = nullptr;
+	}
+
+	m_resourcesValid = false;
 }
 
 bool Timeline_Direct2DRenderer_Native::PreloadTabText(float fontSize, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor)
 {
-	if (!m_pRenderTarget || !m_resourcesValid) {
+	if (!m_pDeviceContext || !m_resourcesValid) {
 		return false;
 	}
 
@@ -232,7 +463,7 @@ bool Timeline_Direct2DRenderer_Native::PreloadTabText(float fontSize, const D2D1
         ID2D1Bitmap* Bitmap = nullptr;
         std::wstring TextStr = std::to_wstring(TabText);
 
-        CreateTabTextBitmap(TextStr, TabTextFontSize, &Bitmap, textColor, bgColor);
+		CreateTabTextBitmap(TextStr, TabTextFontSize, &Bitmap, textColor, bgColor);
 
         Entry.TabTexts[TabText] = Bitmap;
         Entry.TextWidths[TabText] = MeasureTextWidth(TextStr, TextFormat);
@@ -257,7 +488,7 @@ bool Timeline_Direct2DRenderer_Native::PreloadTabText(float fontSize, const D2D1
 
 bool Timeline_Direct2DRenderer_Native::PreloadDrumSymbol(float stringSpace, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
 {
-	if (!m_pRenderTarget || !m_resourcesValid) {
+	if (!m_pDeviceContext || !m_resourcesValid) {
 		return false;
 	}
 	
@@ -281,7 +512,7 @@ bool Timeline_Direct2DRenderer_Native::PreloadDrumSymbol(float stringSpace, cons
 
 bool Timeline_Direct2DRenderer_Native::PreloadDurationSymbols(float zoomLevel, float logScale, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
 {
-	if (!m_pRenderTarget || !m_resourcesValid) {
+	if (!m_pDeviceContext || !m_resourcesValid) {
 		return false;
 	}
 
@@ -387,40 +618,82 @@ IDWriteTextFormat* Timeline_Direct2DRenderer_Native::UpdateTablatureFormat(float
 
 bool Timeline_Direct2DRenderer_Native::ResizeRenderTarget(UINT width, UINT height)
 {
-    if (!m_pRenderTarget) {
-        return false;
-    }
+	if (!m_pSwapChain || !m_pDeviceContext) {
+		return false;
+	}
 
-    HRESULT hr = m_pRenderTarget->Resize(D2D1::SizeU(width, height));
+	// Release the old target bitmap
+	m_pDeviceContext->SetTarget(nullptr);
+	if (m_pTargetBitmap) {
+		m_pTargetBitmap->Release();
+		m_pTargetBitmap = nullptr;
+	}
 
-    return SUCCEEDED(hr);
+	// Resize the swap chain buffers
+	HRESULT hr = m_pSwapChain->ResizeBuffers(
+		0,      // Keep buffer count
+		width,
+		height,
+		DXGI_FORMAT_UNKNOWN,  // Keep format
+		0
+	);
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Recreate the target bitmap
+	return CreateTargetBitmap();
 }
 
 bool Timeline_Direct2DRenderer_Native::BeginDraw()
 {
-    if (!m_resourcesValid && !CreateDeviceResources())
+    if (!m_resourcesValid && !CreateDeviceResources()) {
         return false;
+	}
 
-    m_pRenderTarget->BeginDraw();
+	m_pDeviceContext->BeginDraw();
 
     return true;
 }
 
 bool Timeline_Direct2DRenderer_Native::EndDraw()
 {
-    if (!m_pRenderTarget) {
-        return false;
-    }
+	if (!m_pDeviceContext) {
+		return false;
+	}
 
-    HRESULT hr = m_pRenderTarget->EndDraw();
+	HRESULT hr = m_pDeviceContext->EndDraw();
 
-    if (hr == D2DERR_RECREATE_TARGET)
-    {
-        this->ReleaseDeviceResources();
-        return false;
-    }
-    
-    return SUCCEEDED(hr);
+	if (hr == D2DERR_RECREATE_TARGET)
+	{
+		this->ReleaseDeviceResources();
+		return false;
+	}
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Present the swap chain!
+	if (m_pSwapChain)
+	{
+		DXGI_PRESENT_PARAMETERS Parameters = {};
+		Parameters.DirtyRectsCount = 0;
+		Parameters.pDirtyRects = nullptr;
+		Parameters.pScrollRect = nullptr;
+		Parameters.pScrollOffset = nullptr;
+
+		hr = m_pSwapChain->Present1(0, 0, &Parameters);
+
+		if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+		{
+			this->ReleaseDeviceResources();
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void Timeline_Direct2DRenderer_Native::BeginBatch()
@@ -434,7 +707,7 @@ void Timeline_Direct2DRenderer_Native::BeginBatch()
 void Timeline_Direct2DRenderer_Native::ExecuteBatch()
 {
 #if USE_BATCH_RENDERING
-    if (m_pRenderTarget) {
+    if (m_pDeviceContext) {
         // Create brush cache map with the correct comparator type
         std::unordered_map<D2D1_COLOR_F, ID2D1SolidColorBrush*, ColorHash, ColorEqual> brushCache;
 
@@ -443,16 +716,16 @@ void Timeline_Direct2DRenderer_Native::ExecuteBatch()
             brushCache[cached.Color] = cached.Brush;
         }
 
-        m_CommandBatch.Execute(m_pRenderTarget, brushCache, false);
+        m_CommandBatch.Execute(m_pDeviceContext, brushCache, false);
     }
 #endif
 }
 
 void Timeline_Direct2DRenderer_Native::Clear(const D2D1_COLOR_F& color)
 {
-    if (m_pRenderTarget)
+    if (m_pDeviceContext)
     {
-        m_pRenderTarget->Clear(color);
+		m_pDeviceContext->Clear(color);
     }
 }
 
@@ -512,7 +785,7 @@ bool Timeline_Direct2DRenderer_Native::CreateStrokeStyles()
 
 bool Timeline_Direct2DRenderer_Native::CreateTabTextBitmap(const std::wstring& text, float fontSize, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& textColor, const D2D1_COLOR_F& bgColor)
 {
-	if (!m_pRenderTarget || !m_pDWriteFactory) {
+	if (!m_pDeviceContext || !m_pDWriteFactory) {
 		return false;
 	}
 
@@ -538,7 +811,7 @@ bool Timeline_Direct2DRenderer_Native::CreateTabTextBitmap(const std::wstring& t
 
 	// Create bitmap render target
 	ID2D1BitmapRenderTarget* BitmapRT = nullptr;
-	hr = m_pRenderTarget->CreateCompatibleRenderTarget(D2D1::SizeF(Metrics.width + 2, Metrics.height + 2), &BitmapRT); // Add padding
+	hr = m_pDeviceContext->CreateCompatibleRenderTarget(D2D1::SizeF(Metrics.width + 2, Metrics.height + 2), &BitmapRT); // Add padding
 
 	if (SUCCEEDED(hr))
 	{
@@ -572,7 +845,7 @@ bool Timeline_Direct2DRenderer_Native::CreateTabTextBitmap(const std::wstring& t
 
 bool Timeline_Direct2DRenderer_Native::CreateDrumSymbolBitmap(int symbolType, float size, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
 {
-	if (!m_pRenderTarget) {
+	if (!m_pDeviceContext) {
 		return false;
 	}
 
@@ -587,7 +860,7 @@ bool Timeline_Direct2DRenderer_Native::CreateDrumSymbolBitmap(int symbolType, fl
 	// Create bitmap render target with more padding
 	ID2D1BitmapRenderTarget* BitmapRT = nullptr;
 
-	HRESULT hr = m_pRenderTarget->CreateCompatibleRenderTarget(D2D1::SizeF(BitmapSize, BitmapSize), &BitmapRT);
+	HRESULT hr = m_pDeviceContext->CreateCompatibleRenderTarget(D2D1::SizeF(BitmapSize, BitmapSize), &BitmapRT);
 
 	if (SUCCEEDED(hr))
 	{
@@ -637,7 +910,7 @@ bool Timeline_Direct2DRenderer_Native::CreateDrumSymbolBitmap(int symbolType, fl
 
 bool Timeline_Direct2DRenderer_Native::CreateDurationSymbolBitmap(int duration, float zoomLevel, float logScale, ID2D1Bitmap** ppBitmap, const D2D1_COLOR_F& symbolColor, const D2D1_COLOR_F& bgColor)
 {
-    if (!m_pRenderTarget || !ppBitmap) {
+    if (!m_pDeviceContext || !ppBitmap) {
         return false;
     }
 
@@ -653,7 +926,7 @@ bool Timeline_Direct2DRenderer_Native::CreateDurationSymbolBitmap(int duration, 
     float SymbolXCenter = SymbolWidth / 2;
 
     ID2D1BitmapRenderTarget* symbolRT = nullptr;
-    HRESULT hr = m_pRenderTarget->CreateCompatibleRenderTarget(D2D1::SizeF(SymbolWidth, SymbolHeight), &symbolRT);
+    HRESULT hr = m_pDeviceContext->CreateCompatibleRenderTarget(D2D1::SizeF(SymbolWidth, SymbolHeight), &symbolRT);
 
     if (FAILED(hr) || !symbolRT) {
         return false;
@@ -1034,7 +1307,7 @@ bool Timeline_Direct2DRenderer_Native::CreateTextFormats()
 
 bool Timeline_Direct2DRenderer_Native::CreateBitmapFromImage(System::Drawing::Image^ image, ID2D1Bitmap** ppBitmap)
 {
-    if (!m_pRenderTarget || !image || !ppBitmap) {
+    if (!m_pDeviceContext || !image || !ppBitmap) {
         return false;
     }
 
@@ -1047,7 +1320,7 @@ bool Timeline_Direct2DRenderer_Native::CreateBitmapFromImage(System::Drawing::Im
     D2D1_BITMAP_PROPERTIES props = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
 
     // Create the bitmap
-    HRESULT hr = m_pRenderTarget->CreateBitmap(D2D1::SizeU(GDIBitmap->Width, GDIBitmap->Height), BitmapData->Scan0.ToPointer(), BitmapData->Stride, props, ppBitmap);
+    HRESULT hr = m_pDeviceContext->CreateBitmap(D2D1::SizeU(GDIBitmap->Width, GDIBitmap->Height), BitmapData->Scan0.ToPointer(), BitmapData->Stride, props, ppBitmap);
 
     GDIBitmap->UnlockBits(BitmapData);
     delete GDIBitmap;
@@ -1069,11 +1342,11 @@ bool Timeline_Direct2DRenderer_Native::CreateAndCacheBitmap(const std::wstring& 
 
 bool Timeline_Direct2DRenderer_Native::DrawBitmap(ID2D1Bitmap* bitmap, const D2D1_RECT_F& destRect, float opacity)
 {
-    if (!m_pRenderTarget || !bitmap) {
+    if (!m_pDeviceContext || !bitmap) {
         return false;
     }
 
-    m_pRenderTarget->DrawBitmap(bitmap, destRect, opacity, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+	m_pDeviceContext->DrawBitmap(bitmap, destRect, opacity, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
 
     return true;
 }
@@ -1089,7 +1362,7 @@ ID2D1SolidColorBrush* Timeline_Direct2DRenderer_Native::GetCachedBrush(const D2D
 
 	// Create new brush
 	ID2D1SolidColorBrush* brush = nullptr;
-	HRESULT hr = m_pRenderTarget->CreateSolidColorBrush(color, &brush);
+	HRESULT hr = m_pDeviceContext->CreateSolidColorBrush(color, &brush);
 
 	if (FAILED(hr))
 		return nullptr;
@@ -1116,7 +1389,7 @@ bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, fl
     m_CommandBatch.AddLine(x1, y1, x2, y2, color, strokeWidth);
     return true;
 #else
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
 	}
 
@@ -1125,7 +1398,7 @@ bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, fl
         return false;
     }
 
-    m_pRenderTarget->DrawLine(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), brush, strokeWidth);
+    m_pDeviceContext->DrawLine(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), brush, strokeWidth);
 
     return true;
 #endif
@@ -1140,7 +1413,7 @@ bool Timeline_Direct2DRenderer_Native::DrawLine(float x1, float y1, float x2, fl
 
 bool Timeline_Direct2DRenderer_Native::DrawLines(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color, float strokeWidth)
 {
-    if (!m_pRenderTarget || !points || pointCount < 2) {
+    if (!m_pDeviceContext || !points || pointCount < 2) {
         return false;
     }
 
@@ -1150,7 +1423,7 @@ bool Timeline_Direct2DRenderer_Native::DrawLines(const D2D1_POINT_2F* points, UI
     }
 
     for (UINT32 i = 0; i < pointCount - 1; i++) {
-        m_pRenderTarget->DrawLine(points[i], points[i + 1], brush, strokeWidth);
+		m_pDeviceContext->DrawLine(points[i], points[i + 1], brush, strokeWidth);
     }
 
     return true;
@@ -1162,7 +1435,7 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangle(const D2D1_RECT_F& rect, co
     m_CommandBatch.AddRectangle(rect, color, strokeWidth);
     return true;
 #else    
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1172,7 +1445,7 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangle(const D2D1_RECT_F& rect, co
     }
 
     // There is an issue with 'm_pSolidStroke'
-    m_pRenderTarget->DrawRectangle(rect, brush, strokeWidth);
+    m_pDeviceContext->DrawRectangle(rect, brush, strokeWidth);
 
     return true;
 #endif
@@ -1193,7 +1466,7 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangleDashed(const D2D1_RECT_F& re
     m_CommandBatch.AddDashedRectangle(rect, color, strokeWidth, dashLength, gapLength, zOrder);
     return true;
 #else
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1236,7 +1509,7 @@ bool Timeline_Direct2DRenderer_Native::DrawRectangleDashed(const D2D1_RECT_F& re
 	}
 
 	// Draw the rectangle with the dashed stroke style
-	m_pRenderTarget->DrawRectangle(rect, brush, strokeWidth, m_pDashedStroke);
+	m_pDeviceContext->DrawRectangle(rect, brush, strokeWidth, m_pDashedStroke);
 
 	return true;
 #endif
@@ -1248,7 +1521,7 @@ bool Timeline_Direct2DRenderer_Native::FillRectangle(const D2D1_RECT_F& rect, co
     m_CommandBatch.AddFilledRectangle(rect, color);
     return true;
 #else
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1257,7 +1530,7 @@ bool Timeline_Direct2DRenderer_Native::FillRectangle(const D2D1_RECT_F& rect, co
         return false;
     }
 
-    m_pRenderTarget->FillRectangle(rect, brush);
+    m_pDeviceContext->FillRectangle(rect, brush);
     return true;
 #endif
 }
@@ -1320,13 +1593,13 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleGradient(const D2D1_RECT_F& 
     m_CommandBatch.AddGradientRectangle(rect, stops, true);
     return true;
 #else
-    if (!m_pRenderTarget || gradientStops == NULL) {
+    if (!m_pDeviceContext || gradientStops == NULL) {
 		return false;
 	}
 	
 	ID2D1GradientStopCollection* pGradientStops = NULL;
 	
-	HRESULT hr = m_pRenderTarget->CreateGradientStopCollection(
+	HRESULT hr = m_pDeviceContext->CreateGradientStopCollection(
 		gradientStops,
 		count,
 		D2D1_GAMMA_2_2,
@@ -1338,7 +1611,7 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleGradient(const D2D1_RECT_F& 
 		return false;
 	}
 
-	hr = m_pRenderTarget->CreateLinearGradientBrush(
+	hr = m_pDeviceContext->CreateLinearGradientBrush(
 		D2D1::LinearGradientBrushProperties(
 			D2D1::Point2F(rect.left,  (rect.bottom - rect.left) / 2),
 			D2D1::Point2F(rect.right, (rect.bottom - rect.left) / 2)),
@@ -1350,7 +1623,7 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleGradient(const D2D1_RECT_F& 
 		return false;
 	}
 
-	m_pRenderTarget->FillRectangle(rect, m_pLinearGradientBrush);
+	m_pDeviceContext->FillRectangle(rect, m_pLinearGradientBrush);
 	
 	return true;
 #endif
@@ -1359,7 +1632,7 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleGradient(const D2D1_RECT_F& 
 bool Timeline_Direct2DRenderer_Native::FillRectangleStripes(const D2D1_RECT_F& rect, const D2D1_COLOR_F& color, float stripeWidth)
 {
 #if !(USE_BATCH_RENDERING)
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
 		return false;
 	}
 
@@ -1396,7 +1669,7 @@ bool Timeline_Direct2DRenderer_Native::FillRectangleStripes(const D2D1_RECT_F& r
 #if USE_BATCH_RENDERING
             m_CommandBatch.AddFilledRectangle(stripeRect, color);
 #else
-			m_pRenderTarget->FillRectangle(stripeRect, brush);
+			m_pDeviceContext->FillRectangle(stripeRect, brush);
 #endif
 		}
 	}
@@ -1411,7 +1684,7 @@ bool Timeline_Direct2DRenderer_Native::DrawRoundedRectangle(const D2D1_ROUNDED_R
     m_CommandBatch.AddRoundedRectangle(rect, color, strokeWidth);
     return true;
 #else
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1420,7 +1693,7 @@ bool Timeline_Direct2DRenderer_Native::DrawRoundedRectangle(const D2D1_ROUNDED_R
         return false;
     }
     
-    m_pRenderTarget->DrawRoundedRectangle(rect, brush, strokeWidth);
+    m_pDeviceContext->DrawRoundedRectangle(rect, brush, strokeWidth);
     return true;
 #endif
 }
@@ -1439,7 +1712,7 @@ bool Timeline_Direct2DRenderer_Native::FillRoundedRectangle(const D2D1_ROUNDED_R
     m_CommandBatch.AddFilledRoundedRectangle(rect, color);
     return true;
 #else
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1448,7 +1721,7 @@ bool Timeline_Direct2DRenderer_Native::FillRoundedRectangle(const D2D1_ROUNDED_R
         return false;
     }
 
-    m_pRenderTarget->FillRoundedRectangle(rect, brush);
+    m_pDeviceContext->FillRoundedRectangle(rect, brush);
     return true;
 #endif
 }
@@ -1467,7 +1740,7 @@ bool Timeline_Direct2DRenderer_Native::DrawEllipse(const D2D1_ELLIPSE& ellipse, 
     m_CommandBatch.AddEllipse(ellipse, color, strokeWidth);
     return true;
 #else
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1476,7 +1749,7 @@ bool Timeline_Direct2DRenderer_Native::DrawEllipse(const D2D1_ELLIPSE& ellipse, 
         return false;
     }
 
-    m_pRenderTarget->DrawEllipse(ellipse, brush, strokeWidth);
+    m_pDeviceContext->DrawEllipse(ellipse, brush, strokeWidth);
     return true;
 #endif
 }
@@ -1487,7 +1760,7 @@ bool Timeline_Direct2DRenderer_Native::FillEllipse(const D2D1_ELLIPSE& ellipse, 
     m_CommandBatch.AddFilledEllipse(ellipse, color);
     return true;
 #else
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1496,14 +1769,14 @@ bool Timeline_Direct2DRenderer_Native::FillEllipse(const D2D1_ELLIPSE& ellipse, 
         return false;
     }
 
-    m_pRenderTarget->FillEllipse(ellipse, brush);
+    m_pDeviceContext->FillEllipse(ellipse, brush);
     return true;
 #endif
 }
 
 bool Timeline_Direct2DRenderer_Native::DrawPolygon(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color, float strokeWidth)
 {
-    if (!m_pRenderTarget || !points || pointCount < 3) {
+    if (!m_pDeviceContext || !points || pointCount < 3) {
         return false;
     }
 
@@ -1517,7 +1790,7 @@ bool Timeline_Direct2DRenderer_Native::DrawPolygon(const D2D1_POINT_2F* points, 
     {
         const D2D1_POINT_2F& p1 = points[i];
         const D2D1_POINT_2F& p2 = points[(i + 1) % pointCount]; // Wrap around to first point
-        m_pRenderTarget->DrawLine(p1, p2, brush, strokeWidth);
+		m_pDeviceContext->DrawLine(p1, p2, brush, strokeWidth);
     }
 
     return true;
@@ -1525,7 +1798,7 @@ bool Timeline_Direct2DRenderer_Native::DrawPolygon(const D2D1_POINT_2F* points, 
 
 bool Timeline_Direct2DRenderer_Native::FillDiamond(const D2D1_POINT_2F* points, UINT32 pointCount, const D2D1_COLOR_F& color)
 {
-    if (!m_pRenderTarget || !points || pointCount != 4) {  // For diamonds only
+    if (!m_pDeviceContext || !points || pointCount != 4) {  // For diamonds only
         return false;
     }
 
@@ -1552,11 +1825,11 @@ bool Timeline_Direct2DRenderer_Native::FillDiamond(const D2D1_POINT_2F* points, 
 
     // Save current transform
     D2D1_MATRIX_3X2_F OldTransform;
-    m_pRenderTarget->GetTransform(&OldTransform);
+	m_pDeviceContext->GetTransform(&OldTransform);
 
     // Create transform matrix for 45-degree rotation around center
     D2D1_MATRIX_3X2_F RotationMatrix = D2D1::Matrix3x2F::Rotation(45.0f, center);
-    m_pRenderTarget->SetTransform(RotationMatrix);
+	m_pDeviceContext->SetTransform(RotationMatrix);
 
     // Draw rotated rectangle
     D2D1_RECT_F Rect = D2D1::RectF(
@@ -1566,10 +1839,10 @@ bool Timeline_Direct2DRenderer_Native::FillDiamond(const D2D1_POINT_2F* points, 
         center.y + Height / 2.8284f
     );
 
-    m_pRenderTarget->FillRectangle(Rect, Brush);
+	m_pDeviceContext->FillRectangle(Rect, Brush);
 
     // Restore original transform
-    m_pRenderTarget->SetTransform(OldTransform);
+	m_pDeviceContext->SetTransform(OldTransform);
 
     return true;
 }
@@ -1580,7 +1853,7 @@ bool Timeline_Direct2DRenderer_Native::DrawTieLine(const D2D1_POINT_2F& point1, 
     m_CommandBatch.AddTieLine(point1, point2, point3, point4, color, strokeWidth);
     return true;
 #else
-    if (!m_pRenderTarget || !m_pD2DFactory) {
+    if (!m_pDeviceContext || !m_pD2DFactory) {
         return false;
     }
 
@@ -1622,7 +1895,7 @@ bool Timeline_Direct2DRenderer_Native::DrawTieLine(const D2D1_POINT_2F& point1, 
 
 	if (SUCCEEDED(hr)) {
 		// Draw the bezier curve
-		m_pRenderTarget->DrawGeometry(pathGeometry, brush, strokeWidth);
+		m_pDeviceContext->DrawGeometry(pathGeometry, brush, strokeWidth);
 	}
 
 	// Clean up
@@ -1634,7 +1907,7 @@ bool Timeline_Direct2DRenderer_Native::DrawTieLine(const D2D1_POINT_2F& point1, 
 
 bool Timeline_Direct2DRenderer_Native::DrawPath(ID2D1Geometry* geometry, const D2D1_COLOR_F& color, float strokeWidth)
 {
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1643,13 +1916,13 @@ bool Timeline_Direct2DRenderer_Native::DrawPath(ID2D1Geometry* geometry, const D
         return false;
     }
 
-    m_pRenderTarget->DrawGeometry(geometry, brush, strokeWidth);
+	m_pDeviceContext->DrawGeometry(geometry, brush, strokeWidth);
     return true;
 }
 
 bool Timeline_Direct2DRenderer_Native::FillPath(ID2D1Geometry* geometry, const D2D1_COLOR_F& color)
 {
-    if (!m_pRenderTarget) {
+    if (!m_pDeviceContext) {
         return false;
     }
 
@@ -1658,7 +1931,7 @@ bool Timeline_Direct2DRenderer_Native::FillPath(ID2D1Geometry* geometry, const D
         return false;
     }
 
-    m_pRenderTarget->FillGeometry(geometry, brush);
+	m_pDeviceContext->FillGeometry(geometry, brush);
     return true;
 }
 
@@ -1672,7 +1945,7 @@ bool Timeline_Direct2DRenderer_Native::DrawText(const std::wstring& text, const 
     m_CommandBatch.AddText(text, layoutRect, color, textFormat);
     return true;
 #else
-    if (!m_pRenderTarget || !textFormat) {
+    if (!m_pDeviceContext || !textFormat) {
         return false;
     }
 
@@ -1683,7 +1956,7 @@ bool Timeline_Direct2DRenderer_Native::DrawText(const std::wstring& text, const 
         return false;
     }
 
-    m_pRenderTarget->DrawText(text.c_str(), static_cast<UINT32>(text.length()), textFormat, layoutRect, brush, options);
+    m_pDeviceContext->DrawText(text.c_str(), static_cast<UINT32>(text.length()), textFormat, layoutRect, brush, options);
 
     return true;
 #endif
@@ -1745,40 +2018,27 @@ bool Timeline_Direct2DRenderer_Native::DrawCachedBitmap(const std::wstring& key,
 #endif
 }
 
-bool Timeline_Direct2DRenderer_Native::DrawCachedTabText(int fretNumber, const D2D1_RECT_F& destRect, float fontSize)
+bool Timeline_Direct2DRenderer_Native::DrawCachedTabText(int fretNumber, const D2D1_RECT_F& destRect, float fontSize, TabTextCacheEntry* cachedTabTextEntry)
 {
+    if (!cachedTabTextEntry) {
+        return false;
+    }
+
+    auto it = cachedTabTextEntry->TabTexts.find(fretNumber);
+    if (it == cachedTabTextEntry->TabTexts.end()) {
+        return false;
+    }
+
 #if USE_BATCH_RENDERING
-    TabTextCacheEntry* cachedEntry = GetNearestCachedTabTextEntry(fontSize);
-    if (!cachedEntry) {
-        return false;
-    }
-
-    auto it = cachedEntry->TabTexts.find(fretNumber);
-    if (it == cachedEntry->TabTexts.end()) {
-        return false;
-    }
-
     m_CommandBatch.AddBitmap(it->second, destRect, 1.0f);
-    //m_CommandBatch.AddTabText(it->second, destRect);
     return true;
 #else
-    if (!m_pRenderTarget) {
-		return false;
-	}
-
-	TabTextCacheEntry* CachedEntry = GetNearestCachedTabTextEntry(fontSize);
-	if (!CachedEntry) {
-		return false;
-	}
-
-	auto it = CachedEntry->TabTexts.find(fretNumber);
-	if (it == CachedEntry->TabTexts.end()) {
-		// Symbol not found in cache - this shouldn't happen if preloading worked correctly
+    if (!m_pDeviceContext) {
 		return false;
 	}
 
 	// Draw the cached bitmap
-	m_pRenderTarget->DrawBitmap(
+	m_pDeviceContext->DrawBitmap(
 		it->second,    // The cached bitmap
 		destRect,      // Destination rectangle
 		1.0f,          // Opacity
@@ -1789,40 +2049,29 @@ bool Timeline_Direct2DRenderer_Native::DrawCachedTabText(int fretNumber, const D
 #endif
 }
 
-bool Timeline_Direct2DRenderer_Native::DrawCachedDrumSymbol(int symbolIndex, const D2D1_RECT_F& destRect, float stringSpace)
+bool Timeline_Direct2DRenderer_Native::DrawCachedDrumSymbol(int symbolIndex, const D2D1_RECT_F& destRect, float stringSpace, DrumSymbolCacheEntry* cachedDrumSymbolEntry)
 {
+    if (!cachedDrumSymbolEntry) {
+        return false;
+    }
+
+    auto it = cachedDrumSymbolEntry->DrumSymbols.find(symbolIndex);
+
+	if (it == cachedDrumSymbolEntry->DrumSymbols.end()) {
+        return false;
+    }
+
 #if USE_BATCH_RENDERING
-    DrumSymbolCacheEntry* cachedEntry = GetNearestCachedDrumSymbolEntry(stringSpace);
-    if (!cachedEntry) {
-        return false;
-    }
-
-    auto it = cachedEntry->DrumSymbols.find(symbolIndex);
-    if (it == cachedEntry->DrumSymbols.end()) {
-        return false;
-    }
-
     m_CommandBatch.AddBitmap(it->second, destRect, 1.0f);
-    //m_CommandBatch.AddDrumSymbol(it->second, destRect);
+
     return true;
 #else
-    if (!m_pRenderTarget) {
-		return false;
-	}
-
-	DrumSymbolCacheEntry* CachedEntry = GetNearestCachedDrumSymbolEntry(stringSpace);
-	if (!CachedEntry) {
-		return false;
-	}
-
-	auto it = CachedEntry->DrumSymbols.find(symbolIndex);
-	if (it == CachedEntry->DrumSymbols.end()) {
-		// Symbol not found in cache - this shouldn't happen if preloading worked correctly
+    if (!m_pDeviceContext) {
 		return false;
 	}
 
 	// Draw the cached bitmap
-	m_pRenderTarget->DrawBitmap(
+	m_pDeviceContext->DrawBitmap(
 		it->second,    // The cached bitmap
 		destRect,      // Destination rectangle
 		1.0f,          // Opacity
@@ -1833,40 +2082,28 @@ bool Timeline_Direct2DRenderer_Native::DrawCachedDrumSymbol(int symbolIndex, con
 #endif
 }
 
-bool Timeline_Direct2DRenderer_Native::DrawCachedDudationSymbol(int duration, const D2D1_RECT_F& destRect, float zoomLevel)
+bool Timeline_Direct2DRenderer_Native::DrawCachedDurationSymbol(int duration, const D2D1_RECT_F& destRect, float zoomLevel, DurationSymbolCacheEntry* cachedDurationSymbol)
 {
+    if (!cachedDurationSymbol) {
+        return false;
+    }
+
+    auto it = cachedDurationSymbol->DurationSymbols.find(duration);
+    if (it == cachedDurationSymbol->DurationSymbols.end()) {
+        return false;
+    }
+
 #if USE_BATCH_RENDERING
-    DurationSymbolCacheEntry* cachedEntry = GetNearestCachedDurationSymbolEntry(zoomLevel);
-    if (!cachedEntry) {
-        return false;
-    }
-
-    auto it = cachedEntry->DurationSymbols.find(duration);
-    if (it == cachedEntry->DurationSymbols.end()) {
-        return false;
-    }
-
     m_CommandBatch.AddBitmap(it->second, destRect, 1.0f);
-    //m_CommandBatch.AddDurationSymbol(it->second, destRect);
+
     return true;
 #else
-    if (!m_pRenderTarget) {
-        return false;
-    }
-
-    DurationSymbolCacheEntry* CachedEntry = GetNearestCachedDurationSymbolEntry(zoomLevel);
-    if (!CachedEntry) {
-        return false;
-    }
-
-    auto it = CachedEntry->DurationSymbols.find(duration);
-    if (it == CachedEntry->DurationSymbols.end()) {
-        // Symbol not found in cache - this shouldn't happen if preloading worked correctly
+    if (!m_pDeviceContext) {
         return false;
     }
 
     // Draw the cached bitmap
-    m_pRenderTarget->DrawBitmap(
+    m_pDeviceContext->DrawBitmap(
         it->second,    // The cached bitmap
         destRect,      // Destination rectangle
         1.0f,          // Opacity
@@ -1923,63 +2160,65 @@ DurationSymbolCacheEntry* Timeline_Direct2DRenderer_Native::GetNearestCachedDura
 
 bool Timeline_Direct2DRenderer_Native::PushLayer(const D2D1_LAYER_PARAMETERS& layerParameters, ID2D1Layer* layer)
 {
-    if (!m_pRenderTarget || !layer) {
+    if (!m_pDeviceContext || !layer) {
         return false;
     }
 
-    m_pRenderTarget->PushLayer(layerParameters, layer);
+	m_pDeviceContext->PushLayer(layerParameters, layer);
     return true;
 }
 
 void Timeline_Direct2DRenderer_Native::PopLayer()
 {
-    if (m_pRenderTarget) {
-        m_pRenderTarget->PopLayer();
+    if (m_pDeviceContext) {
+		m_pDeviceContext->PopLayer();
     }
 }
 
 void Timeline_Direct2DRenderer_Native::PushAxisAlignedClip(const D2D1_RECT_F& clipRect, D2D1_ANTIALIAS_MODE antialiasMode)
 {
-    if (m_pRenderTarget) {
-        m_pRenderTarget->PushAxisAlignedClip(clipRect, antialiasMode);
+    if (m_pDeviceContext) {
+		m_pDeviceContext->PushAxisAlignedClip(clipRect, antialiasMode);
     }
 }
 
 void Timeline_Direct2DRenderer_Native::PopAxisAlignedClip()
 {
-    if (m_pRenderTarget) {
-        m_pRenderTarget->PopAxisAlignedClip();
+    if (m_pDeviceContext) {
+		m_pDeviceContext->PopAxisAlignedClip();
     }
 }
 
 void Timeline_Direct2DRenderer_Native::SetTransform(const D2D1_MATRIX_3X2_F& transform)
 {
-    if (m_pRenderTarget) {
-        m_pRenderTarget->SetTransform(transform);
+    if (m_pDeviceContext) {
+		m_pDeviceContext->SetTransform(transform);
     }
 }
 
 void Timeline_Direct2DRenderer_Native::GetTransform(D2D1_MATRIX_3X2_F* transform)
 {
-    if (m_pRenderTarget && transform) {
-        m_pRenderTarget->GetTransform(transform);
+    if (m_pDeviceContext && transform) {
+		m_pDeviceContext->GetTransform(transform);
     }
 }
 
 bool Timeline_Direct2DRenderer_Native::CreateLayer(ID2D1Layer** layer)
 {
-    if (!m_pRenderTarget || !layer) {
+    if (!m_pDeviceContext || !layer) {
         return false;
     }
 
-    HRESULT hr = m_pRenderTarget->CreateLayer(nullptr, layer);
+    HRESULT hr = m_pDeviceContext->CreateLayer(nullptr, layer);
+
     return SUCCEEDED(hr);
 }
 
 bool Timeline_Direct2DRenderer_Native::CreatePathGeometry(ID2D1PathGeometry** geometry)
 {
-    if (!m_pD2DFactory || !geometry)
+    if (!m_pD2DFactory || !geometry) {
         return false;
+	}
 
     HRESULT hr = m_pD2DFactory->CreatePathGeometry(geometry);
     return SUCCEEDED(hr);

@@ -485,25 +485,25 @@ namespace MIDILightDrawer
 			}
 		}
 
+		// Restore original positions if there's an overlap
+		if (HasOverlappingBarsOnBarTrack(_PreviewBars))
+		{
+			for (int i = 0; i < _PreviewBars->Count; i++) {
+				_PreviewBars[i]->StartTick = _OriginalBarStartTicks[i];
+			}
+		}
+
 		// Only update target track if not over header area and not multi-track selection
 		if (!IsMultiTrackSelection && mousePos.X > _Timeline->GetLeftPanelAndTrackHeaderWidth())
 		{
 			_DragTargetTrack = _Timeline->GetTrackAtPoint(mousePos);
-
+			
 			if ((_DragTargetTrack != nullptr) && !HasOverlappingBarsOnSpecificTrack(_DragTargetTrack, _PreviewBars))
 			{
 				for each (BarEvent^ Bar in _PreviewBars)
 				{
 					Bar->ContainingTrack = _DragTargetTrack;
 				}
-			}
-		}
-
-		// Restore original positions if there's an overlap
-		if (HasOverlappingBarsOnBarTrack(_PreviewBars))
-		{
-			for (int i = 0; i < _PreviewBars->Count; i++) {
-				_PreviewBars[i]->StartTick = _OriginalBarStartTicks[i];
 			}
 		}
 

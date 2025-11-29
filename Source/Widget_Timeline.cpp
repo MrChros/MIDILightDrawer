@@ -1302,8 +1302,9 @@ namespace MIDILightDrawer
 		_Tools->Add(TimelineToolType::Fade		, gcnew FadeTool	(this));
 		_Tools->Add(TimelineToolType::Strobe	, gcnew StrobeTool	(this));
 
-		// Set default tool
+		// Set default tool and snapping
 		_CurrentToolType = TimelineToolType::Pointer;
+		_SnappingType = SnappingType::Snap_None;
 		_CurrentTool = _Tools[_CurrentToolType];
 	}
 

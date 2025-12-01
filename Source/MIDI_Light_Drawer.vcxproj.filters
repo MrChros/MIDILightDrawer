@@ -231,6 +231,12 @@
     <ClInclude Include="Timeline_Interval_Tree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Form_Auto_Generate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Control_ComboBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIDI_Light_Drawer.cpp">
@@ -438,6 +444,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Timeline_Interval_Tree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Form_Auto_Generate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Form_Auto_Generate_Algorithm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Control_ComboBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

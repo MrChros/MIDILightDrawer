@@ -167,4 +167,42 @@ namespace MIDILightDrawer
 	{
 		Playback_Audio_Engine_Native::Set_Volume(volume_percent);
 	}
+
+	bool Playback_Audio_Engine::Get_Audio_Samples(int64_t start_sample, int64_t sample_count, array<float>^ output_buffer)
+	{
+		if (output_buffer == nullptr || output_buffer->Length < sample_count)
+			return false;
+
+		pin_ptr<float> Pinned_Buffer = &output_buffer[0];
+		return Playback_Audio_Engine_Native::Get_Audio_Samples(start_sample, sample_count, Pinned_Buffer);
+	}
+
+	array<float>^ Playback_Audio_Engine::Get_Audio_Samples_Range(double start_ms, double end_ms)
+	{
+		if (!Playback_Audio_Engine_Native::Is_Audio_Loaded()) {
+			return nullptr;
+		}
+
+		int Sample_Rate = Playback_Audio_Engine_Native::Get_Sample_Rate_File();
+		int Num_Channels = Playback_Audio_Engine_Native::Get_Channel_Count();
+
+		int64_t Start_Sample = (int64_t)((start_ms / 1000.0) * Sample_Rate);
+		int64_t End_Sample = (int64_t)((end_ms / 1000.0) * Sample_Rate);
+		int64_t Sample_Count = End_Sample - Start_Sample;
+
+		if (Sample_Count <= 0) {
+			return nullptr;
+		}
+
+		// Allocate managed array (interleaved samples)
+		array<float>^ Result = gcnew array<float>((int)(Sample_Count * Num_Channels));
+
+		pin_ptr<float> Pinned_Buffer = &Result[0];
+		if (Playback_Audio_Engine_Native::Get_Audio_Samples(Start_Sample, Sample_Count, Pinned_Buffer))
+		{
+			return Result;
+		}
+
+		return nullptr;
+	}
 }

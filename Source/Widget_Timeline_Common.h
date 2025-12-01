@@ -90,7 +90,7 @@ namespace MIDILightDrawer
 		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureRegularStringComplete;
 		static initonly System::Collections::Generic::List<int>^				TimeSignatureRegularValues;
 
-		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureExtendedrStringMain;
+		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureExtendedStringMain;
 		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureExtendedStringSub;
 		static initonly System::Collections::Generic::List<System::String^>^	TimeSignatureExtendedStringComplete;
 		static initonly System::Collections::Generic::List<int>^				TimeSignatureExtendedValues;
@@ -188,10 +188,10 @@ namespace MIDILightDrawer
 			TimeSignatureRegularValues->Add(305);
 			TimeSignatureRegularValues->Add(319);
 
-			TimeSignatureExtendedrStringMain = gcnew System::Collections::Generic::List<System::String^>;
-			TimeSignatureExtendedrStringMain->AddRange(TimeSignatureRegularStringMain);
-			TimeSignatureExtendedrStringMain->Add("1/64");
-			TimeSignatureExtendedrStringMain->Add("1/128");
+			TimeSignatureExtendedStringMain = gcnew System::Collections::Generic::List<System::String^>;
+			TimeSignatureExtendedStringMain->AddRange(TimeSignatureRegularStringMain);
+			TimeSignatureExtendedStringMain->Add("1/64");
+			TimeSignatureExtendedStringMain->Add("1/128");
 
 			TimeSignatureExtendedStringSub = gcnew System::Collections::Generic::List<System::String^>;
 			TimeSignatureExtendedStringSub->AddRange(TimeSignatureRegularStringSub);
@@ -199,8 +199,8 @@ namespace MIDILightDrawer
 			TimeSignatureExtendedStringSub->Add("");
 
 			TimeSignatureExtendedStringComplete = gcnew System::Collections::Generic::List<System::String^>;
-			for (int i = 0;i < TimeSignatureExtendedrStringMain->Count;i++) {
-				TimeSignatureExtendedStringComplete->Add(gcnew System::String(TimeSignatureExtendedrStringMain[i] + " " + TimeSignatureExtendedStringSub[i]));
+			for (int i = 0;i < TimeSignatureExtendedStringMain->Count;i++) {
+				TimeSignatureExtendedStringComplete->Add(gcnew System::String(TimeSignatureExtendedStringMain[i] + " " + TimeSignatureExtendedStringSub[i]));
 			}
 
 			TimeSignatureExtendedValues = gcnew System::Collections::Generic::List<int>;
@@ -211,7 +211,7 @@ namespace MIDILightDrawer
 
 			TimeSignatureLookup = gcnew System::Collections::Generic::Dictionary<int, System::String^>;
 
-			for (int i = 0;i < TimeSignatureExtendedrStringMain->Count;i++) {
+			for (int i = 0;i < TimeSignatureExtendedStringMain->Count;i++) {
 				TimeSignatureLookup->Add(TimeSignatureExtendedValues[i], TimeSignatureExtendedStringComplete[i]);
 			}
 		}

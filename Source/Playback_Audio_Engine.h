@@ -30,7 +30,7 @@ namespace MIDILightDrawer
 		void Update_From_Native();
 	};
 	
-	ref class Playback_Audio_Engine
+	public ref class Playback_Audio_Engine
 	{
 	private:
 		String^ _File_Path;
@@ -57,6 +57,8 @@ namespace MIDILightDrawer
 		bool Is_Playing();
 		void Set_Offset(double offset_ms);
 		void Set_Volume(double volume_percent);
+		bool Get_Audio_Samples(int64_t start_sample, int64_t sample_count, array<float>^ output_buffer);
+		array<float>^ Get_Audio_Samples_Range(double start_ms, double end_ms);
 
 		property bool Is_Audio_Loaded {
 			bool get() { return Playback_Audio_Engine_Native::Is_Audio_Loaded(); }

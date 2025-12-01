@@ -116,6 +116,10 @@ namespace MIDILightDrawer
 			double get() { return _Audio_Engine->Duration_ms; }
 		}
 
+		property Playback_Audio_Engine^ Audio_Engine {
+			Playback_Audio_Engine^ get() { return _Audio_Engine; }
+		}
+
 		property Waveform_Render_Data^ Audio_Waveform_Data {
 			Waveform_Render_Data^ get() { return _Audio_Engine->Waveform_Data; }
 		}

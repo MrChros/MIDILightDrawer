@@ -139,6 +139,7 @@
     <ClInclude Include="Control_ColorPicker.h" />
     <ClInclude Include="Control_ColorPreset.h" />
     <ClInclude Include="Control_ColorSlider.h" />
+    <ClInclude Include="Control_ComboBox.h" />
     <ClInclude Include="Control_DataGrid.h" />
     <ClInclude Include="Control_DropDown.h" />
     <ClInclude Include="Control_ExpandablePanel.h" />
@@ -160,6 +161,7 @@
     <ClInclude Include="Device_Manager_MIDI_Native.h" />
     <ClInclude Include="Dialog_ColorPicker.h" />
     <ClInclude Include="Easings.h" />
+    <ClInclude Include="Form_Auto_Generate.h" />
     <ClInclude Include="Form_BatchAction.h" />
     <ClInclude Include="Form_Device_Configuration.h" />
     <ClInclude Include="Form_Light_Import.h" />
@@ -213,6 +215,7 @@
     <ClCompile Include="Control_ColorPicker.cpp" />
     <ClCompile Include="Control_ColorPreset.cpp" />
     <ClCompile Include="Control_ColorSlider.cpp" />
+    <ClCompile Include="Control_ComboBox.cpp" />
     <ClCompile Include="Control_DropDown.cpp" />
     <ClCompile Include="Control_ExpandablePanel.cpp" />
     <ClCompile Include="Control_FadePreview.cpp" />
@@ -235,6 +238,8 @@
     <ClCompile Include="Device_Manager_MIDI_Native.cpp" />
     <ClCompile Include="Dialog_ColorPicker.cpp" />
     <ClCompile Include="Easings.cpp" />
+    <ClCompile Include="Form_Auto_Generate.cpp" />
+    <ClCompile Include="Form_Auto_Generate_Algorithm.cpp" />
     <ClCompile Include="Form_BatchAction.cpp" />
     <ClCompile Include="Form_BatchAction_UI.cpp" />
     <ClCompile Include="Form_Device_Configuration.cpp">

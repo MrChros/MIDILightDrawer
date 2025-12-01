@@ -548,6 +548,35 @@ namespace MIDILightDrawer
 		return _Audio_Bit_Rate;
 	}
 
+	bool Playback_Audio_Engine_Native::Get_Audio_Samples(int64_t start_sample, int64_t sample_count, float* output_buffer)
+	{
+		if (!_Audio_Buffer || !output_buffer || start_sample < 0) {
+			return false;
+		}
+
+		std::lock_guard<std::mutex> Lock(_Buffer_Mutex);
+
+		int64_t Total_Samples = _Total_Audio_Samples * _Audio_Num_Channels;
+		int64_t Start_Index = start_sample * _Audio_Num_Channels;
+		int64_t Copy_Count = sample_count * _Audio_Num_Channels;
+
+		if (Start_Index >= Total_Samples)
+			return false;
+
+		// Clamp to available data
+		if (Start_Index + Copy_Count > Total_Samples) {
+			Copy_Count = Total_Samples - Start_Index;
+		}
+
+		memcpy(output_buffer, _Audio_Buffer + Start_Index, Copy_Count * sizeof(float));
+		return true;
+	}
+
+	float* Playback_Audio_Engine_Native::Get_Audio_Buffer_Pointer()
+	{
+		return _Audio_Buffer;
+	}
+
 	int64_t Playback_Audio_Engine_Native::Get_Sample_Count()
 	{
 		return _Total_Audio_Samples;

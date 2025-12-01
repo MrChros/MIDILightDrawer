@@ -72,6 +72,8 @@ namespace MIDILightDrawer
 		static int Get_Sample_Rate_WASAPI();
 		static int Get_Channel_Count();
 		static int Get_Bit_Rate();
+		static bool Get_Audio_Samples(int64_t start_sample, int64_t sample_count, float* output_buffer);
+		static float* Get_Audio_Buffer_Pointer();
 		static int64_t Get_Sample_Count();
 
 	private:

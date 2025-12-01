@@ -24,6 +24,7 @@
 #include "Form_MIDI_Log.h"
 #include "Form_BatchAction.h"
 #include "Form_Light_Import.h"
+#include "Form_Auto_Generate.h"
 #include "Form_Settings_MIDI.h"
 #include "Form_Settings_Hotkeys.h"
 #include "Form_Device_Configuration.h"
@@ -65,6 +66,7 @@ namespace MIDILightDrawer
 			List<ToolStripMenuItem^>^			_Menu_Edit_UndoSteps_Items;
 			ToolStripMenuItem^					_Menu_Edit_BatchAction;
 			ToolStripMenuItem^					_Menu_Edit_MIDI_Log;
+			ToolStripMenuItem^					_Menu_Edit_Auto_Generate;
 
 			gp_parser::Parser*					_GP_Tab;
 			Widget_Tab_Info^					_Tab_Info;
@@ -89,7 +91,7 @@ namespace MIDILightDrawer
 			MIDI_Exporter^						_MIDI_Exporter;
 			MIDI_Event_Raster^					_MIDI_Event_Raster;
 			Form_MIDI_Log^						_Form_MIDI_Log;
-
+			
 			Playback_Manager^					_Playback_Manager;
 			System::Windows::Forms::Timer^		_Playback_Update_Timer;
 
@@ -130,6 +132,7 @@ namespace MIDILightDrawer
 			void Menu_Edit_Delete_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Edit_BatchAction_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_View_MIDI_Log_Click(System::Object^ sender, System::EventArgs^ e);
+			void Menu_View_Auto_Generate_Click(System::Object^ sender, System::EventArgs^ e);
 
 			void Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e);
 			void Menu_Settings_Midi_Click(System::Object^ sender, System::EventArgs^ e);

@@ -60,7 +60,7 @@ namespace MIDILightDrawer
 		Table_Layout_Main->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));	// Padding Column
 
 
-		array<String^>^ Lines_First_Quantization = TimeSignatures::TimeSignatureExtendedrStringMain->ToArray();
+		array<String^>^ Lines_First_Quantization = TimeSignatures::TimeSignatureExtendedStringMain->ToArray();
 		array<String^>^ Lines_Second_Quantization = TimeSignatures::TimeSignatureExtendedStringSub->ToArray();
 		array<int>^ Values_Quantization = TimeSignatures::TimeSignatureExtendedValues->ToArray();
 

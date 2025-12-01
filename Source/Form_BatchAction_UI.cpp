@@ -911,7 +911,7 @@ namespace MIDILightDrawer
 		TableLayout->Controls->Add(Label_FadeQuantization, 0, 1);
 		
 
-		array<String^>^ Lines_First_Quantization = TimeSignatures::TimeSignatureExtendedrStringMain->ToArray();
+		array<String^>^ Lines_First_Quantization = TimeSignatures::TimeSignatureExtendedStringMain->ToArray();
 		array<String^>^ Lines_Second_Quantization = TimeSignatures::TimeSignatureExtendedStringSub->ToArray();
 		array<int>^ Values_Quantization = TimeSignatures::TimeSignatureExtendedValues->ToArray();
 
@@ -1128,7 +1128,7 @@ namespace MIDILightDrawer
 		TableLayout->SetColumnSpan(Label_StrobeQuantization, 2);
 
 
-		array<String^>^ Lines_First_Quantization = TimeSignatures::TimeSignatureExtendedrStringMain->ToArray();
+		array<String^>^ Lines_First_Quantization = TimeSignatures::TimeSignatureExtendedStringMain->ToArray();
 		array<String^>^ Lines_Second_Quantization = TimeSignatures::TimeSignatureExtendedStringSub->ToArray();
 		array<int>^ Values_Quantization = TimeSignatures::TimeSignatureExtendedValues->ToArray();
 
@@ -1252,7 +1252,7 @@ namespace MIDILightDrawer
 			ThemeManager->ApplyThemeToButton(B, ThemeManager->BackgroundAlt);
 		}
 
-		// Apply theme to textboxes
+		// Apply theme to Text Boxes
 		array<TextBox^>^ TextBoxes = {
 			_TextBox_MeasureMinValue, _TextBox_MeasureMaxValue,
 			_TextBox_DurationValue, _TextBox_DurationMinValue, _TextBox_DurationMaxValue,

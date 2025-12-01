@@ -426,6 +426,11 @@ namespace MIDILightDrawer
 		_Menu_Edit_MIDI_Log->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"MIDI_Log")));
 		_Menu_Edit_MIDI_Log->Click += gcnew System::EventHandler(this, &Form_Main::Menu_View_MIDI_Log_Click);
 
+		// Edit -> Auto Generate
+		_Menu_Edit_Auto_Generate = gcnew ToolStripMenuItem("Event Generator");
+		//_Menu_Edit_Auto_Generate->Image = (cli::safe_cast<System::Drawing::Image^>(_Resources->GetObject(L"MIDI_Log")));
+		_Menu_Edit_Auto_Generate->Click += gcnew System::EventHandler(this, &Form_Main::Menu_View_Auto_Generate_Click);
+
 		// Build Edit menu
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_Undo);
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_UndoSteps);
@@ -438,6 +443,7 @@ namespace MIDILightDrawer
 		Menu_Edit->DropDownItems->Add(gcnew ToolStripSeparator());
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_BatchAction);
 		Menu_Edit->DropDownItems->Add(_Menu_Edit_MIDI_Log);
+		Menu_Edit->DropDownItems->Add(_Menu_Edit_Auto_Generate);
 
 		_Menu_Edit_UndoSteps_Items = gcnew List<ToolStripMenuItem^>();
 
@@ -1092,6 +1098,49 @@ namespace MIDILightDrawer
 	{
 		_Form_MIDI_Log->Show();
 		_Form_MIDI_Log->BringToFront();
+	}
+
+	void Form_Main::Menu_View_Auto_Generate_Click(System::Object^ sender, System::EventArgs^ e)
+	{
+		// Check if we have tablature loaded
+		if (this->_GP_Tab == NULL || this->_Timeline->Tracks->Count == 0)
+		{
+			MessageBox::Show(
+				this,
+				"Please load a Guitar Pro file and configure MIDI tracks before using Auto Generate.",
+				"No Tablature Loaded",
+				MessageBoxButtons::OK,
+				MessageBoxIcon::Information);
+			return;
+		}
+
+		// Get waveform data and duration if audio is loaded
+		Waveform_Render_Data^ Waveform_Data = nullptr;
+		double Audio_Duration_ms = 0.0;
+
+		if (_Playback_Manager != nullptr && _Playback_Manager->Is_Audio_Loaded)
+		{
+			Waveform_Data = _Playback_Manager->Audio_Waveform_Data;
+			Audio_Duration_ms = _Playback_Manager->Audio_Duration_ms;
+		}
+
+		// Create and show the auto generate form
+		Form_Auto_Generate^ Auto_Generate_Form = gcnew Form_Auto_Generate(this->_Timeline, this->_Playback_Manager->Audio_Engine);
+
+		// Show as modal dialog
+		System::Windows::Forms::DialogResult Result = Auto_Generate_Form->ShowDialog(this);
+
+		if (Result == System::Windows::Forms::DialogResult::OK)
+		{
+			// Events were generated and added
+			// Update the audio waveform mini-map
+			this->_Audio_Container->Invalidate();
+
+			// Refresh the timeline
+			this->_Timeline->Invalidate();
+		}
+
+		delete Auto_Generate_Form;
 	}
 
 	void Form_Main::Menu_Settings_Hotkeys_Click(System::Object^ sender, System::EventArgs^ e)

@@ -313,36 +313,36 @@ namespace MIDILightDrawer
 	
 	void Control_DropDown::Update_Panel_Position()
 	{
-		Point location;
-		int panel_width = _Tile_Width * _Columns;
-		int x_position;
+		Point Location;
+		int Panel_Width = _Tile_Width * _Columns;
+		int X_Position;
 
 		// Calculate horizontal position
 		switch (_Horizontal_Alignment) {
 		case Panel_Horizontal_Alignment::Left:
-			x_position = this->Left;
+			X_Position = this->Left;
 			break;
 		case Panel_Horizontal_Alignment::Right:
-			x_position = this->Left + (this->Width - panel_width);
+			X_Position = this->Left + (this->Width - Panel_Width) - 3;
 			break;
 		default:
-			x_position = this->Left;
+			X_Position = this->Left;
 			break;
 		}
 
 		if (_Open_Above) {
-			int total_rows = Get_Row_Count();
-			int panel_height = _Tile_Height * total_rows + 3 + 1;
+			int Total_Rows = Get_Row_Count();
+			int Panel_Height = _Tile_Height * Total_Rows + 3 + 1;
 			// Position above the control
-			location = this->Parent->PointToScreen(Point(x_position, this->Top - panel_height));
+			Location = this->Parent->PointToScreen(Point(X_Position, this->Top - Panel_Height));
 		}
 		else {
 			// Position below the control
-			location = this->Parent->PointToScreen(Point(x_position, this->Bottom + 1));
+			Location = this->Parent->PointToScreen(Point(X_Position, this->Bottom + 1));
 		}
 
-		location = this->FindForm()->PointToClient(location);
-		_Drop_Down_Panel->Location = location;
+		Location = this->FindForm()->PointToClient(Location);
+		_Drop_Down_Panel->Location = Location;
 	}
 
 	int Control_DropDown::Get_Row_Count()

@@ -103,8 +103,9 @@ namespace MIDILightDrawer
 		Energy.Brilliance = 0;
 		Energy.Total = 0;
 
-		if (magnitude_spectrum == nullptr || magnitude_spectrum->Length == 0)
+		if (magnitude_spectrum == nullptr || magnitude_spectrum->Length == 0) {
 			return Energy;
+		}
 
 		int N = magnitude_spectrum->Length * 2;	// FFT size
 		float Freq_Resolution = (float)sample_rate / N;
@@ -118,20 +119,27 @@ namespace MIDILightDrawer
 			float Freq = i * Freq_Resolution;
 			float Mag_Squared = magnitude_spectrum[i] * magnitude_spectrum[i];
 
-			if (Freq >= 20 && Freq < 60)
+			if (Freq >= 20 && Freq < 60) {
 				Energy.Sub_Bass += Mag_Squared;
-			else if (Freq >= 60 && Freq < 250)
+			}
+			else if (Freq >= 60 && Freq < 250) {
 				Energy.Bass += Mag_Squared;
-			else if (Freq >= 250 && Freq < 500)
+			}
+			else if (Freq >= 250 && Freq < 500) {
 				Energy.Low_Mid += Mag_Squared;
-			else if (Freq >= 500 && Freq < 2000)
+			}
+			else if (Freq >= 500 && Freq < 2000) {
 				Energy.Mid += Mag_Squared;
-			else if (Freq >= 2000 && Freq < 4000)
+			}
+			else if (Freq >= 2000 && Freq < 4000) {
 				Energy.High_Mid += Mag_Squared;
-			else if (Freq >= 4000 && Freq < 8000)
+			}
+			else if (Freq >= 4000 && Freq < 8000) {
 				Energy.High += Mag_Squared;
-			else if (Freq >= 8000 && Freq < 20000)
+			}
+			else if (Freq >= 8000 && Freq < 20000) {
 				Energy.Brilliance += Mag_Squared;
+			}
 
 			Energy.Total += Mag_Squared;
 		}
@@ -155,33 +163,48 @@ namespace MIDILightDrawer
 		float Flux = 0.0f;
 
 		float Diff = current.Sub_Bass - previous.Sub_Bass;
-		if (Diff > 0) Flux += Diff;
+		if (Diff > 0) {
+			Flux += Diff;
+		}
 
 		Diff = current.Bass - previous.Bass;
-		if (Diff > 0) Flux += Diff;
+		if (Diff > 0) {
+			Flux += Diff;
+		}
 
 		Diff = current.Low_Mid - previous.Low_Mid;
-		if (Diff > 0) Flux += Diff;
+		if (Diff > 0) {
+			Flux += Diff;
+		}
 
 		Diff = current.Mid - previous.Mid;
-		if (Diff > 0) Flux += Diff;
+		if (Diff > 0) {
+			Flux += Diff;
+		}
 
 		Diff = current.High_Mid - previous.High_Mid;
-		if (Diff > 0) Flux += Diff;
+		if (Diff > 0) {
+			Flux += Diff;
+		}
 
 		Diff = current.High - previous.High;
-		if (Diff > 0) Flux += Diff;
+		if (Diff > 0) {
+			Flux += Diff;
+		}
 
 		Diff = current.Brilliance - previous.Brilliance;
-		if (Diff > 0) Flux += Diff;
+		if (Diff > 0) {
+			Flux += Diff;
+		}
 
 		return Flux;
 	}
 
 	float Form_Auto_Generate::CalculateSpectralCentroid(array<float>^ magnitude_spectrum, int sample_rate)
 	{
-		if (magnitude_spectrum == nullptr || magnitude_spectrum->Length == 0)
+		if (magnitude_spectrum == nullptr || magnitude_spectrum->Length == 0) {
 			return 0.0f;
+		}
 
 		int N = magnitude_spectrum->Length * 2;
 		float Freq_Resolution = (float)sample_rate / N;
@@ -196,8 +219,9 @@ namespace MIDILightDrawer
 			Magnitude_Sum += magnitude_spectrum[i];
 		}
 
-		if (Magnitude_Sum > 0)
+		if (Magnitude_Sum > 0) {
 			return Weighted_Sum / Magnitude_Sum;
+		}
 
 		return 0.0f;
 	}
@@ -207,12 +231,29 @@ namespace MIDILightDrawer
 		float Max_Energy = spectrum.Sub_Bass;
 		Frequency_Band Dominant = Frequency_Band::Sub_Bass;
 
-		if (spectrum.Bass > Max_Energy) { Max_Energy = spectrum.Bass; Dominant = Frequency_Band::Bass; }
-		if (spectrum.Low_Mid > Max_Energy) { Max_Energy = spectrum.Low_Mid; Dominant = Frequency_Band::Low_Mid; }
-		if (spectrum.Mid > Max_Energy) { Max_Energy = spectrum.Mid; Dominant = Frequency_Band::Mid; }
-		if (spectrum.High_Mid > Max_Energy) { Max_Energy = spectrum.High_Mid; Dominant = Frequency_Band::High_Mid; }
-		if (spectrum.High > Max_Energy) { Max_Energy = spectrum.High; Dominant = Frequency_Band::High; }
-		if (spectrum.Brilliance > Max_Energy) { Dominant = Frequency_Band::Brilliance; }
+		if (spectrum.Bass > Max_Energy) { 
+			Max_Energy = spectrum.Bass; Dominant = Frequency_Band::Bass; 
+		}
+
+		if (spectrum.Low_Mid > Max_Energy) { 
+			Max_Energy = spectrum.Low_Mid; Dominant = Frequency_Band::Low_Mid;
+		}
+
+		if (spectrum.Mid > Max_Energy) {
+			Max_Energy = spectrum.Mid; Dominant = Frequency_Band::Mid;
+		}
+
+		if (spectrum.High_Mid > Max_Energy) {
+			Max_Energy = spectrum.High_Mid; Dominant = Frequency_Band::High_Mid; 
+		}
+
+		if (spectrum.High > Max_Energy) { 
+			Max_Energy = spectrum.High; Dominant = Frequency_Band::High;
+		}
+
+		if (spectrum.Brilliance > Max_Energy) {
+			Dominant = Frequency_Band::Brilliance;
+		}
 
 		return Dominant;
 	}
@@ -222,15 +263,18 @@ namespace MIDILightDrawer
 	//////////////////////////////////
 	void Form_Auto_Generate::PerformSpectralAnalysis()
 	{
-		if (_Waveform_Data == nullptr || _Audio_Duration_ms <= 0)
+		if (_Waveform_Data == nullptr || _Audio_Duration_ms <= 0) {
 			return;
+		}
 
 		// We need access to raw audio samples
 		// Since we don't have direct access, we'll use the waveform segments
 		// and enhance the analysis with the available data
 
 		int Total_Segments = _Waveform_Data->TotalSegments;
-		if (Total_Segments == 0) return;
+		if (Total_Segments == 0) {
+			return;
+		}
 
 		int Samples_Per_Segment = _Waveform_Data->SamplesPerSegment;
 		double Ms_Per_Segment = _Audio_Duration_ms / (double)Total_Segments;
@@ -408,14 +452,37 @@ namespace MIDILightDrawer
 			Sum_Spectrum.Brilliance += Spec.Brilliance;
 			Sum_Spectrum.Total += Spec.Total;
 
-			if (Spec.Sub_Bass > Peak_Spectrum.Sub_Bass) Peak_Spectrum.Sub_Bass = Spec.Sub_Bass;
-			if (Spec.Bass > Peak_Spectrum.Bass) Peak_Spectrum.Bass = Spec.Bass;
-			if (Spec.Low_Mid > Peak_Spectrum.Low_Mid) Peak_Spectrum.Low_Mid = Spec.Low_Mid;
-			if (Spec.Mid > Peak_Spectrum.Mid) Peak_Spectrum.Mid = Spec.Mid;
-			if (Spec.High_Mid > Peak_Spectrum.High_Mid) Peak_Spectrum.High_Mid = Spec.High_Mid;
-			if (Spec.High > Peak_Spectrum.High) Peak_Spectrum.High = Spec.High;
-			if (Spec.Brilliance > Peak_Spectrum.Brilliance) Peak_Spectrum.Brilliance = Spec.Brilliance;
-			if (Spec.Total > Peak_Spectrum.Total) Peak_Spectrum.Total = Spec.Total;
+			if (Spec.Sub_Bass > Peak_Spectrum.Sub_Bass) {
+				Peak_Spectrum.Sub_Bass = Spec.Sub_Bass;
+			}
+
+			if (Spec.Bass > Peak_Spectrum.Bass) {
+				Peak_Spectrum.Bass = Spec.Bass;
+			}
+
+			if (Spec.Low_Mid > Peak_Spectrum.Low_Mid) {
+				Peak_Spectrum.Low_Mid = Spec.Low_Mid;
+			}
+
+			if (Spec.Mid > Peak_Spectrum.Mid) {
+				Peak_Spectrum.Mid = Spec.Mid;
+			}
+
+			if (Spec.High_Mid > Peak_Spectrum.High_Mid) {
+				Peak_Spectrum.High_Mid = Spec.High_Mid;
+			}
+
+			if (Spec.High > Peak_Spectrum.High) {
+				Peak_Spectrum.High = Spec.High;
+			}
+
+			if (Spec.Brilliance > Peak_Spectrum.Brilliance) {
+				Peak_Spectrum.Brilliance = Spec.Brilliance;
+			}
+
+			if (Spec.Total > Peak_Spectrum.Total) {
+				Peak_Spectrum.Total = Spec.Total;
+			}
 		}
 
 		int Frame_Count = Math::Max(1, Frame_Spectra->Count);
@@ -456,11 +523,23 @@ namespace MIDILightDrawer
 					if (Point.Time_ms >= Seg.Start_ms && Point.Time_ms < Seg.End_ms)
 					{
 						Sum += Point.Energy;
-						if (Point.Energy > Peak) Peak = Point.Energy;
+						if (Point.Energy > Peak) {
+							Peak = Point.Energy;
+						}
+						
 						Count++;
-						if (Point.Is_Beat) Beat_Count++;
-						if (Point.Is_Transient) Transient_Count++;
-						if (Point.Is_Onset) Onset_Count++;
+						
+						if (Point.Is_Beat) {
+							Beat_Count++;
+						}
+
+						if (Point.Is_Transient) {
+							Transient_Count++;
+						}
+
+						if (Point.Is_Onset) {
+							Onset_Count++;
+						}
 
 						Seg_Spectrum.Sub_Bass += Point.Spectrum.Sub_Bass;
 						Seg_Spectrum.Bass += Point.Spectrum.Bass;
@@ -564,8 +643,9 @@ namespace MIDILightDrawer
 			Frame_Times->Add(Frame_Time_ms);
 
 			Sum_Energy += Frame_Energy.Total;
-			if (Frame_Energy.Total > Max_Energy)
+			if (Frame_Energy.Total > Max_Energy) {
 				Max_Energy = Frame_Energy.Total;
+			}
 
 			Previous_Spectrum = Frame_Energy;
 		}
@@ -676,14 +756,37 @@ namespace MIDILightDrawer
 			Sum_Spectrum.Brilliance += Spec.Brilliance;
 			Sum_Spectrum.Total += Spec.Total;
 
-			if (Spec.Sub_Bass > Peak_Spectrum.Sub_Bass) Peak_Spectrum.Sub_Bass = Spec.Sub_Bass;
-			if (Spec.Bass > Peak_Spectrum.Bass) Peak_Spectrum.Bass = Spec.Bass;
-			if (Spec.Low_Mid > Peak_Spectrum.Low_Mid) Peak_Spectrum.Low_Mid = Spec.Low_Mid;
-			if (Spec.Mid > Peak_Spectrum.Mid) Peak_Spectrum.Mid = Spec.Mid;
-			if (Spec.High_Mid > Peak_Spectrum.High_Mid) Peak_Spectrum.High_Mid = Spec.High_Mid;
-			if (Spec.High > Peak_Spectrum.High) Peak_Spectrum.High = Spec.High;
-			if (Spec.Brilliance > Peak_Spectrum.Brilliance) Peak_Spectrum.Brilliance = Spec.Brilliance;
-			if (Spec.Total > Peak_Spectrum.Total) Peak_Spectrum.Total = Spec.Total;
+			if (Spec.Sub_Bass > Peak_Spectrum.Sub_Bass) {
+				Peak_Spectrum.Sub_Bass = Spec.Sub_Bass;
+			}
+
+			if (Spec.Bass > Peak_Spectrum.Bass) {
+				Peak_Spectrum.Bass = Spec.Bass;
+			}
+
+			if (Spec.Low_Mid > Peak_Spectrum.Low_Mid) {
+				Peak_Spectrum.Low_Mid = Spec.Low_Mid;
+			}
+
+			if (Spec.Mid > Peak_Spectrum.Mid) {
+				Peak_Spectrum.Mid = Spec.Mid;
+			}
+
+			if (Spec.High_Mid > Peak_Spectrum.High_Mid) {
+				Peak_Spectrum.High_Mid = Spec.High_Mid;
+			}
+
+			if (Spec.High > Peak_Spectrum.High) {
+				Peak_Spectrum.High = Spec.High;
+			}
+
+			if (Spec.Brilliance > Peak_Spectrum.Brilliance) {
+				Peak_Spectrum.Brilliance = Spec.Brilliance;
+			}
+
+			if (Spec.Total > Peak_Spectrum.Total) {
+				Peak_Spectrum.Total = Spec.Total;
+			}
 		}
 
 		int Frame_Count = Math::Max(1, Frame_Spectra->Count);
@@ -696,7 +799,7 @@ namespace MIDILightDrawer
 		_Audio_Analysis->Global_Average_Spectrum->Brilliance = Sum_Spectrum.Brilliance / Frame_Count;
 		_Audio_Analysis->Global_Average_Spectrum->Total = Sum_Spectrum.Total / Frame_Count;
 
-		_Audio_Analysis->Global_Peak_Spectrum = Peak_Spectrum;
+		_Audio_Analysis->Global_Peak_Spectrum = %Peak_Spectrum;
 
 		// Create segments aligned with measures
 		if (_Timeline != nullptr && _Timeline->Measures != nullptr)
@@ -724,11 +827,24 @@ namespace MIDILightDrawer
 					if (Point.Time_ms >= Seg.Start_ms && Point.Time_ms < Seg.End_ms)
 					{
 						Sum += Point.Energy;
-						if (Point.Energy > Peak) Peak = Point.Energy;
+						
+						if (Point.Energy > Peak) {
+							Peak = Point.Energy;
+						}
+
 						Count++;
-						if (Point.Is_Beat) Beat_Count++;
-						if (Point.Is_Transient) Transient_Count++;
-						if (Point.Is_Onset) Onset_Count++;
+						
+						if (Point.Is_Beat) {
+							Beat_Count++;
+						}
+
+						if (Point.Is_Transient) {
+							Transient_Count++;
+						}
+
+						if (Point.Is_Onset) {
+							Onset_Count++;
+						}
 
 						Seg_Spectrum.Sub_Bass += Point.Spectrum.Sub_Bass;
 						Seg_Spectrum.Bass += Point.Spectrum.Bass;
@@ -766,27 +882,31 @@ namespace MIDILightDrawer
 
 	array<float>^ Form_Auto_Generate::GetMonoSamplesForAnalysis(double start_ms, double end_ms)
 	{
-		if (_Audio_Engine == nullptr || !_Audio_Engine->Is_Audio_Loaded)
+		if (_Audio_Engine == nullptr || !_Audio_Engine->Is_Audio_Loaded) {
 			return nullptr;
+		}
 
 		int Sample_Rate = _Audio_Engine->Sample_Rate_File;
 		int Num_Channels = _Audio_Engine->Channel_Count;
 
-		if (Sample_Rate <= 0 || Num_Channels <= 0)
+		if (Sample_Rate <= 0 || Num_Channels <= 0) {
 			return nullptr;
+		}
 
 		int64_t Start_Sample = (int64_t)((start_ms / 1000.0) * Sample_Rate);
 		int64_t End_Sample = (int64_t)((end_ms / 1000.0) * Sample_Rate);
 		int64_t Sample_Count = End_Sample - Start_Sample;
 
-		if (Sample_Count <= 0)
+		if (Sample_Count <= 0) {
 			return nullptr;
+		}
 
 		// Get interleaved samples from audio engine
 		array<float>^ Interleaved_Samples = _Audio_Engine->Get_Audio_Samples_Range(start_ms, end_ms);
 
-		if (Interleaved_Samples == nullptr)
+		if (Interleaved_Samples == nullptr) {
 			return nullptr;
+		}
 
 		// Convert to mono by averaging channels
 		int Mono_Sample_Count = Interleaved_Samples->Length / Num_Channels;
@@ -830,8 +950,9 @@ namespace MIDILightDrawer
 			// Simple waveform-based analysis (original implementation)
 			_Audio_Analysis = gcnew Audio_Analysis_Data();
 
-			if (_Waveform_Data == nullptr || _Audio_Duration_ms <= 0)
+			if (_Waveform_Data == nullptr || _Audio_Duration_ms <= 0) {
 				return;
+			}
 
 			int Total_Segments = _Waveform_Data->TotalSegments;
 			if (Total_Segments == 0) return;
@@ -849,7 +970,9 @@ namespace MIDILightDrawer
 				float Energy = Math::Abs(Max_Val - Min_Val);
 				Energy_Values->Add(Energy);
 				Sum_Energy += Energy;
-				if (Energy > Max_Energy) Max_Energy = Energy;
+				if (Energy > Max_Energy) {
+					Max_Energy = Energy;
+				}
 			}
 
 			_Audio_Analysis->Global_Average_Energy = Sum_Energy / (float)Total_Segments;
@@ -937,8 +1060,9 @@ namespace MIDILightDrawer
 
 	void Form_Auto_Generate::PreventOverlaps(List<BarEvent^>^ events)
 	{
-		if (events == nullptr || events->Count < 2)
+		if (events == nullptr || events->Count < 2) {
 			return;
+		}
 
 		// Sort events by start tick
 		events->Sort(gcnew Comparison<BarEvent^>(&Track::CompareBarEvents));
@@ -1010,8 +1134,9 @@ namespace MIDILightDrawer
 	{
 		_Tab_Analysis = gcnew Tablature_Analysis_Data();
 
-		if (_Timeline == nullptr || _Timeline->Tracks == nullptr || _Timeline->Measures == nullptr)
+		if (_Timeline == nullptr || _Timeline->Tracks == nullptr || _Timeline->Measures == nullptr) {
 			return;
+		}
 
 		for each (Measure ^ M in _Timeline->Measures)
 		{
@@ -1032,16 +1157,21 @@ namespace MIDILightDrawer
 
 			for each (Track ^ T in _Timeline->Tracks)
 			{
-				if (T->Measures == nullptr) continue;
+				if (T->Measures == nullptr) {
+					continue;
+				}
 
 				for each (TrackMeasure ^ TM in T->Measures)
 				{
-					if (TM->Number != M->Number) continue;
+					if (TM->Number != M->Number) {
+						continue;
+					}
 
 					for each (Beat ^ B in TM->Beats)
 					{
-						if (B->StartTick < M->StartTick || B->StartTick >= M->StartTick + M->Length)
+						if (B->StartTick < M->StartTick || B->StartTick >= M->StartTick + M->Length) {
 							continue;
+						}
 
 						Tab_Event_Info Event;
 						Event.Measure_Index = MA.Measure_Index;
@@ -1165,8 +1295,9 @@ namespace MIDILightDrawer
 	{
 		List<BarEvent^>^ Events = gcnew List<BarEvent^>();
 
-		if (track->Measures == nullptr || track->Measures->Count == 0)
+		if (track->Measures == nullptr || track->Measures->Count == 0) {
 			return Events;
+		}
 
 		int Event_Index = 0;
 
@@ -1213,46 +1344,35 @@ namespace MIDILightDrawer
 					Spectrum = _Audio_Analysis->GetSpectrumAtTime(Time_ms);
 				}
 
-				float Note_Density = _Tab_Analysis->Measures->Count > 0 ?
-					_Tab_Analysis->GetMeasureAt(Tab_Event.Start_Tick).Note_Density : 1.0f;
+				float Note_Density = _Tab_Analysis->Measures->Count > 0 ? _Tab_Analysis->GetMeasureAt(Tab_Event.Start_Tick).Note_Density : 1.0f;
 
-				BarEventType Event_Type = _Settings->Use_Spectral_Analysis ?
-					GetEventTypeForSpectrum(Spectrum, Note_Density) :
-					GetEventTypeForContext(Energy, Note_Density, Tab_Event.Has_Accented_Notes);
+				BarEventType Event_Type = _Settings->Use_Spectral_Analysis ? GetEventTypeForSpectrum(Spectrum, Note_Density) : GetEventTypeForContext(Energy, Note_Density, Tab_Event.Has_Accented_Notes);
 
 				double Time_Ratio = (double)(Tab_Event.Start_Tick - start_tick) / (double)(end_tick - start_tick);
-				Color Event_Color = _Settings->Use_Spectral_Analysis ?
-					GetColorForSpectrum(Spectrum, Time_Ratio, Event_Index) :
-					GetColorForEvent(Time_Ratio, Energy, Event_Index);
+				Color Event_Color = _Settings->Use_Spectral_Analysis ? GetColorForSpectrum(Spectrum, Time_Ratio, Event_Index) : GetColorForEvent(Time_Ratio, Energy, Event_Index);
 
 				BarEvent^ New_Event = nullptr;
 
 				switch (Event_Type)
 				{
-				case BarEventType::Solid:
-					New_Event = gcnew BarEvent(track, Tab_Event.Start_Tick, Duration, Event_Color);
-					break;
+					case BarEventType::Solid:
+						New_Event = gcnew BarEvent(track, Tab_Event.Start_Tick, Duration, Event_Color);
+						break;
 
-				case BarEventType::Fade:
-				{
-					Color End_Color = GetColorForEvent(Time_Ratio + 0.1, Energy * 0.5f, Event_Index + 1);
-					BarEventFadeInfo^ Fade_Info = gcnew BarEventFadeInfo(
-						_Settings->Fade_Quantization_Ticks,
-						Event_Color, End_Color,
-						_Settings->Default_Ease_In,
-						_Settings->Default_Ease_Out);
-					New_Event = gcnew BarEvent(track, Tab_Event.Start_Tick, Duration, Fade_Info);
-					break;
-				}
+					case BarEventType::Fade:
+					{
+						Color End_Color = GetColorForEvent(Time_Ratio + 0.1, Energy * 0.5f, Event_Index + 1);
+						BarEventFadeInfo^ Fade_Info = gcnew BarEventFadeInfo(_Settings->Fade_Quantization_Ticks, Event_Color, End_Color, _Settings->Default_Ease_In, _Settings->Default_Ease_Out);
+						New_Event = gcnew BarEvent(track, Tab_Event.Start_Tick, Duration, Fade_Info);
+						break;
+					}
 
-				case BarEventType::Strobe:
-				{
-					BarEventStrobeInfo^ Strobe_Info = gcnew BarEventStrobeInfo(
-						_Settings->Strobe_Quantization_Ticks,
-						Event_Color);
-					New_Event = gcnew BarEvent(track, Tab_Event.Start_Tick, Duration, Strobe_Info);
-					break;
-				}
+					case BarEventType::Strobe:
+					{
+						BarEventStrobeInfo^ Strobe_Info = gcnew BarEventStrobeInfo(_Settings->Strobe_Quantization_Ticks, Event_Color);
+						New_Event = gcnew BarEvent(track, Tab_Event.Start_Tick, Duration, Strobe_Info);
+						break;
+					}
 				}
 
 				if (New_Event != nullptr)
@@ -1268,13 +1388,15 @@ namespace MIDILightDrawer
 		{
 			for each (Measure ^ M in _Timeline->Measures)
 			{
-				if (M->StartTick < start_tick || M->StartTick >= end_tick)
+				if (M->StartTick < start_tick || M->StartTick >= end_tick) {
 					continue;
+				}
 
 				int Duration = M->Length;
 
-				if (!_Settings->Auto_Duration)
+				if (!_Settings->Auto_Duration) {
 					Duration = _Settings->Fixed_Duration_Ticks;
+				}
 
 				Duration = (int)(Duration * _Settings->Duration_Scale_Factor);
 				Duration = Math::Max(Duration, _Settings->Minimum_Duration_Ticks);
@@ -1302,8 +1424,9 @@ namespace MIDILightDrawer
 			while (Current_Tick < end_tick)
 			{
 				int Duration = Interval;
-				if (Current_Tick + Duration > end_tick)
+				if (Current_Tick + Duration > end_tick) {
 					Duration = end_tick - Current_Tick;
+				}
 
 				double Time_Ratio = (double)(Current_Tick - start_tick) / (double)(end_tick - start_tick);
 				Color Event_Color = GetColorForEvent(Time_Ratio, 0.5f, Event_Index);
@@ -1328,8 +1451,9 @@ namespace MIDILightDrawer
 	{
 		List<BarEvent^>^ Events = gcnew List<BarEvent^>();
 
-		if (_Audio_Analysis == nullptr || _Audio_Analysis->Energy_Points->Count == 0 || _Timeline == nullptr)
+		if (_Audio_Analysis == nullptr || _Audio_Analysis->Energy_Points->Count == 0 || _Timeline == nullptr) {
 			return GenerateFromTablature(track, start_tick, end_tick);
+		}
 
 		double Start_ms = _Timeline->TicksToMilliseconds(start_tick);
 		double End_ms = _Timeline->TicksToMilliseconds(end_tick);
@@ -1344,8 +1468,9 @@ namespace MIDILightDrawer
 
 		for each (Audio_Energy_Point Point in _Audio_Analysis->Energy_Points)
 		{
-			if (Point.Time_ms < Start_ms || Point.Time_ms >= End_ms)
+			if (Point.Time_ms < Start_ms || Point.Time_ms >= End_ms) {
 				continue;
+			}
 
 			int Current_Tick = _Timeline->MillisecondsToTicks(Point.Time_ms);
 
@@ -1391,30 +1516,30 @@ namespace MIDILightDrawer
 
 				switch (Event_Type)
 				{
-				case BarEventType::Solid:
-					New_Event = gcnew BarEvent(track, Event_Start_Tick, Duration, Event_Color);
-					break;
+					case BarEventType::Solid:
+						New_Event = gcnew BarEvent(track, Event_Start_Tick, Duration, Event_Color);
+						break;
 
-				case BarEventType::Fade:
-				{
-					Color End_Color = GetColorForEvent(Time_Ratio + 0.05, Normalized_Energy * 0.3f, Event_Index + 1);
-					BarEventFadeInfo^ Fade_Info = gcnew BarEventFadeInfo(
-						_Settings->Fade_Quantization_Ticks,
-						Event_Color, End_Color,
-						_Settings->Default_Ease_In,
-						_Settings->Default_Ease_Out);
-					New_Event = gcnew BarEvent(track, Event_Start_Tick, Duration, Fade_Info);
-					break;
-				}
+					case BarEventType::Fade:
+					{
+						Color End_Color = GetColorForEvent(Time_Ratio + 0.05, Normalized_Energy * 0.3f, Event_Index + 1);
+						BarEventFadeInfo^ Fade_Info = gcnew BarEventFadeInfo(
+							_Settings->Fade_Quantization_Ticks,
+							Event_Color, End_Color,
+							_Settings->Default_Ease_In,
+							_Settings->Default_Ease_Out);
+						New_Event = gcnew BarEvent(track, Event_Start_Tick, Duration, Fade_Info);
+						break;
+					}
 
-				case BarEventType::Strobe:
-				{
-					BarEventStrobeInfo^ Strobe_Info = gcnew BarEventStrobeInfo(
-						_Settings->Strobe_Quantization_Ticks,
-						Event_Color);
-					New_Event = gcnew BarEvent(track, Event_Start_Tick, Duration, Strobe_Info);
-					break;
-				}
+					case BarEventType::Strobe:
+					{
+						BarEventStrobeInfo^ Strobe_Info = gcnew BarEventStrobeInfo(
+							_Settings->Strobe_Quantization_Ticks,
+							Event_Color);
+						New_Event = gcnew BarEvent(track, Event_Start_Tick, Duration, Strobe_Info);
+						break;
+					}
 				}
 
 				if (New_Event != nullptr)
@@ -1435,8 +1560,9 @@ namespace MIDILightDrawer
 	{
 		List<BarEvent^>^ Events = gcnew List<BarEvent^>();
 
-		if (_Audio_Analysis == nullptr || _Timeline == nullptr)
+		if (_Audio_Analysis == nullptr || _Timeline == nullptr) {
 			return GenerateFromTablature(track, start_tick, end_tick);
+		}
 
 		double Start_ms = _Timeline->TicksToMilliseconds(start_tick);
 		double End_ms = _Timeline->TicksToMilliseconds(end_tick);
@@ -1538,8 +1664,7 @@ namespace MIDILightDrawer
 			float Energy = _Audio_Analysis->GetNormalizedEnergyAtTime(Time_ms);
 			Spectral_Energy Spectrum = _Audio_Analysis->GetSpectrumAtTime(Time_ms);
 
-			if (_Settings->Color_Selection_Mode == Color_Mode::Gradient_By_Energy ||
-				_Settings->Color_Selection_Mode == Color_Mode::Map_To_Velocity)
+			if (_Settings->Color_Selection_Mode == Color_Mode::Gradient_By_Energy || _Settings->Color_Selection_Mode == Color_Mode::Map_To_Velocity)
 			{
 				Color Base_Color = Event->Color;
 				int R = (int)(Base_Color.R * (0.3f + 0.7f * Energy));
@@ -1563,8 +1688,9 @@ namespace MIDILightDrawer
 	{
 		List<BarEvent^>^ Events = gcnew List<BarEvent^>();
 
-		if (_Timeline == nullptr || _Timeline->Measures == nullptr)
+		if (_Timeline == nullptr || _Timeline->Measures == nullptr) {
 			return Events;
+		}
 
 		Dictionary<String^, List<int>^>^ Section_Measures = gcnew Dictionary<String^, List<int>^>();
 
@@ -1580,8 +1706,9 @@ namespace MIDILightDrawer
 			}
 		}
 
-		if (Section_Measures->Count == 0)
+		if (Section_Measures->Count == 0) {
 			return GenerateFromTablature(track, start_tick, end_tick);
+		}
 
 		int Pattern_Color_Index = 0;
 		int Event_Index = 0;
@@ -1598,8 +1725,9 @@ namespace MIDILightDrawer
 
 				Measure^ M = _Timeline->Measures[Measure_Index];
 
-				if (M->StartTick < start_tick || M->StartTick >= end_tick)
+				if (M->StartTick < start_tick || M->StartTick >= end_tick) {
 					continue;
+				}
 
 				int Beats_Per_Measure = M->Numerator;
 				int Ticks_Per_Beat = M->Length / Beats_Per_Measure;
@@ -1653,52 +1781,52 @@ namespace MIDILightDrawer
 
 		switch (_Settings->Color_Selection_Mode)
 		{
-		case Color_Mode::Single_Color:
-			return _Settings->Primary_Color;
+			case Color_Mode::Single_Color:
+				return _Settings->Primary_Color;
 
-		case Color_Mode::Gradient_By_Time:
-		{
-			int R = (int)(_Settings->Primary_Color.R + (_Settings->Secondary_Color.R - _Settings->Primary_Color.R) * time_ratio);
-			int G = (int)(_Settings->Primary_Color.G + (_Settings->Secondary_Color.G - _Settings->Primary_Color.G) * time_ratio);
-			int B = (int)(_Settings->Primary_Color.B + (_Settings->Secondary_Color.B - _Settings->Primary_Color.B) * time_ratio);
-			return Color::FromArgb(R, G, B);
-		}
-
-		case Color_Mode::Gradient_By_Energy:
-		{
-			int R = (int)(_Settings->Primary_Color.R + (_Settings->Secondary_Color.R - _Settings->Primary_Color.R) * energy);
-			int G = (int)(_Settings->Primary_Color.G + (_Settings->Secondary_Color.G - _Settings->Primary_Color.G) * energy);
-			int B = (int)(_Settings->Primary_Color.B + (_Settings->Secondary_Color.B - _Settings->Primary_Color.B) * energy);
-			return Color::FromArgb(R, G, B);
-		}
-
-		case Color_Mode::Alternate_Colors:
-		{
-			int Color_Index = event_index % 3;
-			if (Color_Index == 0) return _Settings->Primary_Color;
-			if (Color_Index == 1) return _Settings->Secondary_Color;
-			return _Settings->Tertiary_Color;
-		}
-
-		case Color_Mode::Random_From_Palette:
-		{
-			if (_Settings->Color_Palette->Count > 0)
+			case Color_Mode::Gradient_By_Time:
 			{
-				Random^ Rnd = gcnew Random(event_index * 17);
-				int Index = Rnd->Next(_Settings->Color_Palette->Count);
-				return _Settings->Color_Palette[Index];
+				int R = (int)(_Settings->Primary_Color.R + (_Settings->Secondary_Color.R - _Settings->Primary_Color.R) * time_ratio);
+				int G = (int)(_Settings->Primary_Color.G + (_Settings->Secondary_Color.G - _Settings->Primary_Color.G) * time_ratio);
+				int B = (int)(_Settings->Primary_Color.B + (_Settings->Secondary_Color.B - _Settings->Primary_Color.B) * time_ratio);
+				return Color::FromArgb(R, G, B);
 			}
-			return _Settings->Primary_Color;
-		}
 
-		case Color_Mode::Map_To_Velocity:
-		{
-			float Brightness = 0.3f + 0.7f * energy;
-			int R = (int)(_Settings->Primary_Color.R * Brightness);
-			int G = (int)(_Settings->Primary_Color.G * Brightness);
-			int B = (int)(_Settings->Primary_Color.B * Brightness);
-			return Color::FromArgb(Math::Min(255, R), Math::Min(255, G), Math::Min(255, B));
-		}
+			case Color_Mode::Gradient_By_Energy:
+			{
+				int R = (int)(_Settings->Primary_Color.R + (_Settings->Secondary_Color.R - _Settings->Primary_Color.R) * energy);
+				int G = (int)(_Settings->Primary_Color.G + (_Settings->Secondary_Color.G - _Settings->Primary_Color.G) * energy);
+				int B = (int)(_Settings->Primary_Color.B + (_Settings->Secondary_Color.B - _Settings->Primary_Color.B) * energy);
+				return Color::FromArgb(R, G, B);
+			}
+
+			case Color_Mode::Alternate_Colors:
+			{
+				int Color_Index = event_index % 3;
+				if (Color_Index == 0) return _Settings->Primary_Color;
+				if (Color_Index == 1) return _Settings->Secondary_Color;
+				return _Settings->Tertiary_Color;
+			}
+
+			case Color_Mode::Random_From_Palette:
+			{
+				if (_Settings->Color_Palette->Count > 0)
+				{
+					Random^ Rnd = gcnew Random(event_index * 17);
+					int Index = Rnd->Next(_Settings->Color_Palette->Count);
+					return _Settings->Color_Palette[Index];
+				}
+				return _Settings->Primary_Color;
+			}
+
+			case Color_Mode::Map_To_Velocity:
+			{
+				float Brightness = 0.3f + 0.7f * energy;
+				int R = (int)(_Settings->Primary_Color.R * Brightness);
+				int G = (int)(_Settings->Primary_Color.G * Brightness);
+				int B = (int)(_Settings->Primary_Color.B * Brightness);
+				return Color::FromArgb(Math::Min(255, R), Math::Min(255, G), Math::Min(255, B));
+			}
 		}
 
 		return _Settings->Primary_Color;
@@ -1712,10 +1840,11 @@ namespace MIDILightDrawer
 		// Map frequency bands to colors
 		// Bass = Red, Mid = Green, High = Blue (or user preference)
 
-		float Total = spectrum.Sub_Bass + spectrum.Bass + spectrum.Low_Mid +
-			spectrum.Mid + spectrum.High_Mid + spectrum.High + spectrum.Brilliance;
+		float Total = spectrum.Sub_Bass + spectrum.Bass + spectrum.Low_Mid + spectrum.Mid + spectrum.High_Mid + spectrum.High + spectrum.Brilliance;
 
-		if (Total <= 0) Total = 1.0f;
+		if (Total <= 0) {
+			Total = 1.0f;
+		}
 
 		// Normalize band contributions
 		float Bass_Contribution = (spectrum.Sub_Bass + spectrum.Bass) / Total;
@@ -1723,15 +1852,9 @@ namespace MIDILightDrawer
 		float High_Contribution = (spectrum.High + spectrum.Brilliance) / Total;
 
 		// Map to RGB
-		int R = (int)(_Settings->Primary_Color.R * Bass_Contribution +
-			_Settings->Secondary_Color.R * Mid_Contribution +
-			_Settings->Tertiary_Color.R * High_Contribution);
-		int G = (int)(_Settings->Primary_Color.G * Bass_Contribution +
-			_Settings->Secondary_Color.G * Mid_Contribution +
-			_Settings->Tertiary_Color.G * High_Contribution);
-		int B = (int)(_Settings->Primary_Color.B * Bass_Contribution +
-			_Settings->Secondary_Color.B * Mid_Contribution +
-			_Settings->Tertiary_Color.B * High_Contribution);
+		int R = (int)(_Settings->Primary_Color.R * Bass_Contribution + _Settings->Secondary_Color.R * Mid_Contribution + _Settings->Tertiary_Color.R * High_Contribution);
+		int G = (int)(_Settings->Primary_Color.G * Bass_Contribution + _Settings->Secondary_Color.G * Mid_Contribution + _Settings->Tertiary_Color.G * High_Contribution);
+		int B = (int)(_Settings->Primary_Color.B * Bass_Contribution + _Settings->Secondary_Color.B * Mid_Contribution + _Settings->Tertiary_Color.B * High_Contribution);
 
 		return Color::FromArgb(
 			Math::Min(255, Math::Max(0, R)),
@@ -1746,25 +1869,32 @@ namespace MIDILightDrawer
 	{
 		switch (_Settings->Type_Selection_Mode)
 		{
-		case Event_Type_Mode::Solid_Only:
-			return BarEventType::Solid;
+			case Event_Type_Mode::Solid_Only:
+				return BarEventType::Solid;
 
-		case Event_Type_Mode::Fade_On_Dynamics:
-			if (energy > _Settings->Energy_Threshold_Fade)
-				return BarEventType::Fade;
-			return BarEventType::Solid;
+			case Event_Type_Mode::Fade_On_Dynamics:
+				if (energy > _Settings->Energy_Threshold_Fade) {
+					return BarEventType::Fade;
+				}
 
-		case Event_Type_Mode::Strobe_On_Fast:
-			if (note_density > _Tab_Analysis->Average_Note_Density * 1.5f || energy > _Settings->Energy_Threshold_Strobe)
-				return BarEventType::Strobe;
-			return BarEventType::Solid;
+				return BarEventType::Solid;
 
-		case Event_Type_Mode::Mixed_Auto:
-			if (energy > _Settings->Energy_Threshold_Strobe || has_accent)
-				return BarEventType::Strobe;
-			if (energy > _Settings->Energy_Threshold_Fade)
-				return BarEventType::Fade;
-			return BarEventType::Solid;
+			case Event_Type_Mode::Strobe_On_Fast:
+				if (note_density > _Tab_Analysis->Average_Note_Density * 1.5f || energy > _Settings->Energy_Threshold_Strobe) {
+					return BarEventType::Strobe;
+				}
+				return BarEventType::Solid;
+
+			case Event_Type_Mode::Mixed_Auto:
+				if (energy > _Settings->Energy_Threshold_Strobe || has_accent) {
+					return BarEventType::Strobe;
+				}
+
+				if (energy > _Settings->Energy_Threshold_Fade) {
+					return BarEventType::Fade;
+				}
+
+				return BarEventType::Solid;
 		}
 
 		return BarEventType::Solid;
@@ -1775,14 +1905,13 @@ namespace MIDILightDrawer
 	//////////////////////////////////
 	BarEventType Form_Auto_Generate::GetEventTypeForSpectrum(Spectral_Energy spectrum, float note_density)
 	{
-		if (_Settings->Type_Selection_Mode == Event_Type_Mode::Solid_Only)
+		if (_Settings->Type_Selection_Mode == Event_Type_Mode::Solid_Only) {
 			return BarEventType::Solid;
+		}
 
 		// Use spectral characteristics to determine event type
-		float High_Energy_Ratio = (spectrum.High + spectrum.High_Mid + spectrum.Brilliance) /
-			Math::Max(0.001f, spectrum.Total);
-		float Bass_Energy_Ratio = (spectrum.Sub_Bass + spectrum.Bass) /
-			Math::Max(0.001f, spectrum.Total);
+		float High_Energy_Ratio = (spectrum.High + spectrum.High_Mid + spectrum.Brilliance) / Math::Max(0.001f, spectrum.Total);
+		float Bass_Energy_Ratio = (spectrum.Sub_Bass + spectrum.Bass) / Math::Max(0.001f, spectrum.Total);
 
 		// High frequency content suggests fast/percussive sounds -> strobe
 		if (High_Energy_Ratio > 0.5f || spectrum.Spectral_Flux > _Settings->Energy_Threshold_Strobe)
@@ -1804,7 +1933,9 @@ namespace MIDILightDrawer
 	//////////////////////////////////
 	void Form_Auto_Generate::ApplyGapFilling(List<BarEvent^>^ events, int start_tick, int end_tick)
 	{
-		if (events->Count < 2) return;
+		if (events->Count < 2) {
+			return;
+		}
 
 		events->Sort(gcnew Comparison<BarEvent^>(&Track::CompareBarEvents));
 
@@ -1816,8 +1947,9 @@ namespace MIDILightDrawer
 			BarEvent^ Next = events[i + 1];
 
 			// Only process events on the same track
-			if (Current->ContainingTrack != Next->ContainingTrack)
+			if (Current->ContainingTrack != Next->ContainingTrack) {
 				continue;
+			}
 
 			int Gap_Start = Current->EndTick;
 			int Gap_Size = Next->StartTick - Gap_Start;
@@ -1826,32 +1958,32 @@ namespace MIDILightDrawer
 			{
 				switch (_Settings->Gap_Fill_Mode)
 				{
-				case 0:	// Extend previous
-					Current->Duration = Current->Duration + Gap_Size;
-					break;
+					case 0:	// Extend previous
+						Current->Duration = Current->Duration + Gap_Size;
+						break;
 
-				case 1:	// Insert fade
-				{
-					Color Start_Color = Current->Color;
-					Color End_Color = Next->Color;
+					case 1:	// Insert fade
+					{
+						Color Start_Color = Current->Color;
+						Color End_Color = Next->Color;
 
-					BarEventFadeInfo^ Fade_Info = gcnew BarEventFadeInfo(
-						_Settings->Fade_Quantization_Ticks,
-						Start_Color, End_Color,
-						_Settings->Default_Ease_In,
-						_Settings->Default_Ease_Out);
+						BarEventFadeInfo^ Fade_Info = gcnew BarEventFadeInfo(
+							_Settings->Fade_Quantization_Ticks,
+							Start_Color, End_Color,
+							_Settings->Default_Ease_In,
+							_Settings->Default_Ease_Out);
 
-					BarEvent^ Gap_Fill = gcnew BarEvent(Current->ContainingTrack, Gap_Start, Gap_Size, Fade_Info);
-					Gap_Events->Add(Gap_Fill);
-					break;
-				}
+						BarEvent^ Gap_Fill = gcnew BarEvent(Current->ContainingTrack, Gap_Start, Gap_Size, Fade_Info);
+						Gap_Events->Add(Gap_Fill);
+						break;
+					}
 
-				case 2:	// Insert dark (black)
-				{
-					BarEvent^ Gap_Fill = gcnew BarEvent(Current->ContainingTrack, Gap_Start, Gap_Size, Color::Black);
-					Gap_Events->Add(Gap_Fill);
-					break;
-				}
+					case 2:	// Insert dark (black)
+					{
+						BarEvent^ Gap_Fill = gcnew BarEvent(Current->ContainingTrack, Gap_Start, Gap_Size, Color::Black);
+						Gap_Events->Add(Gap_Fill);
+						break;
+					}
 				}
 			}
 		}

@@ -546,7 +546,7 @@ namespace MIDILightDrawer
 		Layout->Dock = DockStyle::Fill;
 		Layout->ColumnCount = 5;
 		Layout->RowCount = 5;
-		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));
+		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 35));
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));
@@ -644,7 +644,7 @@ namespace MIDILightDrawer
 		Layout->Dock = DockStyle::Fill;
 		Layout->ColumnCount = 3;
 		Layout->RowCount = 6;
-		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));
+		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 35));
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 35));
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 50));
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 35));
@@ -969,7 +969,7 @@ namespace MIDILightDrawer
 	{
 		_GroupBox_Options = gcnew Control_GroupBox();
 		_GroupBox_Options->Text = "Options";
-		_GroupBox_Options->Size = System::Drawing::Size(715, 105);
+		_GroupBox_Options->Size = System::Drawing::Size(715, 110);
 		_GroupBox_Options->Padding = System::Windows::Forms::Padding(10, 20, 10, 10);
 
 		TableLayoutPanel^ Layout = gcnew TableLayoutPanel();
@@ -977,7 +977,7 @@ namespace MIDILightDrawer
 		Layout->ColumnCount = 2;
 		Layout->RowCount = 3;
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));
-		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 30));
+		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Absolute, 35));
 		Layout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100));
 		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 200));
 		Layout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
@@ -1512,7 +1512,7 @@ namespace MIDILightDrawer
 	//////////////////////////////////
 	void Form_Auto_Generate::CollectSettingsFromUI()
 	{
-		//_Settings->Mode = (Generation_Mode)_DropDown_Mode->Selected_Index;
+		// General settings
 		_Settings->Mode = (Generation_Mode)_ComboBox_Mode->Selected_Index;
 		_Settings->Distribution = (Event_Distribution)_ComboBox_Distribution->Selected_Index;
 
@@ -1521,6 +1521,9 @@ namespace MIDILightDrawer
 			_Settings->Custom_Interval_Ticks = Custom_Interval;
 		}
 
+		_Settings->Clear_Existing_Events = _CheckBox_Clear_Existing->Checked;
+
+		// Track selection
 		_Settings->Apply_To_All_Tracks = _CheckBox_All_Tracks->Checked;
 		_Settings->Selected_Track_Indices->Clear();
 
@@ -1535,7 +1538,7 @@ namespace MIDILightDrawer
 		}
 
 		int Int_For_Parsing;
-
+		// Range selection
 		_Settings->Use_Full_Range = _CheckBox_Full_Range->Checked;
 
 		Int32::TryParse(_TextBox_Start_Measure->Text, Int_For_Parsing);
@@ -1544,20 +1547,39 @@ namespace MIDILightDrawer
 		Int32::TryParse(_TextBox_End_Measure->Text, Int_For_Parsing);
 		_Settings->End_Measure = Int_For_Parsing;
 
+		// Color settings
 		_Settings->Color_Selection_Mode = (Color_Mode)_ComboBox_Color_Mode->Selected_Index;
-		_Settings->Type_Selection_Mode = (Event_Type_Mode)_ComboBox_Event_Type_Mode->Selected_Index;
+		// _Settings->Primary_Color		<-- Already defined
+		// _Settings->Secondary_Color	<-- Already defined
+		// _Settings->Tertiary_Color	<-- Already defined
+		// _Settings->Color_Palette		<-- Already defined
 
+		// Event type settings
+		_Settings->Type_Selection_Mode = (Event_Type_Mode)_ComboBox_Event_Type_Mode->Selected_Index;
 		_Settings->Energy_Threshold_Strobe = (float)_TrackBar_Energy_Strobe->Value / 100.0f;
 		_Settings->Energy_Threshold_Fade = (float)_TrackBar_Energy_Fade->Value / 100.0f;
-
 		_Settings->Strobe_Quantization_Ticks = _DropDown_Strobe_Quantization->Selected_Value;
 		_Settings->Fade_Quantization_Ticks = _DropDown_Fade_Quantization->Selected_Value;
 
-		// Get easing from dropdown
+		// Fade settings
 		_Settings->Default_Ease_In = static_cast<FadeEasing>(this->_DropDown_Ease_In->Selected_Value);
 		_Settings->Default_Ease_Out = static_cast<FadeEasing>(this->_DropDown_Ease_Out->Selected_Value);
-
 		
+		// Audio analysis settings
+		_Settings->Beat_Detection_Sensitivity = (float)_TrackBar_Beat_Sensitivity->Value / 100.0f;
+		_Settings->Transient_Detection_Sensitivity = (float)_TrackBar_Transient_Sensitivity->Value / 100.0f;
+		_Settings->Use_Audio_Energy = _CheckBox_Use_Audio_Energy->Checked;
+		_Settings->Use_Audio_Beats = _CheckBox_Use_Audio_Beats->Checked;
+		_Settings->Use_Spectral_Analysis = _CheckBox_Use_Audio_Energy->Checked || _CheckBox_Use_Audio_Beats->Checked;
+		_Settings->FFT_Window_Size = 1024;	// Could add UI control for this
+		_Settings->Onset_Detection_Threshold = (float)_TrackBar_Transient_Sensitivity->Value / 100.0f;
+		_Settings->Prefer_Bass_Events = false;
+		_Settings->Prefer_Percussion_Events = false;
+
+		// Tablature settings
+
+
+		// Event Duration Settings
 		_Settings->Auto_Duration = _CheckBox_Auto_Duration->Checked;
 
 		Int32::TryParse(_TextBox_Fixed_Duration->Text, Int_For_Parsing);
@@ -1571,14 +1593,10 @@ namespace MIDILightDrawer
 		Int32::TryParse(_TextBox_Max_Duration->Text, Int_For_Parsing);
 		_Settings->Maximum_Duration_Ticks = Int_For_Parsing;
 
-		_Settings->Use_Audio_Energy = _CheckBox_Use_Audio_Energy->Checked;
-		_Settings->Use_Audio_Beats = _CheckBox_Use_Audio_Beats->Checked;
-		_Settings->Beat_Detection_Sensitivity = (float)_TrackBar_Beat_Sensitivity->Value / 100.0f;
-		_Settings->Transient_Detection_Sensitivity = (float)_TrackBar_Transient_Sensitivity->Value / 100.0f;
-
-		_Settings->Clear_Existing_Events = _CheckBox_Clear_Existing->Checked;
-		_Settings->Fill_Gaps = _CheckBox_Fill_Gaps->Checked;
-		_Settings->Gap_Fill_Mode = _ComboBox_Gap_Mode->Selected_Index;
+		// Gap Handling
+		_Settings->Fill_Gaps			= _CheckBox_Fill_Gaps->Checked;
+		_Settings->Gap_Fill_Mode		= _ComboBox_Gap_Mode->Selected_Index;
+		_Settings->Minimum_Gap_Ticks	= 960;	// 1/4
 	}
 
 	void Form_Auto_Generate::UpdateUIState()

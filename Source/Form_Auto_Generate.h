@@ -237,40 +237,40 @@ namespace MIDILightDrawer
 	public:
 		Auto_Generate_Settings();
 
-		// General settings
+		// General Settings
 		property Generation_Mode Mode;
 		property Event_Distribution Distribution;
 		property int Custom_Interval_Ticks;
 		property bool Clear_Existing_Events;
 
-		// Track selection
-		property List<int>^ Selected_Track_Indices;
+		// Track Settings
 		property bool Apply_To_All_Tracks;
+		property List<int>^ Selected_Track_Indices;
 
-		// Range selection
+		// Range Settings
+		property bool Use_Full_Range;
 		property int Start_Measure;
 		property int End_Measure;
-		property bool Use_Full_Range;
 
-		// Color settings
+		// Color Settings
 		property Color_Mode Color_Selection_Mode;
 		property Color Primary_Color;
 		property Color Secondary_Color;
 		property Color Tertiary_Color;
 		property List<Color>^ Color_Palette;
 
-		// Event type settings
+		// Event Type Settings
 		property Event_Type_Mode Type_Selection_Mode;
 		property float Energy_Threshold_Strobe;		// 0.0-1.0, above this = strobe
 		property float Energy_Threshold_Fade;		// 0.0-1.0, above this = fade
 		property int Strobe_Quantization_Ticks;
 		property int Fade_Quantization_Ticks;
 
-		// Fade settings
+		// Fade Settings
 		property FadeEasing Default_Ease_In;
 		property FadeEasing Default_Ease_Out;
 
-		// Audio analysis settings
+		// Audio Analysis Settings
 		property float Beat_Detection_Sensitivity;	// 0.0-1.0
 		property float Transient_Detection_Sensitivity;
 		property bool Use_Audio_Energy;
@@ -281,20 +281,20 @@ namespace MIDILightDrawer
 		property bool Prefer_Bass_Events;			// Weight bass frequencies for event placement
 		property bool Prefer_Percussion_Events;		// Weight mid/high for snare/cymbal detection
 
-		// Tablature settings
+		// Tablature Settings
 		property bool Use_Note_Velocity;
 		property bool Use_Note_Effects;
 		property bool Detect_Accents;
 		property float Accent_Threshold;
 
-		// Event duration settings
+		// Event Duration Settings
 		property bool Auto_Duration;
 		property int Fixed_Duration_Ticks;
 		property float Duration_Scale_Factor;		// Multiplier for auto-calculated duration
 		property int Minimum_Duration_Ticks;
 		property int Maximum_Duration_Ticks;
 
-		// Gap handling
+		// Gap Handling
 		property bool Fill_Gaps;
 		property int Gap_Fill_Mode;					// 0=extend previous, 1=insert fade, 2=insert dark
 		property int Minimum_Gap_Ticks;
@@ -464,7 +464,6 @@ namespace MIDILightDrawer
 
 		// Settings collection
 		void CollectSettingsFromUI();
-		//void UpdateUIFromSettings();
 		void UpdateUIState();
 
 		// Analysis methods
@@ -484,10 +483,8 @@ namespace MIDILightDrawer
 		Color GetColorForSpectrum(Spectral_Energy spectrum, double time_ratio, int event_index);
 		BarEventType GetEventTypeForContext(float energy, float note_density, bool has_accent);
 		BarEventType GetEventTypeForSpectrum(Spectral_Energy spectrum, float note_density);
-		//int CalculateEventDuration(int default_duration, float energy, bool is_last_in_group);
 		void ApplyGapFilling(List<BarEvent^>^ events, int start_tick, int end_tick);
 		void ClearEventsInRange(Track^ track, int start_tick, int end_tick);
-		//int GetTicksForQuantization(String^ quantization_string);
 
 		// Overlap prevention
 		void PreventOverlaps(List<BarEvent^>^ events);
@@ -502,7 +499,6 @@ namespace MIDILightDrawer
 		Spectral_Energy CalculateBandEnergies(array<float>^ magnitude_spectrum, int sample_rate);
 		float CalculateSpectralFlux(Spectral_Energy current, Spectral_Energy previous);
 		float CalculateSpectralCentroid(array<float>^ magnitude_spectrum, int sample_rate);
-		//void DetectOnsets();
 		Frequency_Band GetDominantBand(Spectral_Energy spectrum);
 
 		// Utility

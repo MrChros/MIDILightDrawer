@@ -232,6 +232,7 @@ namespace MIDILightDrawer
 		static initonly System::String^ ChangeColorStart	= "Change Start Color";
 		static initonly System::String^ ChangeColorCenter	= "Change Center Color";
 		static initonly System::String^ ChangeColorEnd		= "Change End Color";
+		static initonly System::String^ SwapColorStartEnd	= "Swap Start && End Color";
 		static initonly System::String^ GetColor			= "Color to Current";
 		static initonly System::String^ GetColorStart		= "Start Color to Current";
 		static initonly System::String^ GetColorCenter		= "Center Color to Currentl";

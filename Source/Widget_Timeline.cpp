@@ -1365,6 +1365,7 @@ namespace MIDILightDrawer
 			_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::GetColorCenter, true, nullptr));
 		}
 		_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::GetColorEnd, true, nullptr));
+		_ContextMenu->Items->Add(CreateContextMenuItem(ContextMenuStrings::SwapColorStartEnd, true, nullptr));
 	}
 
 	void Widget_Timeline::CreateContextMenuStrobe()
@@ -1552,6 +1553,27 @@ namespace MIDILightDrawer
 		{
 			if (_ContextMenuBar->FadeInfo != nullptr) {
 				this->_Tool_And_Control->SetColorDirect(_ContextMenuBar->FadeInfo->ColorStart);
+			}
+		}
+		else if (ItemText == ContextMenuStrings::SwapColorStartEnd)
+		{
+			if (TargetBars->Count > 1) {
+				CompoundCommand^ CompoundCmd = gcnew CompoundCommand("Swap Start && End Color for Multiple Bars");
+
+				for each (BarEvent ^ Bar in TargetBars) {
+					if (Bar->Type != BarEventType::Fade || Bar->FadeInfo == nullptr) {
+						continue;
+					}
+
+					SwapFadeStartEndColorCommand^ Cmd = gcnew SwapFadeStartEndColorCommand(this, Bar, Bar->FadeInfo->ColorEnd, Bar->FadeInfo->ColorStart);
+					CompoundCmd->AddCommand(Cmd);
+				}
+
+				CommandManager()->ExecuteCommand(CompoundCmd);
+			}
+			else {
+				SwapFadeStartEndColorCommand^ Cmd = gcnew SwapFadeStartEndColorCommand(this, _ContextMenuBar, _ContextMenuBar->FadeInfo->ColorEnd, _ContextMenuBar->FadeInfo->ColorStart);
+				CommandManager()->ExecuteCommand(Cmd);
 			}
 		}
 		else {

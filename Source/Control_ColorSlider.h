@@ -12,31 +12,20 @@ namespace MIDILightDrawer
 		Value
 	};
 
-	public ref class Control_ColorSlider : public Control {
+	public ref class Control_ColorSlider : public Control
+	{
+	private:
+		SliderType _Type;
+		float _Value;
+		float _Hue;
+		float _Saturation;
+		float _Brightness;
+		bool _IsDragging;
+
 	public:
 		Control_ColorSlider(SliderType type);
 
 		void ApplyTheme(Color backgroundColor);
-
-		property int Value {
-			int get();
-			void set(int value);
-		}
-
-		property float Hue {
-			float get();
-			void set(float value);
-		}
-
-		property float Saturation {
-			float get();
-			void set(float value);
-		}
-
-		property float Brightness {
-			float get();
-			void set(float value);
-		}
 
 		event EventHandler^ ValueChanged;
 
@@ -47,14 +36,28 @@ namespace MIDILightDrawer
 		virtual void OnMouseUp(MouseEventArgs^ e) override;
 
 	private:
-		SliderType _Type;
-		int _Value;
-		float _Hue;
-		float _Saturation;
-		float _Brightness;
-		bool _IsDragging;
-
 		void UpdateValueFromMouse(int x);
 		static Color ColorFromHSV(float hue, float saturation, float value);
+
+	public:
+		property float Value {
+			float get();
+			void set(float value);
+		}
+
+		property float Hue {
+				float get();
+				void set(float value);
+		}
+
+		property float Saturation {
+				float get();
+				void set(float value);
+		}
+
+		property float Brightness {
+				float get();
+				void set(float value);
+		}
 	};
 }

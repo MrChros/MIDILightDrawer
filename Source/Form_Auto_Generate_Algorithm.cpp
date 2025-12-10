@@ -1224,8 +1224,9 @@ namespace MIDILightDrawer
 	{
 		List<BarEvent^>^ All_Events = gcnew List<BarEvent^>();
 
-		if (_Timeline == nullptr || _Timeline->Tracks == nullptr)
+		if (_Timeline == nullptr || _Timeline->Tracks == nullptr) {
 			return All_Events;
+		}
 
 		int Start_Tick = 0;
 		int End_Tick = _Timeline->TotalTicks;

@@ -519,6 +519,41 @@ namespace MIDILightDrawer
 	}
 
 
+	//////////////////////////////////
+	// SwapFadeStartEndColorCommand //
+	//////////////////////////////////
+	SwapFadeStartEndColorCommand::SwapFadeStartEndColorCommand(Widget_Timeline^ timeline, BarEvent^ bar, Color newColorStart, Color newColorEnd)
+	{
+		_Timeline = timeline;
+		_Bar = bar;
+		_OldColorStart = bar->FadeInfo->ColorStart;
+		_OldColorEnd = bar->FadeInfo->ColorEnd;
+		_NewColorStart = newColorStart;
+		_NewColorEnd = newColorEnd;
+	}
+
+	void SwapFadeStartEndColorCommand::Execute()
+	{
+		_Bar->FadeInfo->ColorStart = _NewColorStart;
+		_Bar->FadeInfo->ColorEnd = _NewColorEnd;
+
+		_Timeline->Invalidate();
+	}
+
+	void SwapFadeStartEndColorCommand::Undo()
+	{
+		_Bar->FadeInfo->ColorStart = _OldColorStart;
+		_Bar->FadeInfo->ColorEnd = _OldColorEnd;
+
+		_Timeline->Invalidate();
+	}
+
+	String^ SwapFadeStartEndColorCommand::GetDescription()
+	{
+		return "Swap Start && End Color";
+	}
+
+
 	/////////////////////////////
 	// ChangeFadeEasingCommand //
 	/////////////////////////////
@@ -539,6 +574,7 @@ namespace MIDILightDrawer
 		else {
 			_Bar->FadeInfo->EaseOut = _NewEasing;
 		}
+
 		_Timeline->Invalidate();
 	}
 

@@ -246,6 +246,24 @@ namespace MIDILightDrawer
 		virtual String^ GetDescription();
 	};
 
+	// Swap Start & End Color
+	public ref class SwapFadeStartEndColorCommand : public ITimelineCommand
+	{
+	private:
+		Widget_Timeline^ _Timeline;
+		BarEvent^ _Bar;
+		Color _OldColorStart;
+		Color _OldColorEnd;
+		Color _NewColorStart;
+		Color _NewColorEnd;
+
+	public:
+		SwapFadeStartEndColorCommand(Widget_Timeline^ timeline, BarEvent^ bar, Color newColorStart, Color newColorEnd);
+		virtual void Execute();
+		virtual void Undo();
+		virtual String^ GetDescription();
+	};
+
 	// Change Fade Easing
 	public ref class ChangeFadeEasingCommand : public ITimelineCommand
 	{

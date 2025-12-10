@@ -1598,7 +1598,7 @@ namespace MIDILightDrawer
 				else if (Hotkey.Key == "Move To End"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Move_To_End();			return true; } }
 				else if (Hotkey.Key == "Rewind"			) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Rewind_Start();			return true; } }
 				else if (Hotkey.Key == "Fast Forward"	) { if (this->_Transport_Controls != nullptr) { this->_Transport_Controls->Trigger_Fast_Forward_Start();	return true; } }
-
+						
 				// Track Mute/Solo
 				else if (Hotkey.Key == "Mute All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Mute_All_Tracks();	return true; } }
 				else if (Hotkey.Key == "Unmute All"		) { if (this->_Timeline != nullptr) { this->_Timeline->Unmute_All_Tracks(); return true; } }
@@ -1612,7 +1612,6 @@ namespace MIDILightDrawer
 
 	void Form_Main::Form_KeyDown(Object^ sender, System::Windows::Forms::KeyEventArgs^ e)
 	{
-
 		if (e->Control && e->KeyCode == Keys::Z)
 		{
 			Menu_Edit_Undo_Click(sender, e);
@@ -1635,8 +1634,10 @@ namespace MIDILightDrawer
 		}
 		else if (e->KeyCode == Keys::Delete)
 		{
-			Menu_Edit_Delete_Click(sender, e);
-			e->Handled = true;
+			if (!this->_Tools_And_Control->ColorPickerIsTyping()) {
+				Menu_Edit_Delete_Click(sender, e);
+				e->Handled = true;
+			}
 		}
 		else if (e->Control && e->KeyCode == Keys::O)
 		{
@@ -1669,8 +1670,11 @@ namespace MIDILightDrawer
 		}
 		else
 		{
-			Process_Hotkey(e->KeyCode);
-			e->Handled = true;
+			bool Key_Processed = Process_Hotkey(e->KeyCode);
+			
+			if(Key_Processed) {
+				e->Handled = true;
+			}
 		}
 	}
 

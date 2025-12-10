@@ -185,6 +185,56 @@ namespace MIDILightDrawer
 		Control::OnMouseMove(e);
 	}
 
+	void Control_FadePreview::OnMouseDoubleClick(MouseEventArgs^ e)
+	{
+		_Start_Selected = false;
+		_End_Selected = false;
+		_Center_Selected = false;
+
+		if (e->Button == Windows::Forms::MouseButtons::Left) {
+			if (e->X > _Rect_Pad_Left.Left && e->X < _Rect_Pad_Left.Right) {
+				_Start_Selected = true;
+				PreviewSideSelected(_Color_Start);
+			}
+			else if (e->X > _Rect_Pad_Right.Left && e->X < _Rect_Pad_Right.Right) {
+				_End_Selected = true;
+				PreviewSideSelected(_Color_End);
+			}
+			else if (e->X > _Rect_Pad_Center.Left && e->X < _Rect_Pad_Center.Right && _Current_Type == FadeType::Three_Colors) {
+				_Center_Selected = true;
+				PreviewSideSelected(_Color_Center);
+			}
+		}
+
+		if (_Start_Selected || _End_Selected || _Center_Selected) {
+			Dialog_ColorPicker^ Picker = gcnew Dialog_ColorPicker();
+			if (_Start_Selected) {
+				Picker->SelectedColor = this->_Color_Start;
+			}
+			else if (_End_Selected) {
+				Picker->SelectedColor = this->_Color_End;
+			}
+			else if (_Center_Selected) {
+				Picker->SelectedColor = this->_Color_Center;
+			}
+
+			if (Picker->ShowDialog(this) == System::Windows::Forms::DialogResult::OK)
+			{
+				if (_Start_Selected) {
+					 this->_Color_Start = Picker->SelectedColor;
+				}
+				else if (_End_Selected) {
+					this->_Color_End = Picker->SelectedColor;
+				}
+				else if (_Center_Selected) {
+					this->_Color_Center = Picker->SelectedColor;
+				}
+
+				this->Invalidate();
+			}
+		}
+	}
+
 	void Control_FadePreview::Draw_Border(Graphics^ g)
 	{
 		Rectangle bounds = this->ClientRectangle;

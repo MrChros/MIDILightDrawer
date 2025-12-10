@@ -7,6 +7,7 @@ using namespace System::Drawing::Drawing2D;
 
 #include "Easings.h"
 #include "Theme_Manager.h"
+#include "Dialog_ColorPicker.h"
 #include "Widget_Timeline_Common.h"
 
 namespace MIDILightDrawer
@@ -30,6 +31,7 @@ namespace MIDILightDrawer
 		virtual void OnPaint(PaintEventArgs^ e) override;
 		virtual void OnMouseDown(MouseEventArgs^ e) override;
 		virtual void OnMouseMove(MouseEventArgs^ e) override;
+		virtual void OnMouseDoubleClick(MouseEventArgs^ e) override;
 
 	private:
 		FadeType _Current_Type;

@@ -41,7 +41,7 @@ namespace MIDILightDrawer
 		_MainLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
 		_MainLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100));
 		_MainLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 100));
-		_MainLayout->BackColor = ThemeManager->Background;
+		_MainLayout->BackColor = ThemeManager->BackgroundAlt;
 
 		// Initialize color picker
 		_ColorPicker = gcnew Control_ColorPicker();

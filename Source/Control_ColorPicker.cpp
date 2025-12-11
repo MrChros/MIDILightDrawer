@@ -94,7 +94,8 @@ namespace MIDILightDrawer
 		_TextBox_Hex->Width = (int)(TEXT_BOX_WIDTH * 1.2);
 		_TextBox_Hex->Height = TEXT_BOX_HEIGHT;
 		_TextBox_Hex->TextChanged += gcnew EventHandler(this, &Control_ColorPicker::OnHexTextBoxValueChanged);
-		_TextBox_Hex->Leave += gcnew EventHandler(this, &Control_ColorPicker::OnHexTextBoxValueChanged);
+		_TextBox_Hex->KeyPress += gcnew KeyPressEventHandler(this, &Control_ColorPicker::OnHexTextBoxKeyPress);
+		_TextBox_Hex->Leave += gcnew EventHandler(this, &Control_ColorPicker::OnHexTextBoxLeave);
 
 		// Add controls in a specific order
 		this->Controls->Add(_Label_Red);
@@ -585,6 +586,38 @@ namespace MIDILightDrawer
 		}
 	}
 	
+	void Control_ColorPicker::OnHexTextBoxKeyPress(Object^ sender, KeyPressEventArgs^ e)
+	{
+		if (_Updating_Text_Boxes) {
+			return;
+		}
+
+		TextBox^ Text_Box = safe_cast<TextBox^>(sender);
+
+		if ((int)e->KeyChar == (int)Keys::Back ||
+			(int)e->KeyChar == (int)Keys::Delete)
+		{
+			return;
+		}
+
+		if ((	((int)e->KeyChar < (int)Keys::D0 || (int)e->KeyChar >(int)Keys::D9) &&
+				((int)e->KeyChar < (int)Keys::A || (int)e->KeyChar > (int)Keys::F) &&
+				((int)e->KeyChar < (int)'a' || (int)e->KeyChar >(int)'f')
+			) || (Text_Box->Text->Length >= 6))
+		{
+			e->Handled = true;
+		}
+	}
+
+	void Control_ColorPicker::OnHexTextBoxLeave(Object^ sender, EventArgs^ e)
+	{
+		TextBox^ Text_Box = safe_cast<TextBox^>(sender);
+		
+		Text_Box->Text = Text_Box->Text->ToUpper();
+
+		OnHexTextBoxValueChanged(sender, e);
+	}
+
 	Color Control_ColorPicker::ColorFromHSV(float hue, float saturation, float value)
 	{
 		int Hi = (int)(hue / 60.0f) % 6;
@@ -595,12 +628,12 @@ namespace MIDILightDrawer
 
 		switch (Hi)
 		{
-			case 0: return Color::FromArgb(255, (int)(value * 255), (int)(T * 255), (int)(P * 255));
-			case 1: return Color::FromArgb(255, (int)(Q * 255), (int)(value * 255), (int)(P * 255));
-			case 2: return Color::FromArgb(255, (int)(P * 255), (int)(value * 255), (int)(T * 255));
-			case 3: return Color::FromArgb(255, (int)(P * 255), (int)(Q * 255), (int)(value * 255));
-			case 4: return Color::FromArgb(255, (int)(T * 255), (int)(P * 255), (int)(value * 255));
-			default: return Color::FromArgb(255, (int)(value * 255), (int)(P * 255), (int)(Q * 255));
+			case 0:		return Color::FromArgb(255, (int)Math::Round(value * 255),	(int)Math::Round(T * 255),		(int)Math::Round(P * 255));
+			case 1:		return Color::FromArgb(255, (int)Math::Round(Q * 255),		(int)Math::Round(value * 255),	(int)Math::Round(P * 255));
+			case 2:		return Color::FromArgb(255, (int)Math::Round(P * 255),		(int)Math::Round(value * 255),	(int)Math::Round(T * 255));
+			case 3:		return Color::FromArgb(255, (int)Math::Round(P * 255),		(int)Math::Round(Q * 255),		(int)Math::Round(value * 255));
+			case 4:		return Color::FromArgb(255, (int)Math::Round(T * 255),		(int)Math::Round(P * 255),		(int)Math::Round(value * 255));
+			default:	return Color::FromArgb(255, (int)Math::Round(value * 255),	(int)Math::Round(P * 255),		(int)Math::Round(Q * 255));
 		}
 	}
 

@@ -67,6 +67,8 @@ namespace MIDILightDrawer
 		void OnRGBTextBoxValueChanged(Object^ sender, EventArgs^ e);
 		void OnRGBTextBoxKeyPress(Object^ sender, KeyPressEventArgs^ e);
 		void OnHexTextBoxValueChanged(Object^ sender, EventArgs^ e);
+		void OnHexTextBoxKeyPress(Object^ sender, KeyPressEventArgs^ e);
+		void OnHexTextBoxLeave(Object^ sender, EventArgs^ e);
 		
 		static Color ColorFromHSV(float hue, float saturation, float value);
 		static void RGBtoHSV(int r, int g, int b, float% h, float% s, float% v);
